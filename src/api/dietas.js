@@ -2,19 +2,26 @@ import client from './client'
 
 // ─── Dietas ───────────────────────────────────────────────────────────────────
 
-export const listarDietas = async ({ alunoId, busca, page = 1, limit = 20 } = {}) => {
+export const listarDietas = async ({ alunoId, busca, kcalMin, kcalMax, page = 1, limit = 20 } = {}) => {
   const params = {
     fields: JSON.stringify([
-      "name", "date", "final_date",
+      "name", "date", "final_date", "creation",
       "aluno", "nome_completo", "profissional",
-      "strategy", "week_days", "total_calories"
+      "strategy", "week_days", "total_calories",
+      "meal_1", "meal_2", "meal_3", "meal_4",
+      "meal_5", "meal_6", "meal_7", "meal_8",
+      "meal_1_label", "meal_2_label", "meal_3_label", "meal_4_label",
+      "meal_5_label", "meal_6_label", "meal_7_label", "meal_8_label"
     ]),
     limit,
     limit_start: (page - 1) * limit,
+    order_by: 'creation desc',
   }
   const filtros = []
   if (alunoId) filtros.push(["aluno", "=", alunoId])
   if (busca) filtros.push(["nome_completo", "like", `%${busca}%`])
+  if (kcalMin) filtros.push(["total_calories", ">=", Number(kcalMin)])
+  if (kcalMax) filtros.push(["total_calories", "<=", Number(kcalMax)])
   if (filtros.length) params.filters = JSON.stringify(filtros)
 
   const res = await client.get('/api/resource/Dieta', { params })
@@ -42,13 +49,24 @@ export const excluirDieta = async (id) => {
 }
 
 export const duplicarDieta = async (id, novoAluno = null, dataInicial = null, dataFinal = null) => {
-  const res = await client.post('/api/method/shapefy.api.duplicar_dieta', {
-    id,
-    novo_aluno: novoAluno,
-    data_inicial: dataInicial,
-    data_final: dataFinal
-  })
-  return res.data.message
+  const dieta = await buscarDieta(id)
+  const { name, creation, modified, modified_by, owner, docstatus, idx,
+    _user_tags, _comments, _assign, _liked_by, nome_completo, ...payload } = dieta
+
+  if (novoAluno) payload.aluno = novoAluno
+  if (dataInicial !== null) payload.date = dataInicial
+  if (dataFinal !== null) payload.final_date = dataFinal
+
+  for (let i = 1; i <= 8; i++) {
+    for (let j = 1; j <= 10; j++) {
+      const field = `meal_${i}_option_${j}_items`
+      if (payload[field]) {
+        payload[field] = payload[field].map(({ name: _n, ...item }) => item)
+      }
+    }
+  }
+
+  return criarDieta(payload)
 }
 
 // ─── Alimentos ────────────────────────────────────────────────────────────────

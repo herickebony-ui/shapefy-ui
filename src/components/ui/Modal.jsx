@@ -1,46 +1,69 @@
+// Props: isOpen/open, onClose, title, subtitle, size (sm/md/lg/xl),
+//        footer (ReactNode), closeOnOverlayClick, children
+// Mobile: fullscreen (<768px), footer buttons stack vertically
 import { X } from 'lucide-react'
 
-export default function Modal({ children, onClose, title, subtitle, size = 'md', footer }) {
-  const sizes = {
-    sm: 'max-w-md',
-    md: 'max-w-2xl',
-    lg: 'max-w-3xl',
-    xl: 'max-w-5xl',
-  }
+const SIZES = {
+  sm: 'md:max-w-[400px]',
+  md: 'md:max-w-[480px]',
+  lg: 'md:max-w-[640px]',
+  xl: 'md:max-w-[800px]',
+}
+
+export default function Modal({
+  isOpen,
+  open,
+  children,
+  onClose,
+  title,
+  subtitle,
+  size = 'md',
+  footer,
+  closeOnOverlayClick = true,
+}) {
+  const visible = isOpen ?? open ?? true
+  if (!visible) return null
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
-      onClick={onClose}
+      className="fixed inset-0 z-[100] flex flex-col md:items-center md:justify-center bg-black/75 backdrop-blur-sm md:p-4"
+      onClick={closeOnOverlayClick ? onClose : undefined}
     >
       <div
-        className={`bg-[#1a1a1a] border border-[#323238] rounded-xl w-full ${sizes[size]} max-h-[90vh] flex flex-col shadow-2xl`}
+        className={`
+          bg-[#1a1a1a] border-0 md:border border-[#323238]
+          w-full h-[100dvh] md:h-auto
+          rounded-none md:rounded-[14px]
+          ${SIZES[size] || SIZES.md}
+          md:max-h-[90vh]
+          flex flex-col
+          shadow-[0_25px_50px_rgba(0,0,0,0.6)]
+        `}
         onClick={e => e.stopPropagation()}
       >
-        {/* Header */}
         {(title || onClose) && (
-          <div className="flex items-center justify-between px-5 py-4 border-b border-[#323238] shrink-0">
+          <div className="flex items-center justify-between px-4 md:px-[22px] py-4 border-b border-[#323238] shrink-0">
             <div>
-              {title && <h3 className="text-white font-bold text-base">{title}</h3>}
-              {subtitle && <p className="text-gray-400 text-xs mt-0.5">{subtitle}</p>}
+              {title && <h3 className="text-white font-bold text-sm md:text-base">{title}</h3>}
+              {subtitle && <p className="text-gray-400 text-[11px] mt-0.5">{subtitle}</p>}
             </div>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-[#323238] transition-colors"
-            >
-              <X size={16} />
-            </button>
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-[#323238] transition-colors shrink-0 ml-3"
+              >
+                <X size={16} />
+              </button>
+            )}
           </div>
         )}
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto">
           {children}
         </div>
 
-        {/* Footer */}
         {footer && (
-          <div className="px-5 py-4 border-t border-[#323238] shrink-0 flex justify-end gap-3">
+          <div className="px-4 md:px-[22px] py-4 border-t border-[#323238] shrink-0 flex flex-col-reverse md:flex-row md:justify-end gap-2 md:gap-[10px] [&>*]:w-full md:[&>*]:w-auto">
             {footer}
           </div>
         )}
