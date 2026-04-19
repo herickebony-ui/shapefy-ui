@@ -6,6 +6,7 @@ import AppLayout from './components/layout/AppLayout'
 import HubAlunos from './pages/Alunos/HubAlunos'
 import DietaListagem from './pages/Dietas/DietaListagem'
 import DietaDetalhe from './pages/Dietas/DietaDetalhe'
+import DietaCriar from './pages/Dietas/DietaCriar'
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -28,6 +29,7 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="alunos" element={<HubAlunos />} />
           <Route path="dietas" element={<DietaListagem />} />
+          <Route path="dietas/nova" element={<DietaCriar />} />
           <Route path="dietas/:id" element={<DietaDetalhe />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

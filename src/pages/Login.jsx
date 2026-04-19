@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
 import { login } from '../api/auth'
+import { Input, Button } from '../components/ui'
+import { tw } from '../styles/tokens'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -11,26 +13,26 @@ export default function Login() {
   const [error, setError] = useState('')
 
   async function handleLogin(e) {
-  e.preventDefault()
-  setLoading(true)
-  setError('')
+    e.preventDefault()
+    setLoading(true)
+    setError('')
 
-  try {
-    const res = await login(form.usr, form.pwd)
-    const { api_key, api_secret } = res.message
-    const token = `${api_key}:${api_secret}`
-    setAuth(form.usr, token)
-    navigate('/')
-  } catch (err) {
-    console.log('ERRO:', err.response?.data)
-    setError('E-mail ou senha incorretos. Tente novamente.')
-  } finally {
-    setLoading(false)
+    try {
+      const res = await login(form.usr, form.pwd)
+      const { api_key, api_secret } = res.message
+      const token = `${api_key}:${api_secret}`
+      setAuth(form.usr, token)
+      navigate('/')
+    } catch (err) {
+      console.log('ERRO:', err.response?.data)
+      setError('E-mail ou senha incorretos. Tente novamente.')
+    } finally {
+      setLoading(false)
+    }
   }
-}
 
   return (
-    <div className="min-h-screen bg-[#202024] flex items-center justify-center px-4">
+    <div className={`${tw.page} flex items-center justify-center px-4`}>
       <div className="w-full max-w-md">
 
         {/* Logo */}
@@ -44,53 +46,45 @@ export default function Login() {
         </div>
 
         {/* Card */}
-        <div className="bg-[#29292e] border border-[#323238] rounded-xl p-8 shadow-xl">
+        <div className={`${tw.card} p-8 shadow-xl`}>
           <h2 className="text-white text-xl font-semibold mb-6">
             Entrar na sua conta
           </h2>
 
           <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-gray-400 text-sm mb-1.5">
-                E-mail
-              </label>
-              <input
-                type="email"
-                required
-                value={form.usr}
-                onChange={(e) => setForm({ ...form, usr: e.target.value })}
-                placeholder="seu@email.com"
-                className="w-full bg-[#1a1a1a] border border-[#323238] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#850000] transition-colors"
-              />
-            </div>
+            <Input
+              label="E-mail"
+              type="email"
+              value={form.usr}
+              onChange={(val) => setForm({ ...form, usr: val })}
+              placeholder="seu@email.com"
+              required
+            />
 
-            <div>
-              <label className="block text-gray-400 text-sm mb-1.5">
-                Senha
-              </label>
-              <input
-                type="password"
-                required
-                value={form.pwd}
-                onChange={(e) => setForm({ ...form, pwd: e.target.value })}
-                placeholder="••••••••"
-                className="w-full bg-[#1a1a1a] border border-[#323238] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#850000] transition-colors"
-              />
-            </div>
+            <Input
+              label="Senha"
+              type="password"
+              value={form.pwd}
+              onChange={(val) => setForm({ ...form, pwd: val })}
+              placeholder="••••••••"
+              required
+            />
 
             {error && (
-              <div className="bg-red-900/20 border border-red-500/30 rounded-lg px-4 py-3">
-                <p className="text-red-400 text-sm">{error}</p>
+              <div className={`${tw.badge.danger} rounded-lg px-4 py-3`}>
+                <p className="text-sm">{error}</p>
               </div>
             )}
 
-            <button
+            <Button
               type="submit"
-              disabled={loading}
-              className="w-full bg-[#850000] hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition-colors mt-2"
+              variant="primary"
+              size="lg"
+              loading={loading}
+              className="w-full mt-2"
             >
-              {loading ? 'Entrando...' : 'Entrar'}
-            </button>
+              Entrar
+            </Button>
           </form>
         </div>
 

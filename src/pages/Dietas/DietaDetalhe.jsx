@@ -1,12 +1,12 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Save, Copy, Trash2, Plus, Search,
   ChevronDown, ChevronUp, X, Loader, Check,
   Edit2, RotateCcw
 } from 'lucide-react'
-import { buscarDieta, salvarDieta, duplicarDieta } from '../../api/dietas'
-import { listarAlimentos } from '../../api/dietas'
+import { buscarDieta, salvarDieta, duplicarDieta, listarAlimentos } from '../../api/dietas'
+import { listarAlunos } from '../../api/alunos'
 import { Card, Badge, Spinner, Button, Modal } from '../../components/ui'
 import { tw } from '../../styles/tokens'
 
@@ -71,9 +71,9 @@ function ModalBuscarAlimento({ onClose, onSelecionar }) {
               className="w-full text-left px-4 py-3 rounded-lg hover:bg-[#323238] transition-colors flex items-center justify-between group"
             >
               <div>
-                <p className="text-white text-sm font-medium">{a.food_name || a.name}</p>
+                <p className="text-white text-sm font-medium">{a.food}</p>
                 <p className="text-gray-500 text-xs mt-0.5">
-                  {a.calories} kcal · P:{a.protein}g C:{a.carbohydrates || a.carbohydrate}g G:{a.fat || a.lipid}g
+                  {a.calories} kcal · P:{a.protein}g C:{a.carbohydrate}g G:{a.lipid}g
                 </p>
               </div>
               <Plus size={15} className="text-gray-600 group-hover:text-white transition-colors" />
@@ -97,11 +97,37 @@ function ModalDuplicar({ dieta, onClose, onDuplicar }) {
   const [dataInicial, setDataInicial] = useState('')
   const [dataFinal, setDataFinal] = useState('')
   const [salvando, setSalvando] = useState(false)
+  const [buscaAluno, setBuscaAluno] = useState('')
+  const [alunosSugeridos, setAlunosSugeridos] = useState([])
+  const [alunoSelecionado, setAlunoSelecionado] = useState(null)
+  const [loadingAlunos, setLoadingAlunos] = useState(false)
+  const buscaTimeout = useRef(null)
+
+  useEffect(() => {
+    if (modo !== 'novo') return
+    clearTimeout(buscaTimeout.current)
+    if (buscaAluno.length < 2) { setAlunosSugeridos([]); return }
+    buscaTimeout.current = setTimeout(async () => {
+      setLoadingAlunos(true)
+      try {
+        const res = await listarAlunos({ search: buscaAluno, limit: 8 })
+        setAlunosSugeridos(res.list)
+      } catch {} finally { setLoadingAlunos(false) }
+    }, 400)
+  }, [buscaAluno, modo])
 
   async function handleDuplicar() {
+    if (modo === 'novo' && !alunoSelecionado) {
+      alert('Selecione o aluno destino.')
+      return
+    }
     setSalvando(true)
     try {
-      await onDuplicar(modo === 'mesmo' ? null : 'novo', dataInicial || null, dataFinal || null)
+      await onDuplicar(
+        modo === 'mesmo' ? null : alunoSelecionado.name,
+        dataInicial || null,
+        dataFinal || null
+      )
       onClose()
     } catch {
       alert('Erro ao duplicar.')
@@ -128,6 +154,43 @@ function ModalDuplicar({ dieta, onClose, onDuplicar }) {
             </button>
           </div>
         </div>
+
+        {modo === 'novo' && (
+          <div className="relative">
+            <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-1.5">Selecionar Aluno</p>
+            {alunoSelecionado ? (
+              <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-[#1a1a1a] border border-[#850000]/40">
+                <span className="text-white text-sm">{alunoSelecionado.nome_completo}</span>
+                <button onClick={() => { setAlunoSelecionado(null); setBuscaAluno('') }} className="text-gray-500 hover:text-red-400">
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                  <input
+                    value={buscaAluno}
+                    onChange={e => setBuscaAluno(e.target.value)}
+                    placeholder="Buscar aluno..."
+                    className={`${tw.input} pl-9`}
+                  />
+                </div>
+                {(alunosSugeridos.length > 0 || loadingAlunos) && (
+                  <div className="absolute z-10 mt-1 w-full bg-[#29292e] border border-[#323238] rounded-lg overflow-hidden shadow-lg">
+                    {loadingAlunos && <p className="text-gray-500 text-xs p-3">Buscando...</p>}
+                    {alunosSugeridos.map(a => (
+                      <button key={a.name} onClick={() => { setAlunoSelecionado(a); setAlunosSugeridos([]) }}
+                        className="w-full text-left px-3 py-2.5 hover:bg-[#323238] text-sm text-white transition-colors">
+                        {a.nome_completo}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -264,14 +327,14 @@ function BlocoOpcao({ mealNum, opcaoNum, dieta, onChange }) {
   function adicionarAlimento(alimento) {
     const novo = {
       name: `new_${Date.now()}`,
-      food: alimento.food_name || alimento.name,
+      food: alimento.food,
       ref_weight: alimento.ref_weight || 100,
       weight: alimento.ref_weight || 100,
-      unit: 'g',
+      unit: alimento.unit || 'g',
       substitute: 0,
       protein:      alimento.protein      || 0,
-      carbohydrate: alimento.carbohydrates || alimento.carbohydrate || 0,
-      lipid:        alimento.fat          || alimento.lipid        || 0,
+      carbohydrate: alimento.carbohydrate || 0,
+      lipid:        alimento.lipid        || 0,
       fiber:        alimento.fiber        || 0,
       calories:     alimento.calories     || 0,
     }
@@ -513,12 +576,12 @@ export default function DietaDetalhe() {
               {dieta.nome_completo || dieta.aluno || 'Dieta'}
             </h1>
             <p className={`${tw.meta} text-sm mt-1`}>
-              {dieta.strategy || dieta.estrategia}
-              {(dieta.week_days || dieta.dias_semana) && ` · ${dieta.week_days || dieta.dias_semana}`}
+              {dieta.strategy}
+              {dieta.week_days && ` · ${dieta.week_days}`}
             </p>
             <p className={`${tw.disabled} text-xs mt-0.5`}>
-              {formatDate(dieta.date || dieta.data_inicial)}
-              {dieta.data_final && ` → ${formatDate(dieta.data_final)}`}
+              {formatDate(dieta.date)}
+              {dieta.final_date && ` → ${formatDate(dieta.final_date)}`}
             </p>
           </div>
           <div className="flex items-center gap-2">

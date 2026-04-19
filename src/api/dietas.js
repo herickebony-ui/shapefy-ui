@@ -10,6 +10,7 @@ export const listarDietas = async ({ alunoId, busca, page = 1, limit = 20 } = {}
       "strategy", "week_days", "total_calories"
     ]),
     limit,
+    limit_start: (page - 1) * limit,
   }
   const filtros = []
   if (alunoId) filtros.push(["aluno", "=", alunoId])
@@ -53,23 +54,27 @@ export const duplicarDieta = async (id, novoAluno = null, dataInicial = null, da
 // ─── Alimentos ────────────────────────────────────────────────────────────────
 
 export const listarAlimentos = async ({ busca = '', grupo = '', page = 1, limit = 50 } = {}) => {
-  const params = {
-    fields: JSON.stringify([
-      "name", "food_name", "calories", "protein",
-      "carbohydrates", "fat", "fiber", "food_group",
-      "serving_size", "serving_unit"
-    ]),
-    limit,
-    limit_start: (page - 1) * limit,
-    order_by: 'food_name asc',
-  }
-  const filtros = []
-  if (busca) filtros.push(["food_name", "like", `%${busca}%`])
-  if (grupo) filtros.push(["food_group", "=", grupo])
-  if (filtros.length) params.filters = JSON.stringify(filtros)
+  const filters = []
+  if (busca) filters.push(["food", "like", `%${busca}%`])
+  if (grupo) filters.push(["food_group", "=", grupo])
 
-  const res = await client.get('/api/resource/Alimento', { params })
-  const list = res.data.data || []
+  const data = new URLSearchParams({
+    doctype: 'Alimento',
+    fields: JSON.stringify(["name", "food", "calories", "protein",
+      "carbohydrate", "lipid", "fiber", "food_group", "ref_weight", "unit"]),
+    filters: JSON.stringify(filters),
+    limit_start: (page - 1) * limit,
+    limit_page_length: limit,
+    order_by: 'food asc',
+  })
+
+  const res = await client.post('/api/method/frappe.desk.reportview.get', data, {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+  })
+  const result = res.data.message
+  const list = result?.values?.map(row =>
+    Object.fromEntries(result.keys.map((k, i) => [k, row[i]]))
+  ) || []
   return { list, hasMore: list.length === limit }
 }
 

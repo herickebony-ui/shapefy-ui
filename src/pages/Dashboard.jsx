@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Users, Plus, ClipboardList, CheckSquare } from 'lucide-react'
+import { Users, Plus, ClipboardList, CheckSquare, Search, MoreVertical } from 'lucide-react'
 import client from '../api/client'
-import { Card, Avatar, Badge, Spinner } from '../components/ui'
+import { Card, Avatar, Badge, Spinner, Input, Button } from '../components/ui'
 import { tw } from '../styles/tokens'
-import { Button } from '../components/ui'
 
 export default function Dashboard() {
   const [stats, setStats] = useState({ total: 0, novos: 0, faltaAssinar: 0, faltaEntregar: 0 })
@@ -76,12 +75,16 @@ export default function Dashboard() {
 
       {/* Tabela */}
       <Card>
-        <div className={`px-6 py-4 border-b ${tw.divider.replace('border-t','border-b')} flex items-center justify-between`}>
-          <input
-            value={busca}
-            onChange={e => setBusca(e.target.value)}
-            placeholder="Buscar aluno..."
-            className={`${tw.input} w-64`}          />
+        <div className={`px-6 py-4 ${tw.dividerBottom} flex items-center justify-between`}>
+          <div className="w-64">
+            <Input
+              value={busca}
+              onChange={setBusca}
+              placeholder="Buscar aluno..."
+              icon={Search}
+              onClear={() => setBusca('')}
+            />
+          </div>
           <Button variant="primary" icon={Plus}>Novo Aluno</Button>
         </div>
 
@@ -115,7 +118,7 @@ export default function Dashboard() {
                   </Badge>
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <button className="text-gray-400 hover:text-white transition-colors">⋮</button>
+                  <Button variant="ghost" size="icon" icon={MoreVertical} />
                 </td>
               </tr>
             ))}

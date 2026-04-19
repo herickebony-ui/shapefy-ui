@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, X, RefreshCw, Salad, ChevronRight } from 'lucide-react'
+import { Search, RefreshCw, Salad, ChevronRight } from 'lucide-react'
 import { listarDietas } from '../../api/dietas'
-import { Card, Badge, Spinner, EmptyState, PageHeader, Button } from '../../components/ui'
+import { Card, Badge, Spinner, EmptyState, PageHeader, Button, Input } from '../../components/ui'
 import { tw } from '../../styles/tokens'
 
 const formatDate = (d) => {
@@ -46,8 +46,8 @@ export default function DietaListagem() {
 
   function getStatusDieta(d) {
     const hoje = new Date().toISOString().split('T')[0]
-    if (!d.data_inicial) return { label: 'Rascunho', variant: 'default' }
-    if (!d.data_final || d.data_final >= hoje) return { label: 'Ativa', variant: 'success' }
+    if (!d.date) return { label: 'Rascunho', variant: 'default' }
+    if (!d.final_date || d.final_date >= hoje) return { label: 'Ativa', variant: 'success' }
     return { label: 'Inativa', variant: 'danger' }
   }
 
@@ -58,13 +58,7 @@ export default function DietaListagem() {
         description="Todas as dietas cadastradas · mais recentes primeiro"
         action={
           <div className="flex items-center gap-3">
-            <button
-              onClick={fetchDietas}
-              disabled={loading}
-              className={`${tw.btnSecondary} w-9 h-9 flex items-center justify-center`}
-            >
-              <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
-            </button>
+            <Button variant="secondary" size="icon" icon={RefreshCw} loading={loading} onClick={fetchDietas} />
             <Button variant="primary" onClick={() => navigate('/dietas/nova')}>
               + Nova Dieta
             </Button>
@@ -73,20 +67,14 @@ export default function DietaListagem() {
       />
 
       {/* Busca */}
-      <div className="relative mb-6 max-w-md">
-        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
-        <input
-          type="text"
-          placeholder="Buscar por aluno..."
+      <div className="mb-6 max-w-md">
+        <Input
           value={search}
-          onChange={e => setSearch(e.target.value)}
-          className={`${tw.input} pl-10 pr-10`}
+          onChange={setSearch}
+          placeholder="Buscar por aluno..."
+          icon={Search}
+          onClear={() => setSearch('')}
         />
-        {search && (
-          <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">
-            <X size={14} />
-          </button>
-        )}
       </div>
 
       {/* Lista */}
@@ -104,7 +92,7 @@ export default function DietaListagem() {
               <button
                 key={dieta.name}
                 onClick={() => navigate(`/dietas/${dieta.name}`)}
-                className={`w-full text-left flex items-center gap-4 px-5 py-4 hover:bg-[#323238] transition-colors group ${i < dietas.length - 1 ? `border-b ${tw.divider.replace('border-t', 'border-b')}` : ''}`}
+                className={`w-full text-left flex items-center gap-4 px-5 py-4 hover:bg-[#323238] transition-colors group ${i < dietas.length - 1 ? tw.dividerBottom : ''}`}
               >
                 {/* Ícone */}
                 <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center flex-shrink-0">
@@ -120,25 +108,25 @@ export default function DietaListagem() {
                     <Badge variant={status.variant} size="sm">{status.label}</Badge>
                   </div>
                   <p className={`${tw.meta} text-xs`}>
-                    {dieta.estrategia || dieta.strategy || 'Sem estratégia'}
+                    {dieta.strategy || 'Sem estratégia'}
                   </p>
                   <div className="flex items-center gap-3 mt-1">
-                    {dieta.dias_semana && (
-                      <span className={`${tw.disabled} text-xs`}>{dieta.dias_semana}</span>
+                    {dieta.week_days && (
+                      <span className={`${tw.disabled} text-xs`}>{dieta.week_days}</span>
                     )}
-                    {(dieta.data_inicial || dieta.date) && (
+                    {dieta.date && (
                       <span className={`${tw.disabled} text-xs`}>
-                        {formatDate(dieta.data_inicial || dieta.date)}
-                        {dieta.data_final && ` → ${formatDate(dieta.data_final)}`}
+                        {formatDate(dieta.date)}
+                        {dieta.final_date && ` → ${formatDate(dieta.final_date)}`}
                       </span>
                     )}
                   </div>
                 </div>
 
                 {/* Kcal */}
-                {(dieta.total_kcal || dieta.total_calories) && (
+                {dieta.total_calories > 0 && (
                   <span className="text-xs px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20 font-semibold flex-shrink-0">
-                    {dieta.total_kcal || dieta.total_calories} kcal
+                    {dieta.total_calories} kcal
                   </span>
                 )}
 

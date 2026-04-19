@@ -30,8 +30,9 @@ export const tw = {
   input:   'bg-[#1a1a1a] border border-[#323238] rounded-lg px-4 py-2.5 text-white text-sm placeholder-gray-600 outline-none focus:border-[#850000]/60 focus:ring-1 focus:ring-[#850000]/30 transition-colors',
 
   // Tabelas
-  thead:   'bg-[#1a1a1a] text-white text-xs font-semibold tracking-wider',
-  tbody:   'bg-[#29292e] hover:bg-[#323238] transition-colors border-t border-[#323238]',
+  thead:    'bg-[#1a1a1a] text-white text-xs font-semibold tracking-wider',
+  tbody:    'bg-[#29292e] hover:bg-[#323238] transition-colors border-t border-[#323238]',
+  tbodyRow: 'bg-[#29292e] hover:bg-[#323238] transition-colors border-t border-[#323238]',
 
   // Botões
   btnPrimary:   'bg-[#850000] hover:bg-red-700 text-white font-semibold rounded-lg transition-colors',
@@ -44,8 +45,9 @@ export const tw = {
   meta:     'text-gray-400',
   disabled: 'text-gray-600',
 
-  // Divisor
-  divider: 'border-t border-[#323238]',
+  // Divisores
+  divider:       'border-t border-[#323238]',
+  dividerBottom: 'border-b border-[#323238]',
 
   // Badges por status
   badge: {
