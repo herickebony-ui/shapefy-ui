@@ -6,19 +6,22 @@ import {
   Trash2, SlidersHorizontal, Eye, Loader, BarChart2,
 } from 'lucide-react'
 import { listarFichas, buscarFicha, excluirFicha, criarFicha, salvarFicha, listarExercicios } from '../../api/fichas'
+import { listarAlunos } from '../../api/alunos'
+import { Button, FormGroup, Input, Select, Autocomplete, Modal, EmptyState } from '../../components/ui'
 
+// Indexa por nome_do_exercicio E name do DocType para cobrir fichas antigas e novas
 const buildIntensMap = (lista) => {
   const map = {}
   lista.forEach(e => {
     try {
-      map[e.nome_do_exercicio] = typeof e.intensidade_json === 'string'
+      const parsed = typeof e.intensidade_json === 'string'
         ? JSON.parse(e.intensidade_json) : (e.intensidade_json || [])
+      if (e.nome_do_exercicio) map[e.nome_do_exercicio] = parsed
+      if (e.name) map[e.name] = parsed
     } catch { }
   })
   return map
 }
-import { listarAlunos } from '../../api/alunos'
-import { Button, FormGroup, Input, Select, Autocomplete, Modal, EmptyState } from '../../components/ui'
 
 const uid = () => `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
 
@@ -41,23 +44,32 @@ const formatDate = (v) => {
 
 // ─── Volume ───────────────────────────────────────────────────────────────────
 
+// Chaves espelham os valores reais de grupo_muscular no Frappe (FichaDetalhe como referência)
 const GRUPOS_CONFIG = [
-  { key: 'quadriceps',    label: 'Quadríceps' },
-  { key: 'isquiotibiais', label: 'Isquiotibiais' },
-  { key: 'gluteos',       label: 'Glúteos' },
-  { key: 'panturrilha',   label: 'Panturrilha' },
-  { key: 'peito',         label: 'Peito' },
-  { key: 'dorsais',       label: 'Dorsais' },
-  { key: 'ombros',        label: 'Ombros' },
-  { key: 'trapezio',      label: 'Trapézio' },
-  { key: 'biceps',        label: 'Bíceps' },
-  { key: 'triceps',       label: 'Tríceps' },
-  { key: 'antebraco',     label: 'Antebraço' },
-  { key: 'abdomen',       label: 'Abdômen' },
-  { key: 'lombares',      label: 'Lombares' },
-  { key: 'adutores',      label: 'Adutores' },
-  { key: 'abdutores',     label: 'Abdutores' },
+  { key: 'quadriceps',         label: 'Quadríceps' },
+  { key: 'isquiotibiais',      label: 'Isquiotibiais' },
+  { key: 'gluteomaximo',       label: 'G. Máximo' },
+  { key: 'gluteomedio',        label: 'G. Médio' },
+  { key: 'adutores',           label: 'Adutores' },
+  { key: 'panturrilhas',       label: 'Panturrilhas' },
+  { key: 'costas',             label: 'Costas' },
+  { key: 'trapezio',           label: 'Trapézio' },
+  { key: 'peitoral',           label: 'Peitoral' },
+  { key: 'deltoidesanterior',  label: 'Delts. Ant.' },
+  { key: 'deltoideslateral',   label: 'Delts. Lat.' },
+  { key: 'deltoidesposterior', label: 'Delts. Post.' },
+  { key: 'biceps',             label: 'Bíceps' },
+  { key: 'triceps',            label: 'Tríceps' },
+  { key: 'abdomen',            label: 'Abdômen' },
 ]
+
+// Mapa de chave → label para lookup rápido (inclui variações comuns)
+const GRUPO_LABEL = Object.fromEntries([
+  ...GRUPOS_CONFIG.map(g => [g.key, g.label]),
+  ['gluteos', 'Glúteos'], ['panturrilha', 'Panturrilha'],
+  ['peito', 'Peito'], ['dorsais', 'Dorsais'], ['ombros', 'Ombros'],
+  ['lombares', 'Lombares'], ['abdutores', 'Abdutores'], ['antebraco', 'Antebraço'],
+])
 
 const calcVolume = (ficha, intensidadeMap = {}) => {
   const vol = {}
@@ -639,9 +651,14 @@ const ModalHistoricoAluno = ({ ficha: fichaRef, onClose }) => {
 
   const gruposAtivos = useMemo(() => {
     if (!fichasVol.length) return []
-    const keys = new Set()
-    fichasVol.forEach(fv => Object.keys(fv.vol).forEach(k => keys.add(k)))
-    return GRUPOS_CONFIG.filter(g => keys.has(g.key))
+    const totais = {}
+    fichasVol.forEach(fv => Object.entries(fv.vol).forEach(([k, v]) => {
+      totais[k] = (totais[k] || 0) + v
+    }))
+    return Object.entries(totais)
+      .filter(([, v]) => v > 0)
+      .sort((a, b) => b[1] - a[1])
+      .map(([key]) => ({ key, label: GRUPO_LABEL[key] || key }))
   }, [fichasVol])
 
   const deltaLabel = (curr, prev) => {

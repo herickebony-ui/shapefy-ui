@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { createPortal } from 'react-dom'
 import {
   ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Save,
   Plus, X, Trash2, Copy, Info, Zap, GripVertical, Loader,
@@ -134,7 +133,7 @@ const TextareaExpansivel = ({ value, onChange, placeholder = '', resetKey, class
 
   useEffect(() => {
     setExpanded(false)
-    if (ref.current) ref.current.style.height = '2rem'
+    if (ref.current) ref.current.style.height = '2.5rem'
   }, [resetKey])
 
   const handleFocus = () => {
@@ -142,14 +141,14 @@ const TextareaExpansivel = ({ value, onChange, placeholder = '', resetKey, class
     setTimeout(() => {
       if (ref.current) {
         ref.current.style.height = 'auto'
-        ref.current.style.height = Math.max(ref.current.scrollHeight, 32) + 'px'
+        ref.current.style.height = Math.max(ref.current.scrollHeight, 40) + 'px'
       }
     }, 0)
   }
 
   const handleBlur = () => {
     setExpanded(false)
-    if (ref.current) ref.current.style.height = '2rem'
+    if (ref.current) ref.current.style.height = '2.5rem'
   }
 
   return (
@@ -161,32 +160,54 @@ const TextareaExpansivel = ({ value, onChange, placeholder = '', resetKey, class
       onBlur={handleBlur}
       placeholder={placeholder}
       rows={1}
-      className={`bg-[#29292e] border border-[#323238] text-gray-200 text-xs rounded-lg px-2 py-1.5 w-full outline-none focus:border-[#850000]/60 resize-none leading-tight transition-all duration-200 ${expanded ? 'min-h-[2rem]' : 'h-8 overflow-hidden'} ${className}`}
+      className={`bg-[#29292e] border border-[#323238] text-gray-200 text-xs rounded px-2 py-1.5 w-full outline-none focus:border-[#850000]/60 resize-none leading-tight transition-all duration-200 ${expanded ? 'min-h-[2.5rem]' : 'h-10 overflow-hidden'} ${className}`}
     />
   )
 }
 
 // ─── SearchableCombo ──────────────────────────────────────────────────────────
-// DS Autocomplete compact com busca local em array de strings.
+// Input de tabela com dropdown local — h-7, bg visível, estilo consistente com
+// os outros inputs da tabela (exceção documentada: não usa Autocomplete DS).
 
-const SearchableCombo = ({ value, onChange, options = [], placeholder = '', className = '' }) => {
-  const searchFn = useCallback(async (q) => {
-    if (!q) return options.slice(0, 30)
+const SearchableCombo = ({ value, onChange, options = [], placeholder = '' }) => {
+  const [open, setOpen] = useState(false)
+  const [q, setQ] = useState(value)
+  const ref = useRef(null)
+
+  useEffect(() => { setQ(value) }, [value])
+
+  const filtered = useMemo(() => {
+    if (!q) return options.slice(0, 40)
     const n = normalizar(q)
-    return options.filter(o => normalizar(o).includes(n)).slice(0, 30)
-  }, [options])
+    return options.filter(o => normalizar(o).includes(n)).slice(0, 40)
+  }, [q, options])
+
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
 
   return (
-    <Autocomplete
-      compact
-      value={value}
-      onChange={onChange}
-      searchFn={searchFn}
-      onSelect={(item) => onChange(item)}
-      renderItem={(item) => <span className="text-xs">{item}</span>}
-      placeholder={placeholder}
-      className={className}
-    />
+    <div ref={ref} className="relative w-full">
+      <input
+        value={q}
+        onChange={e => { setQ(e.target.value); setOpen(true) }}
+        onFocus={() => setOpen(true)}
+        placeholder={placeholder}
+        className="w-full h-7 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60 transition-colors placeholder-gray-600 truncate"
+      />
+      {open && filtered.length > 0 && (
+        <div className="absolute top-full mt-0.5 left-0 w-full bg-[#1a1a1a] border border-[#323238] rounded shadow-xl z-50 max-h-48 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {filtered.map((o, i) => (
+            <button key={i} onMouseDown={() => { onChange(o); setQ(o); setOpen(false) }}
+              className="w-full text-left px-3 py-1.5 text-xs text-gray-200 hover:bg-[#323238] transition-colors truncate block">
+              {o}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -509,19 +530,19 @@ const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, inten
         />
       )}
 
-      <div className="rounded-lg border border-[#323238] bg-[#1a1a1a] overflow-hidden">
+      <div className="rounded-xl border border-[#323238] bg-[#1a1a1a] overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[800px]">
+          <table className="w-full text-sm min-w-[700px]">
             <thead>
               <tr className="text-gray-400 text-xs uppercase tracking-wide border-b border-[#323238] bg-[#0a0a0a]">
-                <th className="w-10 py-2 px-2" />
-                <th className="text-left py-2 px-2 w-[18%]">Grupo Muscular</th>
-                <th className="text-left py-2 px-2 w-[24%]">Exercício</th>
-                <th className="text-center py-2 px-2 w-[7%]">Séries</th>
-                <th className="text-center py-2 px-2 w-[13%]">Reps</th>
-                <th className="text-center py-2 px-2 w-[13%]">Descanso</th>
-                <th className="text-left py-2 px-2">Observação</th>
-                <th className="py-2 px-2 w-[90px]" />
+                <th className="w-8 py-2 px-2" />
+                <th className="text-left py-2 px-2 w-36">Grupo Muscular</th>
+                <th className="text-left py-2 px-2 w-56">Exercício</th>
+                <th className="text-center py-2 px-2 w-12">Séries</th>
+                <th className="text-center py-2 px-2 w-24">Reps</th>
+                <th className="text-center py-2 px-2 w-24">Descanso</th>
+                <th className="text-left py-2 px-2">Instruções</th>
+                <th className="text-center py-2 px-2 w-32">Ações</th>
               </tr>
             </thead>
             <tbody>
