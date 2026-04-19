@@ -716,6 +716,11 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
     try {
       const comIdx = (arr) => (arr || []).map((item, i) => {
         const { _id, ...rest } = item
+        // Backfill intensidade para exercícios que nunca tiveram o campo populado
+        if (!rest.intensidade || rest.intensidade === '[]') {
+          const intens = intensMap[rest.exercicio]
+          if (intens?.length) rest.intensidade = JSON.stringify(intens)
+        }
         if (rest.intensidade && typeof rest.intensidade !== 'string') rest.intensidade = JSON.stringify(rest.intensidade)
         return { ...rest, idx: i + 1 }
       })

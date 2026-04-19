@@ -6,6 +6,17 @@ import {
   Trash2, SlidersHorizontal, Eye, Loader, BarChart2,
 } from 'lucide-react'
 import { listarFichas, buscarFicha, excluirFicha, criarFicha, salvarFicha, listarExercicios } from '../../api/fichas'
+
+const buildIntensMap = (lista) => {
+  const map = {}
+  lista.forEach(e => {
+    try {
+      map[e.nome_do_exercicio] = typeof e.intensidade_json === 'string'
+        ? JSON.parse(e.intensidade_json) : (e.intensidade_json || [])
+    } catch { }
+  })
+  return map
+}
 import { listarAlunos } from '../../api/alunos'
 import { Button, FormGroup, Input, Select, Autocomplete, Modal, EmptyState } from '../../components/ui'
 
@@ -574,8 +585,10 @@ const ModalHistoricoAluno = ({ ficha: fichaRef, onClose }) => {
   const [loadingVol, setLoadingVol] = useState(false)
   const [errVol, setErrVol] = useState(null)
   const volCarregado = useRef(false)
+  const intensMapRef = useRef({})
 
   useEffect(() => {
+    listarExercicios().then(lista => { intensMapRef.current = buildIntensMap(lista) }).catch(console.error)
     listarFichas({ aluno: fichaRef.aluno, limit: 100 })
       .then(({ list }) => {
         const ordenadas = list.slice().sort((a, b) => {
@@ -604,7 +617,7 @@ const ModalHistoricoAluno = ({ ficha: fichaRef, onClose }) => {
             label: formatDate(f.data_de_inicio) || formatDate(f.creation),
             nivel: f.nivel,
             isCurrent: f.name === fichaRef.name,
-            vol: calcVolume(dados),
+            vol: calcVolume(dados, intensMapRef.current),
           }
         })
       )
