@@ -19,8 +19,7 @@ export default function Login() {
 
     try {
       const res = await login(form.usr, form.pwd)
-      const { api_key, api_secret } = res.message
-      const token = `${api_key}:${api_secret}`
+      const token = res.message.token
       setAuth(form.usr, token)
       navigate('/')
     } catch (err) {

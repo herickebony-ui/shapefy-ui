@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const client = axios.create({
-  baseURL: '',
+  baseURL: import.meta.env.VITE_FRAPPE_URL,
   headers: { 'Content-Type': 'application/json' },
   withCredentials: true,
 })
@@ -9,7 +9,7 @@ const client = axios.create({
 client.interceptors.request.use((config) => {
   const token = localStorage.getItem('frappe_token')
   if (token) {
-    config.headers['Authorization'] = `token ${token}`
+    config.headers['Authorization'] = `JWT ${token}`
   }
   return config
 })
