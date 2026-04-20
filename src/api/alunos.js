@@ -1,20 +1,40 @@
 import client from './client'
 
-export const listarAlunos = async ({ search = '', page = 1, limit = 20 } = {}) => {
-  const params = {
-    fields: JSON.stringify(["name","nome_completo","email","telefone","foto","enabled","dieta","treino","creation"]),
-    limit,
-    limit_start: (page - 1) * limit,
-    order_by: 'creation desc',
-  }
+const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
+
+export const criarAluno = async (campos) => {
+  const res = await client.post('/api/resource/Aluno', {
+    profissional: profissionalLogado(),
+    ...campos,
+  })
+  return res.data.data
+}
+
+export const listarAlunos = async ({ search = '', enabled = '', sexo = '', page = 1, limit = 20 } = {}) => {
+  const filtros = []
   if (search) {
-    params.filters = JSON.stringify([["nome_completo","like",`%${search}%`]])
-    params.limit = 200
-    params.limit_start = 0
+    filtros.push(["nome_completo", "like", `%${search}%`])
+  } else {
+    if (enabled !== '') filtros.push(["enabled", "=", Number(enabled)])
+    if (sexo) filtros.push(["sexo", "=", sexo])
+  }
+  const params = {
+    fields: JSON.stringify(["name","nome_completo","email","telefone","foto","enabled","dieta","treino","sexo","age","height","weight","creation"]),
+    filters: JSON.stringify(filtros),
+    limit: search ? 200 : limit,
+    limit_start: search ? 0 : (page - 1) * limit,
+    order_by: 'creation desc',
   }
   const res = await client.get('/api/resource/Aluno', { params })
   const list = res.data.data || []
-  return { list, hasMore: list.length === limit }
+  return { list, hasMore: list.length === (search ? 200 : limit) }
+}
+
+export const contarAlunos = async (filtros = []) => {
+  const res = await client.get('/api/method/frappe.client.get_count', {
+    params: { doctype: 'Aluno', filters: JSON.stringify(filtros) }
+  })
+  return res.data.message || 0
 }
 
 export const buscarAluno = async (id) => {

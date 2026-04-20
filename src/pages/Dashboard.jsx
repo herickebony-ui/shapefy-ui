@@ -1,130 +1,269 @@
-import { useEffect, useState } from 'react'
-import { Users, Plus, ClipboardList, CheckSquare, Search, MoreVertical } from 'lucide-react'
-import client from '../api/client'
-import { Card, Avatar, Badge, Spinner, Input, Button } from '../components/ui'
-import { tw } from '../styles/tokens'
+import { useEffect, useState, useRef, useCallback } from 'react'
+import { Users, UserCheck, UserX, CalendarPlus, Plus, RefreshCw } from 'lucide-react'
+import { listarAlunos, criarAluno, contarAlunos } from '../api/alunos'
+import {
+  Button, Badge, DataTable,
+  Modal, FormGroup, Input, Select,
+} from '../components/ui'
+import ListPage from '../components/templates/ListPage'
+import AlunoModal from './Alunos/AlunoModal'
+
+const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
+const PAGE_SIZE = 30
+
+const SEXO_OPTS = [
+  { value: '', label: 'Selecionar...' },
+  { value: 'Masculino', label: 'Masculino' },
+  { value: 'Feminino', label: 'Feminino' },
+]
+
+const STATUS_OPTS = [
+  { value: '', label: 'Todos' },
+  { value: '1', label: 'Ativos' },
+  { value: '0', label: 'Inativos' },
+]
+
+const SEXO_FILTRO_OPTS = [
+  { value: '', label: 'Todos' },
+  { value: 'Masculino', label: 'Masculino' },
+  { value: 'Feminino', label: 'Feminino' },
+]
+
+const fmtData = (d) => {
+  if (!d) return ''
+  const [y, m, day] = String(d).split(' ')[0].split('-')
+  return `${day}/${m}/${y}`
+}
 
 export default function Dashboard() {
-  const [stats, setStats] = useState({ total: 0, novos: 0, faltaAssinar: 0, faltaEntregar: 0 })
+  // List
   const [alunos, setAlunos] = useState([])
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
+  const [queryBusca, setQueryBusca] = useState('')
+  const [filtroStatus, setFiltroStatus] = useState('')
+  const [filtroSexo, setFiltroSexo] = useState('')
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(false)
+  const debounceRef = useRef(null)
 
-  useEffect(() => { fetchDados() }, [])
+  // Stats
+  const [stats, setStats] = useState({ total: null, ativos: null, inativos: null, novos: null })
 
-  async function fetchDados() {
+  // Modal novo aluno
+  const [alunoAberto, setAlunoAberto] = useState(null)
+  const [showModal, setShowModal] = useState(false)
+  const [salvando, setSalvando] = useState(false)
+  const [novoAluno, setNovoAluno] = useState({ nome_completo: '', email: '', telefone: '', sexo: '' })
+
+  // Debounce busca
+  useEffect(() => {
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      setQueryBusca(busca)
+      setPage(1)
+    }, 400)
+    return () => clearTimeout(debounceRef.current)
+  }, [busca])
+
+  // Reset page on filter change
+  useEffect(() => { setPage(1) }, [filtroStatus, filtroSexo])
+
+  const carregar = useCallback(async () => {
+    setLoading(true)
     try {
-      const res = await client.get('/api/resource/Aluno', {
-        params: {
-          fields: JSON.stringify(["name","nome_completo","email","foto","enabled","creation"]),
-          limit: 50,
-          order_by: 'creation desc'
-        }
+      const res = await listarAlunos({
+        search: queryBusca,
+        enabled: filtroStatus,
+        sexo: filtroSexo,
+        page,
+        limit: PAGE_SIZE,
       })
-      const lista = res.data.data || []
-      setAlunos(lista)
-      setStats({
-        total: lista.length,
-        novos: lista.filter(a => {
-          const d = new Date(a.creation)
-          const now = new Date()
-          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
-        }).length,
-        faltaAssinar: lista.filter(a => !a.enabled).length,
-        faltaEntregar: 0,
-      })
-    } catch (err) {
-      console.error(err)
+      setAlunos(res.list)
+      setHasMore(res.hasMore)
+    } catch (e) {
+      console.error(e)
     } finally {
       setLoading(false)
     }
+  }, [queryBusca, filtroStatus, filtroSexo, page])
+
+  useEffect(() => { carregar() }, [carregar])
+
+  // Carregar stats uma vez
+  useEffect(() => {
+    const agora = new Date()
+    const inicioMes = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-01`
+    Promise.all([
+      contarAlunos([]),
+      contarAlunos([['enabled', '=', 1]]),
+      contarAlunos([['enabled', '=', 0]]),
+      contarAlunos([['creation', '>=', inicioMes]]),
+    ]).then(([total, ativos, inativos, novos]) => {
+      setStats({ total, ativos, inativos, novos })
+    }).catch(console.error)
+  }, [])
+
+  const setField = (campo) => (val) => setNovoAluno(prev => ({ ...prev, [campo]: val }))
+
+  const handleCriar = async () => {
+    if (!novoAluno.nome_completo.trim()) return alert('Nome é obrigatório.')
+    setSalvando(true)
+    try {
+      await criarAluno(novoAluno)
+      setShowModal(false)
+      setNovoAluno({ nome_completo: '', email: '', telefone: '', sexo: '' })
+      carregar()
+      contarAlunos([]).then(total => setStats(s => ({ ...s, total }))).catch(() => {})
+    } catch (e) {
+      console.error(e)
+      alert('Erro ao cadastrar aluno.')
+    } finally {
+      setSalvando(false)
+    }
   }
 
-  const alunosFiltrados = alunos.filter(a =>
-    a.nome_completo?.toLowerCase().includes(busca.toLowerCase())
-  )
-
   const statCards = [
-    { label: 'TOTAL DE ALUNOS', value: stats.total, sub: 'Base total de cadastros', icon: Users, color: 'text-blue-400' },
-    { label: 'NOVOS (MÊS)', value: stats.novos, sub: 'Crescimento Mensal', icon: Plus, color: 'text-green-400' },
-    { label: 'FALTA ASSINAR', value: stats.faltaAssinar, sub: 'Contratos pendentes', icon: ClipboardList, color: 'text-yellow-400' },
-    { label: 'FALTA ENTREGAR', value: stats.faltaEntregar, sub: 'Alunos sem material', icon: CheckSquare, color: 'text-purple-400' },
+    { label: 'Total', value: stats.total, icon: Users, color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20' },
+    { label: 'Ativos', value: stats.ativos, icon: UserCheck, color: 'text-green-400', bg: 'bg-green-500/10 border-green-500/20' },
+    { label: 'Inativos', value: stats.inativos, icon: UserX, color: 'text-red-400', bg: 'bg-red-500/10 border-red-500/20' },
+    { label: 'Novos este mês', value: stats.novos, icon: CalendarPlus, color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/20' },
+  ]
+
+  const columns = [
+    {
+      label: 'Aluno',
+      render: (row) => (
+        <div className="flex items-center gap-3">
+          {row.foto && (
+            <img
+              src={`${FRAPPE_URL}${row.foto}`}
+              alt={row.nome_completo}
+              className="w-8 h-8 rounded-lg object-cover shrink-0 bg-[#323238]"
+              onError={e => { e.target.style.display = 'none' }}
+            />
+          )}
+          <div className="min-w-0">
+            <p className="text-white text-sm font-medium truncate">{row.nome_completo}</p>
+            {row.email && <p className="text-gray-500 text-xs truncate">{row.email}</p>}
+            {row.creation && <p className="text-gray-700 text-[10px]">Cadastrado em {fmtData(row.creation)}</p>}
+          </div>
+        </div>
+      ),
+    },
+    {
+      label: 'Sexo',
+      headerClass: 'hidden md:table-cell w-24',
+      cellClass: 'hidden md:table-cell',
+      render: (row) => (
+        <span className="text-gray-500 text-xs">{row.sexo || '—'}</span>
+      ),
+    },
+    {
+      label: 'Cadastro',
+      headerClass: 'hidden md:table-cell w-28',
+      cellClass: 'hidden md:table-cell',
+      render: (row) => (
+        <span className="text-gray-500 text-xs">{fmtData(row.creation)}</span>
+      ),
+    },
+    {
+      label: 'Status',
+      headerClass: 'hidden sm:table-cell w-24 text-center',
+      cellClass: 'hidden sm:table-cell text-center',
+      render: (row) => (
+        <Badge variant={row.enabled ? 'success' : 'danger'} size="sm">
+          {row.enabled ? 'Ativo' : 'Inativo'}
+        </Badge>
+      ),
+    },
   ]
 
   return (
-    <div className="p-8">
-
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
-        {statCards.map((stat) => {
-          const Icon = stat.icon
-          return (
-            <Card key={stat.label} className="p-5">
-              <div className="flex items-start justify-between mb-3">
-                <p className="text-gray-400 text-xs font-medium tracking-wider">{stat.label}</p>
-                <Icon size={20} className={stat.color} />
+    <>
+      <ListPage
+        title="Meus Alunos"
+        subtitle="Visão geral · clique num aluno para abrir o perfil completo"
+        actions={
+          <>
+            <Button variant="secondary" size="sm" icon={RefreshCw} onClick={carregar} loading={loading} />
+            <Button variant="primary" size="sm" icon={Plus} onClick={() => setShowModal(true)}>
+              Novo Aluno
+            </Button>
+          </>
+        }
+        filters={[
+          { type: 'search', value: busca, onChange: setBusca, placeholder: 'Buscar por nome...' },
+          { type: 'select', value: filtroStatus, onChange: setFiltroStatus, options: STATUS_OPTS },
+          { type: 'select', value: filtroSexo, onChange: setFiltroSexo, options: SEXO_FILTRO_OPTS },
+        ]}
+        loading={loading}
+        empty={alunos.length === 0 && !loading ? {
+          title: busca ? 'Nenhum aluno encontrado' : 'Nenhum aluno cadastrado',
+          description: busca ? `Sem resultados para "${busca}"` : 'Clique em "Novo Aluno" para cadastrar',
+        } : null}
+      >
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          {statCards.map(({ label, value, icon: Icon, color, bg }) => (
+            <div key={label} className={`rounded-lg border px-4 py-3 flex items-center gap-3 ${bg}`}>
+              <Icon size={18} className={color} />
+              <div>
+                <p className="text-white text-lg font-bold leading-tight">
+                  {value === null ? <span className="text-gray-600 text-sm">—</span> : value}
+                </p>
+                <p className="text-gray-500 text-[10px] uppercase tracking-wider">{label}</p>
               </div>
-              <p className="text-white text-4xl font-bold mb-1">
-                {loading ? '—' : stat.value}
-              </p>
-              <p className="text-gray-500 text-xs">{stat.sub}</p>
-            </Card>
-          )
-        })}
-      </div>
-
-      {/* Tabela */}
-      <Card>
-        <div className={`px-6 py-4 ${tw.dividerBottom} flex items-center justify-between`}>
-          <div className="w-64">
-            <Input
-              value={busca}
-              onChange={setBusca}
-              placeholder="Buscar aluno..."
-              icon={Search}
-              onClear={() => setBusca('')}
-            />
-          </div>
-          <Button variant="primary" icon={Plus}>Novo Aluno</Button>
+            </div>
+          ))}
         </div>
 
-        <table className="w-full">
-          <thead>
-            <tr className={tw.thead}>
-              <th className="text-left text-white text-xs font-semibold px-6 py-3 tracking-wider">ALUNO</th>
-              <th className="text-left text-white text-xs font-semibold px-6 py-3 tracking-wider">STATUS</th>
-              <th className="text-right text-white text-xs font-semibold px-6 py-3 tracking-wider">AÇÕES</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={3}><Spinner /></td>
-              </tr>
-            ) : alunosFiltrados.map((aluno) => (
-              <tr key={aluno.name} className={tw.tbodyRow}>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <Avatar nome={aluno.nome_completo} foto={aluno.foto} size="sm" />
-                    <div>
-                      <p className="text-white font-medium text-sm">{aluno.nome_completo || aluno.name}</p>
-                      {aluno.email && <p className="text-gray-500 text-xs">{aluno.email}</p>}
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <Badge variant={aluno.enabled ? 'success' : 'danger'}>
-                    {aluno.enabled ? '✓ Ativo' : '✗ Inativo'}
-                  </Badge>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <Button variant="ghost" size="icon" icon={MoreVertical} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Card>
-    </div>
+        {!loading && alunos.length > 0 && (
+          <DataTable
+            columns={columns}
+            rows={alunos}
+            rowKey="name"
+            onRowClick={(row) => setAlunoAberto(row)}
+            page={page}
+            pageSize={PAGE_SIZE}
+            onPage={setPage}
+            hasMore={hasMore}
+          />
+        )}
+      </ListPage>
+
+      <AlunoModal aluno={alunoAberto} onClose={() => setAlunoAberto(null)} />
+
+      {showModal && (
+        <Modal
+          isOpen
+          onClose={() => setShowModal(false)}
+          title="Novo Aluno"
+          subtitle="Dados básicos — o restante pode ser preenchido depois no Hub"
+          size="sm"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setShowModal(false)}>Cancelar</Button>
+              <Button variant="primary" loading={salvando} onClick={handleCriar}>Cadastrar</Button>
+            </>
+          }
+        >
+          <div className="p-4 space-y-3">
+            <FormGroup label="Nome completo" required>
+              <Input value={novoAluno.nome_completo} onChange={setField('nome_completo')} placeholder="Nome do aluno" />
+            </FormGroup>
+            <FormGroup label="E-mail">
+              <Input value={novoAluno.email} onChange={setField('email')} type="email" placeholder="email@exemplo.com" />
+            </FormGroup>
+            <FormGroup label="Telefone">
+              <Input value={novoAluno.telefone} onChange={setField('telefone')} placeholder="(00) 00000-0000" />
+            </FormGroup>
+            <FormGroup label="Sexo">
+              <Select value={novoAluno.sexo} onChange={setField('sexo')} options={SEXO_OPTS} />
+            </FormGroup>
+          </div>
+        </Modal>
+      )}
+    </>
   )
 }

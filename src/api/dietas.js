@@ -123,16 +123,21 @@ export const listarGrupos = async () => {
 
 export const listarRefeicoesProntas = async ({ busca = '', enabled = '', page = 1, limit = 30 } = {}) => {
   const owner = frappeOwner()
-  const owners = owner ? [owner, ...OWNERS_BASE] : OWNERS_BASE
 
-  const filters = [['owner', 'in', owners]]
+  const filters = []
   if (busca) filters.push(['full_name', 'like', `%${busca}%`])
   if (enabled !== '') filters.push(['enabled', '=', Number(enabled)])
+
+  // Mostra refeições do usuário atual OU refeições públicas (base do sistema)
+  const orFilters = owner
+    ? [['Refeicoes', 'owner', '=', owner], ['Refeicoes', 'public', '=', 1]]
+    : [['Refeicoes', 'public', '=', 1]]
 
   const data = new URLSearchParams({
     doctype: 'Refeicoes',
     fields: JSON.stringify(['name', 'full_name', 'enabled', 'public', 'profissional', 'creation']),
     filters: JSON.stringify(filters),
+    or_filters: JSON.stringify(orFilters),
     limit_start: (page - 1) * limit,
     limit_page_length: limit,
     order_by: 'creation desc',

@@ -4,16 +4,17 @@ import { useParams, useNavigate } from 'react-router-dom'
 import {
   ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Save,
   Plus, X, Trash2, Copy, Info, GripVertical, Loader,
-  Settings, Zap,
+  Settings, Zap, Lightbulb, BookmarkPlus, BookmarkCheck,
 } from 'lucide-react'
 import {
   listarFichas, buscarFicha, criarFicha, salvarFicha,
   listarExercicios, listarAlongamentos, listarAerobicos, listarGruposMusculares,
 } from '../../api/fichas'
 import { listarAlunos, buscarAluno, salvarAluno } from '../../api/alunos'
+import { listarTextos, salvarNoBancoSeNovo } from '../../api/bancoTextos'
 import {
   Button, FormGroup, Input, Select, Textarea,
-  Autocomplete, Modal, Spinner,
+  Autocomplete, Modal, Spinner, TextareaComSugestoes,
 } from '../../components/ui'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -152,13 +153,19 @@ const novaFicha = () => ({
   treino_d_label: '', treino_e_label: '', treino_f_label: '',
 })
 
-// ─── TextareaExpansivel (sem sugestões) ───────────────────────────────────────
-// Expande ao focar, recolhe ao perder foco. Usado inline em células de tabela.
+// ─── TextareaExpansivel ────────────────────────────────────────────────────────
+// Expande ao focar. Com doctype+campo: auto-sugere ao digitar (portal fixed).
 
-const TextareaExpansivel = ({ value, onChange, placeholder = '', resetKey, className = '' }) => {
+const TextareaExpansivel = ({ value, onChange, placeholder = '', resetKey, className = '', doctype, campo }) => {
   const ref = useRef(null)
+  const btnRef = useRef(null)
+  const debRef = useRef(null)
+  const blurRef = useRef(null)
+  const [sugestoes, setSugestoes] = useState([])
+  const [dropOpen, setDropOpen] = useState(false)
+  const [dropPos, setDropPos] = useState(null)
+  const [salvoBanco, setSalvoBanco] = useState(false)
 
-  // Ao adicionar nova linha (resetKey muda), volta ao tamanho base
   useEffect(() => {
     if (ref.current) ref.current.style.height = '2rem'
   }, [resetKey])
@@ -170,16 +177,196 @@ const TextareaExpansivel = ({ value, onChange, placeholder = '', resetKey, class
     }
   }
 
+  const abrirComResultados = (lista) => {
+    if (!ref.current) return
+    const r = ref.current.getBoundingClientRect()
+    setDropPos({ top: r.bottom + 4, left: r.left, width: Math.max(r.width, 240) })
+    setSugestoes(lista)
+    if (lista.length > 0) setDropOpen(true)
+  }
+
+  // Auto-suggest enquanto digita
+  useEffect(() => {
+    if (!doctype || !campo) return
+    clearTimeout(debRef.current)
+    if (!value?.trim()) { setSugestoes([]); setDropOpen(false); return }
+    debRef.current = setTimeout(async () => {
+      try {
+        const lista = await listarTextos(doctype, campo, { busca: value.trim(), apenasAtivos: true })
+        const filtradas = lista.filter(item => (item[campo] || '').trim().toLowerCase() !== value.trim().toLowerCase())
+        abrirComResultados(filtradas)
+      } catch (e) { console.error('sugestões:', e.message) }
+    }, 300)
+    return () => clearTimeout(debRef.current)
+  }, [value, doctype, campo])
+
+  // Lightbulb: busca explícita sem filtro de texto
+  const abrirTodas = async () => {
+    if (!doctype || !campo) return
+    try {
+      const lista = await listarTextos(doctype, campo, { apenasAtivos: true })
+      abrirComResultados(lista)
+    } catch (e) { console.error('sugestões:', e.message) }
+  }
+
+  const salvarNoBanco = async () => {
+    if (!value?.trim() || !doctype || !campo) return
+    try {
+      await salvarNoBancoSeNovo(doctype, campo, value.trim())
+      setSalvoBanco(true)
+      setTimeout(() => setSalvoBanco(false), 2000)
+    } catch (e) { console.error('salvar banco:', e.message) }
+  }
+
+  const handleBlur = () => { blurRef.current = setTimeout(() => setDropOpen(false), 200) }
+  const handleFocus = () => clearTimeout(blurRef.current)
+
   return (
-    <textarea
-      ref={ref}
-      value={value || ''}
-      onChange={e => { onChange(e.target.value); grow() }}
-      onFocus={grow}
-      placeholder={placeholder}
-      rows={1}
-      className={`bg-[#29292e] border border-[#323238] text-gray-200 text-xs rounded px-2 py-1.5 w-full outline-none focus:border-[#850000]/60 resize-none leading-tight min-h-[2rem] ${className}`}
-    />
+    <div className="relative">
+      <textarea
+        ref={ref}
+        value={value || ''}
+        onChange={e => { onChange(e.target.value); grow() }}
+        onFocus={(e) => { grow(); handleFocus() }}
+        onBlur={handleBlur}
+        placeholder={placeholder}
+        rows={1}
+        className={`bg-[#29292e] border border-[#323238] text-gray-200 text-xs rounded px-2 py-1.5 w-full outline-none focus:border-[#850000]/60 resize-none leading-tight min-h-[2rem] ${doctype ? 'pr-9' : ''} ${className}`}
+      />
+      {doctype && campo && (
+        <>
+          <button ref={btnRef} type="button" onClick={abrirTodas}
+            className="absolute top-1 right-5 text-gray-600 hover:text-yellow-400 transition-colors"
+            title="Ver todas as sugestões">
+            <Lightbulb size={10} />
+          </button>
+          {value?.trim() && (
+            <button type="button"
+              onMouseDown={(e) => { e.preventDefault(); salvarNoBanco() }}
+              className="absolute top-1 right-1 transition-colors"
+              title="Salvar no banco de textos">
+              {salvoBanco
+                ? <BookmarkCheck size={10} className="text-green-400" />
+                : <BookmarkPlus size={10} className="text-gray-600 hover:text-[#850000]" />}
+            </button>
+          )}
+        </>
+      )}
+      {dropOpen && dropPos && createPortal(
+        <div style={{ position: 'fixed', top: dropPos.top, left: dropPos.left, zIndex: 9999, width: dropPos.width }}
+          className="bg-[#29292e] border border-[#323238] rounded-lg shadow-xl overflow-hidden">
+          <div className="px-3 py-1.5 border-b border-[#323238] flex items-center justify-between">
+            <span className="text-[10px] text-gray-500 uppercase tracking-wider">Sugestões</span>
+            <button onMouseDown={() => setDropOpen(false)} className="text-gray-600 hover:text-white text-xs">✕</button>
+          </div>
+          <div className="max-h-44 overflow-y-auto">
+            {sugestoes.length === 0
+              ? <p className="text-gray-500 text-xs text-center py-3">Nenhuma sugestão cadastrada</p>
+              : sugestoes.map(item => (
+                <button key={item.name} type="button"
+                  onMouseDown={() => { clearTimeout(blurRef.current); onChange(item[campo]); setDropOpen(false); setTimeout(grow, 0) }}
+                  className="w-full text-left px-3 py-1.5 text-xs text-gray-300 hover:bg-[#323238] hover:text-white transition-colors border-b border-[#323238]/50 last:border-0">
+                  {item[campo]}
+                </button>
+              ))}
+          </div>
+        </div>,
+        document.body
+      )}
+    </div>
+  )
+}
+
+// ─── InputSug ─────────────────────────────────────────────────────────────────
+// Input de célula de tabela com auto-sugestão ao digitar (portal fixed).
+
+const InputSug = ({ value, onChange, doctype, campo, className = '' }) => {
+  const ref = useRef(null)
+  const debRef = useRef(null)
+  const blurRef = useRef(null)
+  const [sugestoes, setSugestoes] = useState([])
+  const [dropOpen, setDropOpen] = useState(false)
+  const [dropPos, setDropPos] = useState(null)
+  const [salvoBanco, setSalvoBanco] = useState(false)
+
+  const abrirComResultados = (lista) => {
+    if (!ref.current) return
+    const r = ref.current.getBoundingClientRect()
+    setDropPos({ top: r.bottom + 4, left: r.left, width: Math.max(r.width, 220) })
+    setSugestoes(lista)
+    if (lista.length > 0) setDropOpen(true)
+  }
+
+  useEffect(() => {
+    clearTimeout(debRef.current)
+    if (!value?.trim()) { setSugestoes([]); setDropOpen(false); return }
+    debRef.current = setTimeout(async () => {
+      try {
+        const lista = await listarTextos(doctype, campo, { busca: value.trim(), apenasAtivos: true })
+        const filtradas = lista.filter(item => (item[campo] || '').trim().toLowerCase() !== value.trim().toLowerCase())
+        abrirComResultados(filtradas)
+      } catch (e) { console.error('sugestões:', e.message) }
+    }, 300)
+    return () => clearTimeout(debRef.current)
+  }, [value, doctype, campo])
+
+  const abrirTodas = async () => {
+    try {
+      const lista = await listarTextos(doctype, campo, { apenasAtivos: true })
+      abrirComResultados(lista)
+    } catch (e) { console.error('sugestões:', e.message) }
+  }
+
+  const salvarNoBanco = async () => {
+    if (!value?.trim()) return
+    try {
+      await salvarNoBancoSeNovo(doctype, campo, value.trim())
+      setSalvoBanco(true)
+      setTimeout(() => setSalvoBanco(false), 2000)
+    } catch (e) { console.error('salvar banco:', e.message) }
+  }
+
+  const handleBlur = () => { blurRef.current = setTimeout(() => setDropOpen(false), 200) }
+
+  return (
+    <div className="relative flex items-center">
+      <input ref={ref} value={value || ''} onChange={e => onChange(e.target.value)}
+        onBlur={handleBlur} onFocus={() => clearTimeout(blurRef.current)}
+        className={`w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60 pr-9 ${className}`} />
+      <button type="button" onClick={abrirTodas}
+        className="absolute right-5 text-gray-600 hover:text-yellow-400 transition-colors" title="Ver todas as sugestões">
+        <Lightbulb size={10} />
+      </button>
+      {value?.trim() && (
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); salvarNoBanco() }}
+          className="absolute right-1 transition-colors" title="Salvar no banco">
+          {salvoBanco
+            ? <BookmarkCheck size={10} className="text-green-400" />
+            : <BookmarkPlus size={10} className="text-gray-600 hover:text-[#850000]" />}
+        </button>
+      )}
+      {dropOpen && dropPos && createPortal(
+        <div style={{ position: 'fixed', top: dropPos.top, left: dropPos.left, zIndex: 9999, width: dropPos.width }}
+          className="bg-[#29292e] border border-[#323238] rounded-lg shadow-xl overflow-hidden">
+          <div className="px-3 py-1.5 border-b border-[#323238] flex items-center justify-between">
+            <span className="text-[10px] text-gray-500 uppercase tracking-wider">Sugestões</span>
+            <button onMouseDown={() => setDropOpen(false)} className="text-gray-600 hover:text-white text-xs">✕</button>
+          </div>
+          <div className="max-h-44 overflow-y-auto">
+            {sugestoes.length === 0
+              ? <p className="text-gray-500 text-xs text-center py-3">Nenhuma sugestão</p>
+              : sugestoes.map(item => (
+                <button key={item.name} type="button"
+                  onMouseDown={() => { clearTimeout(blurRef.current); onChange(item[campo]); setDropOpen(false) }}
+                  className="w-full text-left px-3 py-1.5 text-xs text-gray-300 hover:bg-[#323238] hover:text-white transition-colors border-b border-[#323238]/50 last:border-0">
+                  {item[campo]}
+                </button>
+              ))}
+          </div>
+        </div>,
+        document.body
+      )}
+    </div>
   )
 }
 
@@ -425,14 +612,20 @@ const DetalhesAerobico = ({ aerobico, onSave, onClose }) => {
       footer={<><Button variant="ghost" onClick={onClose}>Cancelar</Button><Button variant="primary" onClick={() => { onSave(local); onClose() }}>Salvar</Button></>}>
       <div className="p-4 space-y-4">
         <div className="bg-[#1a1a1a] rounded-lg px-4 py-2 text-sm text-gray-300 font-medium">{local.exercicios || '—'}</div>
-        <FormGroup label="Frequência"><Input value={local.frequencia || ''} onChange={v => upd('frequencia', v)} placeholder="Ex: 2x na semana" /></FormGroup>
+        <FormGroup label="Frequência">
+          <TextareaComSugestoes value={local.frequencia || ''} onChange={v => upd('frequencia', v)}
+            doctype="Frequencia Aerobico" campo="frequencia_aerobico" placeholder="Ex: 2x na semana" rows={1} />
+        </FormGroup>
         <div className="grid grid-cols-2 gap-3">
           <FormGroup label="Link ou ID do Vídeo" hint={videoDetected ? '✓ ID extraído' : undefined}>
             <Input value={local.video || ''} onChange={handleVideoChange} placeholder="https://youtu.be/... ou código" />
           </FormGroup>
           <FormGroup label="Plataforma"><Select value={local['plataforma_do_vídeo'] || ''} onChange={v => upd('plataforma_do_vídeo', v)} options={PLATAFORMAS_VIDEO} placeholder="Selecionar..." /></FormGroup>
         </div>
-        <FormGroup label="Instruções"><Textarea value={local.instrucao || ''} onChange={v => upd('instrucao', v)} rows={4} placeholder="Descreva as instruções..." /></FormGroup>
+        <FormGroup label="Instruções">
+          <TextareaComSugestoes value={local.instrucao || ''} onChange={v => upd('instrucao', v)}
+            doctype="Instrucao Aerobico" campo="instrucao_aerobico" placeholder="Descreva as instruções..." rows={4} />
+        </FormGroup>
       </div>
     </Modal>
   )
@@ -462,7 +655,10 @@ const DetalhesAlongamento = ({ alongamento, onSave, onClose }) => {
           </FormGroup>
           <FormGroup label="Plataforma"><Select value={local['plataforma_do_vídeo'] || ''} onChange={v => upd('plataforma_do_vídeo', v)} options={PLATAFORMAS_VIDEO} placeholder="Selecionar..." /></FormGroup>
         </div>
-        <FormGroup label="Observações"><Textarea value={local.observacoes || ''} onChange={v => upd('observacoes', v)} rows={4} /></FormGroup>
+        <FormGroup label="Observações">
+          <TextareaComSugestoes value={local.observacoes || ''} onChange={v => upd('observacoes', v)}
+            doctype="Alongamento Observacao" campo="alongamento_observacao" rows={4} />
+        </FormGroup>
       </div>
     </Modal>
   )
@@ -673,7 +869,7 @@ const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, inten
                     </td>
                     {/* Instruções */}
                     <td className="px-2 py-1 align-middle">
-                      <TextareaExpansivel value={ex.observacao || ''} onChange={v => upd(i, 'observacao', v)} placeholder="Instruções..." />
+                      <TextareaExpansivel value={ex.observacao || ''} onChange={v => upd(i, 'observacao', v)} placeholder="Instruções..." doctype="Treino Observacao" campo="treino_observacao" />
                     </td>
                     {/* Ações */}
                     <td className="px-1 py-1 align-top">
@@ -1078,8 +1274,8 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
                         </div>
                       </td>
                       <td className="px-2 py-1 align-middle"><SearchableCombo value={a.exercicios || ''} onChange={v => set('exercicios', v)} options={aerobs} placeholder="Buscar..." /></td>
-                      <td className="px-2 py-1 align-middle"><input value={a.frequencia || ''} onChange={e => set('frequencia', e.target.value)} className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60" /></td>
-                      <td className="px-2 py-1 align-top"><TextareaExpansivel value={a.instrucao || ''} onChange={v => set('instrucao', v)} placeholder="Instruções..." resetKey={aerobicoResetKey} /></td>
+                      <td className="px-2 py-1 align-middle"><InputSug value={a.frequencia || ''} onChange={v => set('frequencia', v)} doctype="Frequencia Aerobico" campo="frequencia_aerobico" /></td>
+                      <td className="px-2 py-1 align-top"><TextareaExpansivel value={a.instrucao || ''} onChange={v => set('instrucao', v)} placeholder="Instruções..." resetKey={aerobicoResetKey} doctype="Instrucao Aerobico" campo="instrucao_aerobico" /></td>
                       <td className="px-2 py-1 text-center align-middle">
                         <div className="flex gap-1 justify-center opacity-0 group-hover:opacity-100 transition">
                           <button onClick={() => setDetalheAerobicoIdx(i)} className="h-6 w-6 flex items-center justify-center bg-[#29292e] text-blue-400 hover:bg-blue-600 hover:text-white rounded transition-colors"><Info size={10} /></button>
@@ -1143,7 +1339,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
                       </td>
                       <td className="px-2 py-1 align-middle"><SearchableCombo value={a.exercicio || ''} onChange={v => set('exercicio', v)} options={alongs} placeholder="Buscar..." /></td>
                       <td className="px-2 py-1 align-middle"><input type="number" value={a.series || ''} onChange={e => set('series', e.target.value)} className="w-full h-8 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60 text-center" /></td>
-                      <td className="px-2 py-1 align-top"><TextareaExpansivel value={a.observacoes || ''} onChange={v => set('observacoes', v)} placeholder="Observações..." resetKey={alongamentoResetKey} /></td>
+                      <td className="px-2 py-1 align-top"><TextareaExpansivel value={a.observacoes || ''} onChange={v => set('observacoes', v)} placeholder="Observações..." resetKey={alongamentoResetKey} doctype="Alongamento Observacao" campo="alongamento_observacao" /></td>
                       <td className="px-2 py-1 text-center align-middle">
                         <div className="flex gap-1 justify-center opacity-0 group-hover:opacity-100 transition">
                           <button onClick={() => setDetalheAlongamentoIdx(i)} className="h-6 w-6 flex items-center justify-center bg-[#29292e] text-blue-400 hover:bg-blue-600 hover:text-white rounded transition-colors"><Info size={10} /></button>

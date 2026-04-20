@@ -13,7 +13,7 @@ const NAV_ITEMS = [
   { type: 'divider', label: 'Dashboard' },
   { id: 'main',      label: 'Meus Alunos',          icon: Users,        path: '/' },
   { type: 'divider', label: 'Central de Alunos' },
-  { id: 'alunos',    label: 'Hub de Alunos',         icon: Home,         path: '/alunos' },
+  { id: 'alunos',    label: 'Gestão de Anamneses',   icon: ClipboardList, path: '/alunos' },
   { id: 'avaliacoes',label: 'Avaliações Corporais',  icon: BarChart2,    path: '/avaliacoes' },
   { type: 'divider', label: 'Module Trainning' },
   { id: 'fichas',    label: 'Fichas de Treino',      icon: Dumbbell,     path: '/fichas' },

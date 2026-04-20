@@ -12,6 +12,23 @@ export const listarAnamneses = async ({ alunoId, page = 1, limit = 50 } = {}) =>
   return { list: res.data.data || [] }
 }
 
+export const listarAnamnesesPorAlunos = async (ids) => {
+  if (!ids.length) return []
+  const res = await client.get('/api/resource/Anamnese', {
+    params: {
+      fields: JSON.stringify(["name","titulo","status","aluno"]),
+      filters: JSON.stringify([["aluno","in", ids]]),
+      limit: ids.length * 10,
+      order_by: 'creation desc',
+    }
+  })
+  return res.data.data || []
+}
+
+export const excluirAnamnese = async (id) => {
+  await client.delete(`/api/resource/Anamnese/${encodeURIComponent(id)}`)
+}
+
 export const buscarAnamnese = async (id) => {
   const res = await client.get(`/api/resource/Anamnese/${id}`)
   return res.data.data
@@ -35,10 +52,13 @@ export const listarFormularios = async () => {
 }
 
 export const vincularAnamnese = async (alunoId, formulario, enviarAluno = true) => {
-  const res = await client.post('/api/method/shapefy.api.vincular_anamnese', {
+  const data = new URLSearchParams({
     aluno: alunoId,
     formulario,
-    enviar_aluno: enviarAluno ? 1 : 0
+    enviar_aluno: enviarAluno ? 1 : 0,
+  })
+  const res = await client.post('/api/method/shapefy.api_shapefy.vincular_anamnese', data, {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
   })
   return res.data.message
 }

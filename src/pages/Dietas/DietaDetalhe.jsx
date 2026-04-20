@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Save, AlertCircle, Loader, ChevronUp, ChevronDown, Plus,
-  FileText, UtensilsCrossed, Edit, Copy, Trash2, ArrowLeftRight
+  FileText, UtensilsCrossed, Edit, Copy, Trash2, ArrowLeftRight, Lightbulb, X,
+  BookmarkPlus, BookmarkCheck,
 } from 'lucide-react'
 import {
   buscarDieta, salvarDieta, listarAlimentos,
@@ -10,6 +12,7 @@ import {
   criarRefeicaoPronta, excluirDieta, duplicarDieta
 } from '../../api/dietas'
 import { listarAlunos, buscarAluno, salvarAluno } from '../../api/alunos'
+import { listarTextos, salvarNoBancoSeNovo } from '../../api/bancoTextos'
 import {
   Button, FormGroup, Input, Select, Textarea, Autocomplete,
   Modal, CollapsibleBanner, Tabs, FooterTotais,
@@ -18,6 +21,103 @@ import {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (v, dec = 1) => v != null ? Number(v).toFixed(dec) : '0.0'
 const uid = () => `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+
+// ─── LegendaSug ───────────────────────────────────────────────────────────────
+// Input de legenda com auto-sugestão ao digitar (portal fixed).
+
+const LegendaSug = ({ value, onChange }) => {
+  const ref = useRef(null)
+  const btnRef = useRef(null)
+  const debRef = useRef(null)
+  const blurRef = useRef(null)
+  const [sugestoes, setSugestoes] = useState([])
+  const [dropOpen, setDropOpen] = useState(false)
+  const [dropPos, setDropPos] = useState(null)
+  const [salvoBanco, setSalvoBanco] = useState(false)
+
+  const abrirComResultados = (lista) => {
+    if (!ref.current) return
+    const r = ref.current.getBoundingClientRect()
+    setDropPos({ top: r.bottom + 4, left: Math.max(4, r.right - 280), width: 280 })
+    setSugestoes(lista)
+    if (lista.length > 0) setDropOpen(true)
+  }
+
+  useEffect(() => {
+    clearTimeout(debRef.current)
+    if (!value?.trim()) { setSugestoes([]); setDropOpen(false); return }
+    debRef.current = setTimeout(async () => {
+      try {
+        const lista = await listarTextos('Legendas', 'legend', { busca: value.trim(), apenasAtivos: true, extra: 'full_name' })
+        const filtradas = lista.filter(item => (item.legend || '').trim().toLowerCase() !== value.trim().toLowerCase())
+        abrirComResultados(filtradas)
+      } catch (e) { console.error('sugestões legendas:', e.message) }
+    }, 300)
+    return () => clearTimeout(debRef.current)
+  }, [value])
+
+  const abrirTodas = async () => {
+    try {
+      const lista = await listarTextos('Legendas', 'legend', { apenasAtivos: true, extra: 'full_name' })
+      abrirComResultados(lista)
+    } catch (e) { console.error('sugestões legendas:', e.message) }
+  }
+
+  const salvarNoBanco = async () => {
+    if (!value?.trim()) return
+    try {
+      await salvarNoBancoSeNovo('Legendas', 'legend', value.trim())
+      setSalvoBanco(true)
+      setTimeout(() => setSalvoBanco(false), 2000)
+    } catch (e) { console.error('salvar legenda banco:', e.message) }
+  }
+
+  const handleBlur = () => { blurRef.current = setTimeout(() => setDropOpen(false), 200) }
+
+  return (
+    <div className="flex items-center gap-1 w-full relative">
+      <input ref={ref} value={value || ''} onChange={e => onChange(e.target.value)}
+        onBlur={handleBlur} onFocus={() => clearTimeout(blurRef.current)}
+        placeholder="Legenda (Ex: Consumir 40min antes do treino)"
+        className="flex-1 bg-transparent text-gray-400 text-xs outline-none border-b border-transparent hover:border-[#323238] focus:border-[#850000]/60 transition-colors text-left pb-1"
+      />
+      <button ref={btnRef} type="button" onClick={abrirTodas}
+        className="text-gray-600 hover:text-yellow-400 transition-colors shrink-0 pb-1" title="Ver todas as sugestões">
+        <Lightbulb size={11} />
+      </button>
+      {value?.trim() && (
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); salvarNoBanco() }}
+          className="shrink-0 pb-1 transition-colors" title="Salvar no banco">
+          {salvoBanco
+            ? <BookmarkCheck size={11} className="text-green-400" />
+            : <BookmarkPlus size={11} className="text-gray-600 hover:text-[#850000]" />}
+        </button>
+      )}
+      {dropOpen && dropPos && createPortal(
+        <div style={{ position: 'fixed', top: dropPos.top, left: dropPos.left, zIndex: 9999, width: dropPos.width }}
+          className="bg-[#29292e] border border-[#323238] rounded-lg shadow-xl overflow-hidden">
+          <div className="px-3 py-1.5 border-b border-[#323238] flex items-center justify-between">
+            <span className="text-[10px] text-gray-500 uppercase tracking-wider">Sugestões de legenda</span>
+            <button onMouseDown={() => setDropOpen(false)} className="text-gray-600 hover:text-white text-xs">✕</button>
+          </div>
+          <div className="max-h-44 overflow-y-auto">
+            {sugestoes.length === 0
+              ? <p className="text-gray-500 text-xs text-center py-3">Nenhuma sugestão cadastrada</p>
+              : sugestoes.map(item => (
+                <button key={item.name} type="button"
+                  onMouseDown={() => { clearTimeout(blurRef.current); onChange(item.legend); setDropOpen(false) }}
+                  className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-[#323238] hover:text-white transition-colors border-b border-[#323238]/50 last:border-0">
+                  {item.full_name && <span className="text-[10px] text-gray-500 block mb-0.5">{item.full_name}</span>}
+                  {item.legend}
+                </button>
+              ))}
+          </div>
+        </div>,
+        document.body
+      )}
+    </div>
+  )
+}
 
 const calcularTotais = (draft) => {
   if (!draft) return null
@@ -333,7 +433,7 @@ const ModalAdicionarRefeicaoPronta = ({ onClose, onSelectMeal }) => {
     timerRef.current = setTimeout(async () => {
       setCarregando(true)
       try {
-        const res = await listarRefeicoesProntas({ busca: termoBusca || undefined, limit: 5 })
+        const res = await listarRefeicoesProntas({ busca: termoBusca || undefined, enabled: '1', limit: 5 })
         let list = res.list || []
         if (t.includes('%') && partes.length) {
           const lowerParts = partes.map(p => p.toLowerCase())
@@ -938,11 +1038,9 @@ const RefeicaoBlock = ({ n, draft, setDraft }) => {
                     onChange={e => setDraft(prev => ({ ...prev, [`meal_${n}_option_${optNum}_label`]: e.target.value }))}
                     className="bg-transparent text-white font-bold text-sm outline-none border-b border-transparent hover:border-[#323238] focus:border-[#850000]/60 transition-colors uppercase tracking-wider w-full md:w-max"
                   />
-                  <input
+                  <LegendaSug
                     value={draft[`meal_${n}_option_${optNum}_legend`] || ''}
-                    onChange={e => setDraft(prev => ({ ...prev, [`meal_${n}_option_${optNum}_legend`]: e.target.value }))}
-                    placeholder="Legenda (Ex: Consumir 40min antes do treino)"
-                    className="bg-transparent text-gray-400 text-xs outline-none border-b border-transparent hover:border-[#323238] focus:border-[#850000]/60 transition-colors w-full text-left pb-1"
+                    onChange={v => setDraft(prev => ({ ...prev, [`meal_${n}_option_${optNum}_legend`]: v }))}
                   />
                   <div className="flex flex-row gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden py-0.5">
                     <Button variant="danger" size="xs" onClick={() => desabilitarOpcao(optNum)} className="whitespace-nowrap shrink-0">

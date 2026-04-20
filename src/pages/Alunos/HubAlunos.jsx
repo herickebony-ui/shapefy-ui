@@ -1,154 +1,227 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { Search, RefreshCw, ChevronLeft, ChevronRight, Trash2, User } from 'lucide-react'
-import { listarAlunos, excluirAluno } from '../../api/alunos'
-import { listarAnamneses } from '../../api/anamneses'
-import { Avatar, Badge, EmptyState, Spinner, PageHeader, Input, Button } from '../../components/ui'
-import { tw } from '../../styles/tokens'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { Send, RefreshCw, ChevronRight } from 'lucide-react'
+
+const fmtData = (d) => {
+  if (!d) return ''
+  const [y, m, day] = String(d).split(' ')[0].split('-')
+  return `${day}/${m}/${y}`
+}
+import { listarAlunos } from '../../api/alunos'
+import { listarAnamnesesPorAlunos, listarAnamneses, listarFormularios, vincularAnamnese } from '../../api/anamneses'
+import {
+  Button, Badge, Spinner, EmptyState, DataTable,
+  Modal, FormGroup, Select,
+} from '../../components/ui'
+import ListPage from '../../components/templates/ListPage'
+import AlunoModal from './AlunoModal'
+
+const PAGE_SIZE = 30
+
+const STATUS_OPTS = [
+  { value: '', label: 'Todos' },
+  { value: 'Respondido', label: 'Respondido' },
+  { value: 'Enviado', label: 'Enviado' },
+  { value: 'pendente', label: 'Sem anamnese' },
+]
 
 export default function HubAlunos() {
   const [alunos, setAlunos] = useState([])
   const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [query, setQuery] = useState('')
+  const [busca, setBusca] = useState('')
+  const [queryBusca, setQueryBusca] = useState('')
+  const [filtroStatus, setFiltroStatus] = useState('')
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
   const [anamnesePorAluno, setAnamnesePorAluno] = useState({})
-  const searchTimeout = useRef(null)
+  const debounceRef = useRef(null)
+
+  // Modal detalhe aluno
+  const [alunoAberto, setAlunoAberto] = useState(null)
+
+  // Modal enviar anamnese
+  const [alunoEnvio, setAlunoEnvio] = useState(null)
+  const [formularios, setFormularios] = useState([])
+  const [formularioSelecionado, setFormularioSelecionado] = useState('')
+  const [enviando, setEnviando] = useState(false)
 
   useEffect(() => {
-    clearTimeout(searchTimeout.current)
-    searchTimeout.current = setTimeout(() => {
-      setQuery(search)
-      setPage(1)
-    }, 400)
-  }, [search])
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => { setQueryBusca(busca); setPage(1) }, 400)
+    return () => clearTimeout(debounceRef.current)
+  }, [busca])
 
-  const fetchAlunos = useCallback(async () => {
+  useEffect(() => { setPage(1) }, [filtroStatus])
+
+  const carregar = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await listarAlunos({ search: query, page, limit: 20 })
+      const res = await listarAlunos({ search: queryBusca, page, limit: PAGE_SIZE })
       setAlunos(res.list)
       setHasMore(res.hasMore)
-      fetchAnamneses(res.list.map(a => a.name))
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
-  }, [query, page])
+      carregarAnamneses(res.list.map(a => a.name))
+    } catch (e) { console.error(e) }
+    finally { setLoading(false) }
+  }, [queryBusca, page])
 
-  useEffect(() => { fetchAlunos() }, [fetchAlunos])
+  useEffect(() => { carregar() }, [carregar])
 
-  async function fetchAnamneses(ids) {
+  const carregarAnamneses = async (ids) => {
     if (!ids.length) return
     try {
+      const lista = await listarAnamnesesPorAlunos(ids)
       const map = {}
-      await Promise.all(ids.map(async id => {
-        const res = await listarAnamneses({ alunoId: id })
-        if (res.list.length) map[id] = res.list
-      }))
+      lista.forEach(a => {
+        if (!map[a.aluno]) map[a.aluno] = []
+        map[a.aluno].push(a)
+      })
       setAnamnesePorAluno(prev => ({ ...prev, ...map }))
-    } catch {}
+    } catch (e) { console.error(e) }
   }
 
-  async function handleExcluir(name, e) {
-    e.stopPropagation()
-    if (!confirm('Tem certeza que deseja excluir este aluno?')) return
-    try {
-      await excluirAluno(name)
-      setAlunos(prev => prev.filter(a => a.name !== name))
-    } catch {
-      alert('Erro ao excluir aluno.')
-    }
-  }
-
-  function getAnamnese(id) {
+  const getStatus = (id) => {
     const lista = anamnesePorAluno[id] || []
-    if (!lista.length) return null
-    if (lista.find(a => a.status === 'Respondido')) return 'respondido'
-    if (lista.find(a => a.status === 'Enviado')) return 'enviado'
+    if (!lista.length) return 'pendente'
+    if (lista.find(a => a.status === 'Respondido')) return 'Respondido'
+    if (lista.find(a => a.status === 'Enviado')) return 'Enviado'
     return 'pendente'
   }
 
+  const abrirEnvio = async (aluno, e) => {
+    e.stopPropagation()
+    setAlunoEnvio(aluno)
+    setFormularioSelecionado('')
+    if (!formularios.length) {
+      const res = await listarFormularios()
+      setFormularios(res.list || [])
+    }
+  }
+
+  const handleEnviar = async () => {
+    if (!formularioSelecionado) return alert('Selecione um formulário.')
+    setEnviando(true)
+    try {
+      await vincularAnamnese(alunoEnvio.name, formularioSelecionado, true)
+      setAlunoEnvio(null)
+      carregarAnamneses([alunoEnvio.name])
+    } catch (e) {
+      console.error(e)
+      alert('Erro ao enviar anamnese.')
+    } finally { setEnviando(false) }
+  }
+
+  const alunosFiltrados = filtroStatus
+    ? alunos.filter(a => getStatus(a.name) === filtroStatus)
+    : alunos
+
+  const columns = [
+    {
+      label: 'Aluno',
+      render: (row) => (
+        <div className="min-w-0">
+          <p className="text-white text-sm font-medium truncate">{row.nome_completo}</p>
+          {row.email && <p className="text-gray-500 text-xs truncate">{row.email}</p>}
+          {row.creation && <p className="text-gray-700 text-[10px]">Cadastrado em {fmtData(row.creation)}</p>}
+        </div>
+      ),
+    },
+    {
+      label: 'Anamnese',
+      headerClass: 'hidden sm:table-cell w-36 text-center',
+      cellClass: 'hidden sm:table-cell text-center',
+      render: (row) => {
+        const s = getStatus(row.name)
+        if (s === 'Respondido') return <Badge variant="success" size="sm">Respondido</Badge>
+        if (s === 'Enviado') return <Badge variant="warning" size="sm">Enviado</Badge>
+        return <Badge variant="default" size="sm">Sem anamnese</Badge>
+      },
+    },
+    {
+      label: 'Ações',
+      headerClass: 'w-24 text-center',
+      cellClass: 'text-center',
+      render: (row) => (
+        <div className="flex items-center justify-center gap-1.5" onClick={e => e.stopPropagation()}>
+          <button
+            onClick={(e) => abrirEnvio(row, e)}
+            title="Enviar anamnese"
+            className="h-7 w-7 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors"
+          >
+            <Send size={12} />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); setAlunoAberto(row) }}
+            title="Ver detalhes"
+            className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors"
+          >
+            <ChevronRight size={12} />
+          </button>
+        </div>
+      ),
+    },
+  ]
+
   return (
-    <div className="p-8">
-      <PageHeader
-        title="Hub de Alunos"
-        description="Hub central dos seus pacientes · mais recentes primeiro"
-        action={
-          <Button
-            variant="secondary"
-            size="icon"
-            icon={RefreshCw}
-            loading={loading}
-            onClick={fetchAlunos}
-          />
+    <>
+      <ListPage
+        title="Gestão de Anamneses"
+        subtitle="Envie e acompanhe anamneses dos seus alunos"
+        actions={
+          <Button variant="secondary" size="sm" icon={RefreshCw} onClick={carregar} loading={loading} />
         }
-      />
+        filters={[
+          { type: 'search', value: busca, onChange: setBusca, placeholder: 'Buscar por nome...' },
+          { type: 'select', value: filtroStatus, onChange: setFiltroStatus, options: STATUS_OPTS },
+        ]}
+        loading={loading}
+        empty={alunosFiltrados.length === 0 && !loading ? {
+          title: 'Nenhum aluno encontrado',
+          description: busca ? `Sem resultados para "${busca}"` : 'Ajuste os filtros acima',
+        } : null}
+      >
+        {!loading && alunosFiltrados.length > 0 && (
+          <DataTable
+            columns={columns}
+            rows={alunosFiltrados}
+            rowKey="name"
+            onRowClick={(row) => setAlunoAberto(row)}
+            page={page}
+            pageSize={PAGE_SIZE}
+            onPage={setPage}
+            hasMore={hasMore}
+          />
+        )}
+      </ListPage>
 
-      {/* Busca */}
-      <div className="mb-6 max-w-md">
-        <Input
-          value={search}
-          onChange={setSearch}
-          placeholder="Buscar por nome..."
-          icon={Search}
-          onClear={() => setSearch('')}
-        />
-      </div>
+      <AlunoModal aluno={alunoAberto} onClose={() => setAlunoAberto(null)} />
 
-      {/* Lista */}
-      {loading ? <Spinner /> : alunos.length === 0 ? (
-        <EmptyState
-          icon={User}
-          title={query ? 'Nenhum aluno encontrado' : 'Nenhum aluno cadastrado'}
-          description={query ? `Sem resultados para "${query}"` : 'Os alunos aparecerão aqui'}
-        />
-      ) : (
-        <div className={`${tw.card} overflow-hidden`}>
-          {alunos.map((aluno, i) => {
-            const anamnese = getAnamnese(aluno.name)
-            return (
-              <div
-                key={aluno.name}
-                className={`flex items-center gap-4 px-4 py-3.5 hover:bg-[#323238] transition-colors group cursor-pointer ${i < alunos.length - 1 ? tw.dividerBottom : ''}`}
-              >
-                <Avatar nome={aluno.nome_completo} foto={aluno.foto} size="sm" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-white font-medium text-sm truncate">{aluno.nome_completo}</p>
-                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    {aluno.email && <p className="text-gray-500 text-xs truncate">{aluno.email}</p>}
-                    <div className="flex items-center gap-1.5">
-                      {aluno.dieta === 1 && <Badge variant="orange" size="sm">D</Badge>}
-                      {aluno.treino === 1 && <Badge variant="blue" size="sm">T</Badge>}
-                      {anamnese === 'respondido' && <Badge variant="success" size="sm">✓ Anamnese</Badge>}
-                      {anamnese === 'enviado' && <Badge variant="warning" size="sm">⏳ Anamnese</Badge>}
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={(e) => handleExcluir(aluno.name, e)}
-                  className="opacity-0 group-hover:opacity-100 w-8 h-8 flex items-center justify-center rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Paginação */}
-      {!loading && alunos.length > 0 && (
-        <div className="flex items-center justify-between mt-6">
-          <p className={`${tw.meta} text-sm`}>Página {page} · {alunos.length} aluno{alunos.length !== 1 ? 's' : ''}</p>
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" size="icon" icon={ChevronLeft} onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} />
-            <span className={`${tw.meta} text-sm px-2`}>Página {page}</span>
-            <Button variant="secondary" size="icon" icon={ChevronRight} onClick={() => setPage(p => p + 1)} disabled={!hasMore} />
+      {alunoEnvio && (
+        <Modal
+          isOpen
+          onClose={() => setAlunoEnvio(null)}
+          title="Enviar Anamnese"
+          subtitle={alunoEnvio.nome_completo}
+          size="sm"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setAlunoEnvio(null)}>Cancelar</Button>
+              <Button variant="primary" icon={Send} loading={enviando} onClick={handleEnviar}>Enviar</Button>
+            </>
+          }
+        >
+          <div className="p-4">
+            <FormGroup label="Formulário de anamnese" required>
+              <Select
+                value={formularioSelecionado}
+                onChange={setFormularioSelecionado}
+                options={[
+                  { value: '', label: 'Selecionar formulário...' },
+                  ...formularios.map(f => ({ value: f.name, label: f.titulo })),
+                ]}
+              />
+            </FormGroup>
           </div>
-        </div>
+        </Modal>
       )}
-    </div>
+    </>
   )
 }

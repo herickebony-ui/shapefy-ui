@@ -13,6 +13,11 @@ import GerenciarAlongamentos from './pages/Exercicios/GerenciarAlongamentos'
 import GerenciarAerobicos from './pages/Exercicios/GerenciarAerobicos'
 import AlimentosListagem from './pages/Alimentos/AlimentosListagem'
 import RefeicoesProntasListagem from './pages/Dietas/RefeicoesProntasListagem'
+import FeedbackListagem from './pages/Feedbacks/FeedbackListagem'
+import FeedbackDetalhe from './pages/Feedbacks/FeedbackDetalhe'
+import AvaliacaoListagem from './pages/Avaliacoes/AvaliacaoListagem'
+import AvaliacaoForm from './pages/Avaliacoes/AvaliacaoForm'
+import BancoTextos from './pages/BancoTextos/BancoTextos'
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -43,6 +48,11 @@ function App() {
           <Route path="aerobicos" element={<GerenciarAerobicos />} />
           <Route path="alimentos" element={<AlimentosListagem />} />
           <Route path="refeicoes-prontas" element={<RefeicoesProntasListagem />} />
+          <Route path="feedbacks" element={<FeedbackListagem />} />
+          <Route path="feedbacks/:id" element={<FeedbackDetalhe />} />
+          <Route path="avaliacoes" element={<AvaliacaoListagem />} />
+          <Route path="avaliacoes/nova" element={<AvaliacaoForm />} />
+          <Route path="banco-textos" element={<BancoTextos />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
