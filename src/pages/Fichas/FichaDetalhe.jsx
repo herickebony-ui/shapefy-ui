@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Save,
-  Plus, X, Trash2, Copy, Info, Zap, GripVertical, Loader,
-  Settings,
+  Plus, X, Trash2, Copy, Info, GripVertical, Loader,
+  Settings, Zap,
 } from 'lucide-react'
 import {
-  buscarFicha, criarFicha, salvarFicha,
-  listarExercicios, listarAlongamentos, listarAerobicos,
+  listarFichas, buscarFicha, criarFicha, salvarFicha,
+  listarExercicios, listarAlongamentos, listarAerobicos, listarGruposMusculares,
 } from '../../api/fichas'
 import { listarAlunos, buscarAluno, salvarAluno } from '../../api/alunos'
 import {
@@ -128,39 +129,29 @@ const novaFicha = () => ({
 // Expande ao focar, recolhe ao perder foco. Usado inline em células de tabela.
 
 const TextareaExpansivel = ({ value, onChange, placeholder = '', resetKey, className = '' }) => {
-  const [expanded, setExpanded] = useState(false)
   const ref = useRef(null)
 
+  // Ao adicionar nova linha (resetKey muda), volta ao tamanho base
   useEffect(() => {
-    setExpanded(false)
-    if (ref.current) ref.current.style.height = '2.5rem'
+    if (ref.current) ref.current.style.height = '2rem'
   }, [resetKey])
 
-  const handleFocus = () => {
-    setExpanded(true)
-    setTimeout(() => {
-      if (ref.current) {
-        ref.current.style.height = 'auto'
-        ref.current.style.height = Math.max(ref.current.scrollHeight, 40) + 'px'
-      }
-    }, 0)
-  }
-
-  const handleBlur = () => {
-    setExpanded(false)
-    if (ref.current) ref.current.style.height = '2.5rem'
+  const grow = () => {
+    if (ref.current) {
+      ref.current.style.height = 'auto'
+      ref.current.style.height = Math.max(ref.current.scrollHeight, 32) + 'px'
+    }
   }
 
   return (
     <textarea
       ref={ref}
       value={value || ''}
-      onChange={e => onChange(e.target.value)}
-      onFocus={handleFocus}
-      onBlur={handleBlur}
+      onChange={e => { onChange(e.target.value); grow() }}
+      onFocus={grow}
       placeholder={placeholder}
       rows={1}
-      className={`bg-[#29292e] border border-[#323238] text-gray-200 text-xs rounded px-2 py-1.5 w-full outline-none focus:border-[#850000]/60 resize-none leading-tight transition-all duration-200 ${expanded ? 'min-h-[2.5rem]' : 'h-10 overflow-hidden'} ${className}`}
+      className={`bg-[#29292e] border border-[#323238] text-gray-200 text-xs rounded px-2 py-1.5 w-full outline-none focus:border-[#850000]/60 resize-none leading-tight min-h-[2rem] ${className}`}
     />
   )
 }
@@ -172,7 +163,8 @@ const TextareaExpansivel = ({ value, onChange, placeholder = '', resetKey, class
 const SearchableCombo = ({ value, onChange, options = [], placeholder = '' }) => {
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState(value)
-  const ref = useRef(null)
+  const [rect, setRect] = useState(null)
+  const inputRef = useRef(null)
 
   useEffect(() => { setQ(value) }, [value])
 
@@ -182,40 +174,53 @@ const SearchableCombo = ({ value, onChange, options = [], placeholder = '' }) =>
     return options.filter(o => normalizar(o).includes(n)).slice(0, 40)
   }, [q, options])
 
+  const openDropdown = () => {
+    if (inputRef.current) setRect(inputRef.current.getBoundingClientRect())
+    setOpen(true)
+  }
+
+  // Atualiza posição do dropdown ao scrollar (position:fixed precisa de rect atualizado)
   useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [])
+    if (!open) return
+    const update = () => {
+      if (inputRef.current) setRect(inputRef.current.getBoundingClientRect())
+    }
+    window.addEventListener('scroll', update, true)
+    return () => window.removeEventListener('scroll', update, true)
+  }, [open])
 
   return (
-    <div ref={ref} className="relative w-full">
+    <div className="relative w-full">
       <input
+        ref={inputRef}
         value={q}
-        onChange={e => { setQ(e.target.value); setOpen(true) }}
-        onFocus={() => setOpen(true)}
+        onChange={e => { setQ(e.target.value); openDropdown() }}
+        onFocus={openDropdown}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
         placeholder={placeholder}
-        className="w-full h-7 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60 transition-colors placeholder-gray-600 truncate"
+        className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60 transition-colors placeholder-gray-600 truncate"
       />
-      {open && filtered.length > 0 && (
-        <div className="absolute top-full mt-0.5 left-0 w-full bg-[#1a1a1a] border border-[#323238] rounded shadow-xl z-50 max-h-48 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {open && filtered.length > 0 && rect && createPortal(
+        <div style={{ position: 'fixed', top: rect.bottom + 2, left: rect.left, width: rect.width, zIndex: 9999 }}
+          className="bg-[#1a1a1a] border border-[#323238] rounded shadow-xl max-h-48 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {filtered.map((o, i) => (
             <button key={i} onMouseDown={() => { onChange(o); setQ(o); setOpen(false) }}
               className="w-full text-left px-3 py-1.5 text-xs text-gray-200 hover:bg-[#323238] transition-colors truncate block">
               {o}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
 }
 
-// ─── TecnicaBtn ───────────────────────────────────────────────────────────────
+// ─── TipoCombinadoBtn ─────────────────────────────────────────────────────────
 
-const TECNICAS = ['Bi-Set', 'Tri-Set', 'Drop Set', 'Super Série', 'Rest-Pause', 'Cluster', 'Pirâmide', 'AMRAP', 'Isometria', 'Falha Muscular']
+const TITULOS_COMBINADO_ROW = ['Bi-set', 'Tri-set', 'Superset']
 
-const TecnicaBtn = ({ value, onChange }) => {
+const TipoCombinadoBtn = ({ value, onChange }) => {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
@@ -228,17 +233,20 @@ const TecnicaBtn = ({ value, onChange }) => {
   return (
     <div ref={ref} className="relative">
       <button onClick={() => setOpen(o => !o)}
-        className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs transition border ${value ? 'bg-[#850000]/20 border-[#850000]/40 text-red-400' : 'border-[#323238] text-gray-500 hover:text-gray-300'}`}>
-        <Zap size={10} />
-        {value ? <span className="max-w-[60px] truncate">{value}</span> : 'Técnica'}
+        className={`flex items-center gap-1 px-2 h-7 rounded border text-xs transition whitespace-nowrap ${value ? 'bg-[#850000]/20 border-[#850000]/40 text-red-400' : 'border-[#323238] text-gray-500 hover:border-gray-400'}`}>
+        {value || 'Tipo...'}
       </button>
       {open && (
-        <div className="absolute top-full mt-1 left-0 bg-[#29292e] border border-[#323238] rounded-lg shadow-xl z-50 min-w-[140px]">
+        <div className="absolute top-full mt-1 left-0 bg-[#29292e] border border-[#323238] rounded-lg shadow-xl z-50 min-w-[120px]">
           <button onMouseDown={() => { onChange(''); setOpen(false) }}
-            className="w-full text-left px-3 py-1.5 text-xs text-gray-500 hover:bg-[#323238] italic">Nenhuma</button>
-          {TECNICAS.map(t => (
+            className="w-full text-left px-3 py-1.5 text-xs text-gray-500 hover:bg-[#323238] flex items-center gap-2 italic">
+            ✓ Tipo...
+          </button>
+          {TITULOS_COMBINADO_ROW.map(t => (
             <button key={t} onMouseDown={() => { onChange(t); setOpen(false) }}
-              className={`w-full text-left px-3 py-1.5 text-xs hover:bg-[#323238] transition ${value === t ? 'text-red-400 font-semibold' : 'text-gray-200'}`}>{t}</button>
+              className={`w-full text-left px-3 py-1.5 text-xs hover:bg-[#323238] transition ${value === t ? 'text-red-400 font-semibold' : 'text-gray-200'}`}>
+              {t}
+            </button>
           ))}
         </div>
       )}
@@ -252,16 +260,6 @@ const RodapeVolume = ({ ficha, intensidadeMap, volumeAnterior }) => {
   const vol = useMemo(() => calcVolume(ficha, intensidadeMap), [ficha, intensidadeMap])
   const normKey = s => normalizar(s).replace(/\s/g, '')
 
-  const grupos = GRUPOS_CONFIG.filter(g => {
-    const v = Object.entries(vol).find(([k]) => normKey(k) === g.key)?.[1] || 0
-    const va = volumeAnterior
-      ? Object.entries(volumeAnterior).find(([k]) => normKey(k) === g.key)?.[1] || 0
-      : 0
-    return v > 0 || va > 0
-  })
-
-  if (!grupos.length) return null
-
   const getVal = (map, key) =>
     Object.entries(map || {}).find(([k]) => normKey(k) === key)?.[1] || 0
 
@@ -269,14 +267,14 @@ const RodapeVolume = ({ ficha, intensidadeMap, volumeAnterior }) => {
     <div className="shrink-0 bg-[#0a0a0a] border-t border-[#323238] px-4 py-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <div className="flex items-center gap-3 min-w-max">
         <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest shrink-0">Volume</span>
-        {grupos.map(g => {
+        {GRUPOS_CONFIG.map(g => {
           const atual = getVal(vol, g.key)
           const anterior = getVal(volumeAnterior, g.key)
           const delta = volumeAnterior ? atual - anterior : null
           return (
-            <div key={g.key} className={`flex items-center gap-1 px-2 py-0.5 rounded ${g.bg}`}>
+            <div key={g.key} className={`flex items-center gap-1 px-2 py-0.5 rounded ${g.bg} ${atual === 0 ? 'opacity-40' : ''}`}>
               <span className="text-[9px] text-gray-400">{g.label}</span>
-              <span className="text-[10px] font-bold text-white">{atual.toFixed(0)}</span>
+              <span className={`text-[10px] font-bold ${atual === 0 ? 'text-gray-500' : 'text-white'}`}>{atual.toFixed(0)}</span>
               {delta !== null && delta !== 0 && (
                 <span className={`text-[8px] font-bold ${delta > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                   {delta > 0 ? `+${delta.toFixed(0)}` : delta.toFixed(0)}
@@ -329,6 +327,10 @@ const DetalhesExercicio = ({ ex, onSave, onClose, intensidadeMap = {} }) => {
             <Input value={local.video || ''} onChange={v => upd('video', v)} placeholder="Ex: dQw4w9WgXcQ" />
           </FormGroup>
         </div>
+
+        <FormGroup label="Tipo de Série (séries nomeadas, separadas por vírgula)">
+          <Input value={local.tipo_de_serie || ''} onChange={v => upd('tipo_de_serie', v)} placeholder="Ex: Aquecimento,Preparatória,Válida" />
+        </FormGroup>
 
         <FormGroup label="Plataforma do Vídeo">
           <Select value={local['plataforma_do_vídeo'] || ''} onChange={v => upd('plataforma_do_vídeo', v)}
@@ -482,15 +484,23 @@ const BannerOrientacoes = ({ alunoId }) => {
 
 // ─── TabelaExercicios ─────────────────────────────────────────────────────────
 
-const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, intensidadeMap = {}, mapaDetalhes = {} }) => {
+// Lista base garantida — independente do que a API retornar
+const GRUPOS_BASE = [
+  'Quadríceps', 'Isquiotibiais', 'Glúteo Máximo', 'Glúteo Médio',
+  'Adutores', 'Abdutores', 'Panturrilhas',
+  'Costas', 'Trapézio', 'Peitoral',
+  'Deltoides Anterior', 'Deltoides Lateral', 'Deltoides Posterior',
+  'Bíceps', 'Tríceps', 'Antebraço', 'Abdômen', 'Lombares',
+]
+
+const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, intensidadeMap = {}, mapaDetalhes = {}, gruposBase = GRUPOS_BASE }) => {
   const [detalheIdx, setDetalheIdx] = useState(null)
 
-  // Inclui grupos já presentes na planilha mesmo antes da API carregar
+  // Mescla grupos do Frappe + grupos já na planilha (preserva grupos de fichas antigas)
   const grupos = useMemo(() => {
-    const deAPI = Object.keys(exerciciosPorGrupo)
     const daPlanilha = exercicios.map(e => e.grupo_muscular).filter(Boolean)
-    return [...new Set([...deAPI, ...daPlanilha])].sort((a, b) => a.localeCompare(b, 'pt-BR'))
-  }, [exerciciosPorGrupo, exercicios])
+    return [...new Set([...gruposBase, ...daPlanilha])].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  }, [gruposBase, exercicios])
 
   const upd = (i, field, val) => {
     const arr = [...exercicios]
@@ -498,7 +508,7 @@ const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, inten
     if (field === 'exercicio') {
       const info = mapaDetalhes[val]
       if (info) {
-        arr[i].grupo_muscular = arr[i].grupo_muscular || info.grupo_muscular || ''
+        if (!arr[i].grupo_muscular && info.grupo_muscular) arr[i].grupo_muscular = info.grupo_muscular
         arr[i].video = info.video || ''
         arr[i]['plataforma_do_vídeo'] = info['plataforma_do_vídeo'] || 'YouTube'
         try { arr[i].intensidade = JSON.stringify(intensidadeMap[val] || []) } catch { }
@@ -512,12 +522,29 @@ const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, inten
   const remove = (i) => onChange(exercicios.filter((_, idx) => idx !== i))
   const move = (i, dir) => onChange(arrayMove(exercicios, i, i + dir))
 
-  // Exercícios disponíveis para o grupo: lista da API + exercício atual (para não perder o valor já salvo)
+  // Exercícios disponíveis: todos quando sem grupo; filtrados por grupo quando selecionado
   const exerciciosDoGrupo = (grupo, exercicioAtual) => {
-    const deAPI = exerciciosPorGrupo[grupo] || []
+    let deAPI
+    if (!grupo) {
+      deAPI = [...new Set(Object.values(exerciciosPorGrupo).flat())]
+    } else {
+      const n = normalizar(grupo)
+      const key = Object.keys(exerciciosPorGrupo).find(k => normalizar(k) === n) || grupo
+      deAPI = exerciciosPorGrupo[key] || []
+    }
     if (exercicioAtual && !deAPI.includes(exercicioAtual)) return [...deAPI, exercicioAtual]
     return deAPI
   }
+
+  // Mapa de quais linhas fazem parte de um combinado
+  let comboActive = false
+  const combinadosMap = exercicios.map(ex => {
+    let isPart = false
+    if (ex.primeiro) comboActive = true
+    if (comboActive) isPart = true
+    if (ex.ultimo) comboActive = false
+    return isPart
+  })
 
   return (
     <div className="flex flex-col gap-3">
@@ -530,12 +557,11 @@ const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, inten
         />
       )}
 
-      <div className="rounded-xl border border-[#323238] bg-[#1a1a1a] overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[700px]">
+      <div className="rounded-xl border border-[#323238] bg-[#1a1a1a]">
+        <table className="w-full text-sm min-w-[700px]">
             <thead>
-              <tr className="text-gray-400 text-xs uppercase tracking-wide border-b border-[#323238] bg-[#0a0a0a]">
-                <th className="w-8 py-2 px-2" />
+              <tr className="text-gray-400 text-xs uppercase tracking-wide border-b border-[#323238]">
+                <th className="w-8 py-2 px-2"></th>
                 <th className="text-left py-2 px-2 w-36">Grupo Muscular</th>
                 <th className="text-left py-2 px-2 w-56">Exercício</th>
                 <th className="text-center py-2 px-2 w-12">Séries</th>
@@ -546,78 +572,96 @@ const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, inten
               </tr>
             </thead>
             <tbody>
-              {exercicios.map((ex, i) => (
-                <tr key={ex._id || i} className="border-b border-[#323238] hover:bg-[#202024] transition group">
-                  {/* Ordem */}
-                  <td className="px-2 text-center w-12 align-middle">
-                    <div className="flex flex-col items-center gap-0">
-                      <button onClick={() => i > 0 && move(i, -1)} disabled={i === 0}
-                        className="text-gray-600 hover:text-white disabled:opacity-20 transition"><ChevronUp size={12} /></button>
-                      <span className="text-[10px] font-mono text-gray-600">{i + 1}</span>
-                      <button onClick={() => i < exercicios.length - 1 && move(i, 1)} disabled={i === exercicios.length - 1}
-                        className="text-gray-600 hover:text-white disabled:opacity-20 transition"><ChevronDown size={12} /></button>
-                    </div>
-                  </td>
-                  {/* Grupo */}
-                  <td className="px-2 py-1 align-middle">
-                    {/* select de célula — exceção documentada */}
-                    <select value={ex.grupo_muscular || ''} onChange={e => upd(i, 'grupo_muscular', e.target.value)}
-                      className="w-full h-7 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60 appearance-none">
-                      <option value="">—</option>
-                      {grupos.map(g => <option key={g} value={g}>{g}</option>)}
-                    </select>
-                  </td>
-                  {/* Exercício */}
-                  <td className="px-2 py-1 align-middle">
-                    <SearchableCombo
-                      value={ex.exercicio || ''}
-                      onChange={v => upd(i, 'exercicio', v)}
-                      options={exerciciosDoGrupo(ex.grupo_muscular, ex.exercicio)}
-                      placeholder="Buscar exercício..."
-                    />
-                  </td>
-                  {/* Séries */}
-                  <td className="px-2 py-1 align-middle">
-                    <input type="number" value={ex.series || ''} onChange={e => upd(i, 'series', e.target.value)}
-                      className="w-full h-7 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60 text-center" />
-                  </td>
-                  {/* Reps */}
-                  <td className="px-2 py-1 align-middle">
-                    <input value={ex.repeticoes || ''} onChange={e => upd(i, 'repeticoes', e.target.value)}
-                      className="w-full h-7 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60 text-center" />
-                  </td>
-                  {/* Descanso */}
-                  <td className="px-2 py-1 align-middle">
-                    <input value={ex.descanso || ''} onChange={e => upd(i, 'descanso', e.target.value)}
-                      className="w-full h-7 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60 text-center" />
-                  </td>
-                  {/* Obs */}
-                  <td className="px-2 py-1 align-middle">
-                    <TextareaExpansivel value={ex.observacao || ''} onChange={v => upd(i, 'observacao', v)} placeholder="Observação..." />
-                  </td>
-                  {/* Ações */}
-                  <td className="px-2 py-1 align-middle">
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-                      <TecnicaBtn value={ex.tecnica || ''} onChange={v => upd(i, 'tecnica', v)} />
-                      <button onClick={() => setDetalheIdx(i)} title="Detalhes"
-                        className="h-6 w-6 flex items-center justify-center bg-[#29292e] text-blue-400 hover:bg-blue-600 hover:text-white rounded transition-colors">
-                        <Info size={10} />
-                      </button>
-                      <button onClick={() => dupe(i)} title="Duplicar"
-                        className="h-6 w-6 flex items-center justify-center bg-[#29292e] text-gray-400 hover:bg-gray-600 hover:text-white rounded transition-colors">
-                        <Copy size={10} />
-                      </button>
-                      <button onClick={() => remove(i)} title="Excluir"
-                        className="h-6 w-6 flex items-center justify-center bg-[#29292e] text-red-400 hover:bg-red-600 hover:text-white rounded transition-colors">
-                        <Trash2 size={10} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {exercicios.map((ex, i) => {
+                const isInCombo = combinadosMap[i]
+                return (
+                  <tr key={ex._id || i}
+                    className={`border-b border-[#323238] transition group hover:bg-[#202024] ${isInCombo ? 'bg-[#850000]/10 border-l-2 border-l-[#850000]' : 'border-l-2 border-l-transparent'}`}>
+                    {/* Ordem */}
+                    <td className="px-2 text-center w-8 align-middle">
+                      <div className="flex flex-row items-center justify-center gap-1">
+                        <div className="flex flex-col items-center">
+                          <button onClick={() => i > 0 && move(i, -1)} disabled={i === 0}
+                            className="text-gray-600 hover:text-white disabled:opacity-20 transition"><ChevronUp size={12} /></button>
+                          <button onClick={() => i < exercicios.length - 1 && move(i, 1)} disabled={i === exercicios.length - 1}
+                            className="text-gray-600 hover:text-white disabled:opacity-20 transition"><ChevronDown size={12} /></button>
+                        </div>
+                        <span className="text-[10px] font-bold font-mono text-gray-500">{i + 1}</span>
+                      </div>
+                    </td>
+                    {/* Grupo */}
+                    <td className="px-2 py-1 align-middle">
+                      <SearchableCombo
+                        value={ex.grupo_muscular || ''}
+                        onChange={v => upd(i, 'grupo_muscular', v)}
+                        options={grupos}
+                        placeholder="Grupo..."
+                      />
+                    </td>
+                    {/* Exercício */}
+                    <td className="px-2 py-1 align-middle">
+                      <SearchableCombo
+                        value={ex.exercicio || ''}
+                        onChange={v => upd(i, 'exercicio', v)}
+                        options={exerciciosDoGrupo(ex.grupo_muscular, ex.exercicio)}
+                        placeholder="Buscar exercício..."
+                      />
+                    </td>
+                    {/* Séries */}
+                    <td className="px-2 py-1 align-middle">
+                      <input type="number" value={ex.series || ''} onChange={e => upd(i, 'series', e.target.value)}
+                        className="w-full h-8 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60 text-center" />
+                    </td>
+                    {/* Reps */}
+                    <td className="px-2 py-1 align-middle">
+                      <input value={ex.repeticoes || ''} onChange={e => upd(i, 'repeticoes', e.target.value)}
+                        className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60 text-center" />
+                    </td>
+                    {/* Descanso */}
+                    <td className="px-2 py-1 align-middle">
+                      <input value={ex.descanso || ''} onChange={e => upd(i, 'descanso', e.target.value)}
+                        className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60 text-center" />
+                    </td>
+                    {/* Instruções */}
+                    <td className="px-2 py-1 align-middle">
+                      <TextareaExpansivel value={ex.observacao || ''} onChange={v => upd(i, 'observacao', v)} placeholder="Instruções..." />
+                    </td>
+                    {/* Ações */}
+                    <td className="px-1 py-1 align-top">
+                      <div className="flex flex-col gap-1 justify-center h-full pt-0.5">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button onClick={() => upd(i, 'primeiro', ex.primeiro ? 0 : 1)}
+                            className={`text-[10px] font-bold px-2 h-7 rounded border transition ${ex.primeiro ? 'bg-green-500/20 text-green-400 border-green-500/50' : 'border-[#323238] text-gray-500 hover:border-gray-500'}`}>
+                            1º
+                          </button>
+                          <button onClick={() => upd(i, 'ultimo', ex.ultimo ? 0 : 1)}
+                            className={`text-[10px] font-bold px-2 h-7 rounded border transition ${ex.ultimo ? 'bg-red-500/20 text-red-400 border-red-500/50' : 'border-[#323238] text-gray-500 hover:border-gray-500'}`}>
+                            Ult
+                          </button>
+                          <div className="w-px h-5 bg-[#323238]" />
+                          {!!ex.primeiro && (
+                            <TipoCombinadoBtn value={ex.titulo_do_exercicio_combinado || ''} onChange={v => upd(i, 'titulo_do_exercicio_combinado', v)} />
+                          )}
+                          <button onClick={() => setDetalheIdx(i)} title="Detalhes"
+                            className="h-6 w-6 flex items-center justify-center bg-[#29292e] text-blue-400 hover:bg-blue-600 hover:text-white rounded transition-colors">
+                            <Info size={10} />
+                          </button>
+                          <button onClick={() => dupe(i)} title="Duplicar"
+                            className="h-6 w-6 flex items-center justify-center bg-[#29292e] text-gray-400 hover:bg-gray-600 hover:text-white rounded transition-colors">
+                            <Copy size={10} />
+                          </button>
+                          <button onClick={() => remove(i)} title="Excluir"
+                            className="h-6 w-6 flex items-center justify-center bg-[#29292e] text-red-400 hover:bg-red-600 hover:text-white rounded transition-colors">
+                            <Trash2 size={10} />
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
-        </div>
       </div>
 
       <button onClick={addRow}
@@ -652,6 +696,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
   const [detalheAerobicoIdx, setDetalheAerobicoIdx] = useState(null)
   const [detalheAlongamentoIdx, setDetalheAlongamentoIdx] = useState(null)
 
+  const [gruposDisponiveis, setGruposDisponiveis] = useState(GRUPOS_BASE)
   const [porGrupo, setPorGrupo] = useState({})
   const [intensMap, setIntensMap] = useState({})
   const [mapaTreinos, setMapaTreinos] = useState({})
@@ -659,8 +704,21 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
   const [mapaAlong, setMapaAlong] = useState({})
   const [aerobs, setAerobs] = useState([])
   const [mapaAerob, setMapaAerob] = useState({})
+  const [exercisesLoaded, setExercisesLoaded] = useState(false)
+  const intensMapRef = useRef({})
 
-  const [ficha, setFicha] = useState({ ...novaFicha(), ...(fichaInicial || {}) })
+  const [ficha, setFicha] = useState(() => {
+    const base = novaFicha()
+    if (!fichaInicial) return base
+    return {
+      ...base,
+      ...fichaInicial,
+      // Se Frappe retornou dias_da_semana vazio, mantém o template padrão
+      dias_da_semana: fichaInicial.dias_da_semana?.length > 0
+        ? fichaInicial.dias_da_semana
+        : base.dias_da_semana,
+    }
+  })
   const upd = (field, val) => setFicha(f => ({ ...f, [field]: val }))
 
   const initialRef = useRef({ numSemanas, dataInicio: ficha.data_de_inicio })
@@ -684,19 +742,28 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
   }, [ficha])
 
   useEffect(() => {
+    listarGruposMusculares()
+      .then(lista => { if (lista.length > 0) setGruposDisponiveis(lista) })
+      .catch(console.error)
+
     listarExercicios().then(lista => {
+      console.log('[Exercicios] total:', lista.length, 'exemplo:', lista[0])
       const mapG = {}, mapI = {}, mapD = {}
       lista.forEach(e => {
         const g = e.grupo_muscular || ''
         if (!mapG[g]) mapG[g] = []
-        mapG[g].push(e.nome_do_exercicio)
-        try {
-          mapI[e.nome_do_exercicio] = typeof e.intensidade_json === 'string'
-            ? JSON.parse(e.intensidade_json) : (e.intensidade_json || [])
-        } catch { }
-        mapD[e.nome_do_exercicio] = { grupo_muscular: g, video: e.video, 'plataforma_do_vídeo': e['plataforma_do_vídeo'] }
+        const nomeExercicio = e.nome_do_exercicio || e['nome_do_exercício'] || ''
+        if (nomeExercicio) mapG[g].push(nomeExercicio)
+        let intens = []
+        try { intens = typeof e.intensidade_json === 'string' ? JSON.parse(e.intensidade_json) : (e.intensidade_json || []) } catch { }
+        if (nomeExercicio) mapI[nomeExercicio] = intens
+        if (e.name) mapI[e.name] = intens
+        if (nomeExercicio) mapD[nomeExercicio] = { grupo_muscular: g, video: e.video, 'plataforma_do_vídeo': e['plataforma_do_vídeo'] }
+        if (e.name) mapD[e.name] = { grupo_muscular: g, video: e.video, 'plataforma_do_vídeo': e['plataforma_do_vídeo'] }
       })
+      intensMapRef.current = mapI
       setPorGrupo(mapG); setIntensMap(mapI); setMapaTreinos(mapD)
+      setExercisesLoaded(true)
     }).catch(console.error)
 
     listarAlongamentos().then(lista => {
@@ -717,6 +784,23 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
       setAerobs(nomes); setMapaAerob(det)
     }).catch(console.error)
   }, [])
+
+  // Busca volume da ficha anterior do mesmo aluno para comparação
+  useEffect(() => {
+    if (!exercisesLoaded || !ficha.aluno) { setVolumeAnterior(null); return }
+    listarFichas({ aluno: ficha.aluno, limit: 10 })
+      .then(({ list }) => {
+        const anterior = list.find(f => f.name !== ficha.name)
+        if (!anterior) { setVolumeAnterior(null); return }
+        buscarFicha(anterior.name)
+          .then(fichaCompleta => {
+            if (fichaCompleta) setVolumeAnterior(calcVolume(fichaCompleta, intensMapRef.current))
+            else setVolumeAnterior(null)
+          })
+          .catch(console.error)
+      })
+      .catch(console.error)
+  }, [ficha.aluno, ficha.name, exercisesLoaded])
 
   const gerarPeriodizacao = () => {
     if (!ficha.data_de_inicio) return alert('Selecione uma data de início primeiro.')
@@ -905,7 +989,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
     )
 
     if (s.id === 'aerobico') return (
-      <div className="flex flex-col gap-4 max-w-5xl mx-auto w-full">
+      <div className="flex flex-col gap-4 w-full">
         {detalheAerobicoIdx !== null && (
           <DetalhesAerobico
             aerobico={ficha.periodizacao_dos_aerobicos[detalheAerobicoIdx]}
@@ -945,7 +1029,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
                         </div>
                       </td>
                       <td className="px-2 py-1 align-middle"><SearchableCombo value={a.exercicios || ''} onChange={v => set('exercicios', v)} options={aerobs} placeholder="Buscar..." /></td>
-                      <td className="px-2 py-1 align-middle"><input value={a.frequencia || ''} onChange={e => set('frequencia', e.target.value)} className="w-full h-7 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60" /></td>
+                      <td className="px-2 py-1 align-middle"><input value={a.frequencia || ''} onChange={e => set('frequencia', e.target.value)} className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60" /></td>
                       <td className="px-2 py-1 align-top"><TextareaExpansivel value={a.instrucao || ''} onChange={v => set('instrucao', v)} placeholder="Instruções..." resetKey={aerobicoResetKey} /></td>
                       <td className="px-2 py-1 text-center align-middle">
                         <div className="flex gap-1 justify-center opacity-0 group-hover:opacity-100 transition">
@@ -969,7 +1053,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
     )
 
     if (s.id === 'alongamento') return (
-      <div className="flex flex-col gap-4 max-w-5xl mx-auto w-full">
+      <div className="flex flex-col gap-4 w-full">
         {detalheAlongamentoIdx !== null && (
           <DetalhesAlongamento
             alongamento={ficha.planilha_de_alongamentos_e_mobilidade[detalheAlongamentoIdx]}
@@ -1009,7 +1093,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
                         </div>
                       </td>
                       <td className="px-2 py-1 align-middle"><SearchableCombo value={a.exercicio || ''} onChange={v => set('exercicio', v)} options={alongs} placeholder="Buscar..." /></td>
-                      <td className="px-2 py-1 align-middle"><input type="number" value={a.series || ''} onChange={e => set('series', e.target.value)} className="w-full h-7 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60 text-center" /></td>
+                      <td className="px-2 py-1 align-middle"><input type="number" value={a.series || ''} onChange={e => set('series', e.target.value)} className="w-full h-8 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60 text-center" /></td>
                       <td className="px-2 py-1 align-top"><TextareaExpansivel value={a.observacoes || ''} onChange={v => set('observacoes', v)} placeholder="Observações..." resetKey={alongamentoResetKey} /></td>
                       <td className="px-2 py-1 text-center align-middle">
                         <div className="flex gap-1 justify-center opacity-0 group-hover:opacity-100 transition">
@@ -1035,7 +1119,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
     // Treinos A–F
     const t = s.id.replace('treino_', '')
     return (
-      <div className="flex flex-col gap-4 max-w-5xl mx-auto w-full">
+      <div className="flex flex-col gap-4 w-full">
         <FormGroup label={`Nome do Treino ${t.toUpperCase()} (opcional)`} >
           <Input value={ficha[`treino_${t}_label`] || ''} onChange={v => upd(`treino_${t}_label`, v)} placeholder={`Ex: Inferior A, Upper, Push...`} />
         </FormGroup>
@@ -1049,6 +1133,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
           exerciciosPorGrupo={porGrupo}
           intensidadeMap={intensMap}
           mapaDetalhes={mapaTreinos}
+          gruposBase={gruposDisponiveis}
         />
       </div>
     )

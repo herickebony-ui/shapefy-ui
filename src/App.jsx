@@ -8,6 +8,7 @@ import DietaListagem from './pages/Dietas/DietaListagem'
 import DietaDetalhe from './pages/Dietas/DietaDetalhe'
 import FichaListagem from './pages/Fichas/FichaListagem'
 import FichaDetalhe from './pages/Fichas/FichaDetalhe'
+import GerenciarTreino from './pages/Exercicios/GerenciarTreino'
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -33,6 +34,7 @@ function App() {
 <Route path="dietas/:id" element={<DietaDetalhe />} />
           <Route path="fichas" element={<FichaListagem />} />
           <Route path="fichas/:id" element={<FichaDetalhe />} />
+          <Route path="exercicios" element={<GerenciarTreino />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Plus, ChevronRight, Calendar, User, LayoutGrid, List,
-  RefreshCw, AlertCircle, Copy, ClipboardList,
+  RefreshCw, AlertCircle, Copy, ClipboardList, X,
   Trash2, SlidersHorizontal, Eye, Loader, BarChart2,
 } from 'lucide-react'
 import { listarFichas, buscarFicha, excluirFicha, criarFicha, salvarFicha, listarExercicios } from '../../api/fichas'
 import { listarAlunos } from '../../api/alunos'
-import { Button, FormGroup, Input, Select, Autocomplete, Modal, EmptyState } from '../../components/ui'
+import { Button, FormGroup, Input, Autocomplete, Modal, EmptyState, Pagination, DataTable } from '../../components/ui'
 
 // Indexa por nome_do_exercicio E name do DocType para cobrir fichas antigas e novas
 const buildIntensMap = (lista) => {
@@ -108,17 +108,20 @@ const statusFicha = (f) => {
   const start = toYMD(f?.data_de_inicio)
   const end   = toYMD(f?.data_de_fim)
   const hoje  = new Date().toISOString().split('T')[0]
+  const emBreve = new Date(); emBreve.setDate(emBreve.getDate() + 7)
+  const emBreveStr = emBreve.toISOString().split('T')[0]
   if (!start && !end) return 'Rascunho'
-  if (start && !end)  return 'Ativa'
-  if (start && end && end >= hoje) return 'Ativa'
-  if (start && end && end < hoje)  return 'Inativa'
+  if (end && end < hoje) return 'Concluído'
+  if (end && end >= hoje && end <= emBreveStr) return 'Vence em breve'
+  if (start) return 'Ativo'
   return 'Rascunho'
 }
 
 const STATUS_COLOR = {
-  Ativa:    'bg-green-500/10 text-green-300 border-green-500/20 shadow-[0_0_8px_rgba(34,197,94,0.5)]',
-  Inativa:  'bg-red-500/10 text-red-300 border-red-500/20 shadow-[0_0_8px_rgba(239,68,68,0.5)]',
-  Rascunho: 'bg-amber-500/10 text-amber-300 border-amber-500/20 shadow-[0_0_8px_rgba(245,158,11,0.5)]',
+  'Ativo':          'bg-green-500/10 text-green-300 border-green-500/20 shadow-[0_0_8px_rgba(34,197,94,0.5)]',
+  'Vence em breve': 'bg-orange-500/10 text-orange-300 border-orange-500/20 shadow-[0_0_8px_rgba(249,115,22,0.5)]',
+  'Concluído':      'bg-red-500/10 text-red-300 border-red-500/20 shadow-[0_0_8px_rgba(239,68,68,0.5)]',
+  'Rascunho':       'bg-amber-500/10 text-amber-300 border-amber-500/20 shadow-[0_0_8px_rgba(245,158,11,0.5)]',
 }
 
 const StatusBadge = ({ ficha }) => {
@@ -171,8 +174,8 @@ const CardFicha = ({ ficha, onClick }) => (
 
 // ─── Row (lista) ──────────────────────────────────────────────────────────────
 
-const RowFicha = ({ ficha, onClick, onDuplicar, onExcluir, onVisualizar, onHistorico }) => (
-  <tr onClick={() => onClick(ficha.name)} className="group border-b border-[#323238] hover:bg-[#2f2f35] cursor-pointer transition-colors">
+const RowFicha = ({ ficha, index = 0, onClick, onDuplicar, onExcluir, onVisualizar, onHistorico }) => (
+  <tr onClick={() => onClick(ficha.name)} className={`group border-b border-[#323238] hover:bg-[#202024] cursor-pointer transition-colors ${index % 2 === 0 ? 'bg-[#1a1a1a]' : 'bg-[#1e1e22]'}`}>
     <td className="px-4 py-3.5 min-w-[200px]">
       <p className="text-white font-medium text-sm truncate">{ficha.nome_completo || '—'}</p>
       <p className="text-gray-500 text-xs mt-0.5 truncate">{ficha.aluno}</p>
@@ -253,10 +256,105 @@ const Skeleton = ({ view }) =>
 
 // ─── Modal Filtros ────────────────────────────────────────────────────────────
 
-const NIVEIS = ['Iniciante', 'Intermediário', 'Avançado']
+const FILTROS_LIMPO = {
+  filtroSexo: '', status: null, nivel: '',
+  filtroLetras: [], filtroTotalDias: '',
+  dataInicioFrom: '', dataInicioTo: '',
+  dataFimFrom: '', dataFimTo: '',
+}
+
+const ToggleGroup = ({ label, options, value, onChange }) => (
+  <div>
+    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{label}</p>
+    <div className="flex flex-wrap gap-2">
+      {options.map(opt => {
+        const active = value === opt
+        return (
+          <button key={opt} onClick={() => onChange(active ? (typeof value === 'string' ? '' : null) : opt)}
+            className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
+              active ? 'bg-[#850000]/20 border-[#850000]/50 text-red-300' : 'border-[#323238] text-gray-400 hover:text-white hover:border-[#444]'
+            }`}>
+            {opt}
+          </button>
+        )
+      })}
+    </div>
+  </div>
+)
+
+const LETRAS_TREINO = ['A', 'B', 'C', 'D', 'E', 'F']
+const FREQS = ['1x', '2x', '3x', '4x', '5x', '6x', '7x']
+
+const EstruturaSelector = ({ value, onChange }) => {
+  const letrasJaUsadas = value.map(x => x.letra)
+  const letrasDisponiveis = LETRAS_TREINO.filter(l => !letrasJaUsadas.includes(l))
+  const [novaLetra, setNovaLetra] = useState(() => letrasDisponiveis[0] || 'A')
+  const [novaFreq, setNovaFreq] = useState('1x')
+
+  useEffect(() => {
+    if (!letrasDisponiveis.includes(novaLetra) && letrasDisponiveis.length > 0) {
+      setNovaLetra(letrasDisponiveis[0])
+    }
+  }, [value])
+
+  const adicionar = () => {
+    if (!novaLetra || letrasJaUsadas.includes(novaLetra)) return
+    onChange([...value, { letra: novaLetra, freq: parseInt(novaFreq) }])
+    const proxima = letrasDisponiveis.filter(l => l !== novaLetra)[0]
+    if (proxima) setNovaLetra(proxima)
+    setNovaFreq('1x')
+  }
+
+  const remover = (letra) => onChange(value.filter(x => x.letra !== letra))
+
+  return (
+    <div>
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Estrutura do treino</p>
+
+      {value.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {value.map(x => (
+            <span key={x.letra} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#850000]/20 border border-[#850000]/40 text-red-300 text-sm">
+              <span className="font-bold">{x.letra}</span>
+              <span className="text-red-400/70">{x.freq}×</span>
+              <button onClick={() => remover(x.letra)} className="ml-0.5 text-red-400/60 hover:text-red-300 transition-colors">
+                <X size={11} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {letrasDisponiveis.length > 0 && (
+        <div className="flex items-center gap-2">
+          <select value={novaLetra} onChange={e => setNovaLetra(e.target.value)}
+            className="h-9 px-2 bg-[#1a1a1a] border border-[#323238] text-white text-sm rounded-lg outline-none focus:border-[#850000]/60 appearance-none w-16">
+            {letrasDisponiveis.map(l => <option key={l} value={l}>{l}</option>)}
+          </select>
+          <select value={novaFreq} onChange={e => setNovaFreq(e.target.value)}
+            className="h-9 px-2 bg-[#1a1a1a] border border-[#323238] text-white text-sm rounded-lg outline-none focus:border-[#850000]/60 appearance-none w-20">
+            {FREQS.map(f => <option key={f} value={f}>{f}</option>)}
+          </select>
+          <button onClick={adicionar}
+            className="h-9 px-3 rounded-lg bg-[#29292e] border border-[#323238] text-gray-300 hover:text-white hover:border-[#444] text-sm transition-colors flex items-center gap-1">
+            <Plus size={13} />
+            Adicionar
+          </button>
+        </div>
+      )}
+
+      {value.length > 0 && (
+        <p className="text-gray-600 text-xs mt-2">
+          Total: {value.reduce((s, x) => s + x.freq, 0)} dias · composição exata
+        </p>
+      )}
+    </div>
+  )
+}
 
 const ModalFiltros = ({ filtros, onChange, onClose, onLimpar }) => {
-  const [local, setLocal] = useState({ ...filtros })
+  const [local, setLocal] = useState({ ...filtros, filtroLetras: [...(filtros.filtroLetras || [])] })
+  const set = (key) => (val) => setLocal(p => ({ ...p, [key]: val }))
 
   return (
     <Modal
@@ -266,7 +364,7 @@ const ModalFiltros = ({ filtros, onChange, onClose, onLimpar }) => {
       size="md"
       footer={
         <>
-          <Button variant="ghost" onClick={() => { setLocal({ status: null, nivel: '', filtroLetras: [], filtroTotalDias: '', dataInicioFrom: '', dataInicioTo: '', dataFimFrom: '', dataFimTo: '' }); onLimpar(); onClose() }}>
+          <Button variant="ghost" onClick={() => { setLocal(FILTROS_LIMPO); onLimpar(); onClose() }}>
             Limpar tudo
           </Button>
           <Button variant="primary" onClick={() => { onChange(local); onClose() }}>
@@ -276,40 +374,31 @@ const ModalFiltros = ({ filtros, onChange, onClose, onLimpar }) => {
       }
     >
       <div className="p-5 space-y-5">
-        <div>
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Status</p>
-          <div className="flex flex-wrap gap-2">
-            {['Rascunho', 'Ativa', 'Inativa'].map(s => (
-              <button key={s} onClick={() => setLocal(p => ({ ...p, status: p.status === s ? null : s }))}
-                className={`px-4 py-1.5 rounded-lg text-sm border transition ${local.status === s ? 'bg-[#850000]/20 border-[#850000]/50 text-red-400' : 'border-[#323238] text-gray-400 hover:text-white'}`}>
-                {s}
-              </button>
-            ))}
-          </div>
-        </div>
-        <FormGroup label="Nível">
-          <Select value={local.nivel || ''} onChange={v => setLocal(p => ({ ...p, nivel: v }))} options={NIVEIS} placeholder="Todos" />
-        </FormGroup>
+        <ToggleGroup label="Sexo" options={['Masculino', 'Feminino']} value={local.filtroSexo} onChange={set('filtroSexo')} />
+        <ToggleGroup label="Nível" options={['Iniciante', 'Intermediário', 'Avançado']} value={local.nivel} onChange={set('nivel')} />
+        <ToggleGroup label="Status" options={['Ativo', 'Vence em breve', 'Concluído', 'Rascunho']} value={local.status} onChange={set('status')} />
         <div className="grid grid-cols-2 gap-4">
           <FormGroup label="Início — de">
-            <input type="date" value={local.dataInicioFrom || ''} onChange={e => setLocal(p => ({ ...p, dataInicioFrom: e.target.value }))}
+            <input type="date" value={local.dataInicioFrom || ''} onChange={e => set('dataInicioFrom')(e.target.value)}
               className="w-full h-10 px-3 bg-[#1a1a1a] border border-[#323238] text-white text-sm rounded-lg outline-none focus:border-[#850000]/60" />
           </FormGroup>
           <FormGroup label="Início — até">
-            <input type="date" value={local.dataInicioTo || ''} onChange={e => setLocal(p => ({ ...p, dataInicioTo: e.target.value }))}
+            <input type="date" value={local.dataInicioTo || ''} onChange={e => set('dataInicioTo')(e.target.value)}
               className="w-full h-10 px-3 bg-[#1a1a1a] border border-[#323238] text-white text-sm rounded-lg outline-none focus:border-[#850000]/60" />
           </FormGroup>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <FormGroup label="Fim — de">
-            <input type="date" value={local.dataFimFrom || ''} onChange={e => setLocal(p => ({ ...p, dataFimFrom: e.target.value }))}
+            <input type="date" value={local.dataFimFrom || ''} onChange={e => set('dataFimFrom')(e.target.value)}
               className="w-full h-10 px-3 bg-[#1a1a1a] border border-[#323238] text-white text-sm rounded-lg outline-none focus:border-[#850000]/60" />
           </FormGroup>
           <FormGroup label="Fim — até">
-            <input type="date" value={local.dataFimTo || ''} onChange={e => setLocal(p => ({ ...p, dataFimTo: e.target.value }))}
+            <input type="date" value={local.dataFimTo || ''} onChange={e => set('dataFimTo')(e.target.value)}
               className="w-full h-10 px-3 bg-[#1a1a1a] border border-[#323238] text-white text-sm rounded-lg outline-none focus:border-[#850000]/60" />
           </FormGroup>
         </div>
+        <ToggleGroup label="Total de dias na semana" options={['2x', '3x', '4x', '5x', '6x']} value={local.filtroTotalDias} onChange={set('filtroTotalDias')} />
+        <EstruturaSelector value={local.filtroLetras} onChange={set('filtroLetras')} />
       </div>
     </Modal>
   )
@@ -789,25 +878,24 @@ const ModalHistoricoAluno = ({ ficha: fichaRef, onClose }) => {
 // ─── FichaListagem ────────────────────────────────────────────────────────────
 
 const FILTROS_INICIAL = {
-  status: null, nivel: '',
+  filtroSexo: '', status: null, nivel: '',
   filtroLetras: [], filtroTotalDias: '',
   dataInicioFrom: '', dataInicioTo: '',
   dataFimFrom: '', dataFimTo: '',
 }
 
-const LIMIT = 50
+const FETCH_LIMIT = 200
 
 export default function FichaListagem() {
   const navigate = useNavigate()
   const [fichas, setFichas] = useState([])
   const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
   const [view, setView] = useState('list')
   const [page, setPage] = useState(1)
-  const [hasMore, setHasMore] = useState(false)
+  const [pageSize, setPageSize] = useState(20)
   const [filtros, setFiltros] = useState(FILTROS_INICIAL)
   const [modalFiltros, setModalFiltros] = useState(false)
   const [modalNova, setModalNova] = useState(false)
@@ -815,62 +903,63 @@ export default function FichaListagem() {
   const [modalExcluir, setModalExcluir] = useState(null)
   const [modalViz, setModalViz] = useState(null)
   const [modalHistorico, setModalHistorico] = useState(null)
-  const isLoadMore = useRef(false)
 
   // Debounce busca
   useEffect(() => {
-    const t = setTimeout(() => { isLoadMore.current = false; setQuery(search); setPage(1) }, 400)
+    const t = setTimeout(() => { setQuery(search); setPage(1) }, 400)
     return () => clearTimeout(t)
   }, [search])
 
-  const fetchFichas = useCallback(async () => {
-    const appending = isLoadMore.current
-    isLoadMore.current = false
-    if (appending) setLoadingMore(true)
-    else setLoading(true)
-    setError(null)
+  useEffect(() => { setPage(1) }, [filtros])
 
+  const fetchFichas = useCallback(async () => {
+    setLoading(true)
+    setError(null)
     try {
-      const temFiltroClienteSide = filtros.status || filtros.filtroLetras?.length > 0 || filtros.filtroTotalDias
-      const { list, hasMore: more } = await listarFichas({
+      const { list } = await listarFichas({
         busca: query || undefined,
-        nivel: filtros.nivel || undefined,
-        page: temFiltroClienteSide ? 1 : page,
-        limit: temFiltroClienteSide ? 300 : LIMIT,
+        limit: FETCH_LIMIT,
       })
-      if (appending) setFichas(prev => [...prev, ...list])
-      else setFichas(list)
-      setHasMore(more && !temFiltroClienteSide)
+      setFichas(list)
     } catch (err) {
       setError(err.message ?? 'Erro ao buscar fichas')
     } finally {
       setLoading(false)
-      setLoadingMore(false)
     }
-  }, [query, page, filtros])
+  }, [query, filtros])
 
   useEffect(() => { fetchFichas() }, [fetchFichas])
 
-  // Filtros client-side
+  // Filtros client-side — busca por nome bypassa todos os filtros locais
   const fichasVisiveis = fichas.filter(f => {
     if (query.trim()) return true
     if (filtros.status && statusFicha(f) !== filtros.status) return false
+    if (filtros.nivel && f.nivel !== filtros.nivel) return false
     const estrutura = f.estrutura_calculada || ''
     if (filtros.filtroTotalDias && estrutura.length !== parseInt(filtros.filtroTotalDias)) return false
     if (filtros.filtroLetras?.length > 0) {
+      // 1. cada letra tem que aparecer exatamente na freq escolhida
       for (const { letra, freq } of filtros.filtroLetras) {
         if (estrutura.split('').filter(l => l === letra).length !== freq) return false
       }
-      const letrasPermitidas = filtros.filtroLetras.map(fl => fl.letra)
+      // 2. não pode haver letra fora do conjunto selecionado
+      const letrasPermitidas = filtros.filtroLetras.map(x => x.letra)
       if (estrutura.split('').some(l => !letrasPermitidas.includes(l))) return false
-      if (estrutura.length !== filtros.filtroLetras.reduce((s, fl) => s + fl.freq, 0)) return false
+      // 3. tamanho total tem que bater com a soma das frequências
+      const totalEsperado = filtros.filtroLetras.reduce((s, x) => s + x.freq, 0)
+      if (estrutura.length !== totalEsperado) return false
     }
-    if (filtros.dataInicioFrom && (!f.data_de_inicio || f.data_de_inicio < filtros.dataInicioFrom)) return false
-    if (filtros.dataInicioTo   && (!f.data_de_inicio || f.data_de_inicio > filtros.dataInicioTo))   return false
-    if (filtros.dataFimFrom    && (!f.data_de_fim    || f.data_de_fim    < filtros.dataFimFrom))    return false
-    if (filtros.dataFimTo      && (!f.data_de_fim    || f.data_de_fim    > filtros.dataFimTo))      return false
+    if (filtros.dataInicioFrom && (!f.data_de_inicio || toYMD(f.data_de_inicio) < filtros.dataInicioFrom)) return false
+    if (filtros.dataInicioTo   && (!f.data_de_inicio || toYMD(f.data_de_inicio) > filtros.dataInicioTo))   return false
+    if (filtros.dataFimFrom    && (!f.data_de_fim    || toYMD(f.data_de_fim)    < filtros.dataFimFrom))    return false
+    if (filtros.dataFimTo      && (!f.data_de_fim    || toYMD(f.data_de_fim)    > filtros.dataFimTo))      return false
     return true
   })
+
+  const fichasPaginadas = useMemo(() => {
+    const start = (page - 1) * pageSize
+    return fichasVisiveis.slice(start, start + pageSize)
+  }, [fichasVisiveis, page, pageSize])
 
   const handleExcluirConfirmado = async (ficha) => {
     try {
@@ -881,7 +970,7 @@ export default function FichaListagem() {
     }
   }
 
-  const temFiltroAtivo = filtros.status || filtros.nivel ||
+  const temFiltroAtivo = filtros.filtroSexo || filtros.status || filtros.nivel ||
     filtros.filtroLetras?.length > 0 || filtros.filtroTotalDias ||
     filtros.dataInicioFrom || filtros.dataInicioTo || filtros.dataFimFrom || filtros.dataFimTo
 
@@ -922,9 +1011,9 @@ export default function FichaListagem() {
       {modalFiltros && (
         <ModalFiltros
           filtros={filtros}
-          onChange={(f) => { isLoadMore.current = false; setPage(1); setFiltros(f) }}
+          onChange={(f) => { setPage(1); setFiltros(f) }}
           onClose={() => setModalFiltros(false)}
-          onLimpar={() => { isLoadMore.current = false; setPage(1); setFiltros(FILTROS_INICIAL) }}
+          onLimpar={() => { setPage(1); setFiltros(FILTROS_INICIAL) }}
         />
       )}
 
@@ -987,51 +1076,100 @@ export default function FichaListagem() {
             description={query ? `Sem resultados para "${query}"` : 'As fichas cadastradas aparecerão aqui'}
           />
         ) : view === 'grid' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {fichasVisiveis.map(f => (
-              <CardFicha key={f.name} ficha={f} onClick={(id) => navigate(`/fichas/${id}`)} />
-            ))}
-          </div>
-        ) : (
-          <div className="bg-[#29292e] border border-[#323238] rounded-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-[#323238] bg-[#1a1a1a]">
-                    {['Aluno', 'Nível', 'Estrutura', 'Status', 'Período', 'Ações', ''].map((label, i) => (
-                      <th key={i} className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{label}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {fichasVisiveis.map(f => (
-                    <RowFicha key={f.name} ficha={f}
-                      onClick={(id) => navigate(`/fichas/${id}`)}
-                      onDuplicar={setModalDuplicar}
-                      onExcluir={setModalExcluir}
-                      onVisualizar={setModalViz}
-                      onHistorico={setModalHistorico}
-                    />
-                  ))}
-                </tbody>
-              </table>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {fichasPaginadas.map(f => (
+                <CardFicha key={f.name} ficha={f} onClick={(id) => navigate(`/fichas/${id}`)} />
+              ))}
             </div>
-          </div>
-        )}
-
-        {/* Paginação */}
-        {!error && fichasVisiveis.length > 0 && (
-          <div className="flex flex-col items-center gap-3 mt-6">
-            {hasMore && !loading && (
-              <Button variant="secondary" loading={loadingMore} icon={ChevronRight}
-                onClick={() => { isLoadMore.current = true; setPage(p => p + 1) }}>
-                Carregar mais fichas
-              </Button>
-            )}
-            <p className="text-gray-500 text-xs">
-              Exibindo {fichasVisiveis.length} ficha{fichasVisiveis.length !== 1 ? 's' : ''}
-            </p>
-          </div>
+            <div className="mt-4">
+              <Pagination page={page} pageSize={pageSize} total={fichasVisiveis.length} onPage={setPage} onPageSize={(s) => { setPageSize(s); setPage(1) }} />
+            </div>
+          </>
+        ) : (
+          <DataTable
+            rows={fichasVisiveis}
+            page={page}
+            pageSize={pageSize}
+            onPage={setPage}
+            onPageSize={(s) => { setPageSize(s); setPage(1) }}
+            onRowClick={(f) => navigate(`/fichas/${f.name}`)}
+            columns={[
+              {
+                label: 'Aluno',
+                headerClass: 'min-w-[200px]',
+                render: (f) => (
+                  <>
+                    <p className="text-white font-medium text-sm truncate">{f.nome_completo || '—'}</p>
+                    <p className="text-gray-500 text-xs mt-0.5 truncate">{f.aluno}</p>
+                    <p className="text-gray-500 text-xs mt-0.5">criado em: {formatDate(f.creation)}</p>
+                  </>
+                ),
+              },
+              {
+                label: 'Nível',
+                headerClass: 'min-w-[100px]',
+                render: (f) => <span className="text-blue-400 text-xs font-medium">{f.nivel || '—'}</span>,
+              },
+              {
+                label: 'Estrutura',
+                headerClass: 'min-w-[100px]',
+                render: (f) => f.estrutura_calculada ? (
+                  <div className="flex gap-1 flex-wrap">
+                    {f.estrutura_calculada.split('').map((l, i) => (
+                      <span key={i} className="text-[10px] font-bold px-1.5 py-0.5 bg-[#323238] text-gray-300 rounded">{l}</span>
+                    ))}
+                  </div>
+                ) : <span className="text-gray-600">—</span>,
+              },
+              {
+                label: 'Status',
+                headerClass: 'min-w-[100px]',
+                render: (f) => <StatusBadge ficha={f} />,
+              },
+              {
+                label: 'Período',
+                headerClass: 'min-w-[160px]',
+                render: (f) => (
+                  <div className="flex items-center gap-1.5 text-gray-400 text-xs">
+                    <Calendar size={11} />
+                    <span>{formatDate(f.data_de_inicio)}</span>
+                    <span className="text-gray-600">→</span>
+                    <span>{formatDate(f.data_de_fim)}</span>
+                  </div>
+                ),
+              },
+              {
+                label: 'Ações',
+                headerClass: 'min-w-[100px]',
+                render: (f) => (
+                  <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                    <button onClick={() => setModalViz(f)}
+                      className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors" title="Visualizar">
+                      <Eye size={12} />
+                    </button>
+                    <button onClick={() => setModalHistorico(f)}
+                      className="h-7 w-7 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors" title="Comparar volumes">
+                      <BarChart2 size={12} />
+                    </button>
+                    <button onClick={() => setModalDuplicar(f)}
+                      className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors" title="Duplicar">
+                      <Copy size={12} />
+                    </button>
+                    <button onClick={() => setModalExcluir(f)}
+                      className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded-lg transition-colors" title="Excluir">
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ),
+              },
+              {
+                label: '',
+                headerClass: 'w-10',
+                render: () => <ChevronRight size={15} className="text-gray-600 group-hover:text-gray-300 transition-colors" />,
+              },
+            ]}
+          />
         )}
       </div>
     </div>

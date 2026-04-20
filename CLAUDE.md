@@ -327,6 +327,20 @@ Child tables:
 - `periodizacao_dos_aerobicos`: `exercicios`, `frequencia`, `instrucao`, `video`, `plataforma_do_vídeo`
 - `planilha_de_alongamentos_e_mobilidade` (Ficha Alongamento): `exercicio`, `series`, `observacoes`, `video`, `plataforma_do_vídeo`
 
+### Treino Exercicio ⚠️
+DocType real dos exercícios de treino (NÃO é `Exercicio`).
+Campos: `name`, `nome_do_exercicio`, `grupo_muscular`, `video`, `plataforma_do_vídeo`, `intensidade_json`, `enabled`
+Filtro obrigatório: `[["Treino Exercicio","enabled","=",1]]`
+
+### Alongamento ⚠️
+DocType real dos alongamentos (NÃO é `Exercicio de Alongamento`).
+Campos: `name`, `nome_do_exercício` (com acento no í), `video`, `plataforma_do_vídeo`, `enabled`
+Filtro obrigatório: `[["Alongamento","enabled","=",1]]`
+
+### Exercicio Aerobico
+Campos: `name`, `exercicio_aerobico`, `video`, `plataforma_do_vídeo`, `enabled`
+Filtro obrigatório: `[["Exercicio Aerobico","enabled","=",1]]`
+
 ---
 
 ## Problemas Conhecidos / Pendências

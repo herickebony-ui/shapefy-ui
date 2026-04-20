@@ -1,32 +1,36 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
   Users, Home, BarChart2, Dumbbell, ClipboardList,
-  MessageSquare, Activity, FileText, LogOut, ChevronLeft, ChevronRight
+  MessageSquare, Activity, FileText, LogOut, ListChecks,
+  PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react'
 import { useState } from 'react'
 import useAuthStore from '../../store/authStore'
 import { logout } from '../../api/auth'
 
-const MENU = {
-  main: [
-    { label: 'Meus Alunos', icon: Users, path: '/' },
-  ],
-  shapefy: [
-    { label: 'Hub de Alunos', icon: Home, path: '/alunos' },
-    { label: 'Avaliações Corporais', icon: BarChart2, path: '/avaliacoes' },
-    { label: 'Fichas de Treino', icon: Dumbbell, path: '/fichas' },
-    { label: 'Dietas', icon: ClipboardList, path: '/dietas' },
-    { label: 'Feedbacks Recebidos', icon: MessageSquare, path: '/feedbacks' },
-    { label: 'Treinos Realizados', icon: Activity, path: '/treinos' },
-    { label: 'Banco de Textos', icon: FileText, path: '/banco-textos' },
-  ],
-}
+const NAV_ITEMS = [
+  { type: 'divider', label: 'Dashboard' },
+  { id: 'main',      label: 'Meus Alunos',          icon: Users,        path: '/' },
+  { type: 'divider', label: 'Central de Alunos' },
+  { id: 'alunos',    label: 'Hub de Alunos',         icon: Home,         path: '/alunos' },
+  { id: 'avaliacoes',label: 'Avaliações Corporais',  icon: BarChart2,    path: '/avaliacoes' },
+  { type: 'divider', label: 'Module Trainning' },
+  { id: 'fichas',    label: 'Fichas de Treino',      icon: Dumbbell,     path: '/fichas' },
+  { id: 'treinos',   label: 'Treinos Realizados',    icon: Activity,     path: '/treinos' },
+  { id: 'exercicios',label: 'Gerenciar Exercícios',  icon: ListChecks,   path: '/exercicios' },
+  { type: 'divider', label: 'Module Diet' },
+  { id: 'dietas',    label: 'Dietas',                icon: ClipboardList,path: '/dietas' },
+  { type: 'divider', label: 'Gerenciamento de Alunos' },
+  { id: 'feedbacks', label: 'Feedbacks Recebidos',   icon: MessageSquare,path: '/feedbacks' },  
+  { type: 'divider', label: 'Gestão Consultoria' },
+  { id: 'textos',    label: 'Banco de Textos',       icon: FileText,     path: '/banco-textos' },
+]
 
 export default function AppLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, clearAuth } = useAuthStore()
-  const [collapsed, setCollapsed] = useState(false)
+  const [expanded, setExpanded] = useState(false)
 
   async function handleLogout() {
     await logout()
@@ -34,124 +38,130 @@ export default function AppLayout() {
     navigate('/login')
   }
 
-  const MenuItem = ({ item }) => {
-    const active = location.pathname === item.path
-    const Icon = item.icon
-    return (
-      <button
-        onClick={() => navigate(item.path)}
-        title={collapsed ? item.label : ''}
-        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left
-          ${active
-            ? 'bg-[#850000] text-white shadow-lg'
-            : 'text-gray-400 hover:bg-[#323238] hover:text-white'
-          }
-          ${collapsed ? 'justify-center' : ''}
-        `}
-      >
-        <Icon size={18} className="flex-shrink-0" />
-        {!collapsed && <span className="truncate">{item.label}</span>}
-      </button>
-    )
-  }
-
   return (
     <div className="min-h-screen bg-[#202024] flex">
 
-      {/* Sidebar */}
-      <aside className={`${collapsed ? 'w-16' : 'w-64'} bg-[#29292e] border-r border-[#323238] flex flex-col flex-shrink-0 transition-all duration-300`}>
+      {/* Overlay mobile */}
+      {expanded && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 md:hidden"
+          onClick={() => setExpanded(false)}
+        />
+      )}
 
-        {/* Logo */}
-        <div className={`flex items-center border-b border-[#323238] px-4 py-4 ${collapsed ? 'justify-center' : 'justify-between'}`}>
-          {!collapsed && (
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-[#850000] flex items-center justify-center flex-shrink-0">
-                <Activity size={18} className="text-white" />
+      {/* ── Sidebar ── */}
+      <aside className={`
+        fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-[60] flex flex-col flex-shrink-0
+        bg-[#222226] border-r border-[#323238] shadow-2xl transition-all duration-300 ease-in-out
+        ${expanded ? 'w-64 translate-x-0' : '-translate-x-full md:translate-x-0 md:w-20'}
+      `}>
+
+        {/* Header da sidebar */}
+        <div className={`h-16 flex items-center border-b border-[#323238] bg-[#1a1a1a]/50
+          ${expanded ? 'justify-between px-4' : 'justify-center'}
+        `}>
+          {expanded ? (
+            <div className="flex items-center gap-2 text-white font-bold tracking-wider">
+              <div className="p-1.5 bg-[#850000] rounded-lg">
+                <Activity className="w-4 h-4 text-white" />
               </div>
-              <span className="text-white font-bold text-sm tracking-widest uppercase">
-                Shapefy
-              </span>
+              <span className="text-sm uppercase tracking-widest">Shapefy</span>
+            </div>
+          ) : (
+            <div className="p-2 bg-[#850000] rounded-xl">
+              <Activity className="w-5 h-5 text-white" />
             </div>
           )}
-          {collapsed && (
-            <div className="w-9 h-9 rounded-lg bg-[#850000] flex items-center justify-center">
-              <Activity size={18} className="text-white" />
-            </div>
-          )}
-          {!collapsed && (
-            <button
-              onClick={() => setCollapsed(true)}
-              className="w-8 h-8 flex items-center justify-center rounded-lg border border-[#323238] text-gray-400 hover:text-white hover:bg-[#323238] transition-colors flex-shrink-0"
-            >
-              <ChevronLeft size={15} />
-            </button>
-          )}
+          <button
+            onClick={() => setExpanded(v => !v)}
+            className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-[#1a1a1a] transition-colors"
+          >
+            {expanded ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
+          </button>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-3 space-y-1">
+          {NAV_ITEMS.map((item, idx) => {
+            if (item.type === 'divider') {
+              return expanded ? (
+                <p key={idx} className="px-3 pt-4 pb-1 text-[10px] font-bold text-gray-600 uppercase tracking-widest">
+                  {item.label}
+                </p>
+              ) : (
+                <div key={idx} className="my-3 border-t border-[#323238] mx-2" />
+              )
+            }
 
-          {/* Item principal */}
-          {MENU.main.map(item => <MenuItem key={item.path} item={item} />)}
+            const active = location.pathname === item.path ||
+              (item.path !== '/' && location.pathname.startsWith(item.path))
+            const Icon = item.icon
 
-          {/* Seção Shapefy Module */}
-          {!collapsed && (
-            <p className="text-gray-600 text-[10px] font-bold tracking-widest uppercase px-3 pt-4 pb-1">
-              Shapefy Module
-            </p>
-          )}
-          {collapsed && <div className="my-2 border-t border-[#323238]" />}
-          {MENU.shapefy.map(item => <MenuItem key={item.path} item={item} />)}
-
-          {/* Seção Gestão */}
-          {!collapsed && (
-            <p className="text-gray-600 text-[10px] font-bold tracking-widest uppercase px-3 pt-4 pb-1">
-              Gestão Consultoria
-            </p>
-          )}
-          {collapsed && <div className="my-2 border-t border-[#323238]" />}
+            return (
+              <button
+                key={item.id}
+                onClick={() => { navigate(item.path); if (window.innerWidth < 768) setExpanded(false) }}
+                title={!expanded ? item.label : ''}
+                className={`w-full flex items-center rounded-xl transition-all text-sm font-medium text-left
+                  ${expanded ? 'gap-3 px-4 py-2.5' : 'justify-center py-2.5'}
+                  ${active
+                    ? 'bg-[#850000] text-white'
+                    : 'text-gray-400 hover:bg-[#323238] hover:text-white'
+                  }
+                `}
+              >
+                <Icon size={18} className="flex-shrink-0" />
+                {expanded && <span className="truncate">{item.label}</span>}
+              </button>
+            )
+          })}
         </nav>
 
         {/* Footer */}
-        <div className="px-3 py-4 border-t border-[#323238] space-y-1">
-          {collapsed ? (
-            <button
-              onClick={() => setCollapsed(false)}
-              className="w-full flex items-center justify-center py-2 rounded-xl text-gray-400 hover:text-white hover:bg-[#323238] transition-colors"
-            >
-              <ChevronRight size={16} />
-            </button>
-          ) : null}
+        <div className="p-3 border-t border-[#323238] bg-[#1a1a1a]/30">
           <button
             onClick={handleLogout}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-gray-400 hover:bg-[#323238] hover:text-white transition-colors ${collapsed ? 'justify-center' : ''}`}
+            title={!expanded ? 'Sair' : ''}
+            className={`w-full flex items-center rounded-xl transition-colors text-gray-400
+              hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20
+              ${expanded ? 'px-4 py-2 gap-3' : 'justify-center py-2'}
+            `}
           >
-            <LogOut size={17} className="flex-shrink-0" />
-            {!collapsed && <span>Sair</span>}
+            <LogOut className="w-5 h-5 flex-shrink-0" />
+            {expanded && <span className="text-xs font-bold uppercase">Sair</span>}
           </button>
         </div>
       </aside>
 
-      {/* Main */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      {/* ── Main ── */}
+      <main className="flex-1 flex flex-col overflow-hidden min-w-0">
 
         {/* Header */}
-        <header className="bg-[#29292e] border-b border-[#323238] px-8 py-4 flex items-center justify-between flex-shrink-0">
+        <header className="bg-[#29292e] border-b border-[#323238] px-6 py-4 flex items-center justify-between flex-shrink-0">
+          {/* Botão mobile para abrir sidebar */}
           <div className="flex items-center gap-4">
-            <div className="w-1 h-7 bg-[#850000] rounded-full" />
-            <div>
-              <h2 className="text-white text-base font-bold tracking-wide uppercase">
-                Gestão Consultoria
-              </h2>
-              <p className="text-gray-500 text-xs">Shapefy · Painel Principal</p>
+            <button
+              onClick={() => setExpanded(true)}
+              className="md:hidden p-2 text-gray-400 hover:text-white rounded-lg hover:bg-[#323238] transition-colors"
+            >
+              <PanelLeftOpen size={18} />
+            </button>
+            <div className="flex items-center gap-4">
+              <div className="w-1 h-7 bg-[#850000] rounded-full" />
+              <div>
+                <h2 className="text-white text-base font-bold tracking-wide uppercase">
+                  Gestão Consultoria
+                </h2>
+                <p className="text-gray-500 text-xs">Shapefy · Painel Principal</p>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="text-right">
+            <div className="text-right hidden sm:block">
               <p className="text-white text-sm font-medium">Administrador</p>
               <p className="text-gray-500 text-xs">{user}</p>
             </div>
-            <div className="w-9 h-9 rounded-full bg-[#850000] flex items-center justify-center text-white font-bold text-sm">
+            <div className="w-9 h-9 rounded-full bg-[#850000] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
               {user?.charAt(0).toUpperCase()}
             </div>
           </div>

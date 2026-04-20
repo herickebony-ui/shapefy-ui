@@ -1,5 +1,7 @@
 import client from './client'
 
+const frappeOwner = () => localStorage.getItem('frappe_user') || ''
+
 // ─── Fichas de Treino ─────────────────────────────────────────────────────────
 
 export const listarFichas = async ({ busca, nivel, aluno, page = 1, limit = 50 } = {}) => {
@@ -45,22 +47,58 @@ export const excluirFicha = async (id) => {
 
 // ─── Exercícios ───────────────────────────────────────────────────────────────
 
-export const listarAlongamentos = async ({ limit = 500 } = {}) => {
-  const res = await client.get('/api/resource/Exercicio de Alongamento', {
+const OWNERS_COMPARTILHADOS = ['teste@shapefy.com', 'Administrator']
+
+export const salvarTreinoExercicio = async (id, dados) => {
+  const url = id ? `/api/resource/Treino Exercicio/${encodeURIComponent(id)}` : '/api/resource/Treino Exercicio'
+  const res = await client[id ? 'put' : 'post'](url, dados)
+  return res.data?.data
+}
+
+export const excluirTreinoExercicio = async (id) => {
+  // Frappe não concede permissão DELETE ao usuário comum — desativamos via PUT (enabled=0)
+  // A query de listagem filtra enabled=1, então o exercício some de todos os lugares
+  await client.put(`/api/resource/Treino Exercicio/${encodeURIComponent(id)}`, { enabled: 0 })
+}
+
+export const listarGruposMusculares = async () => {
+  const res = await client.get('/api/resource/Grupo Muscular', {
+    params: {
+      fields: JSON.stringify(['name']),
+      filters: JSON.stringify([['Grupo Muscular', 'enabled', '=', 1]]),
+      limit: 100,
+      order_by: 'pos asc',
+    },
+  })
+  return (res.data?.data || []).map(g => g.name)
+}
+
+export const listarAlongamentos = async ({ limit = 200 } = {}) => {
+  const owner = frappeOwner()
+  const owners = owner ? [owner, ...OWNERS_COMPARTILHADOS] : OWNERS_COMPARTILHADOS
+  const res = await client.get('/api/resource/Alongamento', {
     params: {
       fields: JSON.stringify(['name', 'nome_do_exercício', 'video', 'plataforma_do_vídeo']),
-      filters: '[]',
+      filters: JSON.stringify([
+        ['Alongamento', 'enabled', '=', 1],
+        ['Alongamento', 'owner', 'in', owners],
+      ]),
       limit,
     },
   })
   return res.data?.data || []
 }
 
-export const listarAerobicos = async ({ limit = 500 } = {}) => {
+export const listarAerobicos = async ({ limit = 200 } = {}) => {
+  const owner = frappeOwner()
+  const owners = owner ? [owner, ...OWNERS_COMPARTILHADOS] : OWNERS_COMPARTILHADOS
   const res = await client.get('/api/resource/Exercicio Aerobico', {
     params: {
-      fields: JSON.stringify(['name', 'exercicio_aerobico', 'video', 'plataforma_do_vídeo', 'instrucao']),
-      filters: '[]',
+      fields: JSON.stringify(['name', 'exercicio_aerobico', 'video', 'plataforma_do_vídeo']),
+      filters: JSON.stringify([
+        ['Exercicio Aerobico', 'enabled', '=', 1],
+        ['Exercicio Aerobico', 'owner', 'in', owners],
+      ]),
       limit,
     },
   })
@@ -68,14 +106,20 @@ export const listarAerobicos = async ({ limit = 500 } = {}) => {
 }
 
 export const listarExercicios = async ({ limit = 500 } = {}) => {
-  const res = await client.get('/api/resource/Exercicio', {
+  const owner = frappeOwner()
+  const owners = owner ? [owner, ...OWNERS_COMPARTILHADOS] : OWNERS_COMPARTILHADOS
+  const res = await client.get('/api/resource/Treino Exercicio', {
     params: {
       fields: JSON.stringify([
-        'name', 'nome_do_exercicio', 'grupo_muscular',
-        'video', 'plataforma_do_vídeo', 'intensidade_json',
+        'name', 'creation', 'owner', 'nome_do_exercicio', 'grupo_muscular',
+        'video', 'plataforma_do_vídeo', 'intensidade_json', 'enabled',
       ]),
-      filters: '[]',
+      filters: JSON.stringify([
+        ['Treino Exercicio', 'enabled', '=', 1],
+        ['Treino Exercicio', 'owner', 'in', owners],
+      ]),
       limit,
+      order_by: 'creation desc',
     },
   })
   return res.data?.data || []
