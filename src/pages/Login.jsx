@@ -20,6 +20,8 @@ export default function Login() {
     try {
       const res = await login(form.usr, form.pwd)
       const token = res.message.token
+      const fullName = res.message.full_name || ''
+      localStorage.setItem('frappe_user_name', fullName.split(' ')[0])
       setAuth(form.usr, token)
       navigate('/')
     } catch (err) {

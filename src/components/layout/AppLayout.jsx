@@ -37,6 +37,7 @@ export default function AppLayout() {
   const location = useLocation()
   const { user, clearAuth } = useAuthStore()
   const [expanded, setExpanded] = useState(false)
+  const userName = localStorage.getItem('frappe_user_name') || 'Admin'
 
   async function handleLogout() {
     await logout()
@@ -164,11 +165,11 @@ export default function AppLayout() {
           </div>
           <div className="flex items-center gap-3">
             <div className="text-right hidden sm:block">
-              <p className="text-white text-sm font-medium">Administrador</p>
+              <p className="text-white text-sm font-medium">{userName}</p>
               <p className="text-gray-500 text-xs">{user}</p>
             </div>
             <div className="w-9 h-9 rounded-full bg-[#850000] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-              {user?.charAt(0).toUpperCase()}
+              {userName.charAt(0).toUpperCase()}
             </div>
           </div>
         </header>
