@@ -110,15 +110,15 @@ export const listarAerobicos = async ({ limit = 200 } = {}) => {
 export const listarExercicios = async ({ limit = 500 } = {}) => {
   const owner = frappeOwner()
   const owners = owner ? [owner, ...OWNERS_COMPARTILHADOS] : OWNERS_COMPARTILHADOS
-  const res = await client.get('/api/resource/Treino Exercicio', {
+  const res = await client.get('/api/resource/Treino%20Exercicio', {
     params: {
       fields: JSON.stringify([
         'name', 'creation', 'owner', 'nome_do_exercicio', 'grupo_muscular',
         'video', 'plataforma_do_vídeo', 'intensidade_json', 'enabled',
       ]),
       filters: JSON.stringify([
-        ['Treino Exercicio', 'enabled', '=', 1],
-        ['Treino Exercicio', 'owner', 'in', owners],
+        ['enabled', '=', 1],
+        ['owner', 'in', owners],
       ]),
       limit,
       order_by: 'creation desc',
