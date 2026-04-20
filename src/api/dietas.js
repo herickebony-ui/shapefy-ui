@@ -75,7 +75,9 @@ export const duplicarDieta = async (id, novoAluno = null, dataInicial = null, da
 // ─── Alimentos ────────────────────────────────────────────────────────────────
 
 export const listarAlimentos = async ({ busca = '', grupo = '', page = 1, limit = 50 } = {}) => {
-  const filters = [['enabled', '=', 1]]
+  const owner = frappeOwner()
+  const owners = owner ? [owner, ...OWNERS_BASE] : OWNERS_BASE
+  const filters = [['enabled', '=', 1], ['owner', 'in', owners]]
   if (busca) filters.push(["food", "like", `%${busca}%`])
   if (grupo) filters.push(["food_group", "=", grupo])
 

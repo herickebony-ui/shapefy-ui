@@ -53,10 +53,17 @@ export default function Autocomplete({
   const computeDropdownPos = () => {
     if (!inputRef.current) return
     const rect = inputRef.current.getBoundingClientRect()
+    const spaceBelow = window.innerHeight - rect.bottom
+    const spaceAbove = rect.top
+    const openUpward = spaceBelow < 260 && spaceAbove > spaceBelow
     setDropdownPos({
-      top: rect.bottom + window.scrollY + 4,
       left: rect.left + window.scrollX,
       width: rect.width,
+      openUpward,
+      ...(openUpward
+        ? { bottom: window.innerHeight - rect.top - window.scrollY + 4 }
+        : { top: rect.bottom + window.scrollY + 4 }
+      ),
     })
   }
 
@@ -64,6 +71,7 @@ export default function Autocomplete({
     const v = e.target.value
     setQuery(v)
     onChange?.(v)
+    computeDropdownPos()
     search(v)
   }
 
@@ -86,6 +94,17 @@ export default function Autocomplete({
     : `w-full h-10 bg-[#1a1a1a] border border-[#323238] rounded-lg text-white text-sm placeholder-gray-600 outline-none transition-colors focus:border-[#850000]/60 focus:ring-1 focus:ring-[#850000]/30 disabled:opacity-40 disabled:cursor-not-allowed ${Icon ? 'pl-10' : 'pl-3'} pr-3`
 
   const useBottomSheet = isMobile && items.length > 5 && !compact
+
+  const desktopDropdownStyle = dropdownPos ? {
+    position: 'fixed',
+    left: dropdownPos.left,
+    width: dropdownPos.width,
+    zIndex: 9999,
+    ...(dropdownPos.openUpward
+      ? { bottom: dropdownPos.bottom }
+      : { top: dropdownPos.top }
+    ),
+  } : {}
 
   const dropdown = open && items.length > 0 && (
     useBottomSheet ? (
@@ -119,8 +138,11 @@ export default function Autocomplete({
         </div>,
         document.body
       )
-    ) : (
-      <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-[#29292e] border border-[#323238] rounded-lg shadow-[0_10px_30px_rgba(0,0,0,0.5)] overflow-hidden max-h-56 overflow-y-auto">
+    ) : createPortal(
+      <div
+        style={desktopDropdownStyle}
+        className="bg-[#29292e] border border-[#323238] rounded-lg shadow-[0_10px_30px_rgba(0,0,0,0.5)] overflow-hidden max-h-56 overflow-y-auto"
+      >
         {items.map((item, i) => (
           <button
             key={i}
@@ -132,14 +154,16 @@ export default function Autocomplete({
             )}
           </button>
         ))}
-      </div>
+      </div>,
+      document.body
     )
   )
 
-  const emptyDropdown = open && !loading && items.length === 0 && query.length >= 1 && (
-    <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-[#29292e] border border-[#323238] rounded-lg shadow-lg overflow-hidden">
+  const emptyDropdown = open && !loading && items.length === 0 && query.length >= 1 && createPortal(
+    <div style={desktopDropdownStyle} className="bg-[#29292e] border border-[#323238] rounded-lg shadow-lg overflow-hidden">
       <p className="px-4 py-3 text-gray-500 text-sm text-center">{emptyState}</p>
-    </div>
+    </div>,
+    document.body
   )
 
   return (
@@ -167,8 +191,7 @@ export default function Autocomplete({
           </span>
         )}
       </div>
-      {!useBottomSheet && dropdown}
-      {useBottomSheet && dropdown}
+      {dropdown}
       {emptyDropdown}
     </div>
   )
