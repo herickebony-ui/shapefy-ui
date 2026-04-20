@@ -1,5 +1,8 @@
 import client from './client'
 
+const frappeOwner = () => localStorage.getItem('frappe_user') || ''
+const OWNERS_BASE = ['Administrator', 'teste@shapefy.com']
+
 // ─── Dietas ───────────────────────────────────────────────────────────────────
 
 export const listarDietas = async ({ alunoId, busca, kcalMin, kcalMax, page = 1, limit = 20 } = {}) => {
@@ -72,7 +75,9 @@ export const duplicarDieta = async (id, novoAluno = null, dataInicial = null, da
 // ─── Alimentos ────────────────────────────────────────────────────────────────
 
 export const listarAlimentos = async ({ busca = '', grupo = '', page = 1, limit = 50 } = {}) => {
-  const filters = []
+  const owner = frappeOwner()
+  const owners = owner ? [owner, ...OWNERS_BASE] : OWNERS_BASE
+  const filters = [['enabled', '=', 1], ['owner', 'in', owners]]
   if (busca) filters.push(["food", "like", `%${busca}%`])
   if (grupo) filters.push(["food_group", "=", grupo])
 
@@ -116,37 +121,55 @@ export const listarGrupos = async () => {
 
 // ─── Refeições Prontas ────────────────────────────────────────────────────────
 
-export const listarRefeicoesProntas = async ({ busca = '', page = 1, limit = 50 } = {}) => {
-  const params = {
-    fields: JSON.stringify(["name", "full_name", "creation"]),
-    limit,
-    limit_start: (page - 1) * limit,
-    order_by: 'creation desc',
-  }
-  if (busca) params.filters = JSON.stringify([["full_name", "like", `%${busca}%`]])
+export const listarRefeicoesProntas = async ({ busca = '', enabled = '', page = 1, limit = 30 } = {}) => {
+  const owner = frappeOwner()
+  const owners = owner ? [owner, ...OWNERS_BASE] : OWNERS_BASE
 
-  const res = await client.get('/api/resource/Ref%20Pronta', { params })
-  const list = res.data.data || []
+  const filters = [['owner', 'in', owners]]
+  if (busca) filters.push(['full_name', 'like', `%${busca}%`])
+  if (enabled !== '') filters.push(['enabled', '=', Number(enabled)])
+
+  const data = new URLSearchParams({
+    doctype: 'Refeicoes',
+    fields: JSON.stringify(['name', 'full_name', 'enabled', 'public', 'profissional', 'creation']),
+    filters: JSON.stringify(filters),
+    limit_start: (page - 1) * limit,
+    limit_page_length: limit,
+    order_by: 'creation desc',
+  })
+
+  const res = await client.post('/api/method/frappe.desk.reportview.get', data, {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  })
+  const result = res.data.message
+  const list = result?.values?.map(row =>
+    Object.fromEntries(result.keys.map((k, i) => [k, row[i]]))
+  ) || []
   return { list, hasMore: list.length === limit }
 }
 
 export const buscarRefeicaoPronta = async (id) => {
-  const res = await client.get(`/api/resource/Ref%20Pronta/${id}`)
+  const res = await client.get(`/api/resource/Refeicoes/${encodeURIComponent(id)}`)
   return res.data.data
 }
 
 export const salvarRefeicaoPronta = async (id, campos) => {
-  const res = await client.put(`/api/resource/Ref%20Pronta/${id}`, campos)
+  const res = await client.put(`/api/resource/Refeicoes/${encodeURIComponent(id)}`, campos)
   return res.data.data
 }
 
 export const criarRefeicaoPronta = async (campos) => {
-  const res = await client.post('/api/resource/Ref%20Pronta', campos)
+  const res = await client.post('/api/resource/Refeicoes', campos)
   return res.data.data
 }
 
 export const excluirRefeicaoPronta = async (id) => {
-  await client.delete(`/api/resource/Ref%20Pronta/${id}`)
+  await client.delete(`/api/resource/Refeicoes/${encodeURIComponent(id)}`)
+}
+
+export const toggleRefeicaoPronta = async (id, enabled) => {
+  const res = await client.put(`/api/resource/Refeicoes/${encodeURIComponent(id)}`, { enabled })
+  return res.data.data
 }
 
 // ─── Medidas Caseiras ─────────────────────────────────────────────────────────

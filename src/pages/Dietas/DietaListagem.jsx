@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Plus, ChevronRight, Calendar, X,
@@ -9,7 +9,7 @@ import {
 import { listarDietas, excluirDieta, buscarDieta, salvarDieta, criarDieta } from '../../api/dietas'
 import { listarAlunos } from '../../api/alunos'
 import { ModalDuplicarDieta } from './DietaDetalhe'
-import { Button, FormGroup, Input, Autocomplete, Modal, EmptyState } from '../../components/ui'
+import { Button, FormGroup, Input, Autocomplete, Modal, EmptyState, Pagination, DataTable } from '../../components/ui'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -120,18 +120,17 @@ const CardDieta = ({ dieta, onClick }) => {
   )
 }
 
-// ─── Row (lista) ──────────────────────────────────────────────────────────────
+// ─── Período editável (cell) ──────────────────────────────────────────────────
 
-const RowDieta = ({ dieta, onClick, onDuplicar, onExcluir, onVisualizar, onDatasAtualizadas }) => {
-  const s = getStrategyStyle(dieta.strategy)
+const RowDietaPeriodo = ({ dieta, onDatasAtualizadas }) => {
   const [editando, setEditando] = useState(false)
   const [datas, setDatas] = useState({ date: toYMD(dieta.date) || '', final_date: toYMD(dieta.final_date) || '' })
   const [salvando, setSalvando] = useState(false)
-  const popoverRef = useRef(null)
+  const ref = useRef(null)
 
   useEffect(() => {
     if (!editando) return
-    const handler = (e) => { if (popoverRef.current && !popoverRef.current.contains(e.target)) setEditando(false) }
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setEditando(false) }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [editando])
@@ -149,82 +148,36 @@ const RowDieta = ({ dieta, onClick, onDuplicar, onExcluir, onVisualizar, onDatas
   }
 
   return (
-    <tr onClick={() => onClick(dieta.name)} className="group border-b border-[#323238] hover:bg-[#2f2f35] cursor-pointer transition-colors">
-      <td className="px-4 py-3.5 min-w-[200px]">
-        <p className="text-white font-medium text-sm truncate">{dieta.nome_completo || '—'}</p>
-        <p className="text-gray-500 text-xs mt-0.5 truncate">{dieta.aluno}</p>
-        <p className="text-gray-500 text-xs mt-0.5">criado em: {formatDate(dieta.creation)}</p>
-      </td>
-      <td className="px-4 py-3.5 min-w-[140px]">
-        <span className={`text-xs font-medium ${s.text}`}>{dieta.strategy || '—'}</span>
-      </td>
-      <td className="px-4 py-3.5 min-w-[100px]">
-        <div className="flex items-center gap-1.5 text-orange-400">
-          <Flame size={12} />
-          <span className="text-sm font-medium">{dieta.total_calories ?? '—'}</span>
-          <span className="text-gray-500 text-xs">kcal</span>
+    <div className="relative" ref={ref}>
+      <button onClick={(e) => { e.stopPropagation(); setEditando(v => !v) }}
+        className="flex items-center gap-2 text-gray-400 hover:text-white text-xs transition-colors group/btn">
+        <Calendar size={11} className="shrink-0" />
+        <span>{formatDate(dieta.date)}</span>
+        <span className="text-gray-600">→</span>
+        <span>{formatDate(dieta.final_date)}</span>
+        <span className="opacity-0 group-hover/btn:opacity-100 transition-opacity text-[10px] text-[#850000]">editar</span>
+      </button>
+      {editando && (
+        <div onClick={e => e.stopPropagation()}
+          className="absolute z-50 top-7 left-0 bg-[#1a1a1a] border border-[#323238] rounded-lg p-4 shadow-2xl w-72 space-y-3">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Editar período</p>
+          <div className="space-y-2">
+            <FormGroup label="Início">
+              <input type="date" value={datas.date} onChange={e => setDatas(p => ({ ...p, date: e.target.value }))}
+                className="w-full h-9 px-3 bg-[#29292e] border border-[#323238] text-white text-xs rounded-lg outline-none focus:border-[#850000]/60" />
+            </FormGroup>
+            <FormGroup label="Fim">
+              <input type="date" value={datas.final_date} onChange={e => setDatas(p => ({ ...p, final_date: e.target.value }))}
+                className="w-full h-9 px-3 bg-[#29292e] border border-[#323238] text-white text-xs rounded-lg outline-none focus:border-[#850000]/60" />
+            </FormGroup>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <Button variant="secondary" size="sm" fullWidth onClick={() => setEditando(false)}>Cancelar</Button>
+            <Button variant="primary" size="sm" fullWidth loading={salvando} onClick={handleSalvar}>Salvar</Button>
+          </div>
         </div>
-      </td>
-      <td className="px-4 py-3.5 min-w-[140px]">
-        <span className="text-gray-400 text-sm">{dieta.week_days || '—'}</span>
-      </td>
-      <td className="px-4 py-3.5 min-w-[100px]"><StatusBadge dieta={dieta} /></td>
-      <td className="px-4 py-3.5 min-w-[200px]" colSpan={2}>
-        <div className="relative" ref={popoverRef}>
-          <button
-            onClick={(e) => { e.stopPropagation(); setEditando(v => !v) }}
-            className="flex items-center gap-2 text-gray-400 hover:text-white text-xs transition-colors group/btn"
-          >
-            <Calendar size={11} className="shrink-0" />
-            <span>{formatDate(dieta.date)}</span>
-            <span className="text-gray-600">→</span>
-            <span>{formatDate(dieta.final_date)}</span>
-            <span className="opacity-0 group-hover/btn:opacity-100 transition-opacity text-[10px] text-[#850000]">editar</span>
-          </button>
-          {editando && (
-            <div onClick={e => e.stopPropagation()}
-              className="absolute z-50 top-7 left-0 bg-[#1a1a1a] border border-[#323238] rounded-lg p-4 shadow-2xl w-72 space-y-3">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Editar período</p>
-              <div className="space-y-2">
-                <FormGroup label="Início">
-                  <input type="date" value={datas.date}
-                    onChange={e => setDatas(p => ({ ...p, date: e.target.value }))}
-                    className="w-full h-9 px-3 bg-[#29292e] border border-[#323238] text-white text-xs rounded-lg outline-none focus:border-[#850000]/60" />
-                </FormGroup>
-                <FormGroup label="Fim">
-                  <input type="date" value={datas.final_date}
-                    onChange={e => setDatas(p => ({ ...p, final_date: e.target.value }))}
-                    className="w-full h-9 px-3 bg-[#29292e] border border-[#323238] text-white text-xs rounded-lg outline-none focus:border-[#850000]/60" />
-                </FormGroup>
-              </div>
-              <div className="flex gap-2 pt-1">
-                <Button variant="secondary" size="sm" fullWidth onClick={() => setEditando(false)}>Cancelar</Button>
-                <Button variant="primary" size="sm" fullWidth loading={salvando} onClick={handleSalvar}>Salvar</Button>
-              </div>
-            </div>
-          )}
-        </div>
-      </td>
-      <td className="px-4 py-3.5 min-w-[100px]">
-        <div className="flex items-center gap-1.5">
-          <button onClick={(e) => { e.stopPropagation(); onVisualizar(dieta.name) }}
-            className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors" title="Visualizar">
-            <Eye size={12} />
-          </button>
-          <button onClick={(e) => { e.stopPropagation(); onDuplicar(dieta.name, dieta.nome_completo) }}
-            className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors" title="Duplicar">
-            <Copy size={12} />
-          </button>
-          <button onClick={(e) => { e.stopPropagation(); onExcluir(dieta.name, dieta.nome_completo) }}
-            className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded-lg transition-colors" title="Excluir">
-            <Trash2 size={12} />
-          </button>
-        </div>
-      </td>
-      <td className="px-4 py-3.5 min-w-[40px]">
-        <ChevronRight size={15} className="text-gray-600 group-hover:text-gray-300 transition-colors" />
-      </td>
-    </tr>
+      )}
+    </div>
   )
 }
 
@@ -549,7 +502,7 @@ const ModalNovaDieta = ({ onClose, onCriada }) => {
 
 // ─── DietaListagem ────────────────────────────────────────────────────────────
 
-const LIMIT = 50
+const FETCH_LIMIT = 200
 
 export default function DietaListagem() {
   const navigate = useNavigate()
@@ -565,53 +518,40 @@ export default function DietaListagem() {
   const [query, setQuery] = useState('')
   const [view, setView] = useState('list')
   const [page, setPage] = useState(1)
-  const [hasMore, setHasMore] = useState(false)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const isLoadMore = useRef(false)
+  const [pageSize, setPageSize] = useState(20)
 
   useEffect(() => {
-    const t = setTimeout(() => { isLoadMore.current = false; setQuery(search); setPage(1) }, 400)
+    const t = setTimeout(() => { setQuery(search); setPage(1) }, 400)
     return () => clearTimeout(t)
   }, [search])
 
+  useEffect(() => { setPage(1) }, [filtros])
+
   const fetchDietas = useCallback(async () => {
-    const appending = isLoadMore.current
-    isLoadMore.current = false
-    if (appending) setLoadingMore(true)
-    else setLoading(true)
+    setLoading(true)
     setError(null)
     try {
-      const temFiltroClienteSide = filtros.status || filtros.refeicoes?.length > 0
-      const { list, hasMore: more } = await listarDietas({
+      const { list } = await listarDietas({
         busca: query || undefined,
         kcalMin: filtros.kcalMin || undefined,
         kcalMax: filtros.kcalMax || undefined,
-        page: temFiltroClienteSide ? 1 : page,
-        limit: temFiltroClienteSide ? 9999 : LIMIT,
+        limit: FETCH_LIMIT,
       })
-      if (appending) setDietas(prev => [...prev, ...list])
-      else setDietas(list)
-      setHasMore(more && !temFiltroClienteSide)
+      setDietas(list)
     } catch (err) {
       setError(err.message ?? 'Erro ao buscar dietas')
     } finally {
       setLoading(false)
-      setLoadingMore(false)
     }
-  }, [query, page, filtros])
+  }, [query, filtros])
 
   useEffect(() => { fetchDietas() }, [fetchDietas])
-
-  const handleCarregarMais = useCallback(() => {
-    isLoadMore.current = true
-    setPage(p => p + 1)
-  }, [])
 
   const handleDatasAtualizadas = useCallback((id, novasDatas) => {
     setDietas(prev => prev.map(d => d.name === id ? { ...d, ...novasDatas } : d))
   }, [])
 
-  const dietasFiltradas = dietas.filter(d => {
+  const dietasFiltradas = useMemo(() => dietas.filter(d => {
     if (filtros.status && getStatus(d).label !== filtros.status) return false
     if (filtros.refeicoes?.length > 0) {
       const match = [1, 2, 3, 4, 5, 6, 7, 8].every(i => {
@@ -622,7 +562,12 @@ export default function DietaListagem() {
       if (!match) return false
     }
     return true
-  })
+  }), [dietas, filtros])
+
+  const dietasPaginadas = useMemo(() => {
+    const start = (page - 1) * pageSize
+    return dietasFiltradas.slice(start, start + pageSize)
+  }, [dietasFiltradas, page, pageSize])
 
   const handleExcluir = async (id, nome) => {
     if (!window.confirm(`Excluir dieta de ${nome}?`)) return
@@ -656,9 +601,9 @@ export default function DietaListagem() {
       {modalFiltros && (
         <ModalFiltros
           filtros={filtros}
-          onChange={(f) => { isLoadMore.current = false; setPage(1); setFiltros(f) }}
+          onChange={(f) => { setPage(1); setFiltros(f) }}
           onClose={() => setModalFiltros(false)}
-          onLimpar={() => { isLoadMore.current = false; setPage(1); setFiltros({ status: null, kcalMin: '', kcalMax: '', refeicoes: [] }) }}
+          onLimpar={() => { setPage(1); setFiltros({ status: null, kcalMin: '', kcalMax: '', refeicoes: [] }) }}
         />
       )}
 
@@ -721,58 +666,98 @@ export default function DietaListagem() {
             description={query ? `Sem resultados para "${query}"` : 'As dietas cadastradas no Frappe aparecerão aqui'}
           />
         ) : view === 'grid' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {dietasFiltradas.map(d => <CardDieta key={d.name} dieta={d} onClick={(id) => navigate(`/dietas/${id}`)} />)}
-          </div>
-        ) : (
-          <div className="bg-[#29292e] border border-[#323238] rounded-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-[#323238] bg-[#1a1a1a]">
-                    {[
-                      { label: 'Paciente', cls: 'min-w-[200px]' },
-                      { label: 'Estratégia', cls: 'min-w-[140px]' },
-                      { label: 'Calorias', cls: 'min-w-[100px]' },
-                      { label: 'Dias', cls: 'min-w-[140px]' },
-                      { label: 'Status', cls: 'min-w-[100px]' },
-                      { label: 'Início', cls: 'min-w-[100px]' },
-                      { label: 'Fim', cls: 'min-w-[100px]' },
-                      { label: 'Ações', cls: 'min-w-[120px]' },
-                      { label: '', cls: 'min-w-[40px]' },
-                    ].map(({ label, cls }, i) => (
-                      <th key={i} className={`px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider ${cls}`}>{label}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {dietasFiltradas.map(d => (
-                    <RowDieta key={d.name} dieta={d}
-                      onClick={(id) => navigate(`/dietas/${id}`)}
-                      onDuplicar={(id, nome) => setModalDuplicar({ id, nome })}
-                      onExcluir={handleExcluir}
-                      onVisualizar={setVizId}
-                      onDatasAtualizadas={handleDatasAtualizadas}
-                    />
-                  ))}
-                </tbody>
-              </table>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {dietasPaginadas.map(d => <CardDieta key={d.name} dieta={d} onClick={(id) => navigate(`/dietas/${id}`)} />)}
             </div>
-          </div>
-        )}
-
-        {/* Paginação */}
-        {!error && dietasFiltradas.length > 0 && (
-          <div className="flex flex-col items-center gap-3 mt-6">
-            {hasMore && !loading && (
-              <Button variant="secondary" onClick={handleCarregarMais} loading={loadingMore} icon={ChevronRight}>
-                Carregar mais dietas
-              </Button>
-            )}
-            <p className="text-gray-500 text-xs">
-              Exibindo {dietasFiltradas.length} dieta{dietasFiltradas.length !== 1 ? 's' : ''}
-            </p>
-          </div>
+            <div className="mt-4">
+              <Pagination page={page} pageSize={pageSize} total={dietasFiltradas.length} onPage={setPage} onPageSize={(s) => { setPageSize(s); setPage(1) }} />
+            </div>
+          </>
+        ) : (
+          <DataTable
+            rows={dietasFiltradas}
+            page={page}
+            pageSize={pageSize}
+            onPage={setPage}
+            onPageSize={(s) => { setPageSize(s); setPage(1) }}
+            onRowClick={(d) => navigate(`/dietas/${d.name}`)}
+            columns={[
+              {
+                label: 'Paciente',
+                headerClass: 'min-w-[200px]',
+                render: (d) => {
+                  const s = getStrategyStyle(d.strategy)
+                  return (
+                    <>
+                      <p className="text-white font-medium text-sm truncate">{d.nome_completo || '—'}</p>
+                      <p className="text-gray-500 text-xs mt-0.5 truncate">{d.aluno}</p>
+                      <p className="text-gray-500 text-xs mt-0.5">criado em: {formatDate(d.creation)}</p>
+                    </>
+                  )
+                },
+              },
+              {
+                label: 'Estratégia',
+                headerClass: 'min-w-[140px]',
+                render: (d) => {
+                  const s = getStrategyStyle(d.strategy)
+                  return <span className={`text-xs font-medium ${s.text}`}>{d.strategy || '—'}</span>
+                },
+              },
+              {
+                label: 'Calorias',
+                headerClass: 'min-w-[100px]',
+                render: (d) => (
+                  <div className="flex items-center gap-1.5 text-orange-400">
+                    <Flame size={12} />
+                    <span className="text-sm font-medium">{d.total_calories ?? '—'}</span>
+                    <span className="text-gray-500 text-xs">kcal</span>
+                  </div>
+                ),
+              },
+              {
+                label: 'Dias',
+                headerClass: 'min-w-[140px]',
+                render: (d) => <span className="text-gray-400 text-sm">{d.week_days || '—'}</span>,
+              },
+              {
+                label: 'Status',
+                headerClass: 'min-w-[100px]',
+                render: (d) => <StatusBadge dieta={d} />,
+              },
+              {
+                label: 'Período',
+                headerClass: 'min-w-[200px]',
+                render: (d) => <RowDietaPeriodo dieta={d} onDatasAtualizadas={handleDatasAtualizadas} />,
+              },
+              {
+                label: 'Ações',
+                headerClass: 'min-w-[120px]',
+                render: (d) => (
+                  <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                    <button onClick={() => setVizId(d.name)}
+                      className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors" title="Visualizar">
+                      <Eye size={12} />
+                    </button>
+                    <button onClick={() => setModalDuplicar({ id: d.name, nome: d.nome_completo })}
+                      className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors" title="Duplicar">
+                      <Copy size={12} />
+                    </button>
+                    <button onClick={() => handleExcluir(d.name, d.nome_completo)}
+                      className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded-lg transition-colors" title="Excluir">
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ),
+              },
+              {
+                label: '',
+                headerClass: 'w-10',
+                render: () => <ChevronRight size={15} className="text-gray-600 group-hover:text-gray-300 transition-colors" />,
+              },
+            ]}
+          />
         )}
       </div>
     </div>

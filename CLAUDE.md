@@ -172,20 +172,46 @@ className="rounded-lg"
 ### Exceções documentadas — padrões permitidos fora do DS
 
 #### 1. Icon buttons em linhas de tabela
-Botões de ação inline (editar, excluir, duplicar, reordenar) dentro de `<tr>` ou cards de lista usam raw `<button>` porque o DS `Button` tem padding horizontal que impede o formato quadrado compacto. Padrão obrigatório:
+Botões de ação inline (editar, excluir, duplicar, visualizar) dentro de `<tr>` usam raw `<button>` porque o DS `Button` tem padding horizontal que impede o formato quadrado compacto. **Padrão obrigatório validado** (DietaListagem / FichaListagem):
 
 ```jsx
-// ✅ Icon button de linha — tamanho h-6 w-6 (desktop) ou h-7 w-7 (mobile/listagem)
-<button onClick={...} className="h-6 w-6 flex items-center justify-center bg-[#29292e] text-blue-400 hover:bg-blue-600 hover:text-white rounded transition-colors">
-  <Edit size={11} />
+// ✅ Sempre h-7 w-7 + border + rounded-lg + sem bg default (só no hover)
+
+// Editar (azul)
+<button onClick={...} title="Editar"
+  className="h-7 w-7 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors">
+  <Edit size={12} />
 </button>
-// Variantes de cor por semântica:
-// editar   → text-blue-400  hover:bg-blue-600
-// substituto → text-yellow-500 hover:bg-yellow-600
-// duplicar → text-gray-400  hover:bg-gray-600
-// excluir  → text-red-400   hover:bg-red-600
-// visualizar → text-gray-400 hover:text-white border border-[#323238]
+
+// Excluir (brand vermelho)
+<button onClick={...} title="Excluir"
+  className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded-lg transition-colors">
+  <Trash2 size={12} />
+</button>
+
+// Visualizar / Duplicar / Neutro (cinza)
+<button onClick={...} title="Visualizar"
+  className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors">
+  <Eye size={12} />
+</button>
+
+// Toggle ativo (verde) / inativo (cinza)
+<button onClick={...}
+  className={`h-7 w-7 flex items-center justify-center border rounded-lg transition-colors
+    ${enabled
+      ? 'text-green-400 border-green-500/30 hover:bg-green-700 hover:border-green-700 hover:text-white'
+      : 'text-gray-500 border-[#323238] hover:border-gray-500 hover:text-white'
+    }`}>
+  {enabled ? <ToggleRight size={12} /> : <ToggleLeft size={12} />}
+</button>
 ```
+
+**Regras:**
+- `h-7 w-7` sempre — nunca `h-6 w-6` em listagens
+- `rounded-lg` — nunca `rounded` sozinho
+- Sem `bg` default — background só aparece no hover
+- Ícone sempre `size={12}`
+- Container da coluna Ações deve ter `onClick={e => e.stopPropagation()}` para não acionar `onRowClick`
 
 #### 2. Inputs em células de tabela editável
 Inputs dentro de `<td>` precisam ser compactos (`h-7`) e com borda transparente por padrão. O DS `Input` é `h-10` — usá-lo quebraria o layout da tabela. Padrão obrigatório:
@@ -233,6 +259,42 @@ Usar os templates para montar novas telas. **Não construir layout de página do
 | `ListPage` | Listagens (Alunos, Dietas, Fichas) | `title`, `subtitle`, `actions`, `filters`, `stats`, `loading`, `empty`, `pagination`, `children` |
 | `DetailPage` | Detalhe/edição de entidade | `title`, `subtitle`, `status`, `backHref`, `actions`, `banner`, `tabs`, `activeTab`, `onTabChange`, `footer`, `children` |
 | `FormPage` | Formulários com stepper opcional | `title`, `steps`, `activeStep`, `onStepChange`, `onSubmit`, `onCancel`, `submitLabel`, `children` |
+
+### Padrão obrigatório para telas de listagem
+
+Toda tela de listagem **deve** usar `ListPage` como wrapper. Padrão de toolbar validado:
+
+```jsx
+// ✅ Toolbar padrão — copiar EXATAMENTE em toda listagem nova
+<ListPage
+  title="Nome da Tela"
+  subtitle="Descrição curta"
+  actions={
+    <>
+      <Button variant="secondary" size="sm" icon={RefreshCw} onClick={carregar} loading={loading} />
+      {/* Filtros avançados em modal — variant="secondary" normal, "danger" quando filtro ativo */}
+      <Button variant="primary" size="sm" icon={Plus} onClick={...}>Nova X</Button>
+    </>
+  }
+  filters={[
+    { type: 'search', value: busca, onChange: setBusca, placeholder: 'Buscar...' },
+    { type: 'select', value: filtro, onChange: setFiltro, options: [...] },
+  ]}
+  loading={loading}
+  empty={lista.length === 0 && !loading ? { title: '...', description: '...' } : null}
+>
+  {!loading && lista.length > 0 && (
+    <DataTable columns={columns} rows={lista} rowKey="name" />
+  )}
+</ListPage>
+```
+
+**Regras:**
+- `stats` prop: **não usar** — nenhuma listagem exibe cards de estatísticas acima da tabela
+- `icon` nos filtros `type: 'search'`: passar a referência do componente Lucide (`icon: Search`), **nunca JSX** (`icon: <Search />`)
+- Toggle grade/lista: raw `<button>` `h-7 w-7` com `bg-[#850000]` ativo — só quando a tela suporta dois modos de visualização (ex: DietaListagem)
+- Paginação: usar via `DataTable` props (`page`, `pageSize`, `onPage`, `onPageSize`) — não duplicar no `ListPage` `pagination` prop
+- Após DELETE: sempre recarregar do servidor (`await listarX(); setLista(data)`) — nunca confiar apenas em state local para confirmar exclusão
 
 ---
 
@@ -326,6 +388,20 @@ Child tables:
 - `periodizacao` (Ficha Periodizacao): `semana`, `series`, `repeticoes`, `descanso`, `legenda`
 - `periodizacao_dos_aerobicos`: `exercicios`, `frequencia`, `instrucao`, `video`, `plataforma_do_vídeo`
 - `planilha_de_alongamentos_e_mobilidade` (Ficha Alongamento): `exercicio`, `series`, `observacoes`, `video`, `plataforma_do_vídeo`
+
+### Treino Exercicio ⚠️
+DocType real dos exercícios de treino (NÃO é `Exercicio`).
+Campos: `name`, `nome_do_exercicio`, `grupo_muscular`, `video`, `plataforma_do_vídeo`, `intensidade_json`, `enabled`
+Filtro obrigatório: `[["Treino Exercicio","enabled","=",1]]`
+
+### Alongamento ⚠️
+DocType real dos alongamentos (NÃO é `Exercicio de Alongamento`).
+Campos: `name`, `nome_do_exercício` (com acento no í), `video`, `plataforma_do_vídeo`, `enabled`
+Filtro obrigatório: `[["Alongamento","enabled","=",1]]`
+
+### Exercicio Aerobico
+Campos: `name`, `exercicio_aerobico`, `video`, `plataforma_do_vídeo`, `enabled`
+Filtro obrigatório: `[["Exercicio Aerobico","enabled","=",1]]`
 
 ---
 
