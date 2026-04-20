@@ -51,6 +51,33 @@ const formatarDataBr = (dateObj) =>
 const normalizar = (s = '') =>
   String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
 
+const PLATAFORMAS_VIDEO = ['YouTube', 'Google Drive', 'Vimeo']
+
+const extractVideoInfo = (input) => {
+  if (!input || !input.includes('://')) return null
+  try {
+    const url = new URL(input)
+    const host = url.hostname.replace('www.', '')
+    if (host === 'youtube.com' || host === 'youtu.be') {
+      let id = null
+      if (host === 'youtu.be') id = url.pathname.slice(1).split('?')[0]
+      else if (url.searchParams.get('v')) id = url.searchParams.get('v')
+      else { const m = url.pathname.match(/\/(embed|shorts|v)\/([^/?]+)/); if (m) id = m[2] }
+      if (id) return { id, platform: 'YouTube' }
+    }
+    if (host === 'drive.google.com') {
+      const m = url.pathname.match(/\/d\/([^/]+)/)
+      const id = m ? m[1] : url.searchParams.get('id')
+      if (id) return { id, platform: 'Google Drive' }
+    }
+    if (host === 'vimeo.com' || host === 'player.vimeo.com') {
+      const m = url.pathname.match(/\/(?:video\/)?(\d+)/)
+      if (m) return { id: m[1], platform: 'Vimeo' }
+    }
+  } catch { }
+  return null
+}
+
 // ─── GRUPOS_CONFIG ────────────────────────────────────────────────────────────
 
 const GRUPOS_CONFIG = [
@@ -292,7 +319,13 @@ const RodapeVolume = ({ ficha, intensidadeMap, volumeAnterior }) => {
 
 const DetalhesExercicio = ({ ex, onSave, onClose, intensidadeMap = {} }) => {
   const [local, setLocal] = useState({ ...ex })
+  const [videoDetected, setVideoDetected] = useState(false)
   const upd = (f, v) => setLocal(l => ({ ...l, [f]: v }))
+  const handleVideoChange = (v) => {
+    const info = extractVideoInfo(v)
+    if (info) { upd('video', info.id); upd('plataforma_do_vídeo', info.platform); setVideoDetected(true) }
+    else { upd('video', v); setVideoDetected(false) }
+  }
 
   const TITULOS_COMBINADO = ['Bi-set', 'Tri-set', 'Superset']
 
@@ -323,8 +356,8 @@ const DetalhesExercicio = ({ ex, onSave, onClose, intensidadeMap = {} }) => {
           <FormGroup label="Carga Sugerida (kg)">
             <Input type="number" value={local.carga_sugerida || ''} onChange={v => upd('carga_sugerida', v)} />
           </FormGroup>
-          <FormGroup label="ID do Vídeo">
-            <Input value={local.video || ''} onChange={v => upd('video', v)} placeholder="Ex: dQw4w9WgXcQ" />
+          <FormGroup label="Link ou ID do Vídeo" hint={videoDetected ? '✓ ID extraído automaticamente' : 'Cole o link ou o código'}>
+            <Input value={local.video || ''} onChange={handleVideoChange} placeholder="https://youtu.be/... ou dQw4w9WgXcQ" />
           </FormGroup>
         </div>
 
@@ -334,7 +367,7 @@ const DetalhesExercicio = ({ ex, onSave, onClose, intensidadeMap = {} }) => {
 
         <FormGroup label="Plataforma do Vídeo">
           <Select value={local['plataforma_do_vídeo'] || ''} onChange={v => upd('plataforma_do_vídeo', v)}
-            options={['YouTube', 'Instagram', 'TikTok']} placeholder="Selecionar..." />
+            options={PLATAFORMAS_VIDEO} placeholder="Selecionar..." />
         </FormGroup>
 
         <div className="border border-[#323238] rounded-lg p-4 space-y-3">
@@ -379,7 +412,13 @@ const DetalhesExercicio = ({ ex, onSave, onClose, intensidadeMap = {} }) => {
 
 const DetalhesAerobico = ({ aerobico, onSave, onClose }) => {
   const [local, setLocal] = useState({ ...aerobico })
+  const [videoDetected, setVideoDetected] = useState(false)
   const upd = (f, v) => setLocal(l => ({ ...l, [f]: v }))
+  const handleVideoChange = (v) => {
+    const info = extractVideoInfo(v)
+    if (info) { upd('video', info.id); upd('plataforma_do_vídeo', info.platform); setVideoDetected(true) }
+    else { upd('video', v); setVideoDetected(false) }
+  }
 
   return (
     <Modal isOpen onClose={onClose} title="Detalhes do Aeróbico" size="md"
@@ -388,8 +427,10 @@ const DetalhesAerobico = ({ aerobico, onSave, onClose }) => {
         <div className="bg-[#1a1a1a] rounded-lg px-4 py-2 text-sm text-gray-300 font-medium">{local.exercicios || '—'}</div>
         <FormGroup label="Frequência"><Input value={local.frequencia || ''} onChange={v => upd('frequencia', v)} placeholder="Ex: 2x na semana" /></FormGroup>
         <div className="grid grid-cols-2 gap-3">
-          <FormGroup label="ID do Vídeo"><Input value={local.video || ''} onChange={v => upd('video', v)} /></FormGroup>
-          <FormGroup label="Plataforma"><Select value={local['plataforma_do_vídeo'] || ''} onChange={v => upd('plataforma_do_vídeo', v)} options={['YouTube', 'Instagram', 'TikTok']} placeholder="Selecionar..." /></FormGroup>
+          <FormGroup label="Link ou ID do Vídeo" hint={videoDetected ? '✓ ID extraído' : undefined}>
+            <Input value={local.video || ''} onChange={handleVideoChange} placeholder="https://youtu.be/... ou código" />
+          </FormGroup>
+          <FormGroup label="Plataforma"><Select value={local['plataforma_do_vídeo'] || ''} onChange={v => upd('plataforma_do_vídeo', v)} options={PLATAFORMAS_VIDEO} placeholder="Selecionar..." /></FormGroup>
         </div>
         <FormGroup label="Instruções"><Textarea value={local.instrucao || ''} onChange={v => upd('instrucao', v)} rows={4} placeholder="Descreva as instruções..." /></FormGroup>
       </div>
@@ -401,7 +442,13 @@ const DetalhesAerobico = ({ aerobico, onSave, onClose }) => {
 
 const DetalhesAlongamento = ({ alongamento, onSave, onClose }) => {
   const [local, setLocal] = useState({ ...alongamento })
+  const [videoDetected, setVideoDetected] = useState(false)
   const upd = (f, v) => setLocal(l => ({ ...l, [f]: v }))
+  const handleVideoChange = (v) => {
+    const info = extractVideoInfo(v)
+    if (info) { upd('video', info.id); upd('plataforma_do_vídeo', info.platform); setVideoDetected(true) }
+    else { upd('video', v); setVideoDetected(false) }
+  }
 
   return (
     <Modal isOpen onClose={onClose} title="Detalhes do Alongamento" size="md"
@@ -410,8 +457,10 @@ const DetalhesAlongamento = ({ alongamento, onSave, onClose }) => {
         <div className="bg-[#1a1a1a] rounded-lg px-4 py-2 text-sm text-gray-300 font-medium">{local.exercicio || '—'}</div>
         <FormGroup label="Séries"><Input type="number" value={local.series || ''} onChange={v => upd('series', v)} /></FormGroup>
         <div className="grid grid-cols-2 gap-3">
-          <FormGroup label="ID do Vídeo"><Input value={local.video || ''} onChange={v => upd('video', v)} /></FormGroup>
-          <FormGroup label="Plataforma"><Select value={local['plataforma_do_vídeo'] || ''} onChange={v => upd('plataforma_do_vídeo', v)} options={['YouTube', 'Instagram', 'TikTok']} placeholder="Selecionar..." /></FormGroup>
+          <FormGroup label="Link ou ID do Vídeo" hint={videoDetected ? '✓ ID extraído' : undefined}>
+            <Input value={local.video || ''} onChange={handleVideoChange} placeholder="https://youtu.be/... ou código" />
+          </FormGroup>
+          <FormGroup label="Plataforma"><Select value={local['plataforma_do_vídeo'] || ''} onChange={v => upd('plataforma_do_vídeo', v)} options={PLATAFORMAS_VIDEO} placeholder="Selecionar..." /></FormGroup>
         </div>
         <FormGroup label="Observações"><Textarea value={local.observacoes || ''} onChange={v => upd('observacoes', v)} rows={4} /></FormGroup>
       </div>

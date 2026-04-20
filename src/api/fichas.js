@@ -75,6 +75,21 @@ export const listarGruposMusculares = async () => {
   return (res.data?.data || []).map(g => g.name)
 }
 
+export const salvarAlongamento = async (id, dados) => {
+  const url = id ? `/api/resource/Alongamento/${encodeURIComponent(id)}` : '/api/resource/Alongamento'
+  const res = await client[id ? 'put' : 'post'](url, dados)
+  return res.data?.data
+}
+
+export const excluirAlongamento = async (id) => {
+  await client.delete(`/api/resource/Alongamento/${encodeURIComponent(id)}`)
+}
+
+export const toggleAlongamento = async (id, enabled) => {
+  const res = await client.put(`/api/resource/Alongamento/${encodeURIComponent(id)}`, { enabled })
+  return res.data?.data
+}
+
 export const listarAlongamentos = async ({ limit = 200 } = {}) => {
   const owner = frappeOwner()
   const owners = owner ? [owner, ...OWNERS_COMPARTILHADOS] : OWNERS_COMPARTILHADOS
@@ -89,6 +104,21 @@ export const listarAlongamentos = async ({ limit = 200 } = {}) => {
     },
   })
   return res.data?.data || []
+}
+
+export const salvarAerobico = async (id, dados) => {
+  const url = id ? `/api/resource/Exercicio%20Aerobico/${encodeURIComponent(id)}` : '/api/resource/Exercicio%20Aerobico'
+  const res = await client[id ? 'put' : 'post'](url, dados)
+  return res.data?.data
+}
+
+export const excluirAerobico = async (id) => {
+  await client.delete(`/api/resource/Exercicio%20Aerobico/${encodeURIComponent(id)}`)
+}
+
+export const toggleAerobico = async (id, enabled) => {
+  const res = await client.put(`/api/resource/Exercicio%20Aerobico/${encodeURIComponent(id)}`, { enabled })
+  return res.data?.data
 }
 
 export const listarAerobicos = async ({ limit = 200 } = {}) => {

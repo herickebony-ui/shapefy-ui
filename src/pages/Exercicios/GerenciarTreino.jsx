@@ -11,15 +11,40 @@ import ListPage from '../../components/templates/ListPage'
 const normalizar = (s = '') =>
   String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
 
-const PLATAFORMAS = ['YouTube', 'Instagram', 'TikTok']
+const PLATAFORMAS = ['YouTube', 'Google Drive', 'Vimeo']
+
+const extractVideoInfo = (input) => {
+  if (!input || !input.includes('://')) return null
+  try {
+    const url = new URL(input)
+    const host = url.hostname.replace('www.', '')
+
+    if (host === 'youtube.com' || host === 'youtu.be') {
+      let id = null
+      if (host === 'youtu.be') id = url.pathname.slice(1).split('?')[0]
+      else if (url.searchParams.get('v')) id = url.searchParams.get('v')
+      else { const m = url.pathname.match(/\/(embed|shorts|v)\/([^/?]+)/); if (m) id = m[2] }
+      if (id) return { id, platform: 'YouTube' }
+    }
+
+    if (host === 'drive.google.com') {
+      const m = url.pathname.match(/\/d\/([^/]+)/)
+      const id = m ? m[1] : url.searchParams.get('id')
+      if (id) return { id, platform: 'Google Drive' }
+    }
+
+    if (host === 'vimeo.com' || host === 'player.vimeo.com') {
+      const m = url.pathname.match(/\/(?:video\/)?(\d+)/)
+      if (m) return { id: m[1], platform: 'Vimeo' }
+    }
+  } catch { }
+  return null
+}
 
 const INTENSIDADE_OPCOES = [
-  { value: '0', label: '0 — Não trabalha' },
-  { value: '0.25', label: '0.25 — Muito leve' },
-  { value: '0.5', label: '0.5 — Leve' },
-  { value: '0.75', label: '0.75 — Moderado' },
+  { value: '0.25', label: '0.25 — Leve' },
+  { value: '0.5', label: '0.5 — Moderado' },
   { value: '1', label: '1.0 — Principal' },
-  { value: '1.5', label: '1.5 — Muito alto' },
 ]
 
 // ─── ModalExercicio ───────────────────────────────────────────────────────────
@@ -33,6 +58,19 @@ const ModalExercicio = ({ exercicio, grupos, onSave, onClose }) => {
   const [grupo, setGrupo] = useState(exercicio?.grupo_muscular || '')
   const [video, setVideo] = useState(exercicio?.video || '')
   const [plataforma, setPlataforma] = useState(exercicio?.['plataforma_do_vídeo'] || 'YouTube')
+  const [videoDetected, setVideoDetected] = useState(false)
+
+  const handleVideoChange = (v) => {
+    const info = extractVideoInfo(v)
+    if (info) {
+      setVideo(info.id)
+      setPlataforma(info.platform)
+      setVideoDetected(true)
+    } else {
+      setVideo(v)
+      setVideoDetected(false)
+    }
+  }
   const [enabled, setEnabled] = useState(exercicio?.enabled ?? 1)
   const [intensidades, setIntensidades] = useState(() => {
     try {
@@ -56,8 +94,11 @@ const ModalExercicio = ({ exercicio, grupos, onSave, onClose }) => {
         video,
         'plataforma_do_vídeo': plataforma,
         enabled,
-        intensidade_json: JSON.stringify(intens.map(i => ({ grupo_muscular: i.grupo_muscular, intensidade: String(i.intensidade) }))),
-        intensidade: intens.map((i, idx) => ({ grupo_muscular: i.grupo_muscular, intensidade: String(i.intensidade), idx: idx + 1 })),
+        intensidade: intens.map(i => ({
+          doctype: 'Treino Exercicio Grupo Muscular',
+          grupo_muscular: i.grupo_muscular,
+          intensidade: String(i.intensidade),
+        })),
       }
       const resultado = await salvarTreinoExercicio(isEdit ? exercicio.name : null, payload)
       onSave(resultado)
@@ -98,8 +139,11 @@ const ModalExercicio = ({ exercicio, grupos, onSave, onClose }) => {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <FormGroup label="ID do Vídeo">
-            <Input value={video} onChange={setVideo} placeholder="Ex: dQw4w9WgXcQ" />
+          <FormGroup
+            label="Link ou ID do Vídeo"
+            hint={videoDetected ? '✓ ID extraído automaticamente' : 'Cole o link ou o código do vídeo'}
+          >
+            <Input value={video} onChange={handleVideoChange} placeholder="https://youtu.be/... ou dQw4w9WgXcQ" />
           </FormGroup>
           <FormGroup label="Plataforma">
             <Select value={plataforma} onChange={setPlataforma} options={PLATAFORMAS} />

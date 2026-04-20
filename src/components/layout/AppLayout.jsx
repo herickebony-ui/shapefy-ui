@@ -3,6 +3,7 @@ import {
   Users, Home, BarChart2, Dumbbell, ClipboardList,
   MessageSquare, Activity, FileText, LogOut, ListChecks,
   PanelLeftClose, PanelLeftOpen, UtensilsCrossed, BookOpen,
+  Wind, Waves,
 } from 'lucide-react'
 import { useState } from 'react'
 import useAuthStore from '../../store/authStore'
@@ -17,7 +18,9 @@ const NAV_ITEMS = [
   { type: 'divider', label: 'Module Trainning' },
   { id: 'fichas',    label: 'Fichas de Treino',      icon: Dumbbell,     path: '/fichas' },
   { id: 'treinos',   label: 'Treinos Realizados',    icon: Activity,     path: '/treinos' },
-  { id: 'exercicios',label: 'Gerenciar Exercícios',  icon: ListChecks,   path: '/exercicios' },
+  { id: 'exercicios',   label: 'Gerenciar Exercícios',   icon: ListChecks, path: '/exercicios' },
+  { id: 'alongamentos', label: 'Gerenciar Alongamentos', icon: Waves,      path: '/alongamentos' },
+  { id: 'aerobicos',    label: 'Gerenciar Aeróbicos',    icon: Wind,       path: '/aerobicos' },
   { type: 'divider', label: 'Module Diet' },
   { id: 'dietas',    label: 'Dietas',                icon: ClipboardList,    path: '/dietas' },
   { id: 'alimentos',         label: 'Cadastrar Alimentos',  icon: UtensilsCrossed, path: '/alimentos' },

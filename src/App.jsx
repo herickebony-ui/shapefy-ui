@@ -9,6 +9,8 @@ import DietaDetalhe from './pages/Dietas/DietaDetalhe'
 import FichaListagem from './pages/Fichas/FichaListagem'
 import FichaDetalhe from './pages/Fichas/FichaDetalhe'
 import GerenciarTreino from './pages/Exercicios/GerenciarTreino'
+import GerenciarAlongamentos from './pages/Exercicios/GerenciarAlongamentos'
+import GerenciarAerobicos from './pages/Exercicios/GerenciarAerobicos'
 import AlimentosListagem from './pages/Alimentos/AlimentosListagem'
 import RefeicoesProntasListagem from './pages/Dietas/RefeicoesProntasListagem'
 
@@ -37,6 +39,8 @@ function App() {
           <Route path="fichas" element={<FichaListagem />} />
           <Route path="fichas/:id" element={<FichaDetalhe />} />
           <Route path="exercicios" element={<GerenciarTreino />} />
+          <Route path="alongamentos" element={<GerenciarAlongamentos />} />
+          <Route path="aerobicos" element={<GerenciarAerobicos />} />
           <Route path="alimentos" element={<AlimentosListagem />} />
           <Route path="refeicoes-prontas" element={<RefeicoesProntasListagem />} />
         </Route>
