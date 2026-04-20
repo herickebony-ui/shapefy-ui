@@ -11,29 +11,27 @@ export const podeExcluir = (owner) =>
 export const listarAlimentos = async ({
   busca = '', grupo = '', enabled = '', page = 1, limit = 300,
 } = {}) => {
-  const filters = [['food', 'like', busca ? `%${busca}%` : '%']]
+  const owner = frappeOwner()
+  const owners = owner ? [owner, ...OWNERS_BASE] : OWNERS_BASE
+
+  const filters = [['owner', 'in', owners]]
+  if (busca) filters.push(['food', 'like', `%${busca}%`])
   if (grupo) filters.push(['food_group', '=', grupo])
   if (enabled !== '') filters.push(['enabled', '=', Number(enabled)])
 
-  const data = new URLSearchParams({
-    doctype: 'Alimento',
-    fields: JSON.stringify([
-      'name', 'food', 'calories', 'protein', 'carbohydrate', 'lipid',
-      'fiber', 'food_group', 'ref_weight', 'unit', 'enabled', 'public', 'owner',
-    ]),
-    filters: JSON.stringify(filters),
-    limit_start: (page - 1) * limit,
-    limit_page_length: limit,
-    order_by: 'food asc',
+  const res = await client.get('/api/resource/Alimento', {
+    params: {
+      fields: JSON.stringify([
+        'name', 'food', 'calories', 'protein', 'carbohydrate', 'lipid',
+        'fiber', 'food_group', 'ref_weight', 'unit', 'enabled', 'public', 'owner',
+      ]),
+      filters: JSON.stringify(filters),
+      limit_start: (page - 1) * limit,
+      limit_page_length: limit,
+      order_by: 'food asc',
+    },
   })
-
-  const res = await client.post('/api/method/frappe.desk.reportview.get', data, {
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-  })
-  const result = res.data.message
-  const list = result?.values?.map(row =>
-    Object.fromEntries(result.keys.map((k, i) => [k, row[i]]))
-  ) || []
+  const list = res.data.data || []
   return { list, hasMore: list.length === limit }
 }
 
@@ -64,9 +62,9 @@ export const toggleAlimento = async (name, enabled) => {
 export const listarGruposAlimentares = async () => {
   const res = await client.get('/api/resource/Grupo%20Alimentar', {
     params: {
-      fields: JSON.stringify(['name', 'grupo']),
+      fields: JSON.stringify(['name']),
       limit_page_length: 100,
-      order_by: 'grupo asc',
+      order_by: 'name asc',
     },
   })
   return res.data.data || []
