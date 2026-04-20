@@ -57,12 +57,12 @@ export default function Autocomplete({
     const spaceAbove = rect.top
     const openUpward = spaceBelow < 260 && spaceAbove > spaceBelow
     setDropdownPos({
-      left: rect.left + window.scrollX,
+      left: rect.left,
       width: rect.width,
       openUpward,
       ...(openUpward
-        ? { bottom: window.innerHeight - rect.top - window.scrollY + 4 }
-        : { top: rect.bottom + window.scrollY + 4 }
+        ? { bottom: window.innerHeight - rect.top + 4 }
+        : { top: rect.bottom + 4 }
       ),
     })
   }
