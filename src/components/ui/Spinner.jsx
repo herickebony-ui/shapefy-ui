@@ -1,9 +1,12 @@
 import { Loader } from 'lucide-react'
 
-export default function Spinner({ size = 24, className = '' }) {
+const SIZE_MAP = { sm: 16, md: 20, lg: 24, xl: 32 }
+
+export default function Spinner({ size = 'md', className = '' }) {
+  const px = typeof size === 'number' ? size : (SIZE_MAP[size] ?? 20)
   return (
-    <div className={`flex items-center justify-center py-16 ${className}`}>
-      <Loader size={size} className="animate-spin text-[#850000]" />
+    <div className={`flex items-center justify-center py-12 ${className}`}>
+      <Loader size={px} className="animate-spin text-[#850000]/60" strokeWidth={1.5} />
     </div>
   )
 }

@@ -56,9 +56,11 @@ export const salvarTreinoExercicio = async (id, dados) => {
 }
 
 export const excluirTreinoExercicio = async (id) => {
-  // Frappe não concede permissão DELETE ao usuário comum — desativamos via PUT (enabled=0)
-  // A query de listagem filtra enabled=1, então o exercício some de todos os lugares
-  await client.put(`/api/resource/Treino Exercicio/${encodeURIComponent(id)}`, { enabled: 0 })
+  try {
+    await client.delete(`/api/resource/Treino%20Exercicio/${encodeURIComponent(id)}`)
+  } catch {
+    await client.put(`/api/resource/Treino%20Exercicio/${encodeURIComponent(id)}`, { enabled: 0 })
+  }
 }
 
 export const listarGruposMusculares = async () => {

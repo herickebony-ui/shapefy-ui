@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Plus, Search, Edit, Trash2, X, ChevronDown } from 'lucide-react'
+import { Plus, Edit, Trash2, X, RefreshCw } from 'lucide-react'
 import {
   listarExercicios, salvarTreinoExercicio, excluirTreinoExercicio, listarGruposMusculares,
 } from '../../api/fichas'
 import {
-  Button, FormGroup, Input, Select, Modal, Spinner, EmptyState, DataTable,
+  Button, FormGroup, Input, Select, Modal, EmptyState, DataTable, Badge,
 } from '../../components/ui'
+import ListPage from '../../components/templates/ListPage'
 
 const normalizar = (s = '') =>
   String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
@@ -65,6 +66,8 @@ const ModalExercicio = ({ exercicio, grupos, onSave, onClose }) => {
     } finally { setSaving(false) }
   }
 
+  const grupoOpts = useMemo(() => grupos.map(g => ({ value: g, label: g })), [grupos])
+
   return (
     <Modal
       isOpen
@@ -79,14 +82,18 @@ const ModalExercicio = ({ exercicio, grupos, onSave, onClose }) => {
       }
     >
       <div className="p-4 space-y-4">
-        {erro && <p className="text-red-400 text-sm">{erro}</p>}
+        {erro && (
+          <div className="bg-red-900/20 border border-red-500/30 text-red-400 text-sm rounded-lg px-3 py-2">
+            {erro}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormGroup label="Nome do Exercício" required>
             <Input value={nome} onChange={setNome} placeholder="Ex: Agachamento Livre" />
           </FormGroup>
           <FormGroup label="Grupo Muscular">
-            <Select value={grupo} onChange={setGrupo} options={grupos} placeholder="Selecionar..." />
+            <Select value={grupo} onChange={setGrupo} options={grupoOpts} placeholder="Selecionar..." />
           </FormGroup>
         </div>
 
@@ -99,15 +106,12 @@ const ModalExercicio = ({ exercicio, grupos, onSave, onClose }) => {
           </FormGroup>
         </div>
 
-        <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={!!enabled} onChange={e => setEnabled(e.target.checked ? 1 : 0)}
-              className="accent-[#850000] w-4 h-4" />
-            <span className="text-sm text-gray-300">Exercício ativo</span>
-          </label>
-        </div>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" checked={!!enabled} onChange={e => setEnabled(e.target.checked ? 1 : 0)}
+            className="accent-[#850000] w-4 h-4" />
+          <span className="text-sm text-gray-300">Exercício ativo</span>
+        </label>
 
-        {/* Intensidade por grupo muscular */}
         <div className="border border-[#323238] rounded-lg overflow-hidden">
           <div className="flex items-center justify-between px-4 py-2 bg-[#1a1a1a] border-b border-[#323238]">
             <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Intensidade por Grupo Muscular</span>
@@ -172,15 +176,25 @@ export default function GerenciarTreino() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editando, setEditando] = useState(null)
   const [deletando, setDeletando] = useState(null)
+  const [deleting, setDeleting] = useState(false)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const debounceRef = useRef(null)
 
-  useEffect(() => {
-    Promise.all([listarExercicios({ limit: 1000 }), listarGruposMusculares()])
-      .then(([exs, grps]) => { setExercicios(exs); setGrupos(grps) })
-      .catch(console.error)
-      .finally(() => setLoading(false))
-  }, [])
+  const carregar = async () => {
+    setLoading(true)
+    try {
+      const [exs, grps] = await Promise.all([
+        listarExercicios({ limit: 1000 }),
+        listarGruposMusculares(),
+      ])
+      setExercicios(exs)
+      setGrupos(grps)
+    } catch (e) { console.error(e) }
+    finally { setLoading(false) }
+  }
+
+  useEffect(() => { carregar() }, [])
 
   const filtrados = useMemo(() => {
     const q = normalizar(busca)
@@ -191,7 +205,6 @@ export default function GerenciarTreino() {
     })
   }, [exercicios, busca, filtroGrupo])
 
-  // reset página ao mudar filtro/busca
   useEffect(() => { setPage(1) }, [busca, filtroGrupo])
 
   const handleSave = (resultado) => {
@@ -204,129 +217,154 @@ export default function GerenciarTreino() {
     setEditando(null)
   }
 
-  const handleDelete = async (ex) => {
+  const handleDelete = async () => {
+    if (!deletando) return
+    setDeleting(true)
     try {
-      await excluirTreinoExercicio(ex.name)
-      setExercicios(prev => prev.filter(e => e.name !== ex.name))
-    } catch (e) { alert('Erro ao excluir: ' + e.message) }
-    setDeletando(null)
+      await excluirTreinoExercicio(deletando.name)
+      // Recarrega do servidor para confirmar que o delete foi efetivo
+      const exs = await listarExercicios({ limit: 1000 })
+      setExercicios(exs)
+      setDeletando(null)
+    } catch (e) {
+      console.error(e)
+      alert('Erro ao excluir: ' + e.message)
+    } finally { setDeleting(false) }
   }
 
-  const abrirModal = (ex = null) => { setEditando(ex); setModalOpen(true) }
+  const grupoOpts = useMemo(() => [
+    { value: '', label: 'Todos os grupos' },
+    ...grupos.map(g => ({ value: g, label: g })),
+  ], [grupos])
 
   const intensidadeCount = (ex) => {
-    try { const r = typeof ex.intensidade_json === 'string' ? JSON.parse(ex.intensidade_json) : (ex.intensidade_json || []); return r.length } catch { return 0 }
+    try {
+      const r = typeof ex.intensidade_json === 'string'
+        ? JSON.parse(ex.intensidade_json)
+        : (ex.intensidade_json || [])
+      return r.length
+    } catch { return 0 }
   }
 
-  if (loading) return <div className="flex items-center justify-center h-full"><Spinner size="lg" /></div>
+  const columns = [
+    {
+      label: 'Nome',
+      render: (ex) => (
+        <div>
+          <span className="text-white font-medium text-sm">{ex.nome_do_exercicio}</span>
+          <span className="md:hidden text-gray-500 text-xs ml-2">{ex.grupo_muscular}</span>
+        </div>
+      ),
+    },
+    {
+      label: 'Grupo Muscular',
+      headerClass: 'hidden md:table-cell',
+      cellClass: 'hidden md:table-cell',
+      render: (ex) => ex.grupo_muscular
+        ? <span className="text-gray-300 text-xs">{ex.grupo_muscular}</span>
+        : <span className="text-gray-600 text-xs italic">—</span>,
+    },
+    {
+      label: 'Intensidades',
+      headerClass: 'hidden lg:table-cell',
+      cellClass: 'hidden lg:table-cell',
+      render: (ex) => {
+        const n = intensidadeCount(ex)
+        return n > 0
+          ? <span className="text-xs font-mono text-emerald-400">{n} grupo{n !== 1 ? 's' : ''}</span>
+          : <span className="text-gray-600 text-xs">—</span>
+      },
+    },
+    {
+      label: 'Status',
+      headerClass: 'hidden lg:table-cell',
+      cellClass: 'hidden lg:table-cell',
+      render: (ex) => (
+        <Badge variant={ex.enabled ? 'success' : 'default'} size="sm">
+          {ex.enabled ? 'Ativo' : 'Inativo'}
+        </Badge>
+      ),
+    },
+    {
+      label: 'Ações',
+      headerClass: 'text-right',
+      cellClass: 'text-right',
+      render: (ex) => ex.owner === currentUser ? (
+        <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
+          <button
+            onClick={() => { setEditando(ex); setModalOpen(true) }}
+            className="h-7 w-7 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors"
+            title="Editar"
+          >
+            <Edit size={12} />
+          </button>
+          <button
+            onClick={() => setDeletando(ex)}
+            className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded-lg transition-colors"
+            title="Excluir"
+          >
+            <Trash2 size={12} />
+          </button>
+        </div>
+      ) : (
+        <span className="text-[10px] text-gray-600 italic">compartilhado</span>
+      ),
+    },
+  ]
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-[#323238] bg-[#29292e] flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-white font-bold text-lg">Gerenciar Exercícios</h1>
-          <p className="text-gray-500 text-sm">{exercicios.length} exercício{exercicios.length !== 1 ? 's' : ''} cadastrado{exercicios.length !== 1 ? 's' : ''}</p>
-        </div>
-        <Button variant="primary" size="sm" icon={Plus} onClick={() => abrirModal()}>
-          Novo Exercício
-        </Button>
-      </div>
-
-      {/* Filtros */}
-      <div className="px-6 py-3 border-b border-[#323238] flex items-center gap-3 flex-wrap bg-[#222226]">
-        <div className="flex items-center gap-2 bg-[#29292e] border border-[#323238] rounded-lg px-3 h-9 flex-1 min-w-[180px] max-w-xs">
-          <Search size={14} className="text-gray-500 shrink-0" />
-          <input value={busca} onChange={e => setBusca(e.target.value)}
-            placeholder="Buscar exercício..."
-            className="bg-transparent text-white text-sm outline-none w-full placeholder-gray-600" />
-          {busca && <button onClick={() => setBusca('')} className="text-gray-500 hover:text-white"><X size={13} /></button>}
-        </div>
-        <select value={filtroGrupo} onChange={e => setFiltroGrupo(e.target.value)}
-          className="h-9 px-3 bg-[#29292e] border border-[#323238] text-gray-200 text-sm rounded-lg outline-none focus:border-[#850000]/60 appearance-none min-w-[160px]">
-          <option value="">Todos os grupos</option>
-          {grupos.map(g => <option key={g} value={g}>{g}</option>)}
-        </select>
-        {filtroGrupo && (
-          <button onClick={() => setFiltroGrupo('')}
-            className="text-xs text-gray-400 hover:text-white underline">Limpar filtro</button>
-        )}
-      </div>
-
-      {/* Lista */}
-      <div className="flex-1 overflow-auto px-6 py-4">
-        {filtrados.length === 0 ? (
-          <EmptyState title="Nenhum exercício encontrado" description={busca || filtroGrupo ? 'Tente ajustar os filtros.' : 'Clique em "Novo Exercício" para começar.'} />
-        ) : (
+    <>
+      <ListPage
+        title="Gerenciar Exercícios"
+        subtitle={`${exercicios.length} exercício${exercicios.length !== 1 ? 's' : ''} cadastrado${exercicios.length !== 1 ? 's' : ''}`}
+        actions={
+          <>
+            <Button variant="secondary" size="sm" icon={RefreshCw} onClick={carregar} loading={loading} />
+            <Button variant="primary" size="sm" icon={Plus} onClick={() => { setEditando(null); setModalOpen(true) }}>
+              Novo Exercício
+            </Button>
+          </>
+        }
+        filters={[
+          {
+            type: 'search',
+            value: busca,
+            onChange: (v) => { setBusca(v); setPage(1) },
+            placeholder: 'Buscar exercício...',
+          },
+          {
+            type: 'select',
+            value: filtroGrupo,
+            onChange: (v) => { setFiltroGrupo(v); setPage(1) },
+            options: grupoOpts,
+            placeholder: 'Grupo muscular',
+          },
+        ]}
+        loading={loading}
+        empty={
+          filtrados.length === 0 && !loading
+            ? {
+                title: 'Nenhum exercício encontrado',
+                description: busca || filtroGrupo
+                  ? 'Tente ajustar os filtros.'
+                  : 'Clique em "Novo Exercício" para começar.',
+              }
+            : null
+        }
+      >
+        {!loading && filtrados.length > 0 && (
           <DataTable
+            columns={columns}
             rows={filtrados}
+            rowKey="name"
             page={page}
             pageSize={pageSize}
             onPage={setPage}
             onPageSize={(s) => { setPageSize(s); setPage(1) }}
-            columns={[
-              {
-                label: 'Nome',
-                render: (ex) => (
-                  <>
-                    <span className="text-white font-medium text-sm">{ex.nome_do_exercicio}</span>
-                    <span className="md:hidden text-gray-500 text-xs ml-2">{ex.grupo_muscular}</span>
-                  </>
-                ),
-              },
-              {
-                label: 'Grupo Muscular',
-                headerClass: 'hidden md:table-cell',
-                cellClass: 'hidden md:table-cell',
-                render: (ex) => ex.grupo_muscular
-                  ? <span className="text-gray-300 text-xs">{ex.grupo_muscular}</span>
-                  : <span className="text-gray-600 text-xs italic">—</span>,
-              },
-              {
-                label: 'Intensidades',
-                headerClass: 'hidden lg:table-cell text-center w-24',
-                cellClass: 'hidden lg:table-cell text-center',
-                render: (ex) => {
-                  const n = intensidadeCount(ex)
-                  return n > 0
-                    ? <span className="text-xs font-mono text-emerald-400">{n} grupo{n !== 1 ? 's' : ''}</span>
-                    : <span className="text-gray-600 text-xs">—</span>
-                },
-              },
-              {
-                label: 'Ativo',
-                headerClass: 'hidden lg:table-cell text-center w-20',
-                cellClass: 'hidden lg:table-cell text-center',
-                render: (ex) => (
-                  <span className={`inline-block w-2 h-2 rounded-full ${ex.enabled ? 'bg-emerald-400' : 'bg-gray-600'}`} />
-                ),
-              },
-              {
-                label: '',
-                headerClass: 'w-20',
-                render: (ex) => ex.owner === currentUser ? (
-                  <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition">
-                    <button onClick={(e) => { e.stopPropagation(); abrirModal(ex) }}
-                      className="h-6 w-6 flex items-center justify-center bg-[#29292e] text-blue-400 hover:bg-blue-600 hover:text-white rounded transition-colors">
-                      <Edit size={11} />
-                    </button>
-                    <button onClick={(e) => { e.stopPropagation(); setDeletando(ex) }}
-                      className="h-6 w-6 flex items-center justify-center bg-[#29292e] text-red-400 hover:bg-red-600 hover:text-white rounded transition-colors">
-                      <Trash2 size={11} />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-end opacity-0 group-hover:opacity-100 transition">
-                    <span className="text-[10px] text-gray-600 italic px-2">compartilhado</span>
-                  </div>
-                ),
-              },
-            ]}
           />
         )}
-      </div>
+      </ListPage>
 
-      {/* Modal criar/editar */}
       {modalOpen && (
         <ModalExercicio
           exercicio={editando}
@@ -336,21 +374,27 @@ export default function GerenciarTreino() {
         />
       )}
 
-      {/* Confirmação de exclusão */}
       {deletando && (
-        <Modal isOpen onClose={() => setDeletando(null)} title="Excluir Exercício" size="sm"
+        <Modal
+          isOpen
+          onClose={() => setDeletando(null)}
+          title="Excluir Exercício"
+          size="sm"
           footer={
             <>
               <Button variant="ghost" onClick={() => setDeletando(null)}>Cancelar</Button>
-              <Button variant="danger" onClick={() => handleDelete(deletando)}>Excluir</Button>
+              <Button variant="danger" onClick={handleDelete} loading={deleting}>Excluir</Button>
             </>
-          }>
+          }
+        >
           <div className="p-4">
-            <p className="text-gray-300 text-sm">Tem certeza que deseja excluir <strong className="text-white">{deletando.nome_do_exercicio}</strong>?</p>
+            <p className="text-gray-300 text-sm">
+              Tem certeza que deseja excluir <strong className="text-white">{deletando.nome_do_exercicio}</strong>?
+            </p>
             <p className="text-gray-500 text-xs mt-1">Esta ação não pode ser desfeita.</p>
           </div>
         </Modal>
       )}
-    </div>
+    </>
   )
 }

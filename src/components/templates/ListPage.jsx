@@ -71,7 +71,7 @@ export default function ListPage({
       <div>
         {loading ? (
           <div className="flex items-center justify-center py-24">
-            <Spinner size="lg" />
+            <Spinner size="md" />
           </div>
         ) : !children && empty ? (
           <div className="py-16">

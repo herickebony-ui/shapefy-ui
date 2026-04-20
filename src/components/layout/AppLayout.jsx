@@ -2,7 +2,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
   Users, Home, BarChart2, Dumbbell, ClipboardList,
   MessageSquare, Activity, FileText, LogOut, ListChecks,
-  PanelLeftClose, PanelLeftOpen,
+  PanelLeftClose, PanelLeftOpen, UtensilsCrossed, BookOpen,
 } from 'lucide-react'
 import { useState } from 'react'
 import useAuthStore from '../../store/authStore'
@@ -19,7 +19,9 @@ const NAV_ITEMS = [
   { id: 'treinos',   label: 'Treinos Realizados',    icon: Activity,     path: '/treinos' },
   { id: 'exercicios',label: 'Gerenciar Exercícios',  icon: ListChecks,   path: '/exercicios' },
   { type: 'divider', label: 'Module Diet' },
-  { id: 'dietas',    label: 'Dietas',                icon: ClipboardList,path: '/dietas' },
+  { id: 'dietas',    label: 'Dietas',                icon: ClipboardList,    path: '/dietas' },
+  { id: 'alimentos',         label: 'Cadastrar Alimentos',  icon: UtensilsCrossed, path: '/alimentos' },
+  { id: 'refeicoes-prontas', label: 'Cadastrar Refeições Prontas',   icon: BookOpen,        path: '/refeicoes-prontas' },
   { type: 'divider', label: 'Gerenciamento de Alunos' },
   { id: 'feedbacks', label: 'Feedbacks Recebidos',   icon: MessageSquare,path: '/feedbacks' },  
   { type: 'divider', label: 'Gestão Consultoria' },
