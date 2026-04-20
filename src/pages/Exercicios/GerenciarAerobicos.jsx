@@ -133,7 +133,7 @@ export default function GerenciarAerobicos() {
   const carregar = async () => {
     setLoading(true)
     try {
-      const data = await listarAerobicos({ limit: 1000 })
+      const data = await listarAerobicos({ limit: 1000, gerenciar: true })
       setAerobicos(data)
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
@@ -177,7 +177,7 @@ export default function GerenciarAerobicos() {
     setDeleting(true)
     try {
       await excluirAerobico(deletando.name)
-      const data = await listarAerobicos({ limit: 1000 })
+      const data = await listarAerobicos({ limit: 1000, gerenciar: true })
       setAerobicos(data)
       setDeletando(null)
     } catch (e) {

@@ -133,7 +133,7 @@ export default function GerenciarAlongamentos() {
   const carregar = async () => {
     setLoading(true)
     try {
-      const data = await listarAlongamentos({ limit: 1000 })
+      const data = await listarAlongamentos({ limit: 1000, gerenciar: true })
       setAlongamentos(data)
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
@@ -177,7 +177,7 @@ export default function GerenciarAlongamentos() {
     setDeleting(true)
     try {
       await excluirAlongamento(deletando.name)
-      const data = await listarAlongamentos({ limit: 1000 })
+      const data = await listarAlongamentos({ limit: 1000, gerenciar: true })
       setAlongamentos(data)
       setDeletando(null)
     } catch (e) {

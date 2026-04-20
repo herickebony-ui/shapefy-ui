@@ -90,18 +90,15 @@ export const toggleAlongamento = async (id, enabled) => {
   return res.data?.data
 }
 
-export const listarAlongamentos = async ({ limit = 200 } = {}) => {
+export const listarAlongamentos = async ({ limit = 200, gerenciar = false } = {}) => {
   const owner = frappeOwner()
   const owners = owner ? [owner, ...OWNERS_COMPARTILHADOS] : OWNERS_COMPARTILHADOS
+  const filters = [['Alongamento', 'owner', 'in', owners]]
+  if (!gerenciar) filters.push(['Alongamento', 'enabled', '=', 1])
+  const fields = ['name', 'nome_do_exercício', 'video', 'plataforma_do_vídeo']
+  if (gerenciar) fields.push('enabled', 'owner')
   const res = await client.get('/api/resource/Alongamento', {
-    params: {
-      fields: JSON.stringify(['name', 'nome_do_exercício', 'video', 'plataforma_do_vídeo']),
-      filters: JSON.stringify([
-        ['Alongamento', 'enabled', '=', 1],
-        ['Alongamento', 'owner', 'in', owners],
-      ]),
-      limit,
-    },
+    params: { fields: JSON.stringify(fields), filters: JSON.stringify(filters), limit },
   })
   return res.data?.data || []
 }
@@ -121,18 +118,15 @@ export const toggleAerobico = async (id, enabled) => {
   return res.data?.data
 }
 
-export const listarAerobicos = async ({ limit = 200 } = {}) => {
+export const listarAerobicos = async ({ limit = 200, gerenciar = false } = {}) => {
   const owner = frappeOwner()
   const owners = owner ? [owner, ...OWNERS_COMPARTILHADOS] : OWNERS_COMPARTILHADOS
-  const res = await client.get('/api/resource/Exercicio Aerobico', {
-    params: {
-      fields: JSON.stringify(['name', 'exercicio_aerobico', 'video', 'plataforma_do_vídeo']),
-      filters: JSON.stringify([
-        ['Exercicio Aerobico', 'enabled', '=', 1],
-        ['Exercicio Aerobico', 'owner', 'in', owners],
-      ]),
-      limit,
-    },
+  const filters = [['Exercicio Aerobico', 'owner', 'in', owners]]
+  if (!gerenciar) filters.push(['Exercicio Aerobico', 'enabled', '=', 1])
+  const fields = ['name', 'exercicio_aerobico', 'video', 'plataforma_do_vídeo']
+  if (gerenciar) fields.push('enabled', 'owner')
+  const res = await client.get('/api/resource/Exercicio%20Aerobico', {
+    params: { fields: JSON.stringify(fields), filters: JSON.stringify(filters), limit },
   })
   return res.data?.data || []
 }
