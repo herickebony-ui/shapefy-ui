@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, ChevronRight, BarChart2, ToggleLeft, ToggleRight, Copy, Check, Trash2 } from 'lucide-react'
+import { ArrowLeft, ChevronRight, BarChart2, ToggleLeft, ToggleRight, Copy, Check, Trash2, Plus, FileText } from 'lucide-react'
 import { buscarAluno, salvarAluno } from '../../api/alunos'
 import { listarDietas } from '../../api/dietas'
 import { listarFichas } from '../../api/fichas'
-import { listarAnamneses, buscarAnamnese, salvarAnamnese, excluirAnamnese } from '../../api/anamneses'
+import { listarAnamneses, buscarAnamnese, salvarAnamnese, excluirAnamnese, listarFormularios, vincularAnamnese } from '../../api/anamneses'
 import {
   Button, Badge, Modal, Tabs, Spinner, EmptyState,
   FormGroup, Input, Select, Textarea,
@@ -314,11 +314,71 @@ function AnamneseViewer({ anamnese: inicial, onVoltar }) {
   )
 }
 
-function TabAnamnese({ anamneses: inicial, loading }) {
+function ModalNovaAnamnese({ alunoId, onClose, onCriada }) {
+  const [formularios, setFormularios] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [vinculando, setVinculando] = useState(null)
+
+  useEffect(() => {
+    listarFormularios()
+      .then(r => setFormularios(r.list))
+      .catch(console.error)
+      .finally(() => setLoading(false))
+  }, [])
+
+  const handleSelecionar = async (formulario) => {
+    setVinculando(formulario.name)
+    try {
+      await vincularAnamnese(alunoId, formulario.name, true)
+      onCriada()
+      onClose()
+    } catch (e) {
+      console.error(e)
+      alert('Erro ao vincular anamnese.')
+    } finally {
+      setVinculando(null)
+    }
+  }
+
+  return (
+    <Modal isOpen onClose={onClose} title="Nova Anamnese" subtitle="Selecione um template" size="sm">
+      <div className="p-4">
+        {loading ? (
+          <div className="flex justify-center py-8"><Spinner /></div>
+        ) : formularios.length === 0 ? (
+          <EmptyState
+            icon={FileText}
+            title="Nenhum template"
+            description="Crie templates em Formulários antes de vincular"
+          />
+        ) : (
+          <div className="bg-[#1a1a1a] rounded-lg border border-[#323238] divide-y divide-[#323238]/50">
+            {formularios.map(f => (
+              <button
+                key={f.name}
+                onClick={() => handleSelecionar(f)}
+                disabled={!!vinculando}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors text-left disabled:opacity-50"
+              >
+                <span className="text-white text-sm font-medium truncate">{f.titulo || f.name}</span>
+                {vinculando === f.name
+                  ? <Spinner size="sm" />
+                  : <ChevronRight size={14} className="text-gray-500 shrink-0" />}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </Modal>
+  )
+}
+
+function TabAnamnese({ anamneses: inicial, loading, alunoId, onRecarregar }) {
   const [lista, setLista] = useState(inicial)
   const [detalhe, setDetalhe] = useState(null)
   const [loadingDetalhe, setLoadingDetalhe] = useState(false)
   const [excluindo, setExcluindo] = useState(null)
+  const [showNovaAnamnese, setShowNovaAnamnese] = useState(false)
 
   useEffect(() => { setLista(inicial) }, [inicial])
 
@@ -347,32 +407,52 @@ function TabAnamnese({ anamneses: inicial, loading }) {
 
   if (loading || loadingDetalhe) return <div className="flex justify-center py-12"><Spinner /></div>
   if (detalhe) return <AnamneseViewer anamnese={detalhe} onVoltar={() => setDetalhe(null)} />
-  if (!lista.length) return <EmptyState icon={BarChart2} title="Sem anamneses" description="Nenhuma anamnese vinculada a este aluno" />
 
   return (
-    <div className="bg-[#29292e] rounded-lg border border-[#323238] divide-y divide-[#323238]/50">
-      {lista.map((a) => (
-        <div key={a.name} onClick={() => abrirAnamnese(a)} className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors">
-          <div className="min-w-0 flex-1">
-            <p className="text-white text-sm font-medium truncate">{a.titulo || a.name}</p>
-            <p className="text-gray-500 text-xs">{fmtData(a.date)}</p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0 ml-2" onClick={e => e.stopPropagation()}>
-            {a.status === 'Respondido' && <Badge variant="success" size="sm">Respondido</Badge>}
-            {a.status === 'Enviado' && <Badge variant="warning" size="sm">Enviado</Badge>}
-            {!a.status && <Badge variant="default" size="sm">Pendente</Badge>}
-            <button
-              onClick={(e) => handleExcluir(e, a)}
-              disabled={excluindo === a.name}
-              title="Excluir anamnese"
-              className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded-lg transition-colors disabled:opacity-40"
-            >
-              <Trash2 size={12} />
-            </button>
-            <ChevronRight size={16} className="text-gray-600" onClick={() => abrirAnamnese(a)} />
-          </div>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-gray-500 text-xs">{lista.length} anamnese{lista.length !== 1 ? 's' : ''}</span>
+        <Button variant="primary" size="xs" icon={Plus} onClick={() => setShowNovaAnamnese(true)}>
+          Nova Anamnese
+        </Button>
+      </div>
+
+      {lista.length === 0 ? (
+        <EmptyState icon={BarChart2} title="Sem anamneses" description="Nenhuma anamnese vinculada a este aluno" />
+      ) : (
+        <div className="bg-[#29292e] rounded-lg border border-[#323238] divide-y divide-[#323238]/50">
+          {lista.map((a) => (
+            <div key={a.name} onClick={() => abrirAnamnese(a)} className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors">
+              <div className="min-w-0 flex-1">
+                <p className="text-white text-sm font-medium truncate">{a.titulo || a.name}</p>
+                <p className="text-gray-500 text-xs">{fmtData(a.date)}</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 ml-2" onClick={e => e.stopPropagation()}>
+                {a.status === 'Respondido' && <Badge variant="success" size="sm">Respondido</Badge>}
+                {a.status === 'Enviado' && <Badge variant="warning" size="sm">Enviado</Badge>}
+                {!a.status && <Badge variant="default" size="sm">Pendente</Badge>}
+                <button
+                  onClick={(e) => handleExcluir(e, a)}
+                  disabled={excluindo === a.name}
+                  title="Excluir anamnese"
+                  className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded-lg transition-colors disabled:opacity-40"
+                >
+                  <Trash2 size={12} />
+                </button>
+                <ChevronRight size={16} className="text-gray-600" onClick={() => abrirAnamnese(a)} />
+              </div>
+            </div>
+          ))}
         </div>
-      ))}
+      )}
+
+      {showNovaAnamnese && (
+        <ModalNovaAnamnese
+          alunoId={alunoId}
+          onClose={() => setShowNovaAnamnese(false)}
+          onCriada={() => { onRecarregar?.() }}
+        />
+      )}
     </div>
   )
 }
@@ -487,7 +567,20 @@ export default function AlunoModal({ aluno: alunoBase, onClose }) {
                     onClick={(f) => { onClose(); navigate(`/fichas/${f.name}`) }}
                   />
           )}
-          {abaAtiva === 'anamnese' && <TabAnamnese anamneses={anamneses} loading={loadingAnamneses} />}
+          {abaAtiva === 'anamnese' && (
+            <TabAnamnese
+              anamneses={anamneses}
+              loading={loadingAnamneses}
+              alunoId={alunoBase.name}
+              onRecarregar={() => {
+                setLoadingAnamneses(true)
+                listarAnamneses({ alunoId: alunoBase.name, limit: 50 })
+                  .then(r => setAnamneses(r.list))
+                  .catch(console.error)
+                  .finally(() => setLoadingAnamneses(false))
+              }}
+            />
+          )}
           {abaAtiva === 'composicao' && (
             <EmptyState icon={BarChart2} title="Avaliação de Composição Corporal" description="Esta funcionalidade será disponibilizada em breve" />
           )}

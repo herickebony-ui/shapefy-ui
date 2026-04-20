@@ -26,7 +26,8 @@ const NAV_ITEMS = [
   { id: 'alimentos',         label: 'Cadastrar Alimentos',  icon: UtensilsCrossed, path: '/alimentos' },
   { id: 'refeicoes-prontas', label: 'Cadastrar Refeições Prontas',   icon: BookOpen,        path: '/refeicoes-prontas' },
   { type: 'divider', label: 'Gerenciamento de Alunos' },
-  { id: 'feedbacks', label: 'Feedbacks Recebidos',   icon: MessageSquare,path: '/feedbacks' },  
+  { id: 'feedbacks',    label: 'Feedbacks Recebidos',  icon: MessageSquare, path: '/feedbacks' },
+  { id: 'formularios', label: 'Criar Formulários',      icon: ClipboardList, path: '/criar-formularios' },
   { type: 'divider', label: 'Gestão Consultoria' },
   { id: 'textos',    label: 'Banco de Textos',       icon: FileText,     path: '/banco-textos' },
 ]

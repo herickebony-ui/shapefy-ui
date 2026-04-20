@@ -18,6 +18,8 @@ import FeedbackDetalhe from './pages/Feedbacks/FeedbackDetalhe'
 import AvaliacaoListagem from './pages/Avaliacoes/AvaliacaoListagem'
 import AvaliacaoForm from './pages/Avaliacoes/AvaliacaoForm'
 import BancoTextos from './pages/BancoTextos/BancoTextos'
+import FormularioListagem from './pages/Formularios/FormularioListagem'
+import FormularioBuilder from './pages/Formularios/FormularioBuilder'
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -53,6 +55,8 @@ function App() {
           <Route path="avaliacoes" element={<AvaliacaoListagem />} />
           <Route path="avaliacoes/nova" element={<AvaliacaoForm />} />
           <Route path="banco-textos" element={<BancoTextos />} />
+          <Route path="criar-formularios" element={<FormularioListagem />} />
+          <Route path="criar-formularios/:tipo/:id" element={<FormularioBuilder />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
