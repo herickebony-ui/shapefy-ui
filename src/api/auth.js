@@ -6,5 +6,8 @@ export async function login(usr, pwd) {
 }
 
 export async function logout() {
-  await client.post('/api/method/logout')
+  await client.post('/api/method/shapefy.api.auth.logout')
+  localStorage.removeItem('frappe_token')
+  localStorage.removeItem('frappe_user')
+  localStorage.removeItem('frappe_user_name')
 }
