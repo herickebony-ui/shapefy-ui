@@ -19,7 +19,6 @@ client.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401 || 417) {
       localStorage.removeItem('frappe_token')
-      window.location.href = '/login'
     }
     return Promise.reject(error)
   }
