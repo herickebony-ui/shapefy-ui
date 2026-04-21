@@ -44,23 +44,22 @@ const formatDate = (v) => {
 
 // ─── Volume ───────────────────────────────────────────────────────────────────
 
-// Chaves espelham os valores reais de grupo_muscular no Frappe (FichaDetalhe como referência)
 const GRUPOS_CONFIG = [
-  { key: 'quadriceps',         label: 'Quadríceps' },
-  { key: 'isquiotibiais',      label: 'Isquiotibiais' },
-  { key: 'gluteomaximo',       label: 'G. Máximo' },
-  { key: 'gluteomedio',        label: 'G. Médio' },
-  { key: 'adutores',           label: 'Adutores' },
-  { key: 'panturrilhas',       label: 'Panturrilhas' },
-  { key: 'costas',             label: 'Costas' },
-  { key: 'trapezio',           label: 'Trapézio' },
-  { key: 'peitoral',           label: 'Peitoral' },
-  { key: 'deltoidesanterior',  label: 'Delts. Ant.' },
-  { key: 'deltoideslateral',   label: 'Delts. Lat.' },
-  { key: 'deltoidesposterior', label: 'Delts. Post.' },
-  { key: 'biceps',             label: 'Bíceps' },
-  { key: 'triceps',            label: 'Tríceps' },
-  { key: 'abdomen',            label: 'Abdômen' },
+  { key: 'quadriceps',         label: 'Quads.',       bg: 'bg-violet-500/15' },
+  { key: 'isquiotibiais',      label: 'Isquios.',     bg: 'bg-violet-500/15' },
+  { key: 'gluteomaximo',       label: 'G. Máx.',      bg: 'bg-violet-500/15' },
+  { key: 'gluteomedio',        label: 'G. Méd.',      bg: 'bg-violet-500/15' },
+  { key: 'adutores',           label: 'Adut.',        bg: 'bg-violet-500/15' },
+  { key: 'panturrilhas',       label: 'Pantur.',      bg: 'bg-violet-500/15' },
+  { key: 'costas',             label: 'Costas',       bg: 'bg-blue-500/15' },
+  { key: 'trapezio',           label: 'Trapézio',     bg: 'bg-blue-500/15' },
+  { key: 'peitoral',           label: 'Peitoral',     bg: 'bg-orange-500/15' },
+  { key: 'deltoidesanterior',  label: 'Delts. Ant.',  bg: 'bg-cyan-500/15' },
+  { key: 'deltoideslateral',   label: 'Delts. Lat.',  bg: 'bg-cyan-500/15' },
+  { key: 'deltoidesposterior', label: 'Delts. Post.', bg: 'bg-cyan-500/15' },
+  { key: 'biceps',             label: 'Bíceps',       bg: 'bg-yellow-500/15' },
+  { key: 'triceps',            label: 'Tríceps',      bg: 'bg-yellow-500/15' },
+  { key: 'abdomen',            label: 'Abd.',         bg: 'bg-emerald-500/15' },
 ]
 
 // Mapa de chave → label para lookup rápido (inclui variações comuns)
