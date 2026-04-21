@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { listarFichas, buscarFicha, excluirFicha, criarFicha, salvarFicha, listarExercicios } from '../../api/fichas'
 import { listarAlunos } from '../../api/alunos'
-import { Button, FormGroup, Input, Autocomplete, Modal, EmptyState, Pagination, DataTable } from '../../components/ui'
+import { Button, FormGroup, Input, Autocomplete, Modal, EmptyState, Pagination, DataTable, FooterTotais } from '../../components/ui'
 
 // Indexa por nome_do_exercicio E name do DocType para cobrir fichas antigas e novas
 const buildIntensMap = (lista) => {
@@ -405,9 +405,11 @@ const ModalFiltros = ({ filtros, onChange, onClose, onLimpar }) => {
 }
 
 // ─── Modal Visualização Rápida ────────────────────────────────────────────────
-// TODO: implementar após receber partes com calcVolume e GRUPOS_CONFIG
 
-const VisualizacaoRapidaModal = ({ ficha, onClose }) => {
+const normalizar = (s = '') =>
+  String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+
+const VisualizacaoRapidaModal = ({ ficha, intensMap = {}, onClose }) => {
   const [dados, setDados] = useState(null)
   const [loading, setLoading] = useState(true)
   const [abaAtiva, setAbaAtiva] = useState('a')
@@ -430,6 +432,17 @@ const VisualizacaoRapidaModal = ({ ficha, onClose }) => {
     label: dados?.[`treino_${t}_label`] || `Treino ${t.toUpperCase()}`,
   }))
 
+  const vol = useMemo(() => dados ? calcVolume(dados, intensMap) : {}, [dados, intensMap])
+
+  const normKey = s => normalizar(s).replace(/\s/g, '')
+  const getVal = (map, key) =>
+    Object.entries(map || {}).find(([k]) => normKey(k) === key)?.[1] || 0
+
+  const volItems = GRUPOS_CONFIG
+    .map(g => ({ label: g.label, shortLabel: g.label, value: getVal(vol, g.key).toFixed(0), _v: getVal(vol, g.key) }))
+    .filter(i => i._v > 0)
+    .map(({ _v, ...i }) => i)
+
   return (
     <Modal isOpen onClose={onClose} title={ficha?.nome_completo || 'Ficha'} size="xl">
       <div className="p-4 min-h-[200px]">
@@ -441,7 +454,16 @@ const VisualizacaoRapidaModal = ({ ficha, onClose }) => {
           <p className="text-red-400 text-center py-10">Erro ao carregar ficha.</p>
         ) : (
           <>
-            {/* TODO: RodapeVolume / calcVolume — aguardando partes restantes */}
+            {/* Volume */}
+            {volItems.length > 0 && (
+              <div className="mb-5">
+                <FooterTotais
+                  variant="groups"
+                  sticky={false}
+                  leftGroup={{ label: 'Volume', items: volItems }}
+                />
+              </div>
+            )}
 
             {/* Tabs de treinos */}
             <div className="flex gap-2 mb-5 flex-wrap">
@@ -893,6 +915,7 @@ export default function FichaListagem() {
   const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
+  const intensMapRef = useRef({})
   const [view, setView] = useState('list')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
@@ -903,6 +926,11 @@ export default function FichaListagem() {
   const [modalExcluir, setModalExcluir] = useState(null)
   const [modalViz, setModalViz] = useState(null)
   const [modalHistorico, setModalHistorico] = useState(null)
+
+  // Carrega mapa de intensidade uma vez para calcVolume no modal de visualização
+  useEffect(() => {
+    listarExercicios().then(lista => { intensMapRef.current = buildIntensMap(lista) }).catch(console.error)
+  }, [])
 
   // Debounce busca
   useEffect(() => {
@@ -999,6 +1027,7 @@ export default function FichaListagem() {
       {modalViz && (
         <VisualizacaoRapidaModal
           ficha={modalViz}
+          intensMap={intensMapRef.current}
           onClose={() => setModalViz(null)}
         />
       )}

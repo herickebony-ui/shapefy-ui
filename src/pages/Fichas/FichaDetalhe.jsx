@@ -14,7 +14,7 @@ import { listarAlunos, buscarAluno, salvarAluno } from '../../api/alunos'
 import { listarTextos, salvarNoBancoSeNovo } from '../../api/bancoTextos'
 import {
   Button, FormGroup, Input, Select, Textarea,
-  Autocomplete, Modal, Spinner, TextareaComSugestoes,
+  Autocomplete, Modal, Spinner, TextareaComSugestoes, FooterTotais,
 } from '../../components/ui'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -473,32 +473,30 @@ const TipoCombinadoBtn = ({ value, onChange }) => {
 const RodapeVolume = ({ ficha, intensidadeMap, volumeAnterior }) => {
   const vol = useMemo(() => calcVolume(ficha, intensidadeMap), [ficha, intensidadeMap])
   const normKey = s => normalizar(s).replace(/\s/g, '')
-
   const getVal = (map, key) =>
     Object.entries(map || {}).find(([k]) => normKey(k) === key)?.[1] || 0
 
+  const items = GRUPOS_CONFIG
+    .map(g => {
+      const atual = getVal(vol, g.key)
+      const anterior = volumeAnterior ? getVal(volumeAnterior, g.key) : null
+      const delta = anterior !== null ? atual - anterior : null
+      let value = atual.toFixed(0)
+      if (delta !== null && delta !== 0)
+        value += delta > 0 ? ` +${delta.toFixed(0)}` : ` ${delta.toFixed(0)}`
+      return { label: g.label, shortLabel: g.label, value, _atual: atual }
+    })
+    .filter(item => item._atual > 0)
+    .map(({ _atual, ...item }) => item)
+
+  if (items.length === 0) return null
+
   return (
-    <div className="shrink-0 bg-[#0a0a0a] border-t border-[#323238] px-4 py-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      <div className="flex items-center gap-3 min-w-max">
-        <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest shrink-0">Volume</span>
-        {GRUPOS_CONFIG.map(g => {
-          const atual = getVal(vol, g.key)
-          const anterior = getVal(volumeAnterior, g.key)
-          const delta = volumeAnterior ? atual - anterior : null
-          return (
-            <div key={g.key} className={`flex items-center gap-1 px-2 py-0.5 rounded ${g.bg} ${atual === 0 ? 'opacity-40' : ''}`}>
-              <span className="text-[9px] text-gray-400">{g.label}</span>
-              <span className={`text-[10px] font-bold ${atual === 0 ? 'text-gray-500' : 'text-white'}`}>{atual.toFixed(0)}</span>
-              {delta !== null && delta !== 0 && (
-                <span className={`text-[8px] font-bold ${delta > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {delta > 0 ? `+${delta.toFixed(0)}` : delta.toFixed(0)}
-                </span>
-              )}
-            </div>
-          )
-        })}
-      </div>
-    </div>
+    <FooterTotais
+      variant="groups"
+      sticky
+      leftGroup={{ label: 'Volume', items }}
+    />
   )
 }
 
@@ -1416,12 +1414,10 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
       </div>
 
       {/* Conteúdo do step */}
-      <div className="flex-1 px-6 py-6 bg-[#202024]">
+      <div className="flex-1 px-6 py-6 pb-20 bg-[#202024]">
         {renderStep()}
+        <RodapeVolume ficha={ficha} intensidadeMap={intensMap} volumeAnterior={volumeAnterior} />
       </div>
-
-      {/* Rodapé de volume — sticky na base */}
-      <RodapeVolume ficha={ficha} intensidadeMap={intensMap} volumeAnterior={volumeAnterior} />
 
       {/* Banner orientações globais do aluno */}
       {ficha.aluno && <BannerOrientacoes alunoId={ficha.aluno} />}
