@@ -30,11 +30,9 @@ export const listarAlunos = async ({ search = '', enabled = '', sexo = '', page 
   return { list, hasMore: list.length === (search ? 200 : limit) }
 }
 
-export const contarAlunos = async (filtros = []) => {
-  const res = await client.get('/api/method/frappe.client.get_count', {
-    params: { doctype: 'Aluno', filters: JSON.stringify(filtros) }
-  })
-  return res.data.message || 0
+export const buscarStatsAlunos = async () => {
+  const res = await client.get('/api/method/shapefy.api.api.get_aluno_stats')
+  return res.data.message
 }
 
 export const buscarAluno = async (id) => {

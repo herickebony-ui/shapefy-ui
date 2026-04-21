@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { Users, UserCheck, UserX, CalendarPlus, Plus, RefreshCw } from 'lucide-react'
-import { listarAlunos, criarAluno, contarAlunos } from '../api/alunos'
+import { listarAlunos, criarAluno, buscarStatsAlunos } from '../api/alunos'
 import {
   Button, Badge, DataTable,
   Modal, FormGroup, Input, Select,
@@ -90,19 +90,8 @@ export default function Dashboard() {
 
   useEffect(() => { carregar() }, [carregar])
 
-  // Carregar stats uma vez
   useEffect(() => {
-    const frappeOwner = localStorage.getItem('frappe_user')
-    const agora = new Date()
-    const inicioMes = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-01`
-    Promise.all([
-      contarAlunos([['owner', '=', frappeOwner]]),
-      contarAlunos([['enabled', '=', 1], ['owner', '=', frappeOwner]]),
-      contarAlunos([['enabled', '=', 0], ['owner', '=', frappeOwner]]),
-      contarAlunos([['creation', '>=', inicioMes], ['owner', '=', frappeOwner]]),
-    ]).then(([total, ativos, inativos, novos]) => {
-      setStats({ total, ativos, inativos, novos })
-    }).catch(console.error)
+    buscarStatsAlunos().then(setStats).catch(console.error)
   }, [])
 
   const setField = (campo) => (val) => setNovoAluno(prev => ({ ...prev, [campo]: val }))
@@ -115,7 +104,7 @@ export default function Dashboard() {
       setShowModal(false)
       setNovoAluno({ nome_completo: '', email: '', telefone: '', sexo: '' })
       carregar()
-      contarAlunos([]).then(total => setStats(s => ({ ...s, total }))).catch(() => {})
+      buscarStatsAlunos().then(setStats).catch(() => {})
     } catch (e) {
       console.error(e)
       alert('Erro ao cadastrar aluno.')
