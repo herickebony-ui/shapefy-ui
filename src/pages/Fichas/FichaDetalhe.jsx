@@ -3,15 +3,16 @@ import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Save,
-  Plus, X, Trash2, Copy, Info, GripVertical, Loader,
-  Settings, Zap, Lightbulb, BookmarkPlus, BookmarkCheck,
+  Plus, X, Trash2, Copy, Info, Loader,
+  Zap, BookmarkPlus, BookmarkCheck,
+  Link2, ListOrdered,
 } from 'lucide-react'
 import {
   listarFichas, buscarFicha, criarFicha, salvarFicha,
   listarExercicios, listarAlongamentos, listarAerobicos, listarGruposMusculares,
 } from '../../api/fichas'
 import { listarAlunos, buscarAluno, salvarAluno } from '../../api/alunos'
-import { listarTextos, salvarNoBancoSeNovo } from '../../api/bancoTextos'
+import { listarTextos, salvarNoBancoSeNovo, excluirTexto } from '../../api/bancoTextos'
 import {
   Button, FormGroup, Input, Select, Textarea,
   Autocomplete, Modal, Spinner, TextareaComSugestoes,
@@ -38,12 +39,24 @@ const somarDias = (dataStr, dias) => {
   return d.toISOString().split('T')[0]
 }
 
-const getSegundaFeira = (dataStr) => {
-  if (!dataStr) return null
-  const d = new Date(dataStr + 'T00:00:00')
-  const day = d.getDay()
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-  return new Date(d.setDate(diff))
+// Semana 01: data_de_inicio → próximo sábado (se já for sáb, vai até o sáb seguinte)
+// Semana 02+: sempre dom → sáb
+const calcularSemanas = (dataInicio, qtdSemanas) => {
+  const inicio = new Date(dataInicio + 'T00:00:00')
+  const weekday = inicio.getDay()
+  let diasAteSabado = (6 - weekday + 7) % 7
+  if (diasAteSabado === 0) diasAteSabado = 7
+  const fimSem1 = new Date(inicio)
+  fimSem1.setDate(inicio.getDate() + diasAteSabado)
+  const semanas = [{ numero: 1, inicio, fim: fimSem1 }]
+  for (let i = 2; i <= qtdSemanas; i++) {
+    const ini = new Date(fimSem1)
+    ini.setDate(fimSem1.getDate() + (i - 2) * 7 + 1)
+    const fim = new Date(ini)
+    fim.setDate(ini.getDate() + 6)
+    semanas.push({ numero: i, inicio: ini, fim })
+  }
+  return semanas
 }
 
 const formatarDataBr = (dateObj) =>
@@ -159,9 +172,8 @@ const novaFicha = () => ({
 const TextareaExpansivel = ({ value, onChange, placeholder = '', resetKey, className = '', doctype, campo }) => {
   const ref = useRef(null)
   const btnRef = useRef(null)
-  const debRef = useRef(null)
   const blurRef = useRef(null)
-  const [sugestoes, setSugestoes] = useState([])
+  const [todasSugestoes, setTodasSugestoes] = useState(null) // null = não carregado ainda
   const [dropOpen, setDropOpen] = useState(false)
   const [dropPos, setDropPos] = useState(null)
   const [salvoBanco, setSalvoBanco] = useState(false)
@@ -177,37 +189,50 @@ const TextareaExpansivel = ({ value, onChange, placeholder = '', resetKey, class
     }
   }
 
-  const abrirComResultados = (lista) => {
+  const posicionar = () => {
     if (!ref.current) return
     const r = ref.current.getBoundingClientRect()
     setDropPos({ top: r.bottom + 4, left: r.left, width: Math.max(r.width, 240) })
-    setSugestoes(lista)
-    if (lista.length > 0) setDropOpen(true)
   }
 
-  // Auto-suggest enquanto digita
-  useEffect(() => {
-    if (!doctype || !campo) return
-    clearTimeout(debRef.current)
-    if (!value?.trim()) { setSugestoes([]); setDropOpen(false); return }
-    debRef.current = setTimeout(async () => {
-      try {
-        const lista = await listarTextos(doctype, campo, { busca: value.trim(), apenasAtivos: true })
-        const filtradas = lista.filter(item => (item[campo] || '').trim().toLowerCase() !== value.trim().toLowerCase())
-        abrirComResultados(filtradas)
-      } catch (e) { console.error('sugestões:', e.message) }
-    }, 300)
-    return () => clearTimeout(debRef.current)
-  }, [value, doctype, campo])
-
-  // Lightbulb: busca explícita sem filtro de texto
-  const abrirTodas = async () => {
-    if (!doctype || !campo) return
+  const carregarTodas = async () => {
+    if (!doctype || !campo) return []
+    if (todasSugestoes !== null) return todasSugestoes
     try {
       const lista = await listarTextos(doctype, campo, { apenasAtivos: true })
-      abrirComResultados(lista)
-    } catch (e) { console.error('sugestões:', e.message) }
+      setTodasSugestoes(lista)
+      return lista
+    } catch (e) { console.error('sugestões:', e.message); return [] }
   }
+
+  // Filtragem local imediata — suporta % como wildcard
+  const filtrar = (lista, q) => {
+    if (!q?.trim()) return lista
+    const term = q.trim().toLowerCase().replace(/%/g, '.*')
+    const re = new RegExp(term)
+    return lista.filter(item => {
+      const texto = (item[campo] || '').toLowerCase()
+      return re.test(texto) && texto !== q.trim().toLowerCase()
+    })
+  }
+
+  const abrirDrop = async () => {
+    const lista = await carregarTodas()
+    const filtradas = filtrar(lista, value)
+    if (filtradas.length === 0) return
+    posicionar()
+    setDropOpen(true)
+  }
+
+  const sugestoesFiltradas = useMemo(() => {
+    if (!todasSugestoes) return []
+    return filtrar(todasSugestoes, value)
+  }, [todasSugestoes, value])
+
+  // Reposicionar quando value muda e drop já está aberto
+  useEffect(() => {
+    if (dropOpen) posicionar()
+  }, [value, dropOpen])
 
   const salvarNoBanco = async () => {
     if (!value?.trim() || !doctype || !campo) return
@@ -218,8 +243,15 @@ const TextareaExpansivel = ({ value, onChange, placeholder = '', resetKey, class
     } catch (e) { console.error('salvar banco:', e.message) }
   }
 
+  const excluirSugestao = async (item) => {
+    try {
+      await excluirTexto(doctype, item.name)
+      setTodasSugestoes(prev => prev ? prev.filter(s => s.name !== item.name) : prev)
+    } catch (e) { console.error('excluir sugestão:', e.message) }
+  }
+
   const handleBlur = () => { blurRef.current = setTimeout(() => setDropOpen(false), 200) }
-  const handleFocus = () => clearTimeout(blurRef.current)
+  const handleFocus = async () => { clearTimeout(blurRef.current); grow(); await abrirDrop() }
 
   return (
     <div className="relative">
@@ -227,47 +259,42 @@ const TextareaExpansivel = ({ value, onChange, placeholder = '', resetKey, class
         ref={ref}
         value={value || ''}
         onChange={e => { onChange(e.target.value); grow() }}
-        onFocus={(e) => { grow(); handleFocus() }}
+        onFocus={handleFocus}
         onBlur={handleBlur}
         placeholder={placeholder}
         rows={1}
-        className={`bg-[#29292e] border border-[#323238] text-gray-200 text-xs rounded px-2 py-1.5 w-full outline-none focus:border-[#2563eb]/60 resize-none leading-tight min-h-[2rem] ${doctype ? 'pr-9' : ''} ${className}`}
+        className={`bg-[#29292e] border border-[#323238] text-gray-200 text-xs rounded px-2 py-1.5 w-full outline-none focus:border-[#2563eb]/60 resize-none leading-tight min-h-[2rem] ${doctype ? 'pr-5' : ''} ${className}`}
       />
-      {doctype && campo && (
-        <>
-          <button ref={btnRef} type="button" onClick={abrirTodas}
-            className="absolute top-1 right-5 text-gray-600 hover:text-yellow-400 transition-colors"
-            title="Ver todas as sugestões">
-            <Lightbulb size={10} />
-          </button>
-          {value?.trim() && (
-            <button type="button"
-              onMouseDown={(e) => { e.preventDefault(); salvarNoBanco() }}
-              className="absolute top-1 right-1 transition-colors"
-              title="Salvar no banco de textos">
-              {salvoBanco
-                ? <BookmarkCheck size={10} className="text-green-400" />
-                : <BookmarkPlus size={10} className="text-gray-600 hover:text-[#2563eb]" />}
-            </button>
-          )}
-        </>
+      {doctype && campo && value?.trim() && (
+        <button type="button"
+          onMouseDown={(e) => { e.preventDefault(); salvarNoBanco() }}
+          className="absolute top-1 right-0.5 transition-colors"
+          title="Salvar no banco de textos">
+          {salvoBanco
+            ? <BookmarkCheck size={13} className="text-green-400" />
+            : <BookmarkPlus size={13} className="text-blue-400/60 hover:text-blue-400" />}
+        </button>
       )}
       {dropOpen && dropPos && createPortal(
         <div style={{ position: 'fixed', top: dropPos.top, left: dropPos.left, zIndex: 9999, width: dropPos.width }}
           className="bg-[#29292e] border border-[#323238] rounded-lg shadow-xl overflow-hidden">
-          <div className="px-3 py-1.5 border-b border-[#323238] flex items-center justify-between">
-            <span className="text-[10px] text-gray-500 uppercase tracking-wider">Sugestões</span>
-            <button onMouseDown={() => setDropOpen(false)} className="text-gray-600 hover:text-white text-xs">✕</button>
-          </div>
           <div className="max-h-44 overflow-y-auto">
-            {sugestoes.length === 0
+            {sugestoesFiltradas.length === 0
               ? <p className="text-gray-500 text-xs text-center py-3">Nenhuma sugestão cadastrada</p>
-              : sugestoes.map(item => (
-                <button key={item.name} type="button"
-                  onMouseDown={() => { clearTimeout(blurRef.current); onChange(item[campo]); setDropOpen(false); setTimeout(grow, 0) }}
-                  className="w-full text-left px-3 py-1.5 text-xs text-gray-300 hover:bg-[#323238] hover:text-white transition-colors border-b border-[#323238]/50 last:border-0">
-                  {item[campo]}
-                </button>
+              : sugestoesFiltradas.map(item => (
+                <div key={item.name} className="flex items-center group/sug border-b border-[#323238]/50 last:border-0 hover:bg-[#323238] transition-colors">
+                  <button type="button"
+                    onMouseDown={() => { clearTimeout(blurRef.current); onChange(item[campo]); setDropOpen(false); setTimeout(grow, 0) }}
+                    className="flex-1 text-left px-3 py-1.5 text-xs text-gray-300 group-hover/sug:text-white">
+                    {item[campo]}
+                  </button>
+                  <button type="button"
+                    onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); excluirSugestao(item) }}
+                    className="px-2 py-1.5 text-gray-600 hover:text-red-400 opacity-0 group-hover/sug:opacity-100 transition-all shrink-0"
+                    title="Excluir do banco">
+                    <X size={10} />
+                  </button>
+                </div>
               ))}
           </div>
         </div>,
@@ -282,40 +309,53 @@ const TextareaExpansivel = ({ value, onChange, placeholder = '', resetKey, class
 
 const InputSug = ({ value, onChange, doctype, campo, className = '' }) => {
   const ref = useRef(null)
-  const debRef = useRef(null)
   const blurRef = useRef(null)
-  const [sugestoes, setSugestoes] = useState([])
+  const [todasSugestoes, setTodasSugestoes] = useState(null)
   const [dropOpen, setDropOpen] = useState(false)
   const [dropPos, setDropPos] = useState(null)
   const [salvoBanco, setSalvoBanco] = useState(false)
 
-  const abrirComResultados = (lista) => {
+  const posicionar = () => {
     if (!ref.current) return
     const r = ref.current.getBoundingClientRect()
-    setDropPos({ top: r.bottom + 4, left: r.left, width: Math.max(r.width, 220) })
-    setSugestoes(lista)
-    if (lista.length > 0) setDropOpen(true)
+    setDropPos({ top: r.bottom + 2, left: r.left, width: Math.max(r.width, 220) })
+  }
+
+  const carregarTodas = async () => {
+    if (todasSugestoes !== null) return todasSugestoes
+    try {
+      const lista = await listarTextos(doctype, campo, { apenasAtivos: true })
+      setTodasSugestoes(lista)
+      return lista
+    } catch (e) { console.error('sugestões:', e.message); return [] }
+  }
+
+  const filtrar = (lista, q) => {
+    if (!q?.trim()) return lista
+    const term = q.trim().toLowerCase().replace(/%/g, '.*')
+    const re = new RegExp(term)
+    return lista.filter(item => {
+      const texto = (item[campo] || '').toLowerCase()
+      return re.test(texto) && texto !== q.trim().toLowerCase()
+    })
+  }
+
+  const sugestoesFiltradas = useMemo(() => {
+    if (!todasSugestoes) return []
+    return filtrar(todasSugestoes, value)
+  }, [todasSugestoes, value])
+
+  const abrirDrop = async () => {
+    const lista = await carregarTodas()
+    const filtradas = filtrar(lista, value)
+    if (filtradas.length === 0) return
+    posicionar()
+    setDropOpen(true)
   }
 
   useEffect(() => {
-    clearTimeout(debRef.current)
-    if (!value?.trim()) { setSugestoes([]); setDropOpen(false); return }
-    debRef.current = setTimeout(async () => {
-      try {
-        const lista = await listarTextos(doctype, campo, { busca: value.trim(), apenasAtivos: true })
-        const filtradas = lista.filter(item => (item[campo] || '').trim().toLowerCase() !== value.trim().toLowerCase())
-        abrirComResultados(filtradas)
-      } catch (e) { console.error('sugestões:', e.message) }
-    }, 300)
-    return () => clearTimeout(debRef.current)
-  }, [value, doctype, campo])
-
-  const abrirTodas = async () => {
-    try {
-      const lista = await listarTextos(doctype, campo, { apenasAtivos: true })
-      abrirComResultados(lista)
-    } catch (e) { console.error('sugestões:', e.message) }
-  }
+    if (dropOpen) posicionar()
+  }, [value, dropOpen])
 
   const salvarNoBanco = async () => {
     if (!value?.trim()) return
@@ -326,41 +366,48 @@ const InputSug = ({ value, onChange, doctype, campo, className = '' }) => {
     } catch (e) { console.error('salvar banco:', e.message) }
   }
 
+  const excluirSugestao = async (item) => {
+    try {
+      await excluirTexto(doctype, item.name)
+      setTodasSugestoes(prev => prev ? prev.filter(s => s.name !== item.name) : prev)
+    } catch (e) { console.error('excluir sugestão:', e.message) }
+  }
+
   const handleBlur = () => { blurRef.current = setTimeout(() => setDropOpen(false), 200) }
 
   return (
     <div className="relative flex items-center">
       <input ref={ref} value={value || ''} onChange={e => onChange(e.target.value)}
-        onBlur={handleBlur} onFocus={() => clearTimeout(blurRef.current)}
-        className={`w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 pr-9 ${className}`} />
-      <button type="button" onClick={abrirTodas}
-        className="absolute right-5 text-gray-600 hover:text-yellow-400 transition-colors" title="Ver todas as sugestões">
-        <Lightbulb size={10} />
-      </button>
+        onBlur={handleBlur} onFocus={async () => { clearTimeout(blurRef.current); await abrirDrop() }}
+        className={`w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 pr-5 ${className}`} />
       {value?.trim() && (
         <button type="button" onMouseDown={(e) => { e.preventDefault(); salvarNoBanco() }}
-          className="absolute right-1 transition-colors" title="Salvar no banco">
+          className="absolute right-0.5 transition-colors" title="Salvar no banco">
           {salvoBanco
-            ? <BookmarkCheck size={10} className="text-green-400" />
-            : <BookmarkPlus size={10} className="text-gray-600 hover:text-[#2563eb]" />}
+            ? <BookmarkCheck size={13} className="text-green-400" />
+            : <BookmarkPlus size={13} className="text-blue-400/60 hover:text-blue-400" />}
         </button>
       )}
       {dropOpen && dropPos && createPortal(
         <div style={{ position: 'fixed', top: dropPos.top, left: dropPos.left, zIndex: 9999, width: dropPos.width }}
           className="bg-[#29292e] border border-[#323238] rounded-lg shadow-xl overflow-hidden">
-          <div className="px-3 py-1.5 border-b border-[#323238] flex items-center justify-between">
-            <span className="text-[10px] text-gray-500 uppercase tracking-wider">Sugestões</span>
-            <button onMouseDown={() => setDropOpen(false)} className="text-gray-600 hover:text-white text-xs">✕</button>
-          </div>
           <div className="max-h-44 overflow-y-auto">
-            {sugestoes.length === 0
+            {sugestoesFiltradas.length === 0
               ? <p className="text-gray-500 text-xs text-center py-3">Nenhuma sugestão</p>
-              : sugestoes.map(item => (
-                <button key={item.name} type="button"
-                  onMouseDown={() => { clearTimeout(blurRef.current); onChange(item[campo]); setDropOpen(false) }}
-                  className="w-full text-left px-3 py-1.5 text-xs text-gray-300 hover:bg-[#323238] hover:text-white transition-colors border-b border-[#323238]/50 last:border-0">
-                  {item[campo]}
-                </button>
+              : sugestoesFiltradas.map(item => (
+                <div key={item.name} className="flex items-center group/sug border-b border-[#323238]/50 last:border-0 hover:bg-[#323238] transition-colors">
+                  <button type="button"
+                    onMouseDown={() => { clearTimeout(blurRef.current); onChange(item[campo]); setDropOpen(false) }}
+                    className="flex-1 text-left px-3 py-1.5 text-xs text-gray-300 group-hover/sug:text-white">
+                    {item[campo]}
+                  </button>
+                  <button type="button"
+                    onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); excluirSugestao(item) }}
+                    className="px-2 py-1.5 text-gray-600 hover:text-red-400 opacity-0 group-hover/sug:opacity-100 transition-all shrink-0"
+                    title="Excluir do banco">
+                    <X size={10} />
+                  </button>
+                </div>
               ))}
           </div>
         </div>,
@@ -516,90 +563,104 @@ const RodapeVolume = ({ ficha, intensidadeMap, volumeAnterior }) => {
 
 const DetalhesExercicio = ({ ex, onSave, onClose, intensidadeMap = {} }) => {
   const [local, setLocal] = useState({ ...ex })
-  const [videoDetected, setVideoDetected] = useState(false)
   const upd = (f, v) => setLocal(l => ({ ...l, [f]: v }))
-  const handleVideoChange = (v) => {
-    const info = extractVideoInfo(v)
-    if (info) { upd('video', info.id); upd('plataforma_do_vídeo', info.platform); setVideoDetected(true) }
-    else { upd('video', v); setVideoDetected(false) }
-  }
 
-  const TITULOS_COMBINADO = ['Bi-set', 'Tri-set', 'Superset']
-
-  let intensidades = []
+  let intensInit = []
   try {
     const raw = local.intensidade
-    intensidades = typeof raw === 'string' ? JSON.parse(raw) : (raw || [])
+    if (typeof raw === 'string') { try { intensInit = raw && raw !== '[]' ? JSON.parse(raw) : [] } catch { intensInit = [] } }
+    else intensInit = raw || []
   } catch { }
-  if (!intensidades.length) intensidades = intensidadeMap[local.exercicio] || []
+  if (!intensInit.length) intensInit = intensidadeMap[local.exercicio] || []
+
+  const [intens, setIntens] = useState(intensInit)
+
+  const addIntensLinha = () => setIntens(prev => [...prev, { grupo_muscular: '', intensidade: '1' }])
+  const updIntensLinha = (i, f, v) => setIntens(prev => prev.map((item, idx) => idx === i ? { ...item, [f]: v } : item))
+  const removeIntensLinha = (i) => setIntens(prev => prev.filter((_, idx) => idx !== i))
+
+  const handleSave = () => {
+    onSave({ ...local, intensidade: JSON.stringify(intens) })
+    onClose()
+  }
+
+  const handleVideoChange = (v) => {
+    const info = extractVideoInfo(v)
+    if (info) { upd('video', info.id); upd('plataforma_do_vídeo', info.platform) }
+    else upd('video', v)
+  }
 
   return (
-    <Modal
-      isOpen
-      onClose={onClose}
-      title="Detalhes do Exercício"
-      size="md"
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button variant="primary" onClick={() => { onSave(local); onClose() }}>Salvar</Button>
-        </>
-      }
-    >
-      <div className="p-4 space-y-4">
-        <div className="bg-[#1a1a1a] rounded-lg px-4 py-2 text-sm text-gray-300 font-medium">{local.exercicio || '—'}</div>
+    <Modal isOpen onClose={onClose} title={local.exercicio || 'Detalhes'} size="md"
+      footer={<><Button variant="ghost" onClick={onClose}>Cancelar</Button><Button variant="primary" onClick={handleSave}>Salvar</Button></>}>
+      <div className="p-4 flex flex-col gap-3">
 
-        <div className="grid grid-cols-2 gap-3">
-          <FormGroup label="Carga Sugerida (kg)">
-            <Input type="number" value={local.carga_sugerida || ''} onChange={v => upd('carga_sugerida', v)} />
+        {/* Carga */}
+        <FormGroup label="Carga Sugerida (kg)">
+          <Input type="number" value={local.carga_sugerida || ''} onChange={v => upd('carga_sugerida', v)} placeholder="Ex: 40" />
+        </FormGroup>
+
+        {/* Vídeo + Plataforma */}
+        <div className="grid grid-cols-2 gap-2">
+          <FormGroup label="ID / Link do Vídeo">
+            <Input value={local.video || ''} onChange={handleVideoChange} placeholder="Ex: dQw4w9WgXcQ" />
           </FormGroup>
-          <FormGroup label="Link ou ID do Vídeo" hint={videoDetected ? '✓ ID extraído automaticamente' : 'Cole o link ou o código'}>
-            <Input value={local.video || ''} onChange={handleVideoChange} placeholder="https://youtu.be/... ou dQw4w9WgXcQ" />
+          <FormGroup label="Plataforma">
+            <Select value={local['plataforma_do_vídeo'] || ''} onChange={v => upd('plataforma_do_vídeo', v)} options={PLATAFORMAS_VIDEO} placeholder="Selecionar..." />
           </FormGroup>
         </div>
 
-        <FormGroup label="Tipo de Série (séries nomeadas, separadas por vírgula)">
-          <Input value={local.tipo_de_serie || ''} onChange={v => upd('tipo_de_serie', v)} placeholder="Ex: Aquecimento,Preparatória,Válida" />
+        {/* Observação */}
+        <FormGroup label="Instruções">
+          <Textarea value={local.observacao || ''} onChange={v => upd('observacao', v)} placeholder="Instruções do exercício..." rows={3} />
         </FormGroup>
 
-        <FormGroup label="Plataforma do Vídeo">
-          <Select value={local['plataforma_do_vídeo'] || ''} onChange={v => upd('plataforma_do_vídeo', v)}
-            options={PLATAFORMAS_VIDEO} placeholder="Selecionar..." />
-        </FormGroup>
-
-        <div className="border border-[#323238] rounded-lg p-4 space-y-3">
-          <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Exercício Combinado</span>
-          <div className="flex items-center gap-6">
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-300">
-              <input type="checkbox" checked={!!local.primeiro} onChange={e => upd('primeiro', e.target.checked ? 1 : 0)} className="accent-[#2563eb] w-4 h-4" />
-              Primeiro exercício
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-300">
-              <input type="checkbox" checked={!!local.ultimo} onChange={e => upd('ultimo', e.target.checked ? 1 : 0)} className="accent-[#2563eb] w-4 h-4" />
-              Último exercício
-            </label>
+        {/* Intensidade — editável */}
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between">
+            <label className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Intensidade</label>
+            <button onClick={addIntensLinha}
+              className="flex items-center gap-1 text-xs text-gray-500 hover:text-white border border-[#323238] px-2 py-0.5 rounded-lg transition">
+              <Plus size={10} /> Add
+            </button>
           </div>
-          {(local.primeiro || local.ultimo) && (
-            <FormGroup label="Título do Combinado">
-              <Select value={local.titulo_do_exercicio_combinado || ''} onChange={v => upd('titulo_do_exercicio_combinado', v)} options={TITULOS_COMBINADO} placeholder="Selecionar..." />
-            </FormGroup>
-          )}
+          <div className="border border-[#323238] rounded-lg overflow-hidden">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-[#1a1a1a] border-b border-[#323238] text-gray-500">
+                  <th className="text-left py-1.5 px-3">Grupo Muscular</th>
+                  <th className="text-left py-1.5 px-3">Intensidade</th>
+                  <th className="w-6"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {intens.length === 0 && (
+                  <tr><td colSpan={3} className="py-3 text-center text-gray-600">Nenhuma intensidade.</td></tr>
+                )}
+                {intens.map((item, i) => (
+                  <tr key={i} className="border-b border-[#323238]/40 last:border-0">
+                    <td className="px-3 py-1">
+                      <input type="text" value={item.grupo_muscular} onChange={e => updIntensLinha(i, 'grupo_muscular', e.target.value)}
+                        placeholder="Grupo..." className="bg-transparent text-gray-200 text-xs w-full outline-none border-b border-[#323238] focus:border-[#850000]/60 py-0.5" />
+                    </td>
+                    <td className="px-3 py-1">
+                      <select value={item.intensidade} onChange={e => updIntensLinha(i, 'intensidade', e.target.value)}
+                        className="bg-transparent text-gray-200 text-xs outline-none border-b border-[#323238] focus:border-[#850000]/60 py-0.5 appearance-none cursor-pointer">
+                        {['0', '0.25', '0.5', '1'].map(v => <option key={v} value={v}>{v}</option>)}
+                      </select>
+                    </td>
+                    <td className="px-2">
+                      <button onClick={() => removeIntensLinha(i)} className="text-gray-600 hover:text-red-400 flex items-center justify-center">
+                        <X size={10} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        {intensidades.length > 0 && (
-          <div className="border border-[#323238] rounded-lg p-4 space-y-2">
-            <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Intensidade por Grupo</span>
-            {intensidades.map((int, i) => {
-              const val = parseFloat(String(int.intensidade).replace(',', '.')) || 0
-              return (
-                <div key={i} className="flex items-center justify-between text-xs">
-                  <span className="text-gray-300">{int.grupo_muscular}</span>
-                  <span className={`font-bold ${val >= 1 ? 'text-red-400' : val >= 0.5 ? 'text-yellow-400' : 'text-gray-400'}`}>{int.intensidade}</span>
-                </div>
-              )
-            })}
-          </div>
-        )}
       </div>
     </Modal>
   )
@@ -737,6 +798,136 @@ const BannerOrientacoes = ({ alunoId }) => {
   )
 }
 
+// ─── Popover base (portal, fecha fora) ───────────────────────────────────────
+
+const Popover = ({ anchor, onClose, children, width = 280, align = 'left' }) => {
+  const ref = useRef(null)
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+
+  useEffect(() => {
+    if (!anchor) return
+    const r = anchor.getBoundingClientRect()
+    let left = align === 'right' ? r.right - width : r.left
+    left = Math.max(8, Math.min(left, window.innerWidth - width - 8))
+    setPos({ top: r.bottom + 6, left })
+  }, [anchor, width, align])
+
+  useEffect(() => {
+    const onClick = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose() }
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    setTimeout(() => document.addEventListener('mousedown', onClick), 0)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('mousedown', onClick); document.removeEventListener('keydown', onKey) }
+  }, [onClose])
+
+  return createPortal(
+    <div ref={ref} style={{ top: pos.top, left: pos.left, width, position: 'fixed', zIndex: 9999 }}
+      className="bg-[#19191d] border border-[#323238] rounded-xl shadow-2xl shadow-black/60 overflow-hidden">
+      {children}
+    </div>,
+    document.body
+  )
+}
+
+// ─── ComboPopover ─────────────────────────────────────────────────────────────
+
+const TIPOS_COMBO = ['Bi-set', 'Tri-set', 'Superset']
+
+const ComboPopover = ({ ex, onChange, anchor, onClose }) => {
+  const set = (f, v) => onChange({ ...ex, [f]: v })
+  const active = ex.primeiro || ex.ultimo
+  return (
+    <Popover anchor={anchor} onClose={onClose} width={220} align="right">
+      <div className="p-2 flex flex-col gap-1.5">
+        {/* Posição */}
+        <div className="flex gap-1">
+          <button onClick={() => set('primeiro', ex.primeiro ? 0 : 1)}
+            className={`flex-1 py-1 rounded text-[11px] font-medium border transition ${
+              ex.primeiro ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' : 'text-gray-400 border-[#323238] hover:border-gray-500'
+            }`}>1º</button>
+          <button onClick={() => set('ultimo', ex.ultimo ? 0 : 1)}
+            className={`flex-1 py-1 rounded text-[11px] font-medium border transition ${
+              ex.ultimo ? 'bg-rose-500/15 text-rose-300 border-rose-500/30' : 'text-gray-400 border-[#323238] hover:border-gray-500'
+            }`}>Último</button>
+        </div>
+        {/* Tipo */}
+        <div className="flex gap-1">
+          {TIPOS_COMBO.map(t => (
+            <button key={t} onClick={() => set('titulo_do_exercicio_combinado', ex.titulo_do_exercicio_combinado === t ? '' : t)}
+              className={`flex-1 py-1 rounded text-[10px] border transition ${
+                ex.titulo_do_exercicio_combinado === t
+                  ? 'bg-blue-500/15 text-blue-300 border-blue-500/30'
+                  : 'text-gray-500 border-[#323238] hover:border-gray-500'
+              }`}>{t}</button>
+          ))}
+        </div>
+        {/* Remover */}
+        {active && (
+          <button onClick={() => { onChange({ ...ex, primeiro: 0, ultimo: 0, titulo_do_exercicio_combinado: '' }); onClose() }}
+            className="text-[10px] text-gray-600 hover:text-red-400 transition text-center py-0.5">
+            remover
+          </button>
+        )}
+      </div>
+    </Popover>
+  )
+}
+
+// ─── SeriesNamePopover ────────────────────────────────────────────────────────
+
+const TIPOS_SERIE_POPOVER = ['Aquecimento', 'Preparatória', 'Trabalho', 'Válida', 'Transição', 'Top Set', 'Máxima']
+
+const SeriesNamePopover = ({ ex, onChange, anchor, onClose }) => {
+  const n = parseInt(ex.series) || 0
+  const arr = (ex.tipo_de_serie || '').split(',').map(s => s.trim())
+  const hasNames = arr.some(Boolean)
+
+  const setSerie = (i, v) => {
+    const next = [...arr]
+    while (next.length < n) next.push('')
+    next[i] = v
+    onChange({ ...ex, tipo_de_serie: next.slice(0, n).join(',') })
+  }
+  const applyAll = (v) => onChange({ ...ex, tipo_de_serie: Array(n).fill(v).join(',') })
+  const clear = () => onChange({ ...ex, tipo_de_serie: '' })
+
+  return (
+    <Popover anchor={anchor} onClose={onClose} width={320} align="right">
+      <div className="p-3">
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Nomear cada série</div>
+          {hasNames && <button onClick={clear} className="text-[10px] text-gray-500 hover:text-red-400 transition">Limpar</button>}
+        </div>
+        {n === 0 ? (
+          <div className="py-4 text-xs text-gray-500 text-center">Defina o nº de séries primeiro.</div>
+        ) : (
+          <>
+            <div className="flex flex-wrap gap-1 mb-3">
+              <span className="text-[10px] text-gray-600 self-center mr-1">Aplicar em todas:</span>
+              {['Trabalho', 'Válida'].map(t => (
+                <button key={t} onClick={() => applyAll(t)}
+                  className="px-1.5 py-0.5 text-[10px] bg-[#29292e] text-gray-300 rounded hover:bg-[#323238] transition">{t}</button>
+              ))}
+            </div>
+            <div className="flex flex-col gap-1 max-h-64 overflow-y-auto pr-1">
+              {Array.from({ length: n }).map((_, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="w-6 text-[11px] font-mono text-gray-500 text-center">{String(i + 1).padStart(2, '0')}</span>
+                  <select value={arr[i] || ''} onChange={(e) => setSerie(i, e.target.value)}
+                    className="flex-1 bg-[#0f0f0f] border border-[#323238] text-gray-200 text-xs rounded-lg px-2 py-1.5 outline-none focus:border-[#2563eb]/50">
+                    <option value="">—</option>
+                    {TIPOS_SERIE_POPOVER.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </Popover>
+  )
+}
+
 // ─── TabelaExercicios ─────────────────────────────────────────────────────────
 
 // Lista base garantida — independente do que a API retornar
@@ -791,14 +982,16 @@ const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, inten
     return deAPI
   }
 
-  // Mapa de quais linhas fazem parte de um combinado
+  // Mapa de posição em combinado para cada linha
   let comboActive = false
   const combinadosMap = exercicios.map(ex => {
-    let isPart = false
-    if (ex.primeiro) comboActive = true
+    let isPart = false; let position = 'none'
+    if (ex.primeiro) { comboActive = true; position = 'first' }
+    else if (comboActive && !ex.ultimo) position = 'middle'
+    if (ex.ultimo) position = 'last'
     if (comboActive) isPart = true
     if (ex.ultimo) comboActive = false
-    return isPart
+    return { isPart, position }
   })
 
   return (
@@ -812,111 +1005,41 @@ const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, inten
         />
       )}
 
-      <div className="rounded-xl border border-[#323238] bg-[#1a1a1a]">
+      <div className="rounded-xl border border-[#323238] bg-[#1a1a1a] overflow-hidden">
         <table className="w-full text-sm min-w-[700px]">
-            <thead>
-              <tr className="text-gray-400 text-xs uppercase tracking-wide border-b border-[#323238]">
-                <th className="w-8 py-2 px-2"></th>
-                <th className="text-left py-2 px-2 w-36">Grupo Muscular</th>
-                <th className="text-left py-2 px-2 w-56">Exercício</th>
-                <th className="text-center py-2 px-2 w-12">Séries</th>
-                <th className="text-center py-2 px-2 w-24">Reps</th>
-                <th className="text-center py-2 px-2 w-24">Descanso</th>
-                <th className="text-left py-2 px-2">Instruções</th>
-                <th className="text-center py-2 px-2 w-32">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {exercicios.map((ex, i) => {
-                const isInCombo = combinadosMap[i]
-                return (
-                  <tr key={ex._id || i}
-                    className={`border-b border-[#323238] transition group hover:bg-[#202024] ${isInCombo ? 'bg-[#2563eb]/10 border-l-2 border-l-[#2563eb]' : 'border-l-2 border-l-transparent'}`}>
-                    {/* Ordem */}
-                    <td className="px-2 text-center w-8 align-middle">
-                      <div className="flex flex-row items-center justify-center gap-1">
-                        <div className="flex flex-col items-center">
-                          <button onClick={() => i > 0 && move(i, -1)} disabled={i === 0}
-                            className="text-gray-600 hover:text-white disabled:opacity-20 transition"><ChevronUp size={12} /></button>
-                          <button onClick={() => i < exercicios.length - 1 && move(i, 1)} disabled={i === exercicios.length - 1}
-                            className="text-gray-600 hover:text-white disabled:opacity-20 transition"><ChevronDown size={12} /></button>
-                        </div>
-                        <span className="text-[10px] font-bold font-mono text-gray-500">{i + 1}</span>
-                      </div>
-                    </td>
-                    {/* Grupo */}
-                    <td className="px-2 py-1 align-middle">
-                      <SearchableCombo
-                        value={ex.grupo_muscular || ''}
-                        onChange={v => upd(i, 'grupo_muscular', v)}
-                        options={grupos}
-                        placeholder="Grupo..."
-                      />
-                    </td>
-                    {/* Exercício */}
-                    <td className="px-2 py-1 align-middle">
-                      <SearchableCombo
-                        value={ex.exercicio || ''}
-                        onChange={v => upd(i, 'exercicio', v)}
-                        options={exerciciosDoGrupo(ex.grupo_muscular, ex.exercicio)}
-                        placeholder="Buscar exercício..."
-                      />
-                    </td>
-                    {/* Séries */}
-                    <td className="px-2 py-1 align-middle">
-                      <input type="number" value={ex.series || ''} onChange={e => upd(i, 'series', e.target.value)}
-                        className="w-full h-8 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 text-center" />
-                    </td>
-                    {/* Reps */}
-                    <td className="px-2 py-1 align-middle">
-                      <input value={ex.repeticoes || ''} onChange={e => upd(i, 'repeticoes', e.target.value)}
-                        className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 text-center" />
-                    </td>
-                    {/* Descanso */}
-                    <td className="px-2 py-1 align-middle">
-                      <input value={ex.descanso || ''} onChange={e => upd(i, 'descanso', e.target.value)}
-                        className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 text-center" />
-                    </td>
-                    {/* Instruções */}
-                    <td className="px-2 py-1 align-middle">
-                      <TextareaExpansivel value={ex.observacao || ''} onChange={v => upd(i, 'observacao', v)} placeholder="Instruções..." doctype="Treino Observacao" campo="treino_observacao" />
-                    </td>
-                    {/* Ações */}
-                    <td className="px-1 py-1 align-top">
-                      <div className="flex flex-col gap-1 justify-center h-full pt-0.5">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <button onClick={() => upd(i, 'primeiro', ex.primeiro ? 0 : 1)}
-                            className={`text-[10px] font-bold px-2 h-7 rounded border transition ${ex.primeiro ? 'bg-green-500/20 text-green-400 border-green-500/50' : 'border-[#323238] text-gray-500 hover:border-gray-500'}`}>
-                            1º
-                          </button>
-                          <button onClick={() => upd(i, 'ultimo', ex.ultimo ? 0 : 1)}
-                            className={`text-[10px] font-bold px-2 h-7 rounded border transition ${ex.ultimo ? 'bg-red-500/20 text-red-400 border-red-500/50' : 'border-[#323238] text-gray-500 hover:border-gray-500'}`}>
-                            Ult
-                          </button>
-                          <div className="w-px h-5 bg-[#323238]" />
-                          {!!ex.primeiro && (
-                            <TipoCombinadoBtn value={ex.titulo_do_exercicio_combinado || ''} onChange={v => upd(i, 'titulo_do_exercicio_combinado', v)} />
-                          )}
-                          <button onClick={() => setDetalheIdx(i)} title="Detalhes"
-                            className="h-6 w-6 flex items-center justify-center bg-[#29292e] text-blue-400 hover:bg-blue-600 hover:text-white rounded transition-colors">
-                            <Info size={10} />
-                          </button>
-                          <button onClick={() => dupe(i)} title="Duplicar"
-                            className="h-6 w-6 flex items-center justify-center bg-[#29292e] text-gray-400 hover:bg-gray-600 hover:text-white rounded transition-colors">
-                            <Copy size={10} />
-                          </button>
-                          <button onClick={() => remove(i)} title="Excluir"
-                            className="h-6 w-6 flex items-center justify-center bg-[#29292e] text-red-400 hover:bg-red-600 hover:text-white rounded transition-colors">
-                            <Trash2 size={10} />
-                          </button>
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+          <thead>
+            <tr className="text-gray-500 text-[10px] uppercase tracking-wider border-b border-[#323238] bg-[#19191d]">
+              <th className="w-[3px] p-0" />
+              <th className="w-10 py-2.5 px-2" />
+              <th className="text-left py-2.5 px-2 w-36">Grupo Muscular</th>
+              <th className="text-left py-2.5 px-2 w-52">Exercício</th>
+              <th className="text-center py-2.5 px-2 w-[88px]">Séries</th>
+              <th className="text-center py-2.5 px-2 w-20">Reps</th>
+              <th className="text-center py-2.5 px-2 w-20">Descanso</th>
+              <th className="text-left py-2.5 px-2">Instruções</th>
+              <th className="text-right py-2.5 px-2 w-[120px]">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {exercicios.map((ex, i) => {
+              const { isPart, position } = combinadosMap[i]
+              return (
+                <ExRow key={ex._id || i}
+                  ex={ex} i={i} total={exercicios.length}
+                  isPart={isPart} position={position}
+                  onChange={e => { const arr = [...exercicios]; arr[i] = e; onChange(arr) }}
+                  onMove={dir => move(i, dir)}
+                  onDup={() => dupe(i)}
+                  onRemove={() => remove(i)}
+                  onOpenDetails={() => setDetalheIdx(i)}
+                  grupos={grupos}
+                  opcoesExercicio={exerciciosDoGrupo(ex.grupo_muscular, ex.exercicio)}
+                  upd={(f, v) => upd(i, f, v)}
+                />
+              )
+            })}
+          </tbody>
+        </table>
       </div>
 
       <button onClick={addRow}
@@ -924,6 +1047,102 @@ const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, inten
         <Plus size={14} /> Adicionar Exercício
       </button>
     </div>
+  )
+}
+
+// ─── ExRow — linha de exercício com novo visual ───────────────────────────────
+
+const ExRow = ({ ex, i, total, isPart, position, onChange, onMove, onDup, onRemove, onOpenDetails, grupos, opcoesExercicio, upd }) => {
+  const [comboOpen, setComboOpen] = useState(false)
+  const [seriesOpen, setSeriesOpen] = useState(false)
+  const comboBtnRef = useRef(null)
+  const seriesBtnRef = useRef(null)
+  const comboActive = ex.primeiro || ex.ultimo
+  const hasSeriesNames = (ex.tipo_de_serie || '').split(',').some(s => s.trim())
+
+  return (
+    <tr className={`border-b border-[#323238] transition group hover:bg-[#202024] relative ${isPart ? 'bg-blue-500/[0.05]' : ''}`}>
+      {/* Barra colorida de combinado */}
+      <td className="p-0 w-[3px] relative">
+        {isPart && <div className="absolute inset-y-0 left-0 w-[3px] bg-blue-500/70" />}
+      </td>
+      {/* Ordem */}
+      <td className="px-2 w-10 align-middle">
+        <div className="flex items-center gap-1">
+          <div className="flex flex-col">
+            <button onClick={() => i > 0 && onMove(-1)} disabled={i === 0}
+              className="text-gray-600 hover:text-white disabled:opacity-20 leading-none"><ChevronUp size={11} /></button>
+            <button onClick={() => i < total - 1 && onMove(1)} disabled={i === total - 1}
+              className="text-gray-600 hover:text-white disabled:opacity-20 leading-none"><ChevronDown size={11} /></button>
+          </div>
+          <span className="text-[10px] font-bold font-mono text-gray-500">{i + 1}</span>
+        </div>
+      </td>
+      {/* Grupo */}
+      <td className="px-2 py-1 align-middle">
+        <SearchableCombo value={ex.grupo_muscular || ''} onChange={v => upd('grupo_muscular', v)} options={grupos} placeholder="Grupo..." />
+      </td>
+      {/* Exercício */}
+      <td className="px-2 py-1 align-middle">
+        <SearchableCombo value={ex.exercicio || ''} onChange={v => upd('exercicio', v)} options={opcoesExercicio} placeholder="Buscar exercício..." />
+      </td>
+      {/* Séries + botão nomear */}
+      <td className="px-2 py-1 align-middle">
+        <div className="flex items-center gap-0.5">
+          <input type="number" value={ex.series || ''} onChange={e => upd('series', e.target.value)}
+            className="w-full h-8 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 text-center font-semibold" />
+          <button ref={seriesBtnRef} onClick={() => setSeriesOpen(true)} title="Nomear séries"
+            className={`h-8 w-6 flex items-center justify-center rounded transition shrink-0 ${
+              hasSeriesNames ? 'text-amber-400 hover:text-amber-300' : 'text-gray-600 hover:text-gray-400'
+            }`}>
+            <ListOrdered size={11} />
+          </button>
+        </div>
+        {seriesOpen && <SeriesNamePopover ex={ex} onChange={onChange} anchor={seriesBtnRef.current} onClose={() => setSeriesOpen(false)} />}
+      </td>
+      {/* Reps */}
+      <td className="px-2 py-1 align-middle">
+        <input value={ex.repeticoes || ''} onChange={e => upd('repeticoes', e.target.value)}
+          className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 text-center" placeholder="8-12" />
+      </td>
+      {/* Descanso */}
+      <td className="px-2 py-1 align-middle">
+        <input value={ex.descanso || ''} onChange={e => upd('descanso', e.target.value)}
+          className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 text-center" placeholder="01:30" />
+      </td>
+      {/* Instruções */}
+      <td className="px-2 py-1 align-middle">
+        <TextareaExpansivel value={ex.observacao || ''} onChange={v => upd('observacao', v)} placeholder="Instruções..." doctype="Treino Observacao" campo="treino_observacao" />
+      </td>
+      {/* Ações minimalistas */}
+      <td className="px-1 py-1 align-middle">
+        <div className="flex items-center justify-end gap-0.5">
+          {/* Combinado */}
+          <button ref={comboBtnRef} onClick={() => setComboOpen(true)} title="Combinado"
+            className={`h-7 w-7 flex items-center justify-center rounded transition ${
+              comboActive ? 'text-blue-300 bg-blue-500/15' : 'text-gray-500 hover:text-gray-200 hover:bg-[#29292e]'
+            }`}>
+            <Link2 size={12} />
+          </button>
+          {comboOpen && <ComboPopover ex={ex} onChange={onChange} anchor={comboBtnRef.current} onClose={() => setComboOpen(false)} />}
+          {/* Detalhes */}
+          <button onClick={onOpenDetails} title="Detalhes (vídeo, carga, intensidade)"
+            className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-gray-200 hover:bg-[#29292e] rounded transition">
+            <Info size={12} />
+          </button>
+          {/* Duplicar */}
+          <button onClick={onDup} title="Duplicar"
+            className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-gray-200 hover:bg-[#29292e] rounded transition">
+            <Copy size={12} />
+          </button>
+          {/* Excluir */}
+          <button onClick={onRemove} title="Excluir"
+            className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded transition">
+            <Trash2 size={12} />
+          </button>
+        </div>
+      </td>
+    </tr>
   )
 }
 
@@ -981,8 +1200,11 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
   useEffect(() => {
     const { numSemanas: initS, dataInicio: initD } = initialRef.current
     if (numSemanas === initS && ficha.data_de_inicio === initD) return
-    if (ficha.data_de_inicio && parseInt(numSemanas) > 0) {
-      upd('data_de_fim', somarDias(ficha.data_de_inicio, parseInt(numSemanas) * 7 - 1))
+    const qtd = parseInt(numSemanas) || 0
+    if (ficha.data_de_inicio && qtd > 0) {
+      const sems = calcularSemanas(ficha.data_de_inicio, qtd)
+      const ultimo = sems[sems.length - 1].fim
+      upd('data_de_fim', ultimo.toISOString().split('T')[0])
     }
   }, [numSemanas, ficha.data_de_inicio])
 
@@ -1059,10 +1281,11 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
 
   const gerarPeriodizacao = () => {
     if (!ficha.data_de_inicio) return alert('Selecione uma data de início primeiro.')
-    const semanas = parseInt(numSemanas) || 4
-    upd('data_de_fim', somarDias(ficha.data_de_inicio, semanas * 7 - 1))
+    const qtd = parseInt(numSemanas) || 4
+    const sems = calcularSemanas(ficha.data_de_inicio, qtd)
+    upd('data_de_fim', sems[sems.length - 1].fim.toISOString().split('T')[0])
     const tabelaAtual = ficha.periodizacao || []
-    const novaTabela = Array.from({ length: semanas }, (_, i) => {
+    const novaTabela = sems.map((_, i) => {
       const existe = tabelaAtual[i]
       if (existe?.repeticoes || existe?.descanso) return { ...existe, semana: String(i + 1).padStart(2, '0') }
       return { semana: String(i + 1).padStart(2, '0'), series: tabelaAtual[0]?.series || '3', repeticoes: '', descanso: '' }
@@ -1212,13 +1435,10 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
                 <tbody>
                   {(ficha.periodizacao || []).map((p, i) => {
                     let periodoTexto = '—'
-                    if (ficha.data_de_inicio) {
-                      const seg = getSegundaFeira(ficha.data_de_inicio)
-                      if (seg) {
-                        const ini = new Date(seg); ini.setDate(seg.getDate() + i * 7)
-                        const fim = new Date(ini); fim.setDate(ini.getDate() + 6)
-                        periodoTexto = `${formatarDataBr(ini)} - ${formatarDataBr(fim)}`
-                      }
+                    if (ficha.data_de_inicio && ficha.periodizacao.length > 0) {
+                      const sems = calcularSemanas(ficha.data_de_inicio, ficha.periodizacao.length)
+                      const sem = sems[i]
+                      if (sem) periodoTexto = `${formatarDataBr(sem.inicio)} - ${formatarDataBr(sem.fim)}`
                     }
                     return (
                       <tr key={i} className="border-b border-[#323238]/50 group h-10 hover:bg-[#202024]">
@@ -1286,11 +1506,14 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
                       <td className="px-2 py-1 align-middle"><SearchableCombo value={a.exercicios || ''} onChange={v => set('exercicios', v)} options={aerobs} placeholder="Buscar..." /></td>
                       <td className="px-2 py-1 align-middle"><InputSug value={a.frequencia || ''} onChange={v => set('frequencia', v)} doctype="Frequencia Aerobico" campo="frequencia_aerobico" /></td>
                       <td className="px-2 py-1 align-top"><TextareaExpansivel value={a.instrucao || ''} onChange={v => set('instrucao', v)} placeholder="Instruções..." resetKey={aerobicoResetKey} doctype="Instrucao Aerobico" campo="instrucao_aerobico" /></td>
-                      <td className="px-2 py-1 text-center align-middle">
-                        <div className="flex gap-1 justify-center opacity-0 group-hover:opacity-100 transition">
-                          <button onClick={() => setDetalheAerobicoIdx(i)} className="h-6 w-6 flex items-center justify-center bg-[#29292e] text-blue-400 hover:bg-blue-600 hover:text-white rounded transition-colors"><Info size={10} /></button>
-                          <button onClick={() => { const arr = [...ficha.periodizacao_dos_aerobicos]; arr.splice(i+1, 0, { ...a, _id: uid() }); upd('periodizacao_dos_aerobicos', arr) }} className="h-6 w-6 flex items-center justify-center bg-[#29292e] text-gray-400 hover:bg-gray-600 hover:text-white rounded transition-colors"><Copy size={10} /></button>
-                          <button onClick={() => upd('periodizacao_dos_aerobicos', ficha.periodizacao_dos_aerobicos.filter((_, idx) => idx !== i))} className="h-6 w-6 flex items-center justify-center bg-[#29292e] text-red-400 hover:bg-red-600 hover:text-white rounded transition-colors"><Trash2 size={10} /></button>
+                      <td className="px-1 py-1 align-middle">
+                        <div className="flex items-center justify-end gap-0.5">
+                          <button onClick={() => setDetalheAerobicoIdx(i)} title="Detalhes"
+                            className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-gray-200 hover:bg-[#29292e] rounded transition"><Info size={12} /></button>
+                          <button onClick={() => { const arr = [...ficha.periodizacao_dos_aerobicos]; arr.splice(i+1, 0, { ...a, _id: uid() }); upd('periodizacao_dos_aerobicos', arr) }} title="Duplicar"
+                            className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-gray-200 hover:bg-[#29292e] rounded transition"><Copy size={12} /></button>
+                          <button onClick={() => upd('periodizacao_dos_aerobicos', ficha.periodizacao_dos_aerobicos.filter((_, idx) => idx !== i))} title="Excluir"
+                            className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded transition"><Trash2 size={12} /></button>
                         </div>
                       </td>
                     </tr>
@@ -1350,11 +1573,14 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
                       <td className="px-2 py-1 align-middle"><SearchableCombo value={a.exercicio || ''} onChange={v => set('exercicio', v)} options={alongs} placeholder="Buscar..." /></td>
                       <td className="px-2 py-1 align-middle"><input type="number" value={a.series || ''} onChange={e => set('series', e.target.value)} className="w-full h-8 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 text-center" /></td>
                       <td className="px-2 py-1 align-top"><TextareaExpansivel value={a.observacoes || ''} onChange={v => set('observacoes', v)} placeholder="Observações..." resetKey={alongamentoResetKey} doctype="Alongamento Observacao" campo="alongamento_observacao" /></td>
-                      <td className="px-2 py-1 text-center align-middle">
-                        <div className="flex gap-1 justify-center opacity-0 group-hover:opacity-100 transition">
-                          <button onClick={() => setDetalheAlongamentoIdx(i)} className="h-6 w-6 flex items-center justify-center bg-[#29292e] text-blue-400 hover:bg-blue-600 hover:text-white rounded transition-colors"><Info size={10} /></button>
-                          <button onClick={() => { const arr = [...ficha.planilha_de_alongamentos_e_mobilidade]; arr.splice(i+1, 0, { ...a, _id: uid() }); upd('planilha_de_alongamentos_e_mobilidade', arr) }} className="h-6 w-6 flex items-center justify-center bg-[#29292e] text-gray-400 hover:bg-gray-600 hover:text-white rounded transition-colors"><Copy size={10} /></button>
-                          <button onClick={() => upd('planilha_de_alongamentos_e_mobilidade', ficha.planilha_de_alongamentos_e_mobilidade.filter((_, idx) => idx !== i))} className="h-6 w-6 flex items-center justify-center bg-[#29292e] text-red-400 hover:bg-red-600 hover:text-white rounded transition-colors"><Trash2 size={10} /></button>
+                      <td className="px-1 py-1 align-middle">
+                        <div className="flex items-center justify-end gap-0.5">
+                          <button onClick={() => setDetalheAlongamentoIdx(i)} title="Detalhes"
+                            className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-gray-200 hover:bg-[#29292e] rounded transition"><Info size={12} /></button>
+                          <button onClick={() => { const arr = [...ficha.planilha_de_alongamentos_e_mobilidade]; arr.splice(i+1, 0, { ...a, _id: uid() }); upd('planilha_de_alongamentos_e_mobilidade', arr) }} title="Duplicar"
+                            className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-gray-200 hover:bg-[#29292e] rounded transition"><Copy size={12} /></button>
+                          <button onClick={() => upd('planilha_de_alongamentos_e_mobilidade', ficha.planilha_de_alongamentos_e_mobilidade.filter((_, idx) => idx !== i))} title="Excluir"
+                            className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded transition"><Trash2 size={12} /></button>
                         </div>
                       </td>
                     </tr>
