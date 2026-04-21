@@ -92,13 +92,14 @@ export default function Dashboard() {
 
   // Carregar stats uma vez
   useEffect(() => {
+    const frappeOwner = localStorage.getItem('frappe_user')
     const agora = new Date()
     const inicioMes = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-01`
     Promise.all([
-      contarAlunos([]),
-      contarAlunos([['enabled', '=', 1]]),
-      contarAlunos([['enabled', '=', 0]]),
-      contarAlunos([['creation', '>=', inicioMes]]),
+      contarAlunos([['owner', '=', frappeOwner]]),
+      contarAlunos([['enabled', '=', 1], ['owner', '=', frappeOwner]]),
+      contarAlunos([['enabled', '=', 0], ['owner', '=', frappeOwner]]),
+      contarAlunos([['creation', '>=', inicioMes], ['owner', '=', frappeOwner]]),
     ]).then(([total, ativos, inativos, novos]) => {
       setStats({ total, ativos, inativos, novos })
     }).catch(console.error)
