@@ -14,7 +14,7 @@ import { listarAlunos, buscarAluno, salvarAluno } from '../../api/alunos'
 import { listarTextos, salvarNoBancoSeNovo } from '../../api/bancoTextos'
 import {
   Button, FormGroup, Input, Select, Textarea,
-  Autocomplete, Modal, Spinner, TextareaComSugestoes, FooterTotais,
+  Autocomplete, Modal, Spinner, TextareaComSugestoes,
 } from '../../components/ui'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -472,31 +472,43 @@ const TipoCombinadoBtn = ({ value, onChange }) => {
 
 const RodapeVolume = ({ ficha, intensidadeMap, volumeAnterior }) => {
   const vol = useMemo(() => calcVolume(ficha, intensidadeMap), [ficha, intensidadeMap])
-  const normKey = s => normalizar(s).replace(/\s/g, '')
-  const getVal = (map, key) =>
-    Object.entries(map || {}).find(([k]) => normKey(k) === key)?.[1] || 0
+  const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, '')
+  const volNorm = {}
+  Object.entries(vol).forEach(([k, v]) => { volNorm[norm(k)] = (volNorm[norm(k)] || 0) + v })
+  const volAntNorm = {}
+  if (volumeAnterior) Object.entries(volumeAnterior).forEach(([k, v]) => { volAntNorm[norm(k)] = (volAntNorm[norm(k)] || 0) + v })
 
-  const items = GRUPOS_CONFIG
-    .map(g => {
-      const atual = getVal(vol, g.key)
-      const anterior = volumeAnterior ? getVal(volumeAnterior, g.key) : null
-      const delta = anterior !== null ? atual - anterior : null
-      let value = atual.toFixed(0)
-      if (delta !== null && delta !== 0)
-        value += delta > 0 ? ` +${delta.toFixed(0)}` : ` ${delta.toFixed(0)}`
-      return { label: g.label, shortLabel: g.label, value, _atual: atual }
-    })
-    .filter(item => item._atual > 0)
-    .map(({ _atual, ...item }) => item)
-
-  if (items.length === 0) return null
-
+  const metade = Math.ceil(GRUPOS_CONFIG.length / 2)
   return (
-    <FooterTotais
-      variant="groups"
-      sticky
-      leftGroup={{ label: 'Volume', items }}
-    />
+    <div className="shrink-0 bg-[#1a1a1a] border-t border-[#323238] px-6 py-1.5 flex flex-col gap-0.5">
+      {[GRUPOS_CONFIG.slice(0, metade), GRUPOS_CONFIG.slice(metade)].map((linha, li) => (
+        <div key={li} className="flex items-center justify-center gap-3 flex-wrap">
+          <span className="text-gray-500 text-[10px] font-bold tracking-widest uppercase shrink-0">
+            {li === 0 ? 'VOLUME:' : <span className="opacity-0">VOLUME:</span>}
+          </span>
+          {linha.map(item => {
+            const valor = volNorm[item.key] || 0
+            const anterior = volAntNorm[item.key] || 0
+            const delta = volumeAnterior ? valor - anterior : null
+            return (
+              <div key={item.key} className={`flex items-center gap-1 shrink-0 px-1.5 py-0.5 rounded ${item.bg}`}>
+                <span className={`text-[10px] uppercase tracking-tight font-medium ${valor > 0 ? 'text-white' : 'text-gray-600'}`}>
+                  {item.label}
+                </span>
+                <span className={`text-xs font-bold ${valor > 0 ? 'text-white' : 'text-gray-600'}`}>
+                  {valor.toFixed(1)}
+                </span>
+                {delta !== null && delta !== 0 && (
+                  <span className={`text-[9px] font-bold ${delta > 0 ? 'text-emerald-500' : 'text-red-400'}`}>
+                    {delta > 0 ? `+${delta.toFixed(1)}` : delta.toFixed(1)}
+                  </span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      ))}
+    </div>
   )
 }
 
@@ -1414,10 +1426,12 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
       </div>
 
       {/* Conteúdo do step */}
-      <div className="flex-1 px-6 py-6 pb-20 bg-[#202024]">
+      <div className="flex-1 overflow-y-auto px-6 py-6 bg-[#202024]">
         {renderStep()}
-        <RodapeVolume ficha={ficha} intensidadeMap={intensMap} volumeAnterior={volumeAnterior} />
       </div>
+
+      {/* Rodapé de volume — fora do scroll */}
+      <RodapeVolume ficha={ficha} intensidadeMap={intensMap} volumeAnterior={volumeAnterior} />
 
       {/* Banner orientações globais do aluno */}
       {ficha.aluno && <BannerOrientacoes alunoId={ficha.aluno} />}

@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { listarFichas, buscarFicha, excluirFicha, criarFicha, salvarFicha, listarExercicios } from '../../api/fichas'
 import { listarAlunos } from '../../api/alunos'
-import { Button, FormGroup, Input, Autocomplete, Modal, EmptyState, Pagination, DataTable, FooterTotais } from '../../components/ui'
+import { Button, FormGroup, Input, Autocomplete, Modal, EmptyState, Pagination, DataTable } from '../../components/ui'
 
 // Indexa por nome_do_exercicio E name do DocType para cobrir fichas antigas e novas
 const buildIntensMap = (lista) => {
@@ -434,14 +434,9 @@ const VisualizacaoRapidaModal = ({ ficha, intensMap = {}, onClose }) => {
 
   const vol = useMemo(() => dados ? calcVolume(dados, intensMap) : {}, [dados, intensMap])
 
-  const normKey = s => normalizar(s).replace(/\s/g, '')
-  const getVal = (map, key) =>
-    Object.entries(map || {}).find(([k]) => normKey(k) === key)?.[1] || 0
-
-  const volItems = GRUPOS_CONFIG
-    .map(g => ({ label: g.label, shortLabel: g.label, value: getVal(vol, g.key).toFixed(0), _v: getVal(vol, g.key) }))
-    .filter(i => i._v > 0)
-    .map(({ _v, ...i }) => i)
+  const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, '')
+  const volNorm = {}
+  Object.entries(vol).forEach(([k, v]) => { volNorm[norm(k)] = (volNorm[norm(k)] || 0) + v })
 
   return (
     <Modal isOpen onClose={onClose} title={ficha?.nome_completo || 'Ficha'} size="xl">
@@ -455,15 +450,28 @@ const VisualizacaoRapidaModal = ({ ficha, intensMap = {}, onClose }) => {
         ) : (
           <>
             {/* Volume */}
-            {volItems.length > 0 && (
-              <div className="mb-5">
-                <FooterTotais
-                  variant="groups"
-                  sticky={false}
-                  leftGroup={{ label: 'Volume', items: volItems }}
-                />
-              </div>
-            )}
+            <div className="bg-[#1a1a1a] border border-[#323238] rounded-xl px-4 py-2 mb-5 flex flex-col gap-1">
+              {[GRUPOS_CONFIG.slice(0, 8), GRUPOS_CONFIG.slice(8)].map((linha, li) => (
+                <div key={li} className="flex items-center justify-center gap-4 flex-wrap">
+                  <span className="text-gray-500 text-[10px] font-bold tracking-widest uppercase shrink-0">
+                    {li === 0 ? 'VOLUME:' : <span className="opacity-0">VOLUME:</span>}
+                  </span>
+                  {linha.map(item => {
+                    const valor = volNorm[item.key] || 0
+                    return (
+                      <div key={item.key} className={`flex items-center gap-1.5 shrink-0 px-1.5 py-0.5 rounded ${item.bg}`}>
+                        <span className={`text-[10px] uppercase tracking-tight font-medium ${valor > 0 ? 'text-white' : 'text-gray-600'}`}>
+                          {item.label}
+                        </span>
+                        <span className={`text-xs font-bold ${valor > 0 ? 'text-white' : 'text-gray-600'}`}>
+                          {valor.toFixed(1)}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              ))}
+            </div>
 
             {/* Tabs de treinos */}
             <div className="flex gap-2 mb-5 flex-wrap">
