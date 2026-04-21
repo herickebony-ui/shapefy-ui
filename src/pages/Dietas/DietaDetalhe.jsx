@@ -36,7 +36,9 @@ const LegendaSug = ({ value, onChange }) => {
   const posicionar = () => {
     if (!ref.current) return
     const r = ref.current.getBoundingClientRect()
-    setDropPos({ top: r.bottom + 4, left: Math.max(4, r.right - 280), width: 280 })
+    const w = Math.min(Math.max(r.width, 300), 420)
+    const left = Math.max(4, Math.min(r.left, window.innerWidth - w - 8))
+    setDropPos({ top: r.bottom + 4, left, width: w })
   }
 
   const carregarTodas = async () => {
@@ -92,8 +94,8 @@ const LegendaSug = ({ value, onChange }) => {
   const handleFocus = async () => { clearTimeout(blurRef.current); await abrirDrop() }
 
   return (
-    <div className="flex items-center gap-1 w-full relative">
-      <input ref={ref} value={value || ''} onChange={e => onChange(e.target.value)}
+    <div ref={ref} className="flex items-center gap-1 w-full relative">
+      <input value={value || ''} onChange={e => onChange(e.target.value)}
         onBlur={handleBlur} onFocus={handleFocus}
         placeholder="Legenda (Ex: Consumir 40min antes do treino)"
         className="flex-1 bg-transparent text-gray-400 text-xs outline-none border-b border-transparent hover:border-[#323238] focus:border-[#2563eb]/60 transition-colors text-left pb-1"
