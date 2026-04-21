@@ -19,7 +19,7 @@ export default function Textarea({
       className={`
         w-full p-3 bg-[#1a1a1a] border rounded-lg text-white text-sm
         placeholder-gray-600 outline-none transition-colors resize-none
-        focus:border-[#850000]/60 focus:ring-1 focus:ring-[#850000]/30
+        focus:border-[#2563eb]/60 focus:ring-1 focus:ring-[#2563eb]/30
         disabled:opacity-40 disabled:cursor-not-allowed
         ${error ? 'border-red-500/60' : 'border-[#323238]'}
         ${className}

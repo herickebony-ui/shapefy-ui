@@ -90,8 +90,8 @@ export default function Autocomplete({
   }
 
   const inputClass = compact
-    ? 'w-full h-7 px-2 bg-transparent border border-transparent hover:border-[#323238] focus:border-[#850000]/60 text-white rounded text-xs outline-none transition-colors placeholder-gray-600'
-    : `w-full h-10 bg-[#1a1a1a] border border-[#323238] rounded-lg text-white text-sm placeholder-gray-600 outline-none transition-colors focus:border-[#850000]/60 focus:ring-1 focus:ring-[#850000]/30 disabled:opacity-40 disabled:cursor-not-allowed ${Icon ? 'pl-10' : 'pl-3'} pr-3`
+    ? 'w-full h-7 px-2 bg-transparent border border-transparent hover:border-[#323238] focus:border-[#2563eb]/60 text-white rounded text-xs outline-none transition-colors placeholder-gray-600'
+    : `w-full h-10 bg-[#1a1a1a] border border-[#323238] rounded-lg text-white text-sm placeholder-gray-600 outline-none transition-colors focus:border-[#2563eb]/60 focus:ring-1 focus:ring-[#2563eb]/30 disabled:opacity-40 disabled:cursor-not-allowed ${Icon ? 'pl-10' : 'pl-3'} pr-3`
 
   const useBottomSheet = isMobile && items.length > 5 && !compact
 

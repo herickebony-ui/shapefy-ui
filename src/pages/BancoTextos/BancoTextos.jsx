@@ -139,7 +139,7 @@ export default function BancoTextos() {
               title={mostrarDesativados ? 'Ocultar desativados' : 'Mostrar desativados'}
               className={`h-7 w-7 flex items-center justify-center border rounded-lg transition-colors text-xs font-bold
                 ${mostrarDesativados
-                  ? 'bg-[#850000] border-[#850000] text-white'
+                  ? 'bg-[#2563eb] border-[#2563eb] text-white'
                   : 'text-gray-400 border-[#323238] hover:border-gray-500 hover:text-white'
                 }`}
             >
@@ -236,7 +236,7 @@ export default function BancoTextos() {
                           <button
                             onClick={() => handleExcluir(item)}
                             title="Excluir"
-                            className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded-lg transition-colors"
+                            className="h-7 w-7 flex items-center justify-center text-[#2563eb] hover:text-white border border-[#2563eb]/30 hover:bg-[#2563eb] rounded-lg transition-colors"
                           >
                             <Trash2 size={12} />
                           </button>
@@ -299,7 +299,7 @@ export default function BancoTextos() {
                 onChange={(e) => setCampoTexto(e.target.value)}
                 rows={4}
                 placeholder="Digite o texto..."
-                className="w-full bg-[#1a1a1a] border border-[#323238] focus:border-[#850000]/60 text-white text-sm rounded-lg px-3 py-2 outline-none resize-none leading-relaxed transition-colors placeholder-gray-600"
+                className="w-full bg-[#1a1a1a] border border-[#323238] focus:border-[#2563eb]/60 text-white text-sm rounded-lg px-3 py-2 outline-none resize-none leading-relaxed transition-colors placeholder-gray-600"
               />
             </FormGroup>
           </div>

@@ -16,9 +16,9 @@ function Stepper({ steps, activeIdx }) {
               <div
                 className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${
                   i < activeIdx
-                    ? 'bg-[#850000]/30 border border-[#850000] text-[#f87171]'
+                    ? 'bg-[#2563eb]/30 border border-[#2563eb] text-[#f87171]'
                     : i === activeIdx
-                      ? 'bg-[#850000] text-white'
+                      ? 'bg-[#2563eb] text-white'
                       : 'bg-[#29292e] border border-[#323238] text-gray-500'
                 }`}
               >
@@ -29,7 +29,7 @@ function Stepper({ steps, activeIdx }) {
               </span>
             </div>
             {i < steps.length - 1 && (
-              <div className={`flex-1 h-px mx-3 ${i < activeIdx ? 'bg-[#850000]/40' : 'bg-[#323238]'}`} />
+              <div className={`flex-1 h-px mx-3 ${i < activeIdx ? 'bg-[#2563eb]/40' : 'bg-[#323238]'}`} />
             )}
           </div>
         ))}
@@ -41,7 +41,7 @@ function Stepper({ steps, activeIdx }) {
           {steps.map((_, i) => (
             <div
               key={i}
-              className={`h-1.5 rounded-full transition-all ${i === activeIdx ? 'w-6 bg-[#850000]' : 'w-1.5 bg-[#323238]'}`}
+              className={`h-1.5 rounded-full transition-all ${i === activeIdx ? 'w-6 bg-[#2563eb]' : 'w-1.5 bg-[#323238]'}`}
             />
           ))}
         </div>

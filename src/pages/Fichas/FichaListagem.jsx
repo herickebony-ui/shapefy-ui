@@ -138,7 +138,7 @@ const StatusBadge = ({ ficha }) => {
 const CardFicha = ({ ficha, onClick }) => (
   <button
     onClick={() => onClick(ficha.name)}
-    className="group w-full text-left bg-[#29292e] border border-[#323238] rounded-lg p-5 transition-all duration-200 hover:bg-[#2f2f35] hover:scale-[1.015] focus:outline-none focus:ring-2 focus:ring-[#850000]/50"
+    className="group w-full text-left bg-[#29292e] border border-[#323238] rounded-lg p-5 transition-all duration-200 hover:bg-[#2f2f35] hover:scale-[1.015] focus:outline-none focus:ring-2 focus:ring-[#2563eb]/50"
   >
     <div className="flex items-start justify-between gap-3 mb-4">
       <div className="flex-1 min-w-0">
@@ -217,7 +217,7 @@ const RowFicha = ({ ficha, index = 0, onClick, onDuplicar, onExcluir, onVisualiz
           <Copy size={12} />
         </button>
         <button onClick={(e) => { e.stopPropagation(); onExcluir(ficha) }}
-          className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded-lg transition-colors" title="Excluir">
+          className="h-7 w-7 flex items-center justify-center text-[#2563eb] hover:text-white border border-[#2563eb]/30 hover:bg-[#2563eb] rounded-lg transition-colors" title="Excluir">
           <Trash2 size={12} />
         </button>
       </div>
@@ -272,7 +272,7 @@ const ToggleGroup = ({ label, options, value, onChange }) => (
         return (
           <button key={opt} onClick={() => onChange(active ? (typeof value === 'string' ? '' : null) : opt)}
             className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
-              active ? 'bg-[#850000]/20 border-[#850000]/50 text-red-300' : 'border-[#323238] text-gray-400 hover:text-white hover:border-[#444]'
+              active ? 'bg-[#2563eb]/20 border-[#2563eb]/50 text-red-300' : 'border-[#323238] text-gray-400 hover:text-white hover:border-[#444]'
             }`}>
             {opt}
           </button>
@@ -314,7 +314,7 @@ const EstruturaSelector = ({ value, onChange }) => {
       {value.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-3">
           {value.map(x => (
-            <span key={x.letra} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#850000]/20 border border-[#850000]/40 text-red-300 text-sm">
+            <span key={x.letra} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#2563eb]/20 border border-[#2563eb]/40 text-red-300 text-sm">
               <span className="font-bold">{x.letra}</span>
               <span className="text-red-400/70">{x.freq}×</span>
               <button onClick={() => remover(x.letra)} className="ml-0.5 text-red-400/60 hover:text-red-300 transition-colors">
@@ -328,11 +328,11 @@ const EstruturaSelector = ({ value, onChange }) => {
       {letrasDisponiveis.length > 0 && (
         <div className="flex items-center gap-2">
           <select value={novaLetra} onChange={e => setNovaLetra(e.target.value)}
-            className="h-9 px-2 bg-[#1a1a1a] border border-[#323238] text-white text-sm rounded-lg outline-none focus:border-[#850000]/60 appearance-none w-16">
+            className="h-9 px-2 bg-[#1a1a1a] border border-[#323238] text-white text-sm rounded-lg outline-none focus:border-[#2563eb]/60 appearance-none w-16">
             {letrasDisponiveis.map(l => <option key={l} value={l}>{l}</option>)}
           </select>
           <select value={novaFreq} onChange={e => setNovaFreq(e.target.value)}
-            className="h-9 px-2 bg-[#1a1a1a] border border-[#323238] text-white text-sm rounded-lg outline-none focus:border-[#850000]/60 appearance-none w-20">
+            className="h-9 px-2 bg-[#1a1a1a] border border-[#323238] text-white text-sm rounded-lg outline-none focus:border-[#2563eb]/60 appearance-none w-20">
             {FREQS.map(f => <option key={f} value={f}>{f}</option>)}
           </select>
           <button onClick={adicionar}
@@ -380,21 +380,21 @@ const ModalFiltros = ({ filtros, onChange, onClose, onLimpar }) => {
         <div className="grid grid-cols-2 gap-4">
           <FormGroup label="Início — de">
             <input type="date" value={local.dataInicioFrom || ''} onChange={e => set('dataInicioFrom')(e.target.value)}
-              className="w-full h-10 px-3 bg-[#1a1a1a] border border-[#323238] text-white text-sm rounded-lg outline-none focus:border-[#850000]/60" />
+              className="w-full h-10 px-3 bg-[#1a1a1a] border border-[#323238] text-white text-sm rounded-lg outline-none focus:border-[#2563eb]/60" />
           </FormGroup>
           <FormGroup label="Início — até">
             <input type="date" value={local.dataInicioTo || ''} onChange={e => set('dataInicioTo')(e.target.value)}
-              className="w-full h-10 px-3 bg-[#1a1a1a] border border-[#323238] text-white text-sm rounded-lg outline-none focus:border-[#850000]/60" />
+              className="w-full h-10 px-3 bg-[#1a1a1a] border border-[#323238] text-white text-sm rounded-lg outline-none focus:border-[#2563eb]/60" />
           </FormGroup>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <FormGroup label="Fim — de">
             <input type="date" value={local.dataFimFrom || ''} onChange={e => set('dataFimFrom')(e.target.value)}
-              className="w-full h-10 px-3 bg-[#1a1a1a] border border-[#323238] text-white text-sm rounded-lg outline-none focus:border-[#850000]/60" />
+              className="w-full h-10 px-3 bg-[#1a1a1a] border border-[#323238] text-white text-sm rounded-lg outline-none focus:border-[#2563eb]/60" />
           </FormGroup>
           <FormGroup label="Fim — até">
             <input type="date" value={local.dataFimTo || ''} onChange={e => set('dataFimTo')(e.target.value)}
-              className="w-full h-10 px-3 bg-[#1a1a1a] border border-[#323238] text-white text-sm rounded-lg outline-none focus:border-[#850000]/60" />
+              className="w-full h-10 px-3 bg-[#1a1a1a] border border-[#323238] text-white text-sm rounded-lg outline-none focus:border-[#2563eb]/60" />
           </FormGroup>
         </div>
         <ToggleGroup label="Total de dias na semana" options={['2x', '3x', '4x', '5x', '6x']} value={local.filtroTotalDias} onChange={set('filtroTotalDias')} />
@@ -435,7 +435,7 @@ const VisualizacaoRapidaModal = ({ ficha, onClose }) => {
       <div className="p-4 min-h-[200px]">
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <Loader size={28} className="animate-spin text-[#850000]" />
+            <Loader size={28} className="animate-spin text-[#2563eb]" />
           </div>
         ) : !dados ? (
           <p className="text-red-400 text-center py-10">Erro ao carregar ficha.</p>
@@ -447,7 +447,7 @@ const VisualizacaoRapidaModal = ({ ficha, onClose }) => {
             <div className="flex gap-2 mb-5 flex-wrap">
               {tabs.map(t => (
                 <button key={t.id} onClick={() => setAbaAtiva(t.id)}
-                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition ${abaAtiva === t.id ? 'bg-[#850000] text-white' : 'bg-[#1a1a1a] text-gray-400 hover:text-white border border-[#323238]'}`}>
+                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition ${abaAtiva === t.id ? 'bg-[#2563eb] text-white' : 'bg-[#1a1a1a] text-gray-400 hover:text-white border border-[#323238]'}`}>
                   {t.label}
                 </button>
               ))}
@@ -527,7 +527,7 @@ const ModalNovaFicha = ({ onClose, onCriada }) => {
       <div className="p-5">
         <FormGroup label="Aluno" required>
           {aluno ? (
-            <div className="flex items-center justify-between h-10 px-3 rounded-lg bg-[#29292e] border border-[#850000]/40">
+            <div className="flex items-center justify-between h-10 px-3 rounded-lg bg-[#29292e] border border-[#2563eb]/40">
               <span className="text-white text-sm">{aluno.nome_completo}</span>
               <button onClick={() => setAluno(null)} className="text-gray-500 hover:text-red-400 transition-colors ml-2">
                 ×
@@ -652,7 +652,7 @@ const ModalDuplicarFicha = ({ ficha, onClose, onDuplicada }) => {
         </p>
         <FormGroup label="Aluno destino" required>
           {aluno ? (
-            <div className="flex items-center justify-between h-10 px-3 rounded-lg bg-[#29292e] border border-[#850000]/40">
+            <div className="flex items-center justify-between h-10 px-3 rounded-lg bg-[#29292e] border border-[#2563eb]/40">
               <span className="text-white text-sm">{aluno.nome_completo}</span>
               <button onClick={() => setAluno(null)} className="text-gray-500 hover:text-red-400 transition-colors ml-2">×</button>
             </div>
@@ -766,7 +766,7 @@ const ModalHistoricoAluno = ({ ficha: fichaRef, onClose }) => {
         <div className="flex border-b border-[#323238] px-5">
           {[{ id: 'fichas', label: 'Fichas' }, { id: 'volume', label: 'Comparativo de Volume' }].map(t => (
             <button key={t.id} onClick={() => setAba(t.id)}
-              className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${aba === t.id ? 'border-[#850000] text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>
+              className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${aba === t.id ? 'border-[#2563eb] text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>
               {t.label}
             </button>
           ))}
@@ -776,7 +776,7 @@ const ModalHistoricoAluno = ({ ficha: fichaRef, onClose }) => {
           {aba === 'fichas' ? (
             loadingLista ? (
               <div className="flex justify-center py-16">
-                <Loader size={28} className="animate-spin text-[#850000]" />
+                <Loader size={28} className="animate-spin text-[#2563eb]" />
               </div>
             ) : todasFichas.length === 0 ? (
               <p className="text-gray-500 text-center py-10">Nenhuma ficha encontrada para este aluno.</p>
@@ -784,7 +784,7 @@ const ModalHistoricoAluno = ({ ficha: fichaRef, onClose }) => {
               <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
                 {todasFichas.map((f, i) => (
                   <button key={f.name} onClick={() => { onClose(); navigate(`/fichas/${f.name}`) }}
-                    className={`w-full text-left flex items-center gap-3 px-4 py-3 rounded-lg border transition hover:bg-[#2f2f35] ${f.name === fichaRef.name ? 'border-[#850000]/40 bg-[#850000]/10' : 'border-[#323238] bg-[#222226]'}`}>
+                    className={`w-full text-left flex items-center gap-3 px-4 py-3 rounded-lg border transition hover:bg-[#2f2f35] ${f.name === fichaRef.name ? 'border-[#2563eb]/40 bg-[#2563eb]/10' : 'border-[#323238] bg-[#222226]'}`}>
                     <span className="text-gray-600 text-xs w-5 text-right shrink-0">{i + 1}</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -794,7 +794,7 @@ const ModalHistoricoAluno = ({ ficha: fichaRef, onClose }) => {
                           <span className="text-gray-500 text-xs font-mono">{f.estrutura_calculada}</span>
                         )}
                         {f.name === fichaRef.name && (
-                          <span className="text-[10px] text-[#850000] font-bold uppercase tracking-wider border border-[#850000]/40 px-1.5 py-0.5 rounded">atual</span>
+                          <span className="text-[10px] text-[#2563eb] font-bold uppercase tracking-wider border border-[#2563eb]/40 px-1.5 py-0.5 rounded">atual</span>
                         )}
                       </div>
                       <div className="flex gap-3 mt-0.5 flex-wrap">
@@ -811,7 +811,7 @@ const ModalHistoricoAluno = ({ ficha: fichaRef, onClose }) => {
           ) : (
             loadingVol ? (
               <div className="flex flex-col items-center justify-center py-16 gap-3">
-                <Loader size={28} className="animate-spin text-[#850000]" />
+                <Loader size={28} className="animate-spin text-[#2563eb]" />
                 <p className="text-gray-500 text-sm">Carregando fichas e calculando volumes…</p>
               </div>
             ) : errVol ? (
@@ -832,10 +832,10 @@ const ModalHistoricoAluno = ({ ficha: fichaRef, onClose }) => {
                     <tr className="border-b border-[#323238]">
                       <th className="text-left py-2 pr-4 text-xs font-semibold text-gray-400 uppercase tracking-wider min-w-[130px]">Grupo Muscular</th>
                       {fichasVol.map((fv) => (
-                        <th key={fv.fichaId} className={`text-center py-2 px-3 text-xs font-semibold uppercase tracking-wider min-w-[90px] ${fv.isCurrent ? 'text-[#a00000]' : 'text-gray-400'}`}>
+                        <th key={fv.fichaId} className={`text-center py-2 px-3 text-xs font-semibold uppercase tracking-wider min-w-[90px] ${fv.isCurrent ? 'text-[#1d4ed8]' : 'text-gray-400'}`}>
                           <div>{fv.label}</div>
                           {fv.nivel && <div className="font-normal text-[10px] text-gray-500 mt-0.5 normal-case">{fv.nivel}</div>}
-                          {fv.isCurrent && <div className="text-[10px] text-[#850000] normal-case mt-0.5 font-bold">atual</div>}
+                          {fv.isCurrent && <div className="text-[10px] text-[#2563eb] normal-case mt-0.5 font-bold">atual</div>}
                         </th>
                       ))}
                     </tr>
@@ -849,7 +849,7 @@ const ModalHistoricoAluno = ({ ficha: fichaRef, onClose }) => {
                           const prev = idx > 0 ? (fichasVol[idx - 1].vol[g.key] || 0) : null
                           const d = prev !== null ? deltaLabel(curr, prev) : null
                           return (
-                            <td key={fv.fichaId} className={`py-2.5 px-3 text-center ${fv.isCurrent ? 'bg-[#850000]/5' : ''}`}>
+                            <td key={fv.fichaId} className={`py-2.5 px-3 text-center ${fv.isCurrent ? 'bg-[#2563eb]/5' : ''}`}>
                               <div className={`text-sm font-bold ${curr > 0 ? (fv.isCurrent ? 'text-white' : 'text-gray-200') : 'text-gray-700'}`}>
                                 {curr > 0 ? curr.toFixed(1) : '—'}
                               </div>
@@ -1036,7 +1036,7 @@ export default function FichaListagem() {
             <div className="flex items-center bg-[#29292e] border border-[#323238] rounded-lg p-1 gap-0.5">
               {[{ key: 'grid', icon: <LayoutGrid size={14} />, title: 'Grade' }, { key: 'list', icon: <List size={14} />, title: 'Lista' }].map(({ key, icon, title }) => (
                 <button key={key} onClick={() => setView(key)} title={title}
-                  className={`h-7 w-7 flex items-center justify-center rounded transition-colors ${view === key ? 'bg-[#850000] text-white' : 'text-gray-400 hover:text-white'}`}>
+                  className={`h-7 w-7 flex items-center justify-center rounded transition-colors ${view === key ? 'bg-[#2563eb] text-white' : 'text-gray-400 hover:text-white'}`}>
                   {icon}
                 </button>
               ))}
@@ -1157,7 +1157,7 @@ export default function FichaListagem() {
                       <Copy size={12} />
                     </button>
                     <button onClick={() => setModalExcluir(f)}
-                      className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded-lg transition-colors" title="Excluir">
+                      className="h-7 w-7 flex items-center justify-center text-[#2563eb] hover:text-white border border-[#2563eb]/30 hover:bg-[#2563eb] rounded-lg transition-colors" title="Excluir">
                       <Trash2 size={12} />
                     </button>
                   </div>

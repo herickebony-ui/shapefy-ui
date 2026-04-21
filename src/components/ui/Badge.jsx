@@ -1,7 +1,7 @@
 export default function Badge({ children, variant = 'default', size = 'md' }) {
   const variants = {
     default: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
-    primary: 'bg-[#850000]/10 text-red-400 border-[#850000]/20',
+    primary: 'bg-[#2563eb]/10 text-red-400 border-[#2563eb]/20',
     success: 'bg-green-500/10 text-green-400 border-green-500/20',
     warning: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
     danger: 'bg-red-500/10 text-red-400 border-red-500/20',

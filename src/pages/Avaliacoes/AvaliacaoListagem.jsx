@@ -429,7 +429,7 @@ export default function AvaliacaoListagem() {
         render: (row) => (
           <div onClick={e => toggleRow(e, row.name)} className="flex items-center justify-center">
             {selectedRows.has(row.name)
-              ? <CheckSquare size={15} className="text-[#850000]" />
+              ? <CheckSquare size={15} className="text-[#2563eb]" />
               : <Square size={15} className="text-gray-600 hover:text-gray-400" />}
           </div>
         ),
@@ -476,7 +476,7 @@ export default function AvaliacaoListagem() {
             <button
               onClick={(e) => handleExcluir(e, row)}
               title="Excluir"
-              className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded-lg transition-colors"
+              className="h-7 w-7 flex items-center justify-center text-[#2563eb] hover:text-white border border-[#2563eb]/30 hover:bg-[#2563eb] rounded-lg transition-colors"
             >
               <Trash2 size={12} />
             </button>
@@ -497,7 +497,7 @@ export default function AvaliacaoListagem() {
                 title="Filtrar com dobras"
                 className={`h-9 px-3 flex items-center gap-1.5 rounded-lg border text-xs font-bold transition-colors ${
                   onlyDobras
-                    ? 'bg-[#850000] border-[#850000] text-white'
+                    ? 'bg-[#2563eb] border-[#2563eb] text-white'
                     : 'bg-transparent border-[#323238] text-gray-400 hover:text-white'
                 }`}
               >
@@ -535,7 +535,7 @@ export default function AvaliacaoListagem() {
 
         {selectedRows.size >= 2 && (
           <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-            <div className="flex items-center gap-3 bg-[#222226] border border-[#850000]/50 shadow-2xl rounded-lg px-5 py-3">
+            <div className="flex items-center gap-3 bg-[#222226] border border-[#2563eb]/50 shadow-2xl rounded-lg px-5 py-3">
               <span className="text-white font-bold text-sm">{selectedRows.size} avaliações selecionadas</span>
               <button
                 onClick={() => {
@@ -544,7 +544,7 @@ export default function AvaliacaoListagem() {
                   if (alunoIds.size > 1) { alert('Selecione avaliações do mesmo aluno para comparar.'); return }
                   abrirCompare(firstSelected, new Set(selectedRows))
                 }}
-                className="flex items-center gap-2 bg-[#850000] hover:bg-[#a00000] text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+                className="flex items-center gap-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors"
               >
                 <GitCompare size={15} /> Comparar ({selectedRows.size})
               </button>
@@ -616,11 +616,11 @@ export default function AvaliacaoListagem() {
         title={isVisible ? 'Clique para ocultar' : 'Clique para mostrar'}
       >
         <div className="flex flex-col items-center gap-1">
-          <span className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isVisible ? 'border-[#850000] bg-[#850000]/20' : 'border-[#323238]'}`}>
-            {isVisible && <Check size={10} className="text-[#850000]" />}
+          <span className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isVisible ? 'border-[#2563eb] bg-[#2563eb]/20' : 'border-[#323238]'}`}>
+            {isVisible && <Check size={10} className="text-[#2563eb]" />}
           </span>
           {fmtDate(av.date)}
-          {isLast && <span className="text-[8px] text-[#850000] font-normal">ÚLTIMO</span>}
+          {isLast && <span className="text-[8px] text-[#2563eb] font-normal">ÚLTIMO</span>}
         </div>
       </th>
     )
@@ -692,7 +692,7 @@ export default function AvaliacaoListagem() {
                 <button
                   onClick={gerarPDF}
                   disabled={pdfGenerating}
-                  className="flex items-center gap-2 bg-[#850000] hover:bg-[#a00000] text-white px-5 py-2 rounded-lg font-bold text-sm transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white px-5 py-2 rounded-lg font-bold text-sm transition-colors disabled:opacity-50"
                 >
                   {pdfGenerating ? <><RefreshCw size={14} className="animate-spin" /> Gerando...</> : <><FileDown size={14} /> Baixar PDF</>}
                 </button>
@@ -729,7 +729,7 @@ export default function AvaliacaoListagem() {
               {visibleAvs.length > 1 && (
                 <div className="grid grid-cols-2 gap-4">
                   {[
-                    { title: 'Peso Corporal (kg)', dataKey: 'Peso', color: '#850000' },
+                    { title: 'Peso Corporal (kg)', dataKey: 'Peso', color: '#2563eb' },
                     { title: `%Gordura (${curFormula?.short})`, dataKey: 'Gordura', color: '#1d4ed8' },
                   ].map(chart => (
                     <div key={chart.title} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
@@ -775,7 +775,7 @@ export default function AvaliacaoListagem() {
           >
             {FORMULAS.map(f => <option key={f.key} value={f.key}>{f.short} — {f.label}</option>)}
           </select>
-          <p className="text-[10px] text-[#850000] pr-1 text-right">{curFormula?.desc}</p>
+          <p className="text-[10px] text-[#2563eb] pr-1 text-right">{curFormula?.desc}</p>
         </div>
 
         {/* Dropdown fórmulas dobras */}
@@ -801,9 +801,9 @@ export default function AvaliacaoListagem() {
                         if (next.size === 0) next.add(f.key)
                         return next
                       })}
-                      className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${isSel ? 'bg-[#850000]/15 border border-[#850000]/30' : 'hover:bg-[#29292e] border border-transparent'}`}
+                      className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${isSel ? 'bg-[#2563eb]/15 border border-[#2563eb]/30' : 'hover:bg-[#29292e] border border-transparent'}`}
                     >
-                      <span className={`mt-0.5 w-4 h-4 rounded border shrink-0 flex items-center justify-center ${isSel ? 'bg-[#850000] border-[#850000]' : 'border-[#323238]'}`}>
+                      <span className={`mt-0.5 w-4 h-4 rounded border shrink-0 flex items-center justify-center ${isSel ? 'bg-[#2563eb] border-[#2563eb]' : 'border-[#323238]'}`}>
                         {isSel && <Check size={10} className="text-white" />}
                       </span>
                       <div>
@@ -951,9 +951,9 @@ export default function AvaliacaoListagem() {
                   )
                 })}
                 {FORMULAS.filter(f => selectedFormulas.has(f.key)).map((f, fi) => (
-                  <tr key={f.key} className={`border-b border-[#323238]/30 ${fi % 2 ? 'bg-[#850000]/5' : 'bg-[#850000]/10'}`}>
+                  <tr key={f.key} className={`border-b border-[#323238]/30 ${fi % 2 ? 'bg-[#2563eb]/5' : 'bg-[#2563eb]/10'}`}>
                     <td className="px-4 py-2.5">
-                      <div className={`text-xs font-bold ${f.key === formulaKey ? 'text-[#850000]' : 'text-gray-400'}`}>
+                      <div className={`text-xs font-bold ${f.key === formulaKey ? 'text-[#2563eb]' : 'text-gray-400'}`}>
                         {f.short} — {f.label}
                         {f.key === formulaKey && <span className="ml-1 text-[9px]">◀ principal</span>}
                       </div>
@@ -990,7 +990,7 @@ export default function AvaliacaoListagem() {
                   <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
                     {fmtDate(av.date)}
                     {av.name === historico[historico.length - 1]?.name && (
-                      <span className="ml-2 text-[#850000]">ÚLTIMO</span>
+                      <span className="ml-2 text-[#2563eb]">ÚLTIMO</span>
                     )}
                   </p>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

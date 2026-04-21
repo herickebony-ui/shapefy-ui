@@ -66,7 +66,7 @@ export default function ImagemInterativa({ src, feedbackId, idx, onRotate, reado
           <div className="flex items-center justify-between w-full">
             <button
               onClick={onRotate}
-              className="text-[10px] flex items-center gap-1 bg-[#29292e] px-3 py-1.5 rounded-lg border border-[#323238] hover:border-[#850000] text-white transition-all shrink-0 font-bold"
+              className="text-[10px] flex items-center gap-1 bg-[#29292e] px-3 py-1.5 rounded-lg border border-[#323238] hover:border-[#2563eb] text-white transition-all shrink-0 font-bold"
             >
               <RefreshCw size={10} /> Virar 90°
             </button>
@@ -88,7 +88,7 @@ export default function ImagemInterativa({ src, feedbackId, idx, onRotate, reado
               <input
                 type="range" min="0.5" max="3" step="0.01" value={scale}
                 onChange={(e) => setScale(parseFloat(e.target.value))}
-                className="w-full accent-[#850000] h-1 bg-[#323238] rounded-lg appearance-none cursor-pointer"
+                className="w-full accent-[#2563eb] h-1 bg-[#323238] rounded-lg appearance-none cursor-pointer"
               />
             </div>
             <div className="flex flex-col gap-1.5 flex-1">

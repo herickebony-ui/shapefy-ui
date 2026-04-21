@@ -79,7 +79,7 @@ const LegendaSug = ({ value, onChange }) => {
       <input ref={ref} value={value || ''} onChange={e => onChange(e.target.value)}
         onBlur={handleBlur} onFocus={() => clearTimeout(blurRef.current)}
         placeholder="Legenda (Ex: Consumir 40min antes do treino)"
-        className="flex-1 bg-transparent text-gray-400 text-xs outline-none border-b border-transparent hover:border-[#323238] focus:border-[#850000]/60 transition-colors text-left pb-1"
+        className="flex-1 bg-transparent text-gray-400 text-xs outline-none border-b border-transparent hover:border-[#323238] focus:border-[#2563eb]/60 transition-colors text-left pb-1"
       />
       <button ref={btnRef} type="button" onClick={abrirTodas}
         className="text-gray-600 hover:text-yellow-400 transition-colors shrink-0 pb-1" title="Ver todas as sugestões">
@@ -90,7 +90,7 @@ const LegendaSug = ({ value, onChange }) => {
           className="shrink-0 pb-1 transition-colors" title="Salvar no banco">
           {salvoBanco
             ? <BookmarkCheck size={11} className="text-green-400" />
-            : <BookmarkPlus size={11} className="text-gray-600 hover:text-[#850000]" />}
+            : <BookmarkPlus size={11} className="text-gray-600 hover:text-[#2563eb]" />}
         </button>
       )}
       {dropOpen && dropPos && createPortal(
@@ -290,7 +290,7 @@ const BannerOrientacoes = ({ alunoId }) => {
   }
 
   if (!alunoId) return null
-  if (loading) return <div className="animate-pulse h-8 bg-[#850000]/10 border border-[#850000]/20 rounded-lg w-full mb-6" />
+  if (loading) return <div className="animate-pulse h-8 bg-[#2563eb]/10 border border-[#2563eb]/20 rounded-lg w-full mb-6" />
 
   const action = (
     <div className="flex items-center gap-2">
@@ -602,22 +602,22 @@ const TabelaAlimentos = ({ items, onUpdateItem, onAddItem, onDeleteItem, onDupli
                       </td>
                       <td className="px-2 py-1">
                         <input type="number" value={item.ref_weight ?? ''} onChange={e => onUpdateItem(realIdx, 'ref_weight', e.target.value)}
-                          className="w-full h-7 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60" />
+                          className="w-full h-7 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60" />
                       </td>
                       <td className="px-2 py-1">
                         <select value={item.unit || 'g'} onChange={e => onUpdateItem(realIdx, 'unit', e.target.value)}
-                          className="w-full h-7 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60 appearance-none">
+                          className="w-full h-7 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 appearance-none">
                           <option>g</option><option>ml</option><option>unidade</option>
                         </select>
                       </td>
                       <td className="px-2 py-1">
                         <input value={item.medida_caseira || ''} onChange={e => onUpdateItem(realIdx, 'medida_caseira', e.target.value)}
-                          className="w-full h-7 px-2 bg-transparent border border-transparent hover:border-[#323238] focus:border-[#850000]/60 text-white rounded text-xs outline-none transition-colors" />
+                          className="w-full h-7 px-2 bg-transparent border border-transparent hover:border-[#323238] focus:border-[#2563eb]/60 text-white rounded text-xs outline-none transition-colors" />
                       </td>
                       {['protein', 'carbohydrate', 'lipid', 'fiber', 'calories'].map(f => (
                         <td key={f} className="px-2 py-1">
                           <input type="number" value={item[f] ?? ''} onChange={e => onUpdateItem(realIdx, f, e.target.value)}
-                            className="w-full h-7 px-1 text-center bg-transparent border border-transparent hover:border-[#323238] focus:border-[#850000]/60 text-white rounded text-xs outline-none transition-colors" />
+                            className="w-full h-7 px-1 text-center bg-transparent border border-transparent hover:border-[#323238] focus:border-[#2563eb]/60 text-white rounded text-xs outline-none transition-colors" />
                         </td>
                       ))}
                       <td className="px-2 py-2 rounded-r-lg">
@@ -676,12 +676,12 @@ const TabelaAlimentos = ({ items, onUpdateItem, onAddItem, onDeleteItem, onDupli
                   <div className="flex gap-2 mt-1.5 pl-0.5">
                     <div className="flex items-center gap-1">
                       <input type="number" value={item.ref_weight ?? ''} onChange={e => onUpdateItem(realIdx, 'ref_weight', e.target.value)}
-                        className="w-16 h-6 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-[11px] text-center outline-none focus:border-[#850000]/60" />
+                        className="w-16 h-6 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-[11px] text-center outline-none focus:border-[#2563eb]/60" />
                       <span className="text-[10px] text-gray-500">g</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <input type="number" value={item.calories ?? ''} onChange={e => onUpdateItem(realIdx, 'calories', e.target.value)}
-                        className="w-16 h-6 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-[11px] text-center outline-none focus:border-[#850000]/60" />
+                        className="w-16 h-6 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-[11px] text-center outline-none focus:border-[#2563eb]/60" />
                       <span className="text-[10px] text-gray-500">kcal</span>
                     </div>
                   </div>
@@ -691,7 +691,7 @@ const TabelaAlimentos = ({ items, onUpdateItem, onAddItem, onDeleteItem, onDupli
           </div>
           {/* Mobile: adicionar alimento — botão dashed compacto */}
           <button onClick={() => onAddItem(false)}
-            className="md:hidden w-full py-2 text-gray-500 hover:text-white text-xs flex items-center justify-center gap-1.5 border-t border-dashed border-[#323238] hover:border-[#850000]/40 transition-colors">
+            className="md:hidden w-full py-2 text-gray-500 hover:text-white text-xs flex items-center justify-center gap-1.5 border-t border-dashed border-[#323238] hover:border-[#2563eb]/40 transition-colors">
             <Plus size={11} /> Adicionar alimento
           </button>
         </>
@@ -838,7 +838,7 @@ const ModalCopiarOpcao = ({ draft, itemsOrigem, onClose, onCopiar }) => {
             <div className="flex gap-2">
               {[{ value: 'substituir', label: 'Substituir' }, { value: 'adicionar', label: 'Adicionar ao final' }].map(op => (
                 <button key={op.value} onClick={() => setModoColagem(op.value)}
-                  className={`flex-1 py-2 rounded-lg text-sm border transition ${modoColagem === op.value ? 'bg-[#850000]/20 border-[#850000]/50 text-red-400' : 'border-[#323238] text-gray-400 hover:text-white'}`}>
+                  className={`flex-1 py-2 rounded-lg text-sm border transition ${modoColagem === op.value ? 'bg-[#2563eb]/20 border-[#2563eb]/50 text-red-400' : 'border-[#323238] text-gray-400 hover:text-white'}`}>
                   {op.label}
                 </button>
               ))}
@@ -1009,11 +1009,11 @@ const RefeicaoBlock = ({ n, draft, setDraft }) => {
 
       <div className="flex items-center justify-between px-5 py-4 border-b border-[#323238]">
         <div className="flex items-center gap-3">
-          <span className="h-2 w-2 rounded-full bg-[#850000] shrink-0" />
+          <span className="h-2 w-2 rounded-full bg-[#2563eb] shrink-0" />
           <input
             value={draft[`meal_${n}_label`] || MEAL_LABELS[n]}
             onChange={e => setDraft(prev => ({ ...prev, [`meal_${n}_label`]: e.target.value }))}
-            className="bg-transparent text-white font-semibold text-base outline-none border-b border-transparent hover:border-[#323238] focus:border-[#850000]/60 transition-colors"
+            className="bg-transparent text-white font-semibold text-base outline-none border-b border-transparent hover:border-[#323238] focus:border-[#2563eb]/60 transition-colors"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -1036,7 +1036,7 @@ const RefeicaoBlock = ({ n, draft, setDraft }) => {
                   <input
                     value={draft[`meal_${n}_option_${optNum}_label`] || `Opção ${optNum}`}
                     onChange={e => setDraft(prev => ({ ...prev, [`meal_${n}_option_${optNum}_label`]: e.target.value }))}
-                    className="bg-transparent text-white font-bold text-sm outline-none border-b border-transparent hover:border-[#323238] focus:border-[#850000]/60 transition-colors uppercase tracking-wider w-full md:w-max"
+                    className="bg-transparent text-white font-bold text-sm outline-none border-b border-transparent hover:border-[#323238] focus:border-[#2563eb]/60 transition-colors uppercase tracking-wider w-full md:w-max"
                   />
                   <LegendaSug
                     value={draft[`meal_${n}_option_${optNum}_legend`] || ''}
@@ -1059,7 +1059,7 @@ const RefeicaoBlock = ({ n, draft, setDraft }) => {
             )
           })}
           <button onClick={adicionarOpcao}
-            className="w-full py-2 border border-dashed border-[#323238] text-gray-500 hover:text-white hover:border-[#850000]/40 text-sm rounded-lg transition-colors">
+            className="w-full py-2 border border-dashed border-[#323238] text-gray-500 hover:text-white hover:border-[#2563eb]/40 text-sm rounded-lg transition-colors">
             + Adicionar Opção
           </button>
         </div>
@@ -1106,7 +1106,7 @@ export const ModalDuplicarDieta = ({ dietaId, nomeAtual, onClose, onDuplicado })
           <div className="flex gap-2">
             {[{ value: 'mesmo', label: 'Mesmo Aluno' }, { value: 'novo', label: 'Novo Aluno' }].map(op => (
               <button key={op.value} onClick={() => setModo(op.value)}
-                className={`flex-1 py-2 rounded-lg text-sm border transition ${modo === op.value ? 'bg-[#850000]/20 border-[#850000]/50 text-red-400' : 'border-[#323238] text-gray-400 hover:text-white'}`}>
+                className={`flex-1 py-2 rounded-lg text-sm border transition ${modo === op.value ? 'bg-[#2563eb]/20 border-[#2563eb]/50 text-red-400' : 'border-[#323238] text-gray-400 hover:text-white'}`}>
                 {op.label}
               </button>
             ))}
@@ -1229,7 +1229,7 @@ export default function DietaDetalhe() {
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center py-32 gap-4 text-white">
-      <Loader size={32} className="animate-spin text-[#850000]" />
+      <Loader size={32} className="animate-spin text-[#2563eb]" />
       <p className="text-gray-500 text-sm">Carregando dieta...</p>
     </div>
   )

@@ -83,7 +83,7 @@ export default function TextareaComSugestoes({
         placeholder={placeholder}
         rows={rows}
         disabled={disabled}
-        className="w-full bg-[#1a1a1a] border border-[#323238] focus:border-[#850000]/60 text-white text-sm rounded-lg px-3 py-2 outline-none resize-none leading-relaxed transition-colors placeholder-gray-600 disabled:opacity-50"
+        className="w-full bg-[#1a1a1a] border border-[#323238] focus:border-[#2563eb]/60 text-white text-sm rounded-lg px-3 py-2 outline-none resize-none leading-relaxed transition-colors placeholder-gray-600 disabled:opacity-50"
       />
 
       {dropdownOpen && sugestoes.length > 0 && (
@@ -122,7 +122,7 @@ export default function TextareaComSugestoes({
             {salvado ? (
               <><Check size={12} className="text-green-400" /><span className="text-green-400">Salvo!</span></>
             ) : (
-              <><Plus size={12} className="text-gray-500 hover:text-[#850000]" /><span className="text-gray-500 hover:text-[#850000]">Salvar no banco</span></>
+              <><Plus size={12} className="text-gray-500 hover:text-[#2563eb]" /><span className="text-gray-500 hover:text-[#2563eb]">Salvar no banco</span></>
             )}
           </button>
         </div>

@@ -20,7 +20,7 @@ export default function Pagination({ page, pageSize, total, onPage, onPageSize }
           <select
             value={pageSize}
             onChange={e => { onPageSize(Number(e.target.value)); onPage(1) }}
-            className="h-7 px-2 bg-[#1a1a1a] border border-[#323238] text-gray-200 rounded text-xs outline-none focus:border-[#850000]/60 appearance-none"
+            className="h-7 px-2 bg-[#1a1a1a] border border-[#323238] text-gray-200 rounded text-xs outline-none focus:border-[#2563eb]/60 appearance-none"
           >
             {PAGE_SIZE_OPTIONS.map(n => (
               <option key={n} value={n}>{n}</option>
@@ -44,7 +44,7 @@ export default function Pagination({ page, pageSize, total, onPage, onPageSize }
               onClick={() => onPage(p)}
               className={`min-w-[28px] h-7 px-2 rounded text-xs font-medium transition-colors border ${
                 p === page
-                  ? 'bg-[#850000] border-[#850000] text-white'
+                  ? 'bg-[#2563eb] border-[#2563eb] text-white'
                   : 'bg-[#1a1a1a] border-[#323238] text-gray-400 hover:text-white hover:border-[#444]'
               }`}
             >

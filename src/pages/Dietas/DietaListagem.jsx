@@ -80,7 +80,7 @@ const CardDieta = ({ dieta, onClick }) => {
   return (
     <button
       onClick={() => onClick(dieta.name)}
-      className={`group w-full text-left bg-[#29292e] border ${s.border} ${s.glow} rounded-lg p-5 transition-all duration-200 hover:bg-[#2f2f35] hover:scale-[1.015] hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-[#850000]/50`}
+      className={`group w-full text-left bg-[#29292e] border ${s.border} ${s.glow} rounded-lg p-5 transition-all duration-200 hover:bg-[#2f2f35] hover:scale-[1.015] hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-[#2563eb]/50`}
     >
       <div className="flex items-start justify-between gap-3 mb-4">
         <div className="flex-1 min-w-0">
@@ -155,7 +155,7 @@ const RowDietaPeriodo = ({ dieta, onDatasAtualizadas }) => {
         <span>{formatDate(dieta.date)}</span>
         <span className="text-gray-600">→</span>
         <span>{formatDate(dieta.final_date)}</span>
-        <span className="opacity-0 group-hover/btn:opacity-100 transition-opacity text-[10px] text-[#850000]">editar</span>
+        <span className="opacity-0 group-hover/btn:opacity-100 transition-opacity text-[10px] text-[#2563eb]">editar</span>
       </button>
       {editando && (
         <div onClick={e => e.stopPropagation()}
@@ -164,11 +164,11 @@ const RowDietaPeriodo = ({ dieta, onDatasAtualizadas }) => {
           <div className="space-y-2">
             <FormGroup label="Início">
               <input type="date" value={datas.date} onChange={e => setDatas(p => ({ ...p, date: e.target.value }))}
-                className="w-full h-9 px-3 bg-[#29292e] border border-[#323238] text-white text-xs rounded-lg outline-none focus:border-[#850000]/60" />
+                className="w-full h-9 px-3 bg-[#29292e] border border-[#323238] text-white text-xs rounded-lg outline-none focus:border-[#2563eb]/60" />
             </FormGroup>
             <FormGroup label="Fim">
               <input type="date" value={datas.final_date} onChange={e => setDatas(p => ({ ...p, final_date: e.target.value }))}
-                className="w-full h-9 px-3 bg-[#29292e] border border-[#323238] text-white text-xs rounded-lg outline-none focus:border-[#850000]/60" />
+                className="w-full h-9 px-3 bg-[#29292e] border border-[#323238] text-white text-xs rounded-lg outline-none focus:border-[#2563eb]/60" />
             </FormGroup>
           </div>
           <div className="flex gap-2 pt-1">
@@ -243,7 +243,7 @@ const ModalFiltros = ({ filtros, onChange, onClose, onLimpar }) => {
           <div className="flex flex-wrap gap-2">
             {['Rascunho', 'Ativa', 'Inativa'].map(s => (
               <button key={s} onClick={() => toggle('status', s)}
-                className={`px-4 py-1.5 rounded-lg text-sm border transition ${local.status === s ? 'bg-[#850000]/20 border-[#850000]/50 text-red-400' : 'border-[#323238] text-gray-400 hover:text-white'}`}>
+                className={`px-4 py-1.5 rounded-lg text-sm border transition ${local.status === s ? 'bg-[#2563eb]/20 border-[#2563eb]/50 text-red-400' : 'border-[#323238] text-gray-400 hover:text-white'}`}>
                 {s}
               </button>
             ))}
@@ -268,7 +268,7 @@ const ModalFiltros = ({ filtros, onChange, onClose, onLimpar }) => {
               const ativo = (local.refeicoes || []).includes(n)
               return (
                 <button key={n} onClick={() => toggleRefeicao(n)}
-                  className={`px-3 py-1.5 rounded-lg text-xs border transition ${ativo ? 'bg-[#850000]/20 border-[#850000]/50 text-red-400' : 'border-[#323238] text-gray-400 hover:text-white'}`}>
+                  className={`px-3 py-1.5 rounded-lg text-xs border transition ${ativo ? 'bg-[#2563eb]/20 border-[#2563eb]/50 text-red-400' : 'border-[#323238] text-gray-400 hover:text-white'}`}>
                   {REFEICOES_LABELS[n]}
                 </button>
               )
@@ -332,7 +332,7 @@ const VisualizacaoDietaModal = ({ dietaId, onClose }) => {
       <span className="text-gray-300">Líp: <strong className="text-white">{fmt(totais.lip, 0)}g</strong></span>
       <span className="text-gray-300">Carb: <strong className="text-white">{fmt(totais.carb, 0)}g</strong></span>
       <span className="text-gray-300">Fib: <strong className="text-white">{fmt(totais.fib, 0)}g</strong></span>
-      <span className="bg-[#850000]/20 text-red-300 border border-[#850000]/30 px-2 py-0.5 rounded font-medium">
+      <span className="bg-[#2563eb]/20 text-red-300 border border-[#2563eb]/30 px-2 py-0.5 rounded font-medium">
         Kcal: <strong className="text-white">{fmt(totais.kcal, 0)}</strong>
       </span>
       <span className="text-gray-500">|</span>
@@ -355,7 +355,7 @@ const VisualizacaoDietaModal = ({ dietaId, onClose }) => {
       <div className="p-4 space-y-4 min-h-[200px]">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader size={28} className="animate-spin text-[#850000]" />
+            <Loader size={28} className="animate-spin text-[#2563eb]" />
           </div>
         ) : !dados ? (
           <p className="text-red-400 text-center py-10">Erro ao carregar dieta.</p>
@@ -366,7 +366,7 @@ const VisualizacaoDietaModal = ({ dietaId, onClose }) => {
             return (
               <div key={n} className="bg-[#29292e] border border-[#323238] rounded-lg overflow-hidden">
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-[#323238]">
-                  <span className="h-2 w-2 rounded-full bg-[#850000] shrink-0" />
+                  <span className="h-2 w-2 rounded-full bg-[#2563eb] shrink-0" />
                   <span className="text-white font-semibold text-sm">{dados[`meal_${n}_label`] || REFEICAO_NOMES[n]}</span>
                 </div>
                 <div className="p-3 space-y-3">
@@ -475,7 +475,7 @@ const ModalNovaDieta = ({ onClose, onCriada }) => {
       <div className="p-5">
         <FormGroup label="Aluno" required>
           {aluno ? (
-            <div className="flex items-center justify-between h-10 px-3 rounded-lg bg-[#29292e] border border-[#850000]/40">
+            <div className="flex items-center justify-between h-10 px-3 rounded-lg bg-[#29292e] border border-[#2563eb]/40">
               <span className="text-white text-sm">{aluno.nome_completo}</span>
               <button onClick={() => setAluno(null)} className="text-gray-500 hover:text-red-400 transition-colors ml-2">
                 <X size={13} />
@@ -626,7 +626,7 @@ export default function DietaListagem() {
             <div className="flex items-center bg-[#29292e] border border-[#323238] rounded-lg p-1 gap-0.5">
               {[{ key: 'grid', icon: <LayoutGrid size={14} />, title: 'Grade' }, { key: 'list', icon: <List size={14} />, title: 'Lista' }].map(({ key, icon, title }) => (
                 <button key={key} onClick={() => setView(key)} title={title}
-                  className={`h-7 w-7 flex items-center justify-center rounded transition-colors ${view === key ? 'bg-[#850000] text-white' : 'text-gray-400 hover:text-white'}`}>
+                  className={`h-7 w-7 flex items-center justify-center rounded transition-colors ${view === key ? 'bg-[#2563eb] text-white' : 'text-gray-400 hover:text-white'}`}>
                   {icon}
                 </button>
               ))}
@@ -745,7 +745,7 @@ export default function DietaListagem() {
                       <Copy size={12} />
                     </button>
                     <button onClick={() => handleExcluir(d.name, d.nome_completo)}
-                      className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded-lg transition-colors" title="Excluir">
+                      className="h-7 w-7 flex items-center justify-center text-[#2563eb] hover:text-white border border-[#2563eb]/30 hover:bg-[#2563eb] rounded-lg transition-colors" title="Excluir">
                       <Trash2 size={12} />
                     </button>
                   </div>

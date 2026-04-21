@@ -10,6 +10,16 @@ export default defineConfig({
         changeOrigin: true,
         secure: true,
         cookieDomainRewrite: 'localhost',
+      },
+      '/files': {
+        target: 'https://beta.shapefy.online',
+        changeOrigin: true,
+        secure: true,
+      },
+      '/private/files': {
+        target: 'https://beta.shapefy.online',
+        changeOrigin: true,
+        secure: true,
       }
     }
   }

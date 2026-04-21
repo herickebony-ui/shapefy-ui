@@ -4,7 +4,7 @@ export default function Card({ children, className = '', onClick, hover = false 
       onClick={onClick}
       className={`
         bg-[#29292e] border border-[#323238] rounded-xl
-        ${hover ? 'hover:border-[#850000]/40 hover:bg-[#2f2f34] transition-all cursor-pointer' : ''}
+        ${hover ? 'hover:border-[#2563eb]/40 hover:bg-[#2f2f34] transition-all cursor-pointer' : ''}
         ${className}
       `}
     >

@@ -113,7 +113,7 @@ export default function FormularioListagem() {
                   onClick={() => handleExcluir(aba, item)}
                   disabled={excluindo === item.name}
                   title="Excluir"
-                  className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded-lg transition-colors disabled:opacity-40"
+                  className="h-7 w-7 flex items-center justify-center text-[#2563eb] hover:text-white border border-[#2563eb]/30 hover:bg-[#2563eb] rounded-lg transition-colors disabled:opacity-40"
                 >
                   <Trash2 size={12} />
                 </button>

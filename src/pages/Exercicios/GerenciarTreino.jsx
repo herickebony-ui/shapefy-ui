@@ -152,7 +152,7 @@ const ModalExercicio = ({ exercicio, grupos, onSave, onClose }) => {
 
         <label className="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" checked={!!enabled} onChange={e => setEnabled(e.target.checked ? 1 : 0)}
-            className="accent-[#850000] w-4 h-4" />
+            className="accent-[#2563eb] w-4 h-4" />
           <span className="text-sm text-gray-300">Exercício ativo</span>
         </label>
 
@@ -180,14 +180,14 @@ const ModalExercicio = ({ exercicio, grupos, onSave, onClose }) => {
                   <tr key={i} className="border-b border-[#323238]/50 last:border-0">
                     <td className="px-2 py-1">
                       <select value={it.grupo_muscular} onChange={e => updIntens(i, 'grupo_muscular', e.target.value)}
-                        className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60 appearance-none">
+                        className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 appearance-none">
                         <option value="">Selecionar...</option>
                         {grupos.map(g => <option key={g} value={g}>{g}</option>)}
                       </select>
                     </td>
                     <td className="px-2 py-1">
                       <select value={String(it.intensidade)} onChange={e => updIntens(i, 'intensidade', e.target.value)}
-                        className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60 appearance-none">
+                        className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 appearance-none">
                         {INTENSIDADE_OPCOES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                       </select>
                     </td>
@@ -344,7 +344,7 @@ export default function GerenciarTreino() {
           </button>
           <button
             onClick={() => setDeletando(ex)}
-            className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded-lg transition-colors"
+            className="h-7 w-7 flex items-center justify-center text-[#2563eb] hover:text-white border border-[#2563eb]/30 hover:bg-[#2563eb] rounded-lg transition-colors"
             title="Excluir"
           >
             <Trash2 size={12} />

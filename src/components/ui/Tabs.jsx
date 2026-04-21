@@ -15,7 +15,7 @@ export default function Tabs({ tabs = [], active, onChange, variant = 'underline
               transition-colors shrink-0
               disabled:opacity-40 disabled:cursor-not-allowed
               ${active === tab.id
-                ? 'bg-[#850000] text-white'
+                ? 'bg-[#2563eb] text-white'
                 : 'bg-[#29292e] text-gray-400 hover:text-white hover:bg-[#323238]'
               }
             `}
@@ -46,7 +46,7 @@ export default function Tabs({ tabs = [], active, onChange, variant = 'underline
               text-[12px] md:text-[13px] font-medium border-b-2 transition-colors shrink-0
               disabled:opacity-40 disabled:cursor-not-allowed
               ${active === tab.id
-                ? 'border-[#850000] text-white'
+                ? 'border-[#2563eb] text-white'
                 : 'border-transparent text-gray-500 hover:text-gray-300'
               }
             `}
@@ -54,7 +54,7 @@ export default function Tabs({ tabs = [], active, onChange, variant = 'underline
             {tab.icon && <span>{tab.icon}</span>}
             {tab.label}
             {tab.badge != null && (
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${active === tab.id ? 'bg-[#850000]/30 text-red-300' : 'bg-[#29292e] text-gray-500'}`}>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${active === tab.id ? 'bg-[#2563eb]/30 text-red-300' : 'bg-[#29292e] text-gray-500'}`}>
                 {tab.badge}
               </span>
             )}

@@ -75,7 +75,7 @@ function EditorItens({ items, onChange }) {
         <button
           type="button"
           onClick={addItem}
-          className="flex items-center gap-1 text-xs text-[#850000] hover:text-red-400 transition-colors"
+          className="flex items-center gap-1 text-xs text-[#2563eb] hover:text-red-400 transition-colors"
         >
           <Plus size={12} /> Adicionar
         </button>
@@ -115,7 +115,7 @@ function EditorItens({ items, onChange }) {
                 type="number"
                 value={item.weight}
                 onChange={(e) => handleWeightChange(item.__uid, e.target.value)}
-                className="w-16 h-7 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60 tabular-nums"
+                className="w-16 h-7 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 tabular-nums"
               />
               <span className="text-gray-500 text-xs w-4">{item.unit || 'g'}</span>
               <button
@@ -409,7 +409,7 @@ export default function RefeicoesProntasListagem() {
           <button
             onClick={() => setConfirmDelete(row)}
             title="Excluir"
-            className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded-lg transition-colors"
+            className="h-7 w-7 flex items-center justify-center text-[#2563eb] hover:text-white border border-[#2563eb]/30 hover:bg-[#2563eb] rounded-lg transition-colors"
           >
             <Trash2 size={12} />
           </button>

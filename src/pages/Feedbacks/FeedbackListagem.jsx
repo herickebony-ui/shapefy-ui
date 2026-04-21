@@ -101,7 +101,7 @@ function ViewComparacao({ dados, imgSrcs, onVoltar, onRotate, modoTrocarFoto, se
                     return (
                       <tr key={idx} className="bg-[#0a0a0a]/50">
                         <td colSpan={dados.length + 1} className="p-3">
-                          <h3 className="text-xs font-bold text-white uppercase tracking-wider bg-[#850000]/10 border-l-4 border-[#850000] px-4 py-2 rounded-r-lg">
+                          <h3 className="text-xs font-bold text-white uppercase tracking-wider bg-[#2563eb]/10 border-l-4 border-[#2563eb] px-4 py-2 rounded-r-lg">
                             {item.pergunta}
                           </h3>
                         </td>
@@ -401,14 +401,14 @@ export default function FeedbackListagem() {
             className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors relative group"
           >
             <Columns size={12} />
-            <span className="absolute -top-1.5 -right-1.5 bg-[#850000] text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">3</span>
+            <span className="absolute -top-1.5 -right-1.5 bg-[#2563eb] text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">3</span>
           </button>
           <button
             onClick={() => toggleSelecionado(row)}
             title="Selecionar para comparar"
             className={`h-7 w-7 flex items-center justify-center border rounded-lg transition-colors ${
               selecionados.find(f => f.name === row.name)
-                ? 'text-[#850000] border-[#850000]/40 bg-[#850000]/10'
+                ? 'text-[#2563eb] border-[#2563eb]/40 bg-[#2563eb]/10'
                 : 'text-gray-500 border-[#323238] hover:border-gray-500 hover:text-white'
             }`}
           >
@@ -520,7 +520,7 @@ export default function FeedbackListagem() {
               type="date"
               value={filtroDataInicio}
               onChange={e => { setFiltroDataInicio(e.target.value); setPage(1) }}
-              className="w-40 px-3 py-2 bg-[#1a1a1a] border border-[#323238] text-white rounded-lg text-sm outline-none focus:border-[#850000]/60 transition-colors"
+              className="w-40 px-3 py-2 bg-[#1a1a1a] border border-[#323238] text-white rounded-lg text-sm outline-none focus:border-[#2563eb]/60 transition-colors"
             />
           </div>
           <div className="relative">
@@ -529,7 +529,7 @@ export default function FeedbackListagem() {
               type="date"
               value={filtroDataFim}
               onChange={e => { setFiltroDataFim(e.target.value); setPage(1) }}
-              className="w-40 px-3 py-2 bg-[#1a1a1a] border border-[#323238] text-white rounded-lg text-sm outline-none focus:border-[#850000]/60 transition-colors"
+              className="w-40 px-3 py-2 bg-[#1a1a1a] border border-[#323238] text-white rounded-lg text-sm outline-none focus:border-[#2563eb]/60 transition-colors"
             />
           </div>
         </div>

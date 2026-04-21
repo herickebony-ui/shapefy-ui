@@ -13,7 +13,7 @@ export const colors = {
   border:  '#323238',
 
   // Marca
-  primary:      '#850000',
+  primary:      '#2563eb',
   primaryHover: '#b91c1c',
 }
 
@@ -24,10 +24,10 @@ export const tw = {
 
   // Containers
   card:    'bg-[#29292e] border border-[#323238] rounded-xl',
-  cardHover: 'bg-[#29292e] border border-[#323238] rounded-xl hover:border-[#850000]/40 hover:bg-[#2f2f34] transition-all cursor-pointer',
+  cardHover: 'bg-[#29292e] border border-[#323238] rounded-xl hover:border-[#2563eb]/40 hover:bg-[#2f2f34] transition-all cursor-pointer',
 
   // Inputs
-  input:   'bg-[#1a1a1a] border border-[#323238] rounded-lg px-4 py-2.5 text-white text-sm placeholder-gray-600 outline-none focus:border-[#850000]/60 focus:ring-1 focus:ring-[#850000]/30 transition-colors',
+  input:   'bg-[#1a1a1a] border border-[#323238] rounded-lg px-4 py-2.5 text-white text-sm placeholder-gray-600 outline-none focus:border-[#2563eb]/60 focus:ring-1 focus:ring-[#2563eb]/30 transition-colors',
 
   // Tabelas
   thead:    'bg-[#1a1a1a] text-white text-xs font-semibold tracking-wider',
@@ -35,7 +35,7 @@ export const tw = {
   tbodyRow: 'bg-[#29292e] hover:bg-[#323238] transition-colors border-t border-[#323238]',
 
   // Botões
-  btnPrimary:   'bg-[#850000] hover:bg-red-700 text-white font-semibold rounded-lg transition-colors',
+  btnPrimary:   'bg-[#2563eb] hover:bg-red-700 text-white font-semibold rounded-lg transition-colors',
   btnSecondary: 'bg-[#29292e] border border-[#323238] text-gray-400 hover:text-white hover:bg-[#323238] rounded-lg transition-colors',
   btnGhost:     'text-gray-400 hover:text-white hover:bg-[#323238] rounded-lg transition-colors',
 
@@ -65,7 +65,7 @@ export const tw = {
     purple: 'border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.05)]',
     green:  'border-green-500/30 shadow-[0_0_15px_rgba(34,197,94,0.05)]',
     blue:   'border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.05)]',
-    red:    'border-[#850000]/30 shadow-[0_0_15px_rgba(133,0,0,0.10)]',
+    red:    'border-[#2563eb]/30 shadow-[0_0_15px_rgba(133,0,0,0.10)]',
     yellow: 'border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.05)]',
   }
 }

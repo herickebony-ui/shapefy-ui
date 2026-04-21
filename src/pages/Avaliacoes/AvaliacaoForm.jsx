@@ -31,7 +31,7 @@ function SecaoForm({ icon: Icon, title, children }) {
   return (
     <div className="bg-[#222226] border border-[#323238] rounded-lg p-5">
       <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-        <Icon size={14} className="text-[#850000]" /> {title}
+        <Icon size={14} className="text-[#2563eb]" /> {title}
       </h3>
       {children}
     </div>

@@ -25,7 +25,7 @@ export default function Avatar({ nome, foto, size = 'md' }) {
   }
 
   return (
-    <div className={`${sizes[size]} rounded-full bg-[#850000]/20 border border-[#850000]/30 flex items-center justify-center font-bold text-red-400 shrink-0`}>
+    <div className={`${sizes[size]} rounded-full bg-[#2563eb]/20 border border-[#2563eb]/30 flex items-center justify-center font-bold text-red-400 shrink-0`}>
       {initials}
     </div>
   )

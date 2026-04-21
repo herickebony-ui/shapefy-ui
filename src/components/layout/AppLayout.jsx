@@ -69,13 +69,13 @@ export default function AppLayout() {
         `}>
           {expanded ? (
             <div className="flex items-center gap-2 text-white font-bold tracking-wider">
-              <div className="p-1.5 bg-[#850000] rounded-lg">
+              <div className="p-1.5 bg-[#2563eb] rounded-lg">
                 <Activity className="w-4 h-4 text-white" />
               </div>
               <span className="text-sm uppercase tracking-widest">Shapefy</span>
             </div>
           ) : (
-            <div className="p-2 bg-[#850000] rounded-xl">
+            <div className="p-2 bg-[#2563eb] rounded-xl">
               <Activity className="w-5 h-5 text-white" />
             </div>
           )}
@@ -112,7 +112,7 @@ export default function AppLayout() {
                 className={`w-full flex items-center rounded-xl transition-all text-sm font-medium text-left
                   ${expanded ? 'gap-3 px-4 py-2.5' : 'justify-center py-2.5'}
                   ${active
-                    ? 'bg-[#850000] text-white'
+                    ? 'bg-[#2563eb] text-white'
                     : 'text-gray-400 hover:bg-[#323238] hover:text-white'
                   }
                 `}
@@ -154,7 +154,7 @@ export default function AppLayout() {
               <PanelLeftOpen size={18} />
             </button>
             <div className="flex items-center gap-4">
-              <div className="w-1 h-7 bg-[#850000] rounded-full" />
+              <div className="w-1 h-7 bg-[#2563eb] rounded-full" />
               <div>
                 <h2 className="text-white text-base font-bold tracking-wide uppercase">
                   Gestão Consultoria
@@ -168,7 +168,7 @@ export default function AppLayout() {
               <p className="text-white text-sm font-medium">{userName}</p>
               <p className="text-gray-500 text-xs">{user}</p>
             </div>
-            <div className="w-9 h-9 rounded-full bg-[#850000] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+            <div className="w-9 h-9 rounded-full bg-[#2563eb] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
               {userName.charAt(0).toUpperCase()}
             </div>
           </div>

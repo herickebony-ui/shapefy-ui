@@ -243,7 +243,7 @@ export default function FormularioBuilder() {
                     </button>
                     <button
                       onClick={() => removePergunta(idx)}
-                      className="h-6 w-6 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded transition-colors"
+                      className="h-6 w-6 flex items-center justify-center text-[#2563eb] hover:text-white border border-[#2563eb]/30 hover:bg-[#2563eb] rounded transition-colors"
                     >
                       <Trash2 size={11} />
                     </button>
@@ -275,7 +275,7 @@ export default function FormularioBuilder() {
                       type="checkbox"
                       checked={!!p.reqd}
                       onChange={e => updatePergunta(idx, 'reqd', e.target.checked)}
-                      className="rounded border-[#323238] bg-[#1a1a1a] accent-[#850000]"
+                      className="rounded border-[#323238] bg-[#1a1a1a] accent-[#2563eb]"
                     />
                     <span className="text-gray-400 text-xs">Obrigatória</span>
                   </label>
@@ -314,7 +314,7 @@ export default function FormularioBuilder() {
           {/* Adicionar pergunta */}
           <button
             onClick={addPergunta}
-            className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-[#323238] hover:border-[#850000]/50 text-gray-500 hover:text-[#850000] rounded-lg transition-colors text-sm font-medium"
+            className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-[#323238] hover:border-[#2563eb]/50 text-gray-500 hover:text-[#2563eb] rounded-lg transition-colors text-sm font-medium"
           >
             <Plus size={14} />
             Adicionar pergunta

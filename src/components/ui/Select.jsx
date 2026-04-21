@@ -17,7 +17,7 @@ export default function Select({
         className={`
           w-full h-10 pl-3 pr-10 bg-[#1a1a1a] border rounded-lg text-white text-sm
           outline-none transition-colors appearance-none
-          focus:border-[#850000]/60 focus:ring-1 focus:ring-[#850000]/30
+          focus:border-[#2563eb]/60 focus:ring-1 focus:ring-[#2563eb]/30
           disabled:opacity-40 disabled:cursor-not-allowed
           ${!value ? 'text-gray-600' : ''}
           ${error ? 'border-red-500/60' : 'border-[#323238]'}

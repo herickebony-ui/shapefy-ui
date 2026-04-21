@@ -231,7 +231,7 @@ const TextareaExpansivel = ({ value, onChange, placeholder = '', resetKey, class
         onBlur={handleBlur}
         placeholder={placeholder}
         rows={1}
-        className={`bg-[#29292e] border border-[#323238] text-gray-200 text-xs rounded px-2 py-1.5 w-full outline-none focus:border-[#850000]/60 resize-none leading-tight min-h-[2rem] ${doctype ? 'pr-9' : ''} ${className}`}
+        className={`bg-[#29292e] border border-[#323238] text-gray-200 text-xs rounded px-2 py-1.5 w-full outline-none focus:border-[#2563eb]/60 resize-none leading-tight min-h-[2rem] ${doctype ? 'pr-9' : ''} ${className}`}
       />
       {doctype && campo && (
         <>
@@ -247,7 +247,7 @@ const TextareaExpansivel = ({ value, onChange, placeholder = '', resetKey, class
               title="Salvar no banco de textos">
               {salvoBanco
                 ? <BookmarkCheck size={10} className="text-green-400" />
-                : <BookmarkPlus size={10} className="text-gray-600 hover:text-[#850000]" />}
+                : <BookmarkPlus size={10} className="text-gray-600 hover:text-[#2563eb]" />}
             </button>
           )}
         </>
@@ -332,7 +332,7 @@ const InputSug = ({ value, onChange, doctype, campo, className = '' }) => {
     <div className="relative flex items-center">
       <input ref={ref} value={value || ''} onChange={e => onChange(e.target.value)}
         onBlur={handleBlur} onFocus={() => clearTimeout(blurRef.current)}
-        className={`w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60 pr-9 ${className}`} />
+        className={`w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 pr-9 ${className}`} />
       <button type="button" onClick={abrirTodas}
         className="absolute right-5 text-gray-600 hover:text-yellow-400 transition-colors" title="Ver todas as sugestões">
         <Lightbulb size={10} />
@@ -342,7 +342,7 @@ const InputSug = ({ value, onChange, doctype, campo, className = '' }) => {
           className="absolute right-1 transition-colors" title="Salvar no banco">
           {salvoBanco
             ? <BookmarkCheck size={10} className="text-green-400" />
-            : <BookmarkPlus size={10} className="text-gray-600 hover:text-[#850000]" />}
+            : <BookmarkPlus size={10} className="text-gray-600 hover:text-[#2563eb]" />}
         </button>
       )}
       {dropOpen && dropPos && createPortal(
@@ -412,7 +412,7 @@ const SearchableCombo = ({ value, onChange, options = [], placeholder = '' }) =>
         onFocus={openDropdown}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         placeholder={placeholder}
-        className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60 transition-colors placeholder-gray-600 truncate"
+        className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 transition-colors placeholder-gray-600 truncate"
       />
       {open && filtered.length > 0 && rect && createPortal(
         <div style={{ position: 'fixed', top: rect.bottom + 2, left: rect.left, width: rect.width, zIndex: 9999 }}
@@ -447,7 +447,7 @@ const TipoCombinadoBtn = ({ value, onChange }) => {
   return (
     <div ref={ref} className="relative">
       <button onClick={() => setOpen(o => !o)}
-        className={`flex items-center gap-1 px-2 h-7 rounded border text-xs transition whitespace-nowrap ${value ? 'bg-[#850000]/20 border-[#850000]/40 text-red-400' : 'border-[#323238] text-gray-500 hover:border-gray-400'}`}>
+        className={`flex items-center gap-1 px-2 h-7 rounded border text-xs transition whitespace-nowrap ${value ? 'bg-[#2563eb]/20 border-[#2563eb]/40 text-red-400' : 'border-[#323238] text-gray-500 hover:border-gray-400'}`}>
         {value || 'Tipo...'}
       </button>
       {open && (
@@ -561,11 +561,11 @@ const DetalhesExercicio = ({ ex, onSave, onClose, intensidadeMap = {} }) => {
           <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Exercício Combinado</span>
           <div className="flex items-center gap-6">
             <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-300">
-              <input type="checkbox" checked={!!local.primeiro} onChange={e => upd('primeiro', e.target.checked ? 1 : 0)} className="accent-[#850000] w-4 h-4" />
+              <input type="checkbox" checked={!!local.primeiro} onChange={e => upd('primeiro', e.target.checked ? 1 : 0)} className="accent-[#2563eb] w-4 h-4" />
               Primeiro exercício
             </label>
             <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-300">
-              <input type="checkbox" checked={!!local.ultimo} onChange={e => upd('ultimo', e.target.checked ? 1 : 0)} className="accent-[#850000] w-4 h-4" />
+              <input type="checkbox" checked={!!local.ultimo} onChange={e => upd('ultimo', e.target.checked ? 1 : 0)} className="accent-[#2563eb] w-4 h-4" />
               Último exercício
             </label>
           </div>
@@ -693,7 +693,7 @@ const BannerOrientacoes = ({ alunoId }) => {
   }
 
   return (
-    <div className="shrink-0 bg-[#850000]/10 border-t border-[#850000]/30">
+    <div className="shrink-0 bg-[#2563eb]/10 border-t border-[#2563eb]/30">
       <div className="px-5 py-2 flex items-start gap-2">
         <button onClick={() => setOpen(o => !o)}
           className="flex items-center gap-1.5 text-[10px] font-bold italic text-gray-500 hover:text-gray-300 uppercase tracking-widest transition outline-none shrink-0">
@@ -821,7 +821,7 @@ const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, inten
                 const isInCombo = combinadosMap[i]
                 return (
                   <tr key={ex._id || i}
-                    className={`border-b border-[#323238] transition group hover:bg-[#202024] ${isInCombo ? 'bg-[#850000]/10 border-l-2 border-l-[#850000]' : 'border-l-2 border-l-transparent'}`}>
+                    className={`border-b border-[#323238] transition group hover:bg-[#202024] ${isInCombo ? 'bg-[#2563eb]/10 border-l-2 border-l-[#2563eb]' : 'border-l-2 border-l-transparent'}`}>
                     {/* Ordem */}
                     <td className="px-2 text-center w-8 align-middle">
                       <div className="flex flex-row items-center justify-center gap-1">
@@ -855,17 +855,17 @@ const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, inten
                     {/* Séries */}
                     <td className="px-2 py-1 align-middle">
                       <input type="number" value={ex.series || ''} onChange={e => upd(i, 'series', e.target.value)}
-                        className="w-full h-8 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60 text-center" />
+                        className="w-full h-8 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 text-center" />
                     </td>
                     {/* Reps */}
                     <td className="px-2 py-1 align-middle">
                       <input value={ex.repeticoes || ''} onChange={e => upd(i, 'repeticoes', e.target.value)}
-                        className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60 text-center" />
+                        className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 text-center" />
                     </td>
                     {/* Descanso */}
                     <td className="px-2 py-1 align-middle">
                       <input value={ex.descanso || ''} onChange={e => upd(i, 'descanso', e.target.value)}
-                        className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60 text-center" />
+                        className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 text-center" />
                     </td>
                     {/* Instruções */}
                     <td className="px-2 py-1 align-middle">
@@ -910,7 +910,7 @@ const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, inten
       </div>
 
       <button onClick={addRow}
-        className="flex items-center gap-2 text-sm text-gray-400 hover:text-white border border-dashed border-[#323238] hover:border-[#850000]/50 px-4 py-2 rounded-lg transition w-full justify-center">
+        className="flex items-center gap-2 text-sm text-gray-400 hover:text-white border border-dashed border-[#323238] hover:border-[#2563eb]/50 px-4 py-2 rounded-lg transition w-full justify-center">
         <Plus size={14} /> Adicionar Exercício
       </button>
     </div>
@@ -1113,7 +1113,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormGroup label="Aluno" required>
               {ficha.nome_completo ? (
-                <div className="flex items-center justify-between h-10 px-3 rounded-lg bg-[#29292e] border border-[#850000]/40">
+                <div className="flex items-center justify-between h-10 px-3 rounded-lg bg-[#29292e] border border-[#2563eb]/40">
                   <span className="text-white text-sm">{ficha.nome_completo}</span>
                   <button onClick={() => { upd('aluno', ''); upd('nome_completo', '') }} className="text-gray-500 hover:text-red-400 ml-2">×</button>
                 </div>
@@ -1144,7 +1144,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
                 <div className="flex gap-2">
                   {/* input de célula — exceção documentada */}
                   <input type="number" value={numSemanas} onChange={e => setNumSemanas(e.target.value)}
-                    className="bg-[#29292e] border border-[#323238] text-gray-200 text-sm rounded-lg pl-3 w-full outline-none focus:border-[#850000]/60 h-10" />
+                    className="bg-[#29292e] border border-[#323238] text-gray-200 text-sm rounded-lg pl-3 w-full outline-none focus:border-[#2563eb]/60 h-10" />
                   <Button variant="primary" onClick={gerarPeriodizacao} icon={Zap} title="Gerar datas e tabela" />
                 </div>
               </div>
@@ -1176,7 +1176,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
                 <div key={i} className="flex items-center justify-between px-4 py-2 border-b border-[#323238] last:border-0 h-10">
                   <span className="text-gray-300 text-sm w-24">{dia.dia_da_semana}</span>
                   <select value={dia.treino} onChange={e => { const d = [...ficha.dias_da_semana]; d[i] = { ...d[i], treino: e.target.value }; upd('dias_da_semana', d) }}
-                    className="bg-[#29292e] border border-[#323238] text-gray-200 text-xs rounded-lg px-2 py-1 outline-none focus:border-[#850000]/60 w-36">
+                    className="bg-[#29292e] border border-[#323238] text-gray-200 text-xs rounded-lg px-2 py-1 outline-none focus:border-[#2563eb]/60 w-36">
                     <option value="Off">Off</option>
                     {['Treino A', 'Treino B', 'Treino C', 'Treino D', 'Treino E', 'Treino F'].map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
@@ -1291,7 +1291,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
           </div>
         </div>
         <button onClick={() => { upd('periodizacao_dos_aerobicos', [...(ficha.periodizacao_dos_aerobicos || []), { _id: uid(), exercicios: '', frequencia: '', instrucao: '' }]); setAerobicoResetKey(k => k + 1) }}
-          className="flex items-center gap-2 text-sm text-gray-400 hover:text-white border border-dashed border-[#323238] hover:border-[#850000]/50 px-4 py-2 rounded-lg transition w-full justify-center">
+          className="flex items-center gap-2 text-sm text-gray-400 hover:text-white border border-dashed border-[#323238] hover:border-[#2563eb]/50 px-4 py-2 rounded-lg transition w-full justify-center">
           <Plus size={14} /> Adicionar Aeróbico
         </button>
       </div>
@@ -1338,7 +1338,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
                         </div>
                       </td>
                       <td className="px-2 py-1 align-middle"><SearchableCombo value={a.exercicio || ''} onChange={v => set('exercicio', v)} options={alongs} placeholder="Buscar..." /></td>
-                      <td className="px-2 py-1 align-middle"><input type="number" value={a.series || ''} onChange={e => set('series', e.target.value)} className="w-full h-8 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60 text-center" /></td>
+                      <td className="px-2 py-1 align-middle"><input type="number" value={a.series || ''} onChange={e => set('series', e.target.value)} className="w-full h-8 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 text-center" /></td>
                       <td className="px-2 py-1 align-top"><TextareaExpansivel value={a.observacoes || ''} onChange={v => set('observacoes', v)} placeholder="Observações..." resetKey={alongamentoResetKey} doctype="Alongamento Observacao" campo="alongamento_observacao" /></td>
                       <td className="px-2 py-1 text-center align-middle">
                         <div className="flex gap-1 justify-center opacity-0 group-hover:opacity-100 transition">
@@ -1355,7 +1355,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
           </div>
         </div>
         <button onClick={() => upd('planilha_de_alongamentos_e_mobilidade', [...(ficha.planilha_de_alongamentos_e_mobilidade || []), { _id: uid(), exercicio: '', series: 3, observacoes: '' }])}
-          className="flex items-center gap-2 text-sm text-gray-400 hover:text-white border border-dashed border-[#323238] hover:border-[#850000]/50 px-4 py-2 rounded-lg transition w-full justify-center">
+          className="flex items-center gap-2 text-sm text-gray-400 hover:text-white border border-dashed border-[#323238] hover:border-[#2563eb]/50 px-4 py-2 rounded-lg transition w-full justify-center">
           <Plus size={14} /> Adicionar Alongamento
         </button>
       </div>
@@ -1409,7 +1409,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
       <div className="sticky top-[57px] z-10 flex items-center gap-1 px-6 py-2 border-b border-[#323238] bg-[#29292e] overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {steps.map((s, i) => (
           <button key={s.id} onClick={() => setStep(i)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition ${i === step ? 'bg-[#850000] text-white' : 'text-gray-400 hover:text-white hover:bg-[#323238]'}`}>
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition ${i === step ? 'bg-[#2563eb] text-white' : 'text-gray-400 hover:text-white hover:bg-[#323238]'}`}>
             <span className="text-xs mr-1 opacity-40">{i + 1}</span>{s.label}
           </button>
         ))}

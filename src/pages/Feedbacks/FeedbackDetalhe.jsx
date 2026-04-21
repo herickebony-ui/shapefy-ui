@@ -353,14 +353,14 @@ export default function FeedbackDetalhe() {
           <button
             onClick={() => navegar(-1)}
             disabled={idxAtual <= 0}
-            className="fixed left-4 md:left-20 top-1/2 -translate-y-1/2 z-30 p-2 md:p-3 bg-[#29292e]/90 backdrop-blur border border-[#323238] rounded-full shadow-xl hover:bg-[#1a1a1a] hover:border-[#850000]/50 disabled:opacity-20 disabled:cursor-not-allowed text-white transition-all"
+            className="fixed left-4 md:left-20 top-1/2 -translate-y-1/2 z-30 p-2 md:p-3 bg-[#29292e]/90 backdrop-blur border border-[#323238] rounded-full shadow-xl hover:bg-[#1a1a1a] hover:border-[#2563eb]/50 disabled:opacity-20 disabled:cursor-not-allowed text-white transition-all"
           >
             <ChevronLeft size={20} />
           </button>
           <button
             onClick={() => navegar(1)}
             disabled={idxAtual >= feedbacksFiltrados.length - 1}
-            className="fixed right-2 md:right-4 top-1/2 -translate-y-1/2 z-30 p-2 md:p-3 bg-[#29292e]/90 backdrop-blur border border-[#323238] rounded-full shadow-xl hover:bg-[#1a1a1a] hover:border-[#850000]/50 disabled:opacity-20 disabled:cursor-not-allowed text-white transition-all"
+            className="fixed right-2 md:right-4 top-1/2 -translate-y-1/2 z-30 p-2 md:p-3 bg-[#29292e]/90 backdrop-blur border border-[#323238] rounded-full shadow-xl hover:bg-[#1a1a1a] hover:border-[#2563eb]/50 disabled:opacity-20 disabled:cursor-not-allowed text-white transition-all"
           >
             <ChevronRight size={20} />
           </button>

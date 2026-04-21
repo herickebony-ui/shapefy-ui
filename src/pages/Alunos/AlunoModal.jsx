@@ -275,7 +275,7 @@ function AnamneseViewer({ anamnese: inicial, onVoltar }) {
           if (isSecao) return (
             <div key={idx} className="px-6 py-5 bg-[#111113] flex items-center gap-4">
               <div className="flex-1 h-px bg-[#323238]" />
-              <span className="text-[#850000] text-xs font-bold uppercase tracking-[0.25em] shrink-0">{item.pergunta}</span>
+              <span className="text-[#2563eb] text-xs font-bold uppercase tracking-[0.25em] shrink-0">{item.pergunta}</span>
               <div className="flex-1 h-px bg-[#323238]" />
             </div>
           )
@@ -303,7 +303,7 @@ function AnamneseViewer({ anamnese: inicial, onVoltar }) {
                     onChange={e => setResposta(idx, e.target.value)}
                     onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
                     style={{ minHeight: '2.5rem', overflow: 'hidden' }}
-                    className="w-full bg-[#29292e] border border-[#323238] focus:border-[#850000]/60 text-white text-xs rounded-lg px-3 py-2 outline-none resize-none leading-relaxed transition-colors"
+                    className="w-full bg-[#29292e] border border-[#323238] focus:border-[#2563eb]/60 text-white text-xs rounded-lg px-3 py-2 outline-none resize-none leading-relaxed transition-colors"
                   />
                 : <p className="text-gray-400 text-xs italic leading-relaxed">{item.resposta || <span className="text-gray-600 not-italic opacity-50">Não respondida</span>}</p>}
             </div>
@@ -435,7 +435,7 @@ function TabAnamnese({ anamneses: inicial, loading, alunoId, onRecarregar }) {
                   onClick={(e) => handleExcluir(e, a)}
                   disabled={excluindo === a.name}
                   title="Excluir anamnese"
-                  className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded-lg transition-colors disabled:opacity-40"
+                  className="h-7 w-7 flex items-center justify-center text-[#2563eb] hover:text-white border border-[#2563eb]/30 hover:bg-[#2563eb] rounded-lg transition-colors disabled:opacity-40"
                 >
                   <Trash2 size={12} />
                 </button>

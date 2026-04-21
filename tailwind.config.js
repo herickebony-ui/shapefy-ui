@@ -13,8 +13,8 @@ export default {
           4: '#323238',  // hover / border
         },
         brand: {
-          DEFAULT: '#850000',
-          hover:   '#a00000',
+          DEFAULT: '#2563eb',
+          hover:   '#1d4ed8',
         },
         info: {
           DEFAULT: '#0052cc',
@@ -40,8 +40,8 @@ export default {
         'td-deep':          '#1a1a1a',
         'td-deeper':        '#121212',
         'td-border':        '#323238',
-        'td-primary':       '#850000',
-        'td-primary-hover': '#b91c1c',
+        'td-primary':       '#2563eb',
+        'td-primary-hover': '#1d4ed8',
       },
       borderRadius: {
         'td': '0.5rem',
@@ -50,7 +50,7 @@ export default {
         'glow-purple': '0 0 15px rgba(168, 85, 247, 0.05)',
         'glow-green':  '0 0 15px rgba(34, 197, 94, 0.05)',
         'glow-blue':   '0 0 15px rgba(59, 130, 246, 0.05)',
-        'glow-red':    '0 0 15px rgba(133, 0, 0, 0.10)',
+        'glow-brand':   '0 0 15px rgba(37, 99, 235, 0.10)',
         'glow-yellow': '0 0 15px rgba(234, 179, 8, 0.05)',
       },
     },

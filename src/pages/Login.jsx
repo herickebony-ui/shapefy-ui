@@ -39,7 +39,7 @@ export default function Login() {
         {/* Logo */}
         <div className="text-center mb-10">
           <h1 className="text-4xl font-bold text-white tracking-tight">
-            Shape<span className="text-[#850000]">fy</span>
+            Shape<span className="text-[#2563eb]">fy</span>
           </h1>
           <p className="text-gray-400 mt-2 text-sm">
             Plataforma de gestão para profissionais de saúde

@@ -108,7 +108,7 @@ const ModalAlongamento = ({ alongamento, onSave, onClose }) => {
 
         <label className="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" checked={!!enabled} onChange={e => setEnabled(e.target.checked ? 1 : 0)}
-            className="accent-[#850000] w-4 h-4" />
+            className="accent-[#2563eb] w-4 h-4" />
           <span className="text-sm text-gray-300">Alongamento ativo</span>
         </label>
       </div>
@@ -237,7 +237,7 @@ export default function GerenciarAlongamentos() {
           </button>
           <button
             onClick={() => setDeletando(row)}
-            className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded-lg transition-colors"
+            className="h-7 w-7 flex items-center justify-center text-[#2563eb] hover:text-white border border-[#2563eb]/30 hover:bg-[#2563eb] rounded-lg transition-colors"
             title="Excluir"
           >
             <Trash2 size={12} />
