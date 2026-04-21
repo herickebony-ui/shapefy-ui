@@ -17,6 +17,7 @@ import FeedbackListagem from './pages/Feedbacks/FeedbackListagem'
 import FeedbackDetalhe from './pages/Feedbacks/FeedbackDetalhe'
 import AvaliacaoListagem from './pages/Avaliacoes/AvaliacaoListagem'
 import AvaliacaoForm from './pages/Avaliacoes/AvaliacaoForm'
+import TreinosRealizados from './pages/Treinos/TreinosRealizados'
 import BancoTextos from './pages/BancoTextos/BancoTextos'
 import FormularioListagem from './pages/Formularios/FormularioListagem'
 import FormularioBuilder from './pages/Formularios/FormularioBuilder'
@@ -54,6 +55,7 @@ function App() {
           <Route path="feedbacks/:id" element={<FeedbackDetalhe />} />
           <Route path="avaliacoes" element={<AvaliacaoListagem />} />
           <Route path="avaliacoes/nova" element={<AvaliacaoForm />} />
+          <Route path="treinos" element={<TreinosRealizados />} />
           <Route path="banco-textos" element={<BancoTextos />} />
           <Route path="criar-formularios" element={<FormularioListagem />} />
           <Route path="criar-formularios/:tipo/:id" element={<FormularioBuilder />} />
