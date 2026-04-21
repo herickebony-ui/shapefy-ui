@@ -135,7 +135,7 @@ export const listarRefeicoesProntas = async ({ busca = '', enabled = '', page = 
 
   const data = new URLSearchParams({
     doctype: 'Refeicoes',
-    fields: JSON.stringify(['name', 'full_name', 'enabled', 'public', 'profissional', 'creation']),
+    fields: JSON.stringify(['name', 'full_name', 'enabled', 'public', 'profissional', 'owner', 'creation']),
     filters: JSON.stringify(filters),
     or_filters: JSON.stringify(orFilters),
     limit_start: (page - 1) * limit,

@@ -3,7 +3,7 @@ import {
   Users, Home, BarChart2, Dumbbell, ClipboardList,
   MessageSquare, Activity, FileText, LogOut, ListChecks,
   PanelLeftClose, PanelLeftOpen, UtensilsCrossed, BookOpen,
-  Wind, Waves,
+  Wind, Waves, Pill, CreditCard, UserCircle, HelpCircle, Briefcase,
 } from 'lucide-react'
 import { useState } from 'react'
 import useAuthStore from '../../store/authStore'
@@ -29,7 +29,13 @@ const NAV_ITEMS = [
   { id: 'feedbacks',    label: 'Feedbacks Recebidos',  icon: MessageSquare, path: '/feedbacks' },
   { id: 'formularios', label: 'Criar Formulários',      icon: ClipboardList, path: '/criar-formularios' },
   { type: 'divider', label: 'Gestão Consultoria' },
-  { id: 'textos',    label: 'Banco de Textos',       icon: FileText,     path: '/banco-textos' },
+  { id: 'textos',       label: 'Banco de Textos',        icon: FileText,     path: '/banco-textos' },
+  { id: 'prescricoes',  label: 'Prescrição Paciente',    icon: Pill,         path: '/prescricoes' },
+  { type: 'divider', label: 'Conta' },
+  { id: 'assinatura',   label: 'Minha Assinatura',       icon: CreditCard,   path: '/assinatura' },
+  { id: 'perfil',       label: 'Perfil Profissional',    icon: Briefcase,    path: '/perfil' },
+  { id: 'me',           label: 'Usuário',                icon: UserCircle,   path: '/me' },
+  { id: 'suporte',      label: 'Suporte',                icon: HelpCircle,   path: '/suporte' },
 ]
 
 export default function AppLayout() {

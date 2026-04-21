@@ -21,6 +21,12 @@ import TreinosRealizados from './pages/Treinos/TreinosRealizados'
 import BancoTextos from './pages/BancoTextos/BancoTextos'
 import FormularioListagem from './pages/Formularios/FormularioListagem'
 import FormularioBuilder from './pages/Formularios/FormularioBuilder'
+import Suporte from './pages/Suporte/Suporte'
+import UsuarioHub from './pages/Usuario/UsuarioHub'
+import PerfilProfissional from './pages/Perfil/PerfilProfissional'
+import MinhaAssinatura from './pages/Assinatura/MinhaAssinatura'
+import PrescricaoListagem from './pages/Prescricoes/PrescricaoListagem'
+import PrescricaoDetalhe from './pages/Prescricoes/PrescricaoDetalhe'
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -59,6 +65,12 @@ function App() {
           <Route path="banco-textos" element={<BancoTextos />} />
           <Route path="criar-formularios" element={<FormularioListagem />} />
           <Route path="criar-formularios/:tipo/:id" element={<FormularioBuilder />} />
+          <Route path="suporte" element={<Suporte />} />
+          <Route path="me" element={<UsuarioHub />} />
+          <Route path="perfil" element={<PerfilProfissional />} />
+          <Route path="assinatura" element={<MinhaAssinatura />} />
+          <Route path="prescricoes" element={<PrescricaoListagem />} />
+          <Route path="prescricoes/:id" element={<PrescricaoDetalhe />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

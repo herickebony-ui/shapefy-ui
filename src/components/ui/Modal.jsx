@@ -4,10 +4,11 @@
 import { X } from 'lucide-react'
 
 const SIZES = {
-  sm: 'md:max-w-[400px]',
-  md: 'md:max-w-[480px]',
-  lg: 'md:max-w-[640px]',
-  xl: 'md:max-w-[800px]',
+  sm:  'md:max-w-[400px]',
+  md:  'md:max-w-[480px]',
+  lg:  'md:max-w-[640px]',
+  xl:  'md:max-w-[800px]',
+  '2xl': 'md:max-w-[1100px]',
 }
 
 export default function Modal({
