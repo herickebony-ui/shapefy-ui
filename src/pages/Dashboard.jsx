@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { Users, UserCheck, UserX, CalendarPlus, Plus, RefreshCw } from 'lucide-react'
-import { listarAlunos, criarAluno, buscarStatsAlunos } from '../api/alunos'
+import { Users, UserCheck, UserX, CalendarPlus, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { listarAlunos, criarAluno, buscarStatsAlunos, excluirAluno } from '../api/alunos'
 import {
   Button, Badge, DataTable,
   Modal, FormGroup, Input, Select,
@@ -50,6 +50,10 @@ export default function Dashboard() {
   // Stats
   const [stats, setStats] = useState({ total: null, ativos: null, inativos: null, novos: null })
 
+  // Modal excluir
+  const [alunoExcluir, setAlunoExcluir] = useState(null)
+  const [excluindo, setExcluindo] = useState(false)
+
   // Modal novo aluno
   const [alunoAberto, setAlunoAberto] = useState(null)
   const [showModal, setShowModal] = useState(false)
@@ -93,6 +97,20 @@ export default function Dashboard() {
   useEffect(() => {
     buscarStatsAlunos().then(setStats).catch(console.error)
   }, [])
+
+  const handleExcluir = async () => {
+    if (!alunoExcluir) return
+    setExcluindo(true)
+    try {
+      await excluirAluno(alunoExcluir.name)
+      setAlunoExcluir(null)
+      carregar()
+      buscarStatsAlunos().then(setStats).catch(() => {})
+    } catch (e) {
+      console.error(e)
+      alert('Erro ao excluir aluno.')
+    } finally { setExcluindo(false) }
+  }
 
   const setField = (campo) => (val) => setNovoAluno(prev => ({ ...prev, [campo]: val }))
 
@@ -167,6 +185,22 @@ export default function Dashboard() {
         </Badge>
       ),
     },
+    {
+      label: 'Ações',
+      headerClass: 'w-16 text-center',
+      cellClass: 'text-center',
+      render: (row) => (
+        <div className="flex items-center justify-center" onClick={e => e.stopPropagation()}>
+          <button
+            onClick={(e) => { e.stopPropagation(); setAlunoExcluir(row) }}
+            title="Excluir aluno"
+            className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded-lg transition-colors"
+          >
+            <Trash2 size={12} />
+          </button>
+        </div>
+      ),
+    },
   ]
 
   return (
@@ -223,6 +257,25 @@ export default function Dashboard() {
       </ListPage>
 
       <AlunoModal aluno={alunoAberto} onClose={() => setAlunoAberto(null)} />
+
+      {alunoExcluir && (
+        <Modal
+          isOpen
+          onClose={() => setAlunoExcluir(null)}
+          title="Excluir Aluno"
+          size="sm"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setAlunoExcluir(null)}>Cancelar</Button>
+              <Button variant="danger" loading={excluindo} onClick={handleExcluir}>Excluir</Button>
+            </>
+          }
+        >
+          <div className="p-4 text-sm text-gray-300">
+            Tem certeza que deseja excluir <span className="text-white font-semibold">{alunoExcluir.nome_completo}</span>? Esta ação não pode ser desfeita.
+          </div>
+        </Modal>
+      )}
 
       {showModal && (
         <Modal

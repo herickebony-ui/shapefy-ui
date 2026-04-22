@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Send, RefreshCw, ChevronRight, Trash2 } from 'lucide-react'
+import { Send, RefreshCw, ChevronRight } from 'lucide-react'
 
 const fmtData = (d) => {
   if (!d) return ''
   const [y, m, day] = String(d).split(' ')[0].split('-')
   return `${day}/${m}/${y}`
 }
-import { listarAlunos, excluirAluno } from '../../api/alunos'
+import { listarAlunos } from '../../api/alunos'
 import { listarAnamnesesPorAlunos, listarAnamneses, listarFormularios, vincularAnamnese } from '../../api/anamneses'
 import {
   Button, Badge, Spinner, EmptyState, DataTable,
@@ -37,10 +37,6 @@ export default function HubAlunos() {
 
   // Modal detalhe aluno
   const [alunoAberto, setAlunoAberto] = useState(null)
-
-  // Modal excluir aluno
-  const [alunoExcluir, setAlunoExcluir] = useState(null)
-  const [excluindo, setExcluindo] = useState(false)
 
   // Modal enviar anamnese
   const [alunoEnvio, setAlunoEnvio] = useState(null)
@@ -113,19 +109,6 @@ export default function HubAlunos() {
     } finally { setEnviando(false) }
   }
 
-  const handleExcluir = async () => {
-    if (!alunoExcluir) return
-    setExcluindo(true)
-    try {
-      await excluirAluno(alunoExcluir.name)
-      setAlunoExcluir(null)
-      await carregar()
-    } catch (e) {
-      console.error(e)
-      alert('Erro ao excluir aluno.')
-    } finally { setExcluindo(false) }
-  }
-
   const alunosFiltrados = filtroStatus
     ? alunos.filter(a => getStatus(a.name) === filtroStatus)
     : alunos
@@ -154,7 +137,7 @@ export default function HubAlunos() {
     },
     {
       label: 'Ações',
-      headerClass: 'w-32 text-center',
+      headerClass: 'w-24 text-center',
       cellClass: 'text-center',
       render: (row) => (
         <div className="flex items-center justify-center gap-1.5" onClick={e => e.stopPropagation()}>
@@ -171,13 +154,6 @@ export default function HubAlunos() {
             className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors"
           >
             <ChevronRight size={12} />
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); setAlunoExcluir(row) }}
-            title="Excluir aluno"
-            className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded-lg transition-colors"
-          >
-            <Trash2 size={12} />
           </button>
         </div>
       ),
@@ -217,25 +193,6 @@ export default function HubAlunos() {
       </ListPage>
 
       <AlunoModal aluno={alunoAberto} onClose={() => setAlunoAberto(null)} />
-
-      {alunoExcluir && (
-        <Modal
-          isOpen
-          onClose={() => setAlunoExcluir(null)}
-          title="Excluir Aluno"
-          size="sm"
-          footer={
-            <>
-              <Button variant="ghost" onClick={() => setAlunoExcluir(null)}>Cancelar</Button>
-              <Button variant="danger" loading={excluindo} onClick={handleExcluir}>Excluir</Button>
-            </>
-          }
-        >
-          <div className="p-4 text-sm text-gray-300">
-            Tem certeza que deseja excluir <span className="text-white font-semibold">{alunoExcluir.nome_completo}</span>? Esta ação não pode ser desfeita.
-          </div>
-        </Modal>
-      )}
 
       {alunoEnvio && (
         <Modal
