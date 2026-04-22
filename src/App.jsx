@@ -33,6 +33,13 @@ function PrivateRoute({ children }) {
   return isAuthenticated ? children : <Navigate to="/login" replace />
 }
 
+function ModuleRoute({ modulo, children }) {
+  const modulos = useAuthStore((s) => s.modulos)
+  if (modulos?.[modulo]) return children
+  window.location.href = 'https://shapefy.online/checkout?subscription_plan=PLANO%20COMPLETO%20MENSAL'
+  return null
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -47,21 +54,31 @@ function App() {
           }
         >
           <Route index element={<Dashboard />} />
-          <Route path="alunos" element={<HubAlunos />} />
-          <Route path="dietas" element={<DietaListagem />} />
-<Route path="dietas/:id" element={<DietaDetalhe />} />
-          <Route path="fichas" element={<FichaListagem />} />
-          <Route path="fichas/:id" element={<FichaDetalhe />} />
-          <Route path="exercicios" element={<GerenciarTreino />} />
-          <Route path="alongamentos" element={<GerenciarAlongamentos />} />
-          <Route path="aerobicos" element={<GerenciarAerobicos />} />
-          <Route path="alimentos" element={<AlimentosListagem />} />
-          <Route path="refeicoes-prontas" element={<RefeicoesProntasListagem />} />
-          <Route path="feedbacks" element={<FeedbackListagem />} />
-          <Route path="feedbacks/:id" element={<FeedbackDetalhe />} />
+
+          {/* anamnese */}
+          <Route path="alunos" element={<ModuleRoute modulo="anamnese"><HubAlunos /></ModuleRoute>} />
+
+          {/* dieta */}
+          <Route path="dietas" element={<ModuleRoute modulo="dieta"><DietaListagem /></ModuleRoute>} />
+          <Route path="dietas/:id" element={<ModuleRoute modulo="dieta"><DietaDetalhe /></ModuleRoute>} />
+          <Route path="alimentos" element={<ModuleRoute modulo="dieta"><AlimentosListagem /></ModuleRoute>} />
+          <Route path="refeicoes-prontas" element={<ModuleRoute modulo="dieta"><RefeicoesProntasListagem /></ModuleRoute>} />
+
+          {/* treino */}
+          <Route path="fichas" element={<ModuleRoute modulo="treino"><FichaListagem /></ModuleRoute>} />
+          <Route path="fichas/:id" element={<ModuleRoute modulo="treino"><FichaDetalhe /></ModuleRoute>} />
+          <Route path="exercicios" element={<ModuleRoute modulo="treino"><GerenciarTreino /></ModuleRoute>} />
+          <Route path="alongamentos" element={<ModuleRoute modulo="treino"><GerenciarAlongamentos /></ModuleRoute>} />
+          <Route path="aerobicos" element={<ModuleRoute modulo="treino"><GerenciarAerobicos /></ModuleRoute>} />
+          <Route path="treinos" element={<ModuleRoute modulo="treino"><TreinosRealizados /></ModuleRoute>} />
+
+          {/* feedback */}
+          <Route path="feedbacks" element={<ModuleRoute modulo="feedback"><FeedbackListagem /></ModuleRoute>} />
+          <Route path="feedbacks/:id" element={<ModuleRoute modulo="feedback"><FeedbackDetalhe /></ModuleRoute>} />
+
+          {/* sem restrição */}
           <Route path="avaliacoes" element={<AvaliacaoListagem />} />
           <Route path="avaliacoes/nova" element={<AvaliacaoForm />} />
-          <Route path="treinos" element={<TreinosRealizados />} />
           <Route path="banco-textos" element={<BancoTextos />} />
           <Route path="criar-formularios" element={<FormularioListagem />} />
           <Route path="criar-formularios/:tipo/:id" element={<FormularioBuilder />} />

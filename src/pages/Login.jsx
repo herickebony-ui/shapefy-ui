@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
 import { login } from '../api/auth'
+import { buscarAssinatura, buscarPlano } from '../api/assinatura'
 import { Input, Button } from '../components/ui'
 import { tw } from '../styles/tokens'
 
 export default function Login() {
   const navigate = useNavigate()
   const setAuth = useAuthStore((s) => s.setAuth)
+  const setModulos = useAuthStore((s) => s.setModulos)
   const [form, setForm] = useState({ usr: '', pwd: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -23,6 +25,24 @@ export default function Login() {
       const fullName = res.message.full_name || ''
       localStorage.setItem('frappe_user_name', fullName.split(' ')[0])
       setAuth(form.usr, token)
+
+      try {
+        const assinatura = await buscarAssinatura()
+        if (assinatura?.plano_de_assinatura) {
+          const plano = await buscarPlano(assinatura.plano_de_assinatura)
+          if (plano) {
+            setModulos({
+              dieta:    !!plano.dieta,
+              treino:   !!plano.treino,
+              feedback: !!plano.feedback,
+              anamnese: !!plano.anamnese,
+            })
+          }
+        }
+      } catch (e) {
+        console.error('Erro ao buscar módulos do plano:', e)
+      }
+
       navigate('/')
     } catch (err) {
       console.log('ERRO:', err.response?.data)

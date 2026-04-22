@@ -13,20 +13,20 @@ const NAV_ITEMS = [
   { type: 'divider', label: 'Dashboard' },
   { id: 'main',      label: 'Meus Alunos',          icon: Users,        path: '/' },
   { type: 'divider', label: 'Central de Alunos' },
-  { id: 'alunos',    label: 'Gestão de Anamneses',   icon: ClipboardList, path: '/alunos' },
+  { id: 'alunos',    label: 'Gestão de Anamneses',   icon: ClipboardList, path: '/alunos',   modulo: 'anamnese' },
   { id: 'avaliacoes',label: 'Avaliações Corporais',  icon: BarChart2,    path: '/avaliacoes' },
-  { type: 'divider', label: 'Module Trainning' },
-  { id: 'fichas',    label: 'Fichas de Treino',      icon: Dumbbell,     path: '/fichas' },
-  { id: 'treinos',   label: 'Treinos Realizados',    icon: Activity,     path: '/treinos' },
-  { id: 'exercicios',   label: 'Gerenciar Exercícios',   icon: ListChecks, path: '/exercicios' },
-  { id: 'alongamentos', label: 'Gerenciar Alongamentos', icon: Waves,      path: '/alongamentos' },
-  { id: 'aerobicos',    label: 'Gerenciar Aeróbicos',    icon: Wind,       path: '/aerobicos' },
-  { type: 'divider', label: 'Module Diet' },
-  { id: 'dietas',    label: 'Dietas',                icon: ClipboardList,    path: '/dietas' },
-  { id: 'alimentos',         label: 'Cadastrar Alimentos',  icon: UtensilsCrossed, path: '/alimentos' },
-  { id: 'refeicoes-prontas', label: 'Cadastrar Refeições Prontas',   icon: BookOpen,        path: '/refeicoes-prontas' },
+  { type: 'divider', label: 'Module Trainning', modulo: 'treino' },
+  { id: 'fichas',    label: 'Fichas de Treino',      icon: Dumbbell,     path: '/fichas',       modulo: 'treino' },
+  { id: 'treinos',   label: 'Treinos Realizados',    icon: Activity,     path: '/treinos',      modulo: 'treino' },
+  { id: 'exercicios',   label: 'Gerenciar Exercícios',   icon: ListChecks, path: '/exercicios',   modulo: 'treino' },
+  { id: 'alongamentos', label: 'Gerenciar Alongamentos', icon: Waves,      path: '/alongamentos', modulo: 'treino' },
+  { id: 'aerobicos',    label: 'Gerenciar Aeróbicos',    icon: Wind,       path: '/aerobicos',    modulo: 'treino' },
+  { type: 'divider', label: 'Module Diet', modulo: 'dieta' },
+  { id: 'dietas',    label: 'Dietas',                icon: ClipboardList,    path: '/dietas',           modulo: 'dieta' },
+  { id: 'alimentos',         label: 'Cadastrar Alimentos',        icon: UtensilsCrossed, path: '/alimentos',         modulo: 'dieta' },
+  { id: 'refeicoes-prontas', label: 'Cadastrar Refeições Prontas', icon: BookOpen,        path: '/refeicoes-prontas', modulo: 'dieta' },
   { type: 'divider', label: 'Gerenciamento de Alunos' },
-  { id: 'feedbacks',    label: 'Feedbacks Recebidos',  icon: MessageSquare, path: '/feedbacks' },
+  { id: 'feedbacks',    label: 'Feedbacks Recebidos',  icon: MessageSquare, path: '/feedbacks',        modulo: 'feedback' },
   { id: 'formularios', label: 'Criar Formulários',      icon: ClipboardList, path: '/criar-formularios' },
   { type: 'divider', label: 'Gestão Consultoria' },
   { id: 'textos',       label: 'Banco de Textos',        icon: FileText,     path: '/banco-textos' },
@@ -41,7 +41,7 @@ const NAV_ITEMS = [
 export default function AppLayout() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { user, clearAuth } = useAuthStore()
+  const { user, clearAuth, modulos } = useAuthStore()
   const [expanded, setExpanded] = useState(false)
   const userName = localStorage.getItem('frappe_user_name') || 'Admin'
 
@@ -96,6 +96,8 @@ export default function AppLayout() {
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-3 space-y-1">
           {NAV_ITEMS.map((item, idx) => {
+            if (item.modulo && !modulos?.[item.modulo]) return null
+
             if (item.type === 'divider') {
               return expanded ? (
                 <p key={idx} className="px-3 pt-4 pb-1 text-[10px] font-bold text-gray-600 uppercase tracking-widest">
