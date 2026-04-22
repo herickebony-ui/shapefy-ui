@@ -110,6 +110,14 @@ function LinkCadastroField({ preenchido, alunoId }) {
 
 // ─── Tab Perfil ───────────────────────────────────────────────────────────────
 
+function parseEndereco(raw) {
+  try {
+    const parsed = JSON.parse(raw || '')
+    if (parsed && typeof parsed === 'object' && 'cep' in parsed) return parsed
+  } catch {}
+  return { cep: '', logradouro: raw || '', numero: '', bairro: '', cidade: '', uf: '' }
+}
+
 function TabPerfil({ aluno: inicial, alunoId }) {
   const [form, setForm] = useState({
     nome_completo: inicial.nome_completo || '',
@@ -119,7 +127,6 @@ function TabPerfil({ aluno: inicial, alunoId }) {
     senha_de_acesso: inicial.senha_de_acesso || '',
     cpf: inicial.cpf || '',
     'profissão': inicial['profissão'] || '',
-    'endereço': inicial['endereço'] || '',
     sexo: inicial.sexo || '',
     age: inicial.age || '',
     height: inicial.height || '',
@@ -134,11 +141,39 @@ function TabPerfil({ aluno: inicial, alunoId }) {
     treino: !!inicial.treino,
     ja_usou_o_aplicativo: !!inicial.ja_usou_o_aplicativo,
   })
+  const [address, setAddress] = useState(() => parseEndereco(inicial['endereço']))
+  const [buscandoCep, setBuscandoCep] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [salvo, setSalvo] = useState(false)
 
   const set = (campo) => (val) => setForm(prev => ({ ...prev, [campo]: val }))
   const toggle = (campo) => (val) => setForm(prev => ({ ...prev, [campo]: val }))
+  const setAddr = (campo) => (val) => setAddress(prev => ({ ...prev, [campo]: val }))
+
+  const buscarCep = async (digits) => {
+    setBuscandoCep(true)
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`)
+      const data = await res.json()
+      if (!data.erro) {
+        setAddress(prev => ({
+          ...prev,
+          logradouro: data.logradouro || '',
+          bairro: data.bairro || '',
+          cidade: data.localidade || '',
+          uf: data.uf || '',
+        }))
+      }
+    } catch (e) { console.error(e) }
+    finally { setBuscandoCep(false) }
+  }
+
+  const onCepChange = (val) => {
+    const digits = val.replace(/\D/g, '').slice(0, 8)
+    const masked = digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits
+    setAddress(prev => ({ ...prev, cep: masked }))
+    if (digits.length === 8) buscarCep(digits)
+  }
 
   const salvar = async () => {
     setSalvando(true)
@@ -146,6 +181,14 @@ function TabPerfil({ aluno: inicial, alunoId }) {
       const { ja_usou_o_aplicativo: _a, link_de_cadastro: _b, ...payload } = form
       await salvarAluno(alunoId, {
         ...payload,
+        'endereço': JSON.stringify({
+          cep: address.cep.replace(/\D/g, ''),
+          logradouro: address.logradouro,
+          numero: address.numero,
+          bairro: address.bairro,
+          cidade: address.cidade,
+          uf: address.uf,
+        }),
         enabled: form.enabled ? 1 : 0,
         dieta: form.dieta ? 1 : 0,
         treino: form.treino ? 1 : 0,
@@ -176,7 +219,37 @@ function TabPerfil({ aluno: inicial, alunoId }) {
         <FormGroup label="CPF"><Input value={form.cpf} onChange={set('cpf')} /></FormGroup>
         <FormGroup label="Profissão"><Input value={form['profissão']} onChange={set('profissão')} /></FormGroup>
       </div>
-      <FormGroup label="Endereço"><Input value={form['endereço']} onChange={set('endereço')} /></FormGroup>
+
+      <SecaoPerfil titulo="Endereço" />
+      <div className="grid grid-cols-2 gap-3">
+        <FormGroup label="CEP">
+          <div className="relative">
+            <Input value={address.cep} onChange={onCepChange} placeholder="00000-000" />
+            {buscandoCep && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                <Spinner size="sm" />
+              </div>
+            )}
+          </div>
+        </FormGroup>
+        <FormGroup label="Logradouro">
+          <Input value={address.logradouro} onChange={setAddr('logradouro')} placeholder="Rua, Av..." />
+        </FormGroup>
+        <FormGroup label="Número">
+          <Input value={address.numero} onChange={setAddr('numero')} placeholder="Ex: 120" />
+        </FormGroup>
+        <FormGroup label="Bairro">
+          <Input value={address.bairro} onChange={setAddr('bairro')} />
+        </FormGroup>
+      </div>
+      <div className="grid grid-cols-[1fr_72px] gap-3">
+        <FormGroup label="Cidade">
+          <Input value={address.cidade} onChange={setAddr('cidade')} />
+        </FormGroup>
+        <FormGroup label="UF">
+          <Input value={address.uf} onChange={v => setAddr('uf')(v.toUpperCase().slice(0, 2))} placeholder="BA" />
+        </FormGroup>
+      </div>
 
       <SecaoPerfil titulo="Corpo" />
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

@@ -1,9 +1,9 @@
-beta.shapefyapp.com {
+shapefyapp.com {
     root * /usr/share/caddy
     encode gzip
 
-    reverse_proxy /api/* https://beta.shapefy.online {
-        header_up Host beta.shapefy.online
+    reverse_proxy /api/* https://shapefy.online {
+        header_up Host shapefy.online
     }
 
     file_server

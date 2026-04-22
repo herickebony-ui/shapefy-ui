@@ -17,7 +17,7 @@ client.interceptors.request.use((config) => {
 client.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 || 417) {
+    if (error.response?.status === 401) {
       localStorage.removeItem('frappe_token')
     }
     return Promise.reject(error)
