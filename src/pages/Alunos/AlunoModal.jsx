@@ -111,11 +111,18 @@ function LinkCadastroField({ preenchido, alunoId }) {
 // ─── Tab Perfil ───────────────────────────────────────────────────────────────
 
 function parseEndereco(raw) {
-  try {
-    const parsed = JSON.parse(raw || '')
-    if (parsed && typeof parsed === 'object' && 'cep' in parsed) return parsed
-  } catch {}
   return { cep: '', logradouro: raw || '', numero: '', bairro: '', cidade: '', uf: '' }
+}
+
+function formatarEndereco(address) {
+  const partes = []
+  if (address.logradouro) partes.push(address.logradouro)
+  if (address.numero) partes.push(address.numero)
+  if (address.bairro) partes.push(address.bairro)
+  if (address.cidade) partes.push(address.cidade)
+  if (address.uf) partes.push(address.uf)
+  if (address.cep) partes.push(`CEP ${address.cep}`)
+  return partes.join(', ')
 }
 
 function TabPerfil({ aluno: inicial, alunoId }) {
@@ -181,14 +188,7 @@ function TabPerfil({ aluno: inicial, alunoId }) {
       const { ja_usou_o_aplicativo: _a, link_de_cadastro: _b, ...payload } = form
       await salvarAluno(alunoId, {
         ...payload,
-        'endereço': JSON.stringify({
-          cep: address.cep.replace(/\D/g, ''),
-          logradouro: address.logradouro,
-          numero: address.numero,
-          bairro: address.bairro,
-          cidade: address.cidade,
-          uf: address.uf,
-        }),
+        'endereço': formatarEndereco(address),
         enabled: form.enabled ? 1 : 0,
         dieta: form.dieta ? 1 : 0,
         treino: form.treino ? 1 : 0,
@@ -211,7 +211,7 @@ function TabPerfil({ aluno: inicial, alunoId }) {
         <FormGroup label="E-mail"><Input value={form.email} onChange={set('email')} type="email" /></FormGroup>
         <FormGroup label="Telefone"><Input value={form.telefone} onChange={set('telefone')} /></FormGroup>
         <FormGroup label="Instagram"><Input value={form.instagram} onChange={set('instagram')} placeholder="@usuario" /></FormGroup>
-        <FormGroup label="Senha de Acesso"><Input value={form.senha_de_acesso} onChange={set('senha_de_acesso')} /></FormGroup>
+        <FormGroup label="Senha de Acesso"><Input value={form.senha_de_acesso} onChange={() => {}} disabled /></FormGroup>
       </div>
 
       <SecaoPerfil titulo="Dados Pessoais" />
