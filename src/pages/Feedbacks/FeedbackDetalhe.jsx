@@ -57,7 +57,7 @@ export default function FeedbackDetalhe() {
       try {
         const data = await buscarFeedback(id)
         setFeedback(data)
-        setStatusLocal(data.status || 'Respondido')
+        setStatusLocal(data.status || '')
         setResposta(data.feedback_do_profissional || '')
       } catch (e) {
         console.error(e)

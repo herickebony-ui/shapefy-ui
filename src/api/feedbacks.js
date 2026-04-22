@@ -4,7 +4,10 @@ const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
 
 export const listarFeedbacks = async ({ busca = '', status = '', dataInicio = '', dataFim = '', page = 1, limit = 500 } = {}) => {
   const profissional = profissionalLogado()
-  const filtros = [['profissional', 'in', [profissional, '']]]
+  const filtros = [
+    ['profissional', 'in', [profissional, '']],
+    ['status', '!=', 'Enviando'],
+  ]
   if (busca) {
     filtros.push(['nome_completo', 'like', `%${busca}%`])
   } else {

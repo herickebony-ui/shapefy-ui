@@ -11,25 +11,32 @@ export default function ImagemInterativa({ src, feedbackId, idx, onRotate, reado
   const [scale, setScale] = useState(saved?.scale || 1)
   const [pos, setPos] = useState(saved?.pos || { x: 0, y: 0 })
   const [align, setAlign] = useState(saved?.align || 0)
+  const [rotation, setRotation] = useState(saved?.rotation || 0)
   const [isDragging, setIsDragging] = useState(false)
   const [startDrag, setStartDrag] = useState({ x: 0, y: 0 })
 
   const [imgLoading, setImgLoading] = useState(true)
   const [imgError, setImgError] = useState(false)
 
-  const isDirty = scale !== 1 || pos.x !== 0 || pos.y !== 0 || align !== 0
+  const isDirty = scale !== 1 || pos.x !== 0 || pos.y !== 0 || align !== 0 || rotation !== 0
 
   useEffect(() => {
     const t = setTimeout(() => {
       if (isDirty) {
-        localStorage.setItem(storageKey, JSON.stringify({ scale, pos, align }))
+        localStorage.setItem(storageKey, JSON.stringify({ scale, pos, align, rotation }))
       }
     }, 500)
     return () => clearTimeout(t)
-  }, [scale, pos, align, storageKey, isDirty])
+  }, [scale, pos, align, rotation, storageKey, isDirty])
+
+  const handleVirar = () => {
+    setRotation(r => (r + 90) % 360)
+    // tenta persistir no servidor em background, sem bloquear o visual
+    onRotate?.()
+  }
 
   const reset = () => {
-    setScale(1); setPos({ x: 0, y: 0 }); setAlign(0)
+    setScale(1); setPos({ x: 0, y: 0 }); setAlign(0); setRotation(0)
     localStorage.removeItem(storageKey)
   }
 
@@ -65,7 +72,7 @@ export default function ImagemInterativa({ src, feedbackId, idx, onRotate, reado
         <div className="flex flex-col w-full gap-3 px-1 bg-[#222226]/60 p-3 rounded-lg border border-[#323238]">
           <div className="flex items-center justify-between w-full">
             <button
-              onClick={onRotate}
+              onClick={handleVirar}
               className="text-[10px] flex items-center gap-1 bg-[#29292e] px-3 py-1.5 rounded-lg border border-[#323238] hover:border-[#2563eb] text-white transition-all shrink-0 font-bold"
             >
               <RefreshCw size={10} /> Virar 90°
@@ -132,7 +139,7 @@ export default function ImagemInterativa({ src, feedbackId, idx, onRotate, reado
             draggable={false}
             className="max-h-full max-w-full object-contain"
             style={{
-              transform: `translate(${pos.x}px, ${pos.y}px) scale(${scale}) rotate(${align}deg)`,
+              transform: `translate(${pos.x}px, ${pos.y}px) scale(${scale}) rotate(${rotation + align}deg)`,
               transition: isDragging ? 'none' : 'transform 0.1s ease-out',
               display: imgError ? 'none' : 'block',
             }}
