@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 .env
+Caddyfile
+nginx.conf
+vite.config.js
