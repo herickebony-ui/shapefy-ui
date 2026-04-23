@@ -6,18 +6,18 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://shapefy.online',
+        target: 'https://beta.shapefy.online',
         changeOrigin: true,
         secure: true,
         cookieDomainRewrite: 'localhost',
       },
       '/files': {
-        target: 'https://shapefy.online',
+        target: 'https://beta.shapefy.online',
         changeOrigin: true,
         secure: true,
       },
       '/private/files': {
-        target: 'https://shapefy.online',
+        target: 'https://beta.shapefy.online',
         changeOrigin: true,
         secure: true,
       }
