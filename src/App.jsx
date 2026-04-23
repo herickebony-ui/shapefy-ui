@@ -33,10 +33,12 @@ function PrivateRoute({ children }) {
   return isAuthenticated ? children : <Navigate to="/login" replace />
 }
 
+const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
+
 function ModuleRoute({ modulo, children }) {
   const modulos = useAuthStore((s) => s.modulos)
   if (modulos?.[modulo]) return children
-  window.location.href = 'https://shapefy.online/checkout?subscription_plan=PLANO%20COMPLETO%20MENSAL'
+  window.location.href = `${FRAPPE_URL}/checkout?subscription_plan=PLANO%20COMPLETO%20MENSAL`
   return null
 }
 

@@ -71,7 +71,7 @@ function ToggleField({ label, descricao, value, onChange }) {
 function LinkCadastroField({ preenchido, alunoId }) {
   const [copiado, setCopiado] = useState(false)
   const copiarLink = async () => {
-    const url = `https://shapefy.online/preencher_aluno?name=${alunoId}`
+    const url = `${FRAPPE_URL}/preencher_aluno?name=${alunoId}`
     try {
       await navigator.clipboard.writeText(url)
       setCopiado(true)
