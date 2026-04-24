@@ -17,7 +17,7 @@ export default function Badge({ children, variant = 'default', size = 'md' }) {
   }
 
   return (
-    <span className={`inline-flex items-center font-semibold rounded border uppercase tracking-wider ${variants[variant]} ${sizes[size]}`}>
+    <span className={`inline-flex items-center font-bold rounded border uppercase tracking-wider ${variants[variant]} ${sizes[size]}`}>
       {children}
     </span>
   )

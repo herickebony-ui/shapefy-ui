@@ -73,7 +73,7 @@ export default function Input({
 
   return (
     <div className="w-full flex flex-col gap-1.5">
-      <label className="text-gray-400 text-xs font-bold uppercase tracking-wider">{label}</label>
+      <label className="text-gray-400 text-xs font-medium">{label}</label>
       {field}
       {error && <p className="text-[#f87171] text-[11px]">{error}</p>}
     </div>

@@ -11,7 +11,7 @@ export default function Tabs({ tabs = [], active, onChange, variant = 'underline
             onClick={() => !tab.disabled && onChange(tab.id)}
             disabled={tab.disabled}
             className={`
-              inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium
+              inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold
               transition-colors shrink-0
               disabled:opacity-40 disabled:cursor-not-allowed
               ${active === tab.id
@@ -43,7 +43,7 @@ export default function Tabs({ tabs = [], active, onChange, variant = 'underline
             disabled={tab.disabled}
             className={`
               inline-flex items-center gap-2 px-4 md:px-5 py-3
-              text-[12px] md:text-[13px] font-medium border-b-2 transition-colors shrink-0
+              text-[12px] md:text-[13px] font-semibold border-b-2 transition-colors shrink-0
               disabled:opacity-40 disabled:cursor-not-allowed
               ${active === tab.id
                 ? 'border-[#2563eb] text-white'

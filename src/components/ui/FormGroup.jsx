@@ -4,7 +4,7 @@ export default function FormGroup({ label, required, hint, error, success, count
     <div className="flex flex-col gap-1.5">
       {label && (
         <div className="flex items-center justify-between">
-          <label className="text-gray-400 text-xs font-bold uppercase tracking-wider">
+          <label className="text-gray-400 text-xs font-medium">
             {label}
             {required && <span className="text-[#ef4444] ml-1">*</span>}
           </label>

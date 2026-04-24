@@ -863,7 +863,7 @@ const ModalHistoricoAluno = ({ ficha: fichaRef, onClose }) => {
                       {fichasVol.map((fv) => (
                         <th key={fv.fichaId} className={`text-center py-2 px-3 text-xs font-semibold uppercase tracking-wider min-w-[90px] ${fv.isCurrent ? 'text-[#1d4ed8]' : 'text-gray-400'}`}>
                           <div>{fv.label}</div>
-                          {fv.nivel && <div className="font-normal text-[10px] text-gray-500 mt-0.5 normal-case">{fv.nivel}</div>}
+                          {fv.nivel && <div className="font-medium text-[10px] text-gray-500 mt-0.5 normal-case">{fv.nivel}</div>}
                           {fv.isCurrent && <div className="text-[10px] text-[#2563eb] normal-case mt-0.5 font-bold">atual</div>}
                         </th>
                       ))}

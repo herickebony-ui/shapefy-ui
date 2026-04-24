@@ -32,11 +32,11 @@ export default function CollapsibleBanner({
   const v = STYLES[variant] || STYLES.primary
 
   return (
-    <div className={`border rounded-lg ${v.wrapper}`}>
+    <div className={`border rounded-xl ${v.wrapper}`}>
       <div className="px-4 py-2.5 flex items-center justify-between gap-3">
         <button
           onClick={() => setOpen(o => !o)}
-          className={`flex items-center gap-2.5 text-[11px] font-bold italic uppercase tracking-[0.12em] ${v.title} outline-none text-left`}
+          className={`flex items-center gap-2.5 text-[11px] font-bold italic uppercase tracking-widest ${v.title} outline-none text-left`}
         >
           {open
             ? <ChevronUp size={14} strokeWidth={2.5} />

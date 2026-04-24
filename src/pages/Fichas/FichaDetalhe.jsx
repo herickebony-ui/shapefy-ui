@@ -25,10 +25,13 @@ const uid = () =>
     ? crypto.randomUUID()
     : `${Date.now()}_${Math.random().toString(16).slice(2)}`
 
+const TREINOS = ['a', 'b', 'c', 'd', 'e', 'f']
+const labelTreino = (t, ficha) => ficha[`treino_${t}_label`] || `Treino ${t.toUpperCase()}`
+
 const arrayMove = (arr, from, to) => {
   const a = [...arr]
   const [item] = a.splice(from, 1)
-  a.splice(to > from ? to - 1 : to, 0, item)
+  a.splice(to, 0, item)
   return a
 }
 
@@ -618,7 +621,7 @@ const DetalhesExercicio = ({ ex, onSave, onClose, intensidadeMap = {} }) => {
         {/* Intensidade — editável */}
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
-            <label className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Intensidade</label>
+            <label className="text-xs text-gray-400 font-bold uppercase tracking-wider">Intensidade</label>
             <button onClick={addIntensLinha}
               className="flex items-center gap-1 text-xs text-gray-500 hover:text-white border border-[#323238] px-2 py-0.5 rounded-lg transition">
               <Plus size={10} /> Add
@@ -1010,14 +1013,14 @@ const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, inten
           <thead>
             <tr className="text-gray-500 text-[10px] uppercase tracking-wider border-b border-[#323238] bg-[#19191d]">
               <th className="w-[3px] p-0" />
-              <th className="w-10 py-2.5 px-2" />
+              <th className="w-8 py-2.5 px-2" />
               <th className="text-left py-2.5 px-2 w-36">Grupo Muscular</th>
-              <th className="text-left py-2.5 px-2 w-52">Exercício</th>
+              <th className="text-left py-2.5 px-2 w-56">Exercício</th>
               <th className="text-center py-2.5 px-2 w-[88px]">Séries</th>
-              <th className="text-center py-2.5 px-2 w-20">Reps</th>
-              <th className="text-center py-2.5 px-2 w-20">Descanso</th>
+              <th className="text-center py-2.5 px-2 w-24">Reps</th>
+              <th className="text-center py-2.5 px-2 w-24">Descanso</th>
               <th className="text-left py-2.5 px-2">Instruções</th>
-              <th className="text-right py-2.5 px-2 w-[120px]">Ações</th>
+              <th className="text-right py-2.5 px-2 w-32">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -1103,12 +1106,12 @@ const ExRow = ({ ex, i, total, isPart, position, onChange, onMove, onDup, onRemo
       {/* Reps */}
       <td className="px-2 py-1 align-middle">
         <input value={ex.repeticoes || ''} onChange={e => upd('repeticoes', e.target.value)}
-          className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 text-center" placeholder="8-12" />
+          className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 text-center" placeholder="8 a 12" />
       </td>
       {/* Descanso */}
       <td className="px-2 py-1 align-middle">
         <input value={ex.descanso || ''} onChange={e => upd('descanso', e.target.value)}
-          className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 text-center" placeholder="01:30" />
+          className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 text-center" placeholder="00:45 a 01:30" />
       </td>
       {/* Instruções */}
       <td className="px-2 py-1 align-middle">
@@ -1146,6 +1149,115 @@ const ExRow = ({ ex, i, total, isPart, position, onChange, onMove, onDup, onRemo
   )
 }
 
+// ─── GerenciadorTreinos ──────────────────────────────────────────────────────
+
+const GerenciadorTreinos = ({ ficha, upd, onClose }) => {
+  const [acao, setAcao] = useState('copiar')
+  const [origem, setOrigem] = useState('')
+  const [destino, setDestino] = useState('')
+  const [feedback, setFeedback] = useState('')
+
+  const executar = () => {
+    if (!origem) return setFeedback('Selecione o treino de origem.')
+    if (acao !== 'excluir' && !destino) return setFeedback('Selecione o treino de destino.')
+    if ((acao === 'copiar' || acao === 'mover' || acao === 'inverter') && origem === destino)
+      return setFeedback('Origem e destino não podem ser iguais.')
+
+    const chaveOrigem = `planilha_de_treino_${origem}`
+    const chaveDestino = `planilha_de_treino_${destino}`
+
+    // Regenera _id e descarta o `name` do doc vindo do backend para evitar
+    // colisão de keys no React e overwrite acidental do exercício original.
+    const limpar = (ex) => {
+      const { name, _id, ...resto } = ex
+      return { ...resto, _id: uid() }
+    }
+    const exOrigem = (ficha[chaveOrigem] || []).map(limpar)
+    const exDestino = (ficha[chaveDestino] || []).map(limpar)
+
+    if (acao === 'copiar') {
+      upd(chaveDestino, [...exDestino, ...exOrigem])
+      setFeedback(`✅ Exercícios do ${labelTreino(origem, ficha)} copiados para ${labelTreino(destino, ficha)}.`)
+    } else if (acao === 'mover') {
+      upd(chaveDestino, [...exDestino, ...exOrigem])
+      upd(chaveOrigem, [])
+      setFeedback(`✅ Exercícios movidos de ${labelTreino(origem, ficha)} para ${labelTreino(destino, ficha)}.`)
+    } else if (acao === 'inverter') {
+      upd(chaveOrigem, exDestino)
+      upd(chaveDestino, exOrigem)
+      setFeedback(`✅ ${labelTreino(origem, ficha)} e ${labelTreino(destino, ficha)} invertidos.`)
+    } else if (acao === 'excluir') {
+      if (!window.confirm(`Excluir todos os exercícios do ${labelTreino(origem, ficha)}?`)) return
+      upd(chaveOrigem, [])
+      setFeedback(`✅ ${labelTreino(origem, ficha)} limpo.`)
+    }
+  }
+
+  const rotulo = (t) => {
+    const n = (ficha[`planilha_de_treino_${t}`] || []).length
+    return `${labelTreino(t, ficha)}${n > 0 ? ` (${n} ex.)` : ' (vazio)'}`
+  }
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Gerenciador de Treinos"
+      size="sm"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>Fechar</Button>
+          <Button variant="primary" onClick={executar}>Executar</Button>
+        </>
+      }
+    >
+      <div className="p-4 flex flex-col gap-4">
+        <FormGroup label="Ação">
+          <Select
+            value={acao}
+            onChange={v => { setAcao(v); setFeedback('') }}
+            placeholder=""
+            options={[
+              { value: 'copiar', label: 'Copiar exercícios' },
+              { value: 'mover', label: 'Mover exercícios' },
+              { value: 'inverter', label: 'Inverter treinos' },
+              { value: 'excluir', label: 'Limpar treino' },
+            ]}
+          />
+        </FormGroup>
+
+        <FormGroup label={acao === 'inverter' ? 'Treino A (inverter com)' : 'Copiar/Mover/Limpar exercícios do'}>
+          <Select
+            value={origem}
+            onChange={v => { setOrigem(v); setFeedback('') }}
+            placeholder="Selecionar treino..."
+            options={TREINOS.map(t => ({ value: t, label: rotulo(t) }))}
+          />
+        </FormGroup>
+
+        {acao !== 'excluir' && (
+          <FormGroup label={acao === 'inverter' ? 'Treino B (inverter com)' : 'Para'}>
+            <Select
+              value={destino}
+              onChange={v => { setDestino(v); setFeedback('') }}
+              placeholder="Selecionar treino..."
+              options={TREINOS.filter(t => t !== origem).map(t => ({ value: t, label: rotulo(t) }))}
+            />
+          </FormGroup>
+        )}
+
+        {feedback && (
+          <p className={`text-xs px-3 py-2 rounded-lg ${feedback.startsWith('✅')
+            ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+            : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+            {feedback}
+          </p>
+        )}
+      </div>
+    </Modal>
+  )
+}
+
 // ─── FormularioFicha ──────────────────────────────────────────────────────────
 
 const buscarAlunosFn = async (q) => {
@@ -1169,6 +1281,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
   const [alongamentoResetKey, setAlongamentoResetKey] = useState(0)
   const [detalheAerobicoIdx, setDetalheAerobicoIdx] = useState(null)
   const [detalheAlongamentoIdx, setDetalheAlongamentoIdx] = useState(null)
+  const [gerenciadorAberto, setGerenciadorAberto] = useState(false)
 
   const [gruposDisponiveis, setGruposDisponiveis] = useState(GRUPOS_BASE)
   const [porGrupo, setPorGrupo] = useState({})
@@ -1339,7 +1452,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
     const s = steps[step]
 
     if (s.id === 'config') return (
-      <div className="flex flex-col gap-6 max-w-5xl mx-auto w-full">
+      <div className="flex flex-col gap-6 max-w-6xl mx-auto w-full">
         <div className="space-y-4">
           <h3 className="text-white font-semibold text-sm border-b border-[#323238] pb-2">Informações da Ficha</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1372,7 +1485,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
                 <Input type="date" value={ficha.data_de_inicio || ''} onChange={v => upd('data_de_inicio', v)} />
               </FormGroup>
               <div className="flex flex-col gap-1">
-                <label className="text-xs text-gray-400 font-medium uppercase tracking-wider">Duração (Semanas)</label>
+                <label className="text-xs text-gray-400 font-medium">Duração (Semanas)</label>
                 <div className="flex gap-2">
                   {/* input de célula — exceção documentada */}
                   <input type="number" value={numSemanas} onChange={e => setNumSemanas(e.target.value)}
@@ -1400,7 +1513,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
           </FormGroup>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
           <div className="space-y-3">
             <h3 className="text-white font-semibold text-sm border-b border-[#323238] pb-2">Distribuição Semanal</h3>
             <div className="bg-[#1a1a1a] rounded-lg border border-[#323238] overflow-hidden">
@@ -1423,12 +1536,12 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="text-gray-500 border-b border-[#323238]">
-                    <th className="py-2 px-3 text-left w-10">Sem.</th>
-                    <th className="py-2 px-2 text-left text-[10px] text-gray-600 font-normal">Período</th>
+                    <th className="py-2 px-3 text-left w-12">Sem.</th>
+                    <th className="py-2 px-2 text-left text-[10px] text-gray-600 font-bold uppercase tracking-widest">Período (Seg-Dom)</th>
                     <th className="py-2 px-3 text-center">Séries</th>
                     <th className="py-2 px-3 text-center">Reps</th>
                     <th className="py-2 px-3 text-center">Descanso</th>
-                    <th className="w-8" />
+                    <th className="w-10" />
                   </tr>
                 </thead>
                 <tbody>
@@ -1463,7 +1576,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
     )
 
     if (s.id === 'aerobico') return (
-      <div className="flex flex-col gap-4 w-full">
+      <div className="flex flex-col gap-4 max-w-6xl mx-auto w-full">
         {detalheAerobicoIdx !== null && (
           <DetalhesAerobico
             aerobico={ficha.periodizacao_dos_aerobicos[detalheAerobicoIdx]}
@@ -1479,11 +1592,11 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
             <table className="w-full text-sm min-w-[700px]">
               <thead>
                 <tr className="text-gray-400 text-xs uppercase tracking-wide border-b border-[#323238]">
-                  <th className="w-10 py-2 px-2" />
-                  <th className="text-left py-2 px-2 w-[25%]">Exercício</th>
-                  <th className="text-left py-2 px-2 w-[15%]">Frequência</th>
+                  <th className="w-8 py-2 px-2" />
+                  <th className="text-left py-2 px-2 w-56">Exercício</th>
+                  <th className="text-left py-2 px-2 w-36">Frequência</th>
                   <th className="text-left py-2 px-2">Instruções</th>
-                  <th className="py-2 px-2 w-20" />
+                  <th className="py-2 px-2 w-32" />
                 </tr>
               </thead>
               <tbody>
@@ -1530,7 +1643,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
     )
 
     if (s.id === 'alongamento') return (
-      <div className="flex flex-col gap-4 w-full">
+      <div className="flex flex-col gap-4 max-w-6xl mx-auto w-full">
         {detalheAlongamentoIdx !== null && (
           <DetalhesAlongamento
             alongamento={ficha.planilha_de_alongamentos_e_mobilidade[detalheAlongamentoIdx]}
@@ -1546,11 +1659,11 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
             <table className="w-full text-sm min-w-[600px]">
               <thead>
                 <tr className="text-gray-400 text-xs uppercase tracking-wide border-b border-[#323238]">
-                  <th className="w-10 py-2 px-2" />
-                  <th className="text-left py-2 px-2 w-[35%]">Exercício</th>
-                  <th className="text-center py-2 px-2 w-[10%]">Séries</th>
+                  <th className="w-8 py-2 px-2" />
+                  <th className="text-left py-2 px-2 w-56">Exercício</th>
+                  <th className="text-center py-2 px-2 w-20">Séries</th>
                   <th className="text-left py-2 px-2">Observação</th>
-                  <th className="py-2 px-2 w-20" />
+                  <th className="py-2 px-2 w-32" />
                 </tr>
               </thead>
               <tbody>
@@ -1599,10 +1712,12 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
     // Treinos A–F
     const t = s.id.replace('treino_', '')
     return (
-      <div className="flex flex-col gap-4 w-full">
-        <FormGroup label={`Nome do Treino ${t.toUpperCase()} (opcional)`} >
-          <Input value={ficha[`treino_${t}_label`] || ''} onChange={v => upd(`treino_${t}_label`, v)} placeholder={`Ex: Inferior A, Upper, Push...`} />
-        </FormGroup>
+      <div className="flex flex-col gap-4 max-w-6xl mx-auto w-full">
+        <div className="max-w-xs">
+          <FormGroup label={`Nome do Treino ${t.toUpperCase()} (opcional)`} >
+            <Input value={ficha[`treino_${t}_label`] || ''} onChange={v => upd(`treino_${t}_label`, v)} placeholder={`Ex: Inferior A, Upper, Push...`} />
+          </FormGroup>
+        </div>
         <FormGroup label={`Orientações Treino ${t.toUpperCase()}`}>
           <Textarea value={ficha[`orientacoes_treino_${t}`] || ''} onChange={v => upd(`orientacoes_treino_${t}`, v)} rows={3} placeholder="Orientações específicas deste treino..." />
         </FormGroup>
@@ -1634,6 +1749,9 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
         </div>
         <div className="flex items-center gap-3">
           {erro && <p className="text-red-400 text-sm max-w-xs truncate">{erro}</p>}
+          <Button variant="secondary" icon={Copy} onClick={() => setGerenciadorAberto(true)}>
+            Gerenciar Treinos
+          </Button>
           <Button variant="primary" icon={Save} onClick={handleSave} loading={saving}>
             Salvar Ficha
           </Button>
@@ -1667,6 +1785,14 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
         <span className="text-gray-600 text-xs">{step + 1} / {steps.length}</span>
         <Button variant="ghost" iconRight={ChevronRight} onClick={() => setStep(s => Math.min(steps.length - 1, s + 1))} disabled={step === steps.length - 1}>Próximo</Button>
       </div>
+
+      {gerenciadorAberto && (
+        <GerenciadorTreinos
+          ficha={ficha}
+          upd={upd}
+          onClose={() => setGerenciadorAberto(false)}
+        />
+      )}
     </div>
   )
 }

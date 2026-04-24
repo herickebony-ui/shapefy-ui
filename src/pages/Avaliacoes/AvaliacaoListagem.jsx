@@ -620,7 +620,7 @@ export default function AvaliacaoListagem() {
             {isVisible && <Check size={10} className="text-[#2563eb]" />}
           </span>
           {fmtDate(av.date)}
-          {isLast && <span className="text-[8px] text-[#2563eb] font-normal">ÚLTIMO</span>}
+          {isLast && <span className="text-[8px] text-[#2563eb] font-bold uppercase tracking-widest">ÚLTIMO</span>}
         </div>
       </th>
     )
@@ -715,7 +715,7 @@ export default function AvaliacaoListagem() {
                       <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">{card.label}</div>
                       <div className="text-2xl font-bold text-gray-900">
                         {fmtNum(latest?.[card.key], card.dec)}
-                        <span className="text-sm font-normal text-gray-400 ml-1">{latest?.[card.key] ? card.unit : ''}</span>
+                        <span className="text-sm font-medium text-gray-400 ml-1">{latest?.[card.key] ? card.unit : ''}</span>
                       </div>
                       {dv != null && dv !== 0 && visibleAvs.length > 1 && (
                         <div className={`text-xs font-bold mt-1 ${!isPos ? 'text-green-600' : 'text-red-600'}`}>
@@ -870,7 +870,7 @@ export default function AvaliacaoListagem() {
                 <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5">{card.label}</div>
                 <div className="text-2xl font-bold text-white leading-none">
                   {fmtNum(latest[card.key], card.dec)}
-                  <span className="text-sm font-normal text-gray-500 ml-1">{latest[card.key] ? card.unit : ''}</span>
+                  <span className="text-sm font-medium text-gray-500 ml-1">{latest[card.key] ? card.unit : ''}</span>
                 </div>
                 {d != null && d !== 0 && visibleAvs.length > 1 && (
                   <div className={`text-[11px] font-bold mt-1.5 ${isGood ? 'text-green-400' : 'text-red-400'}`}>

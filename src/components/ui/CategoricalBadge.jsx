@@ -31,7 +31,7 @@ export default function CategoricalBadge({ category, children, size = 'md' }) {
 
   return (
     <span
-      className={`inline-block border rounded-md font-bold uppercase tracking-[0.08em] ${sizeClass}`}
+      className={`inline-block border rounded font-bold uppercase tracking-widest ${sizeClass}`}
       style={{ color, borderColor: hexToRgba(color, 0.35) }}
     >
       {children}

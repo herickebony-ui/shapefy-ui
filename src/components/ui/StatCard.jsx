@@ -18,13 +18,13 @@ export default function StatCard({ label, value, unit, color = 'default', size =
   const c = COLORS[color] || COLORS.default
 
   return (
-    <div className={`bg-[#29292e] border border-[#323238] rounded-lg ${s.pad}`}>
-      <div className="text-gray-500 text-[10px] uppercase tracking-wider font-semibold mb-1.5">
+    <div className={`bg-[#29292e] border border-[#323238] rounded-xl ${s.pad}`}>
+      <div className="text-gray-500 text-[10px] uppercase tracking-wider font-bold mb-1.5">
         {label}
       </div>
       <div className={`font-bold leading-none ${s.value} ${c}`}>
         {value}
-        {unit && <span className="text-gray-500 text-[11px] font-normal ml-1">{unit}</span>}
+        {unit && <span className="text-gray-500 text-[11px] font-medium ml-1">{unit}</span>}
       </div>
     </div>
   )

@@ -59,7 +59,18 @@ O `client.js` injeta automaticamente o header `Authorization: token <frappe_toke
 
 ### Regras de estilo obrigatórias
 
-- **Border-radius:** sempre `rounded-lg` (8px). **Nunca `rounded-xl`** em componentes novos.
+- **Border-radius — hierarquia de 3 tiers (nunca `rounded-md`):**
+  - `rounded-xl` (12px) → cards, containers, modais, banners.
+  - `rounded-lg` (8px) → inputs, botões, selects, tags, pills.
+  - `rounded` (4px) → células de tabela, chips pequenos, badges inline.
+- **Pesos tipográficos — só 3 pesos (nunca `font-normal` em labels/títulos):**
+  - `font-medium` → labels de campo (text-xs, caixa normal).
+  - `font-semibold` → títulos de seção (h3/text-sm), nomes em listas, tab ativo.
+  - `font-bold` → valores destacados, h1/h2, rótulos uppercase de card, cabeçalhos de tabela.
+- **Tracking (letter-spacing) em uppercase:**
+  - Texto uppercase ≤12px → `tracking-wider`.
+  - Breadcrumbs / rótulos uppercase de card / cabeçalhos de tabela → `tracking-widest`.
+  - Títulos grandes (h1/h2) → sem tracking ou `tracking-tight`.
 - **Hex hardcoded no JSX:** proibido. Usar tokens Tailwind tokenizados (`bg-[#850000]` é aceitável transitoriamente com comentário `// TODO: tokenizar`).
 - **Responsividade:** todo componente deve funcionar em 375px sem scroll horizontal. Testar em `sm:640px`, `md:768px`, `lg:1024px`.
 - **Botões touch:** `min-height: 40px` em mobile.
@@ -77,7 +88,7 @@ O `client.js` injeta automaticamente o header `Authorization: token <frappe_toke
 | Componente | Props principais | Notas |
 |---|---|---|
 | `Button` | `variant` (primary/secondary/ghost/info/success/danger), `size` (xs/sm/md/lg), `icon`, `iconRight`, `fullWidth`, `loading`, `onClick` | 6 variants. Sem `warning`. |
-| `FormGroup` | `label`, `required`, `hint`, `error`, `success`, `counter {current,max}`, `children` | Wrapper de campo com label uppercase |
+| `FormGroup` | `label`, `required`, `hint`, `error`, `success`, `counter {current,max}`, `children` | Wrapper de campo; label `text-xs font-medium` (caixa normal — não uppercase) |
 | `Input` | `value`, `onChange(string)`, `placeholder`, `type`, `icon`, `error`, `disabled`, `onClear` | `h-10` padrão |
 | `Select` | `value`, `onChange(string)`, `options` (array de string ou `{value,label}`), `placeholder`, `error` | Chevron svg customizado |
 | `Textarea` | `value`, `onChange(string)`, `placeholder`, `rows`, `error`, `disabled` | `resize-none` padrão |
@@ -162,11 +173,13 @@ import { FormGroup, Input, Select, Textarea } from '../../components/ui'
 // ✅ SEMPRE
 <Modal title="..." onClose={...}>...</Modal>
 
-// ❌ NUNCA — rounded-xl em componentes novos
-className="rounded-xl"
+// ❌ NUNCA — rounded-md (proibido) ou rounded-lg em card
+className="rounded-md"
+<div className="bg-[#29292e] rounded-lg p-4">  {/* card com rounded errado */}
 
-// ✅ SEMPRE
-className="rounded-lg"
+// ✅ SEMPRE — raio por tier (card = xl, input/botão = lg, célula = none)
+className="rounded-lg"  // input/botão/select
+<div className="bg-[#29292e] rounded-xl p-4">  {/* card */}
 ```
 
 ### Exceções documentadas — padrões permitidos fora do DS

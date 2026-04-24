@@ -11,7 +11,7 @@ export default function FooterTotais({
   if (variant === 'groups') {
     const renderItem = (item, i, muted = false) =>
       item.highlight ? (
-        <span key={i} className="bg-[rgba(133,0,0,0.15)] border border-[rgba(133,0,0,0.3)] rounded-md px-2 py-0.5 text-[10px] md:text-[11px]">
+        <span key={i} className="bg-[rgba(133,0,0,0.15)] border border-[rgba(133,0,0,0.3)] rounded px-2 py-0.5 text-[10px] md:text-[11px]">
           <strong className="text-[#f87171]">
             <span className="hidden md:inline">{item.label}</span>
             <span className="md:hidden">{item.shortLabel || item.label}</span>

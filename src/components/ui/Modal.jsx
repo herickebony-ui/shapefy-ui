@@ -34,7 +34,7 @@ export default function Modal({
         className={`
           bg-[#1a1a1a] border-0 md:border border-[#323238]
           w-full h-[100dvh] md:h-auto
-          rounded-none md:rounded-[14px]
+          rounded-none md:rounded-xl
           ${SIZES[size] || SIZES.md}
           md:max-h-[90vh]
           flex flex-col
@@ -45,7 +45,7 @@ export default function Modal({
         {(title || onClose) && (
           <div className="flex items-center justify-between px-4 md:px-[22px] py-4 border-b border-[#323238] shrink-0">
             <div>
-              {title && <h3 className="text-white font-bold text-sm md:text-base">{title}</h3>}
+              {title && <h3 className="text-white font-semibold text-sm md:text-base">{title}</h3>}
               {subtitle && <p className="text-gray-400 text-[11px] mt-0.5">{subtitle}</p>}
             </div>
             {onClose && (
