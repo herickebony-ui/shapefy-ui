@@ -1224,7 +1224,6 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
       .catch(console.error)
 
     listarExercicios().then(lista => {
-      console.log('[Exercicios] total:', lista.length, 'exemplo:', lista[0])
       const mapG = {}, mapI = {}, mapD = {}
       lista.forEach(e => {
         const g = e.grupo_muscular || ''

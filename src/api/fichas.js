@@ -47,8 +47,6 @@ export const excluirFicha = async (id) => {
 
 // ─── Exercícios ───────────────────────────────────────────────────────────────
 
-const OWNERS_COMPARTILHADOS = ['teste@shapefy.com', 'Administrator']
-
 export const salvarTreinoExercicio = async (id, dados) => {
   const url = id ? `/api/resource/Treino Exercicio/${encodeURIComponent(id)}` : '/api/resource/Treino Exercicio'
   const res = await client[id ? 'put' : 'post'](url, dados)
@@ -92,8 +90,7 @@ export const toggleAlongamento = async (id, enabled) => {
 
 export const listarAlongamentos = async ({ limit = 200, gerenciar = false } = {}) => {
   const owner = frappeOwner()
-  const owners = owner ? [owner, ...OWNERS_COMPARTILHADOS] : OWNERS_COMPARTILHADOS
-  const filters = [['Alongamento', 'owner', 'in', owners]]
+  const filters = [['Alongamento', 'owner', '=', owner]]
   if (!gerenciar) filters.push(['Alongamento', 'enabled', '=', 1])
   const fields = ['name', 'nome_do_exercício', 'video', 'plataforma_do_vídeo']
   if (gerenciar) fields.push('enabled', 'owner')
@@ -120,8 +117,7 @@ export const toggleAerobico = async (id, enabled) => {
 
 export const listarAerobicos = async ({ limit = 200, gerenciar = false } = {}) => {
   const owner = frappeOwner()
-  const owners = owner ? [owner, ...OWNERS_COMPARTILHADOS] : OWNERS_COMPARTILHADOS
-  const filters = [['Exercicio Aerobico', 'owner', 'in', owners]]
+  const filters = [['Exercicio Aerobico', 'owner', '=', owner]]
   if (!gerenciar) filters.push(['Exercicio Aerobico', 'enabled', '=', 1])
   const fields = ['name', 'exercicio_aerobico', 'video', 'plataforma_do_vídeo']
   if (gerenciar) fields.push('enabled', 'owner')
@@ -133,7 +129,6 @@ export const listarAerobicos = async ({ limit = 200, gerenciar = false } = {}) =
 
 export const listarExercicios = async ({ limit = 500 } = {}) => {
   const owner = frappeOwner()
-  const owners = owner ? [owner, ...OWNERS_COMPARTILHADOS] : OWNERS_COMPARTILHADOS
   const res = await client.get('/api/resource/Treino%20Exercicio', {
     params: {
       fields: JSON.stringify([
@@ -142,7 +137,7 @@ export const listarExercicios = async ({ limit = 500 } = {}) => {
       ]),
       filters: JSON.stringify([
         ['enabled', '=', 1],
-        ['owner', 'in', owners],
+        ['owner', '=', owner],
       ]),
       limit,
       order_by: 'creation desc',

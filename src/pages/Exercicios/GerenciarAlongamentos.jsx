@@ -1,12 +1,14 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
-import { Plus, Edit, Trash2, RefreshCw } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Plus, Edit, Trash2, RefreshCw, BookOpen } from 'lucide-react'
 import {
   listarAlongamentos, salvarAlongamento, excluirAlongamento, toggleAlongamento,
 } from '../../api/fichas'
+import { listarBibliotecaAlongamentos } from '../../api/biblioteca'
 import {
-  Button, FormGroup, Input, Select, Modal, EmptyState, DataTable, Badge,
+  Button, FormGroup, Input, Select, Modal, DataTable, Badge,
 } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
+import ExplorarBibliotecaModal from '../../components/ExplorarBibliotecaModal'
 
 const PLATAFORMAS = ['YouTube', 'Google Drive', 'Vimeo']
 
@@ -119,7 +121,7 @@ const ModalAlongamento = ({ alongamento, onSave, onClose }) => {
 // ─── GerenciarAlongamentos ────────────────────────────────────────────────────
 
 export default function GerenciarAlongamentos() {
-  const currentUser = localStorage.getItem('frappe_user') || ''
+  const [showBiblioteca, setShowBiblioteca] = useState(false)
   const [alongamentos, setAlongamentos] = useState([])
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
@@ -215,7 +217,7 @@ export default function GerenciarAlongamentos() {
       label: 'Ações',
       headerClass: 'text-right',
       cellClass: 'text-right',
-      render: (row) => row.owner === currentUser ? (
+      render: (row) => (
         <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
           <button
             onClick={() => handleToggle(row)}
@@ -237,14 +239,12 @@ export default function GerenciarAlongamentos() {
           </button>
           <button
             onClick={() => setDeletando(row)}
-            className="h-7 w-7 flex items-center justify-center text-[#2563eb] hover:text-white border border-[#2563eb]/30 hover:bg-[#2563eb] rounded-lg transition-colors"
+            className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded-lg transition-colors"
             title="Excluir"
           >
             <Trash2 size={12} />
           </button>
         </div>
-      ) : (
-        <span className="text-[10px] text-gray-600 italic">compartilhado</span>
       ),
     },
   ]
@@ -257,6 +257,9 @@ export default function GerenciarAlongamentos() {
         actions={
           <>
             <Button variant="secondary" size="sm" icon={RefreshCw} onClick={carregar} loading={loading} />
+            <Button variant="secondary" size="sm" icon={BookOpen} onClick={() => setShowBiblioteca(true)}>
+              Explorar Biblioteca
+            </Button>
             <Button variant="primary" size="sm" icon={Plus} onClick={() => { setEditando(null); setModalOpen(true) }}>
               Novo Alongamento
             </Button>
@@ -300,6 +303,18 @@ export default function GerenciarAlongamentos() {
           onClose={() => { setModalOpen(false); setEditando(null) }}
         />
       )}
+
+      <ExplorarBibliotecaModal
+        isOpen={showBiblioteca}
+        onClose={() => setShowBiblioteca(false)}
+        titulo="Explorar Biblioteca de Alongamentos"
+        doctype="Alongamento"
+        buscarFn={(q) => listarBibliotecaAlongamentos({ busca: q })}
+        colunas={[
+          { label: 'Alongamento', render: (r) => <span className="text-white">{r['nome_do_exercício']}</span> },
+        ]}
+        onImportado={() => carregar()}
+      />
 
       {deletando && (
         <Modal

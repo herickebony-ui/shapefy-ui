@@ -1,14 +1,16 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Plus, Search, Edit, Trash2, ToggleLeft, ToggleRight, RefreshCw, Copy } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, ToggleLeft, ToggleRight, RefreshCw, BookOpen } from 'lucide-react'
 import {
-  listarAlimentos, buscarAlimento, criarAlimento, salvarAlimento, excluirAlimento,
-  toggleAlimento, listarGruposAlimentares, podeExcluir,
+  listarAlimentos, criarAlimento, salvarAlimento, excluirAlimento,
+  toggleAlimento, listarGruposAlimentares,
 } from '../../api/alimentos'
+import { listarBibliotecaAlimentos } from '../../api/biblioteca'
 import {
   Button, FormGroup, Input, Select, Modal, Spinner, EmptyState,
   DataTable, Badge,
 } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
+import ExplorarBibliotecaModal from '../../components/ExplorarBibliotecaModal'
 
 const fmt = (v) => v != null ? Number(v).toFixed(1) : '—'
 
@@ -244,6 +246,7 @@ export default function AlimentosListagem() {
   const [modal, setModal] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [deleting, setDeleting] = useState(false)
+  const [showBiblioteca, setShowBiblioteca] = useState(false)
   const debounceRef = useRef(null)
 
   const carregar = async (opts = {}) => {
@@ -278,18 +281,6 @@ export default function AlimentosListagem() {
     } catch (e) {
       console.error(e)
       setAlimentos(prev => prev.map(a => a.name === row.name ? { ...a, enabled: row.enabled } : a))
-    }
-  }
-
-  const handleDuplicar = async (row) => {
-    try {
-      const full = await buscarAlimento(row.name)
-      const { name, creation, modified, modified_by, owner, docstatus, idx, ...payload } = full
-      await criarAlimento({ ...payload, food: `${full.food} (cópia)`, enabled: 1 })
-      carregar()
-    } catch (e) {
-      console.error(e)
-      alert('Erro ao duplicar alimento.')
     }
   }
 
@@ -359,16 +350,6 @@ export default function AlimentosListagem() {
       ),
     },
     {
-      label: 'Origem',
-      headerClass: 'hidden lg:table-cell',
-      cellClass: 'hidden lg:table-cell',
-      render: (row) => (
-        <span className={`text-xs font-medium ${podeExcluir(row.owner) ? 'text-blue-400' : 'text-gray-500'}`}>
-          {podeExcluir(row.owner) ? 'Meu' : 'Base'}
-        </span>
-      ),
-    },
-    {
       label: 'Ações',
       headerClass: 'text-right',
       cellClass: 'text-right',
@@ -383,24 +364,14 @@ export default function AlimentosListagem() {
           >
             {row.enabled ? <ToggleRight size={12} /> : <ToggleLeft size={12} />}
           </button>
-
-          {podeExcluir(row.owner) ? (
-            <>
-              <button onClick={() => setModal({ alimento: row })} title="Editar"
-                className="h-7 w-7 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors">
-                <Edit size={12} />
-              </button>
-              <button onClick={() => setConfirmDelete(row)} title="Excluir"
-                className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded-lg transition-colors">
-                <Trash2 size={12} />
-              </button>
-            </>
-          ) : (
-            <button onClick={() => handleDuplicar(row)} title="Duplicar para editar"
-              className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors">
-              <Copy size={12} />
-            </button>
-          )}
+          <button onClick={() => setModal({ alimento: row })} title="Editar"
+            className="h-7 w-7 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors">
+            <Edit size={12} />
+          </button>
+          <button onClick={() => setConfirmDelete(row)} title="Excluir"
+            className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded-lg transition-colors">
+            <Trash2 size={12} />
+          </button>
         </div>
       ),
     },
@@ -414,6 +385,9 @@ export default function AlimentosListagem() {
         actions={
           <>
             <Button variant="secondary" size="sm" icon={RefreshCw} onClick={() => carregar()} />
+            <Button variant="secondary" size="sm" icon={BookOpen} onClick={() => setShowBiblioteca(true)}>
+              Explorar Biblioteca
+            </Button>
             <Button variant="primary" size="sm" icon={Plus} onClick={() => setModal('novo')}>
               Novo Alimento
             </Button>
@@ -426,7 +400,7 @@ export default function AlimentosListagem() {
         ]}
         loading={loading}
         empty={alimentos.length === 0 && !loading
-          ? { title: 'Nenhum alimento encontrado', description: 'Tente ajustar os filtros ou crie um novo alimento.' }
+          ? { title: 'Nenhum alimento encontrado', description: busca || grupo || filtroAtivo ? 'Tente ajustar os filtros.' : 'Clique em "Explorar Biblioteca" para importar alimentos ou crie um novo.' }
           : null}
       >
         {!loading && alimentos.length > 0 && (
@@ -443,6 +417,20 @@ export default function AlimentosListagem() {
         <ModalAlimento alimento={modal.alimento} grupos={grupos}
           onSave={() => { setModal(null); carregar() }} onClose={() => setModal(null)} />
       )}
+
+      <ExplorarBibliotecaModal
+        isOpen={showBiblioteca}
+        onClose={() => setShowBiblioteca(false)}
+        titulo="Explorar Biblioteca de Alimentos"
+        doctype="Alimento"
+        buscarFn={(q) => listarBibliotecaAlimentos({ busca: q })}
+        colunas={[
+          { label: 'Alimento', render: (r) => <span className="text-white">{r.food}</span> },
+          { label: 'Grupo', headerClass: 'hidden sm:block', cellClass: 'hidden sm:block text-gray-400 text-xs', render: (r) => r.food_group || '—' },
+          { label: 'Kcal', cellClass: 'text-gray-300 text-xs tabular-nums', render: (r) => r.calories != null ? `${Number(r.calories).toFixed(0)} kcal` : '—' },
+        ]}
+        onImportado={() => carregar()}
+      />
 
       {confirmDelete && (
         <Modal isOpen onClose={() => setConfirmDelete(null)} title="Excluir Alimento" size="sm"

@@ -1,7 +1,6 @@
 import client from './client'
 
 const frappeOwner = () => localStorage.getItem('frappe_user') || ''
-const OWNERS_BASE = ['Administrator', 'teste@shapefy.com']
 
 // ─── Dietas ───────────────────────────────────────────────────────────────────
 
@@ -76,8 +75,7 @@ export const duplicarDieta = async (id, novoAluno = null, dataInicial = null, da
 
 export const listarAlimentos = async ({ busca = '', grupo = '', page = 1, limit = 50 } = {}) => {
   const owner = frappeOwner()
-  const owners = owner ? [owner, ...OWNERS_BASE] : OWNERS_BASE
-  const filters = [['enabled', '=', 1], ['owner', 'in', owners]]
+  const filters = [['enabled', '=', 1], ['owner', '=', owner]]
   if (busca) filters.push(["food", "like", `%${busca}%`])
   if (grupo) filters.push(["food_group", "=", grupo])
 

@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Plus, Edit, Trash2, X, RefreshCw } from 'lucide-react'
+import { Plus, Edit, Trash2, X, RefreshCw, BookOpen } from 'lucide-react'
 import {
   listarExercicios, salvarTreinoExercicio, excluirTreinoExercicio, listarGruposMusculares,
 } from '../../api/fichas'
+import { listarBibliotecaExercicios } from '../../api/biblioteca'
 import {
   Button, FormGroup, Input, Select, Modal, EmptyState, DataTable, Badge,
 } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
+import ExplorarBibliotecaModal from '../../components/ExplorarBibliotecaModal'
 
 const normalizar = (s = '') =>
   String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
@@ -211,7 +213,6 @@ const ModalExercicio = ({ exercicio, grupos, onSave, onClose }) => {
 // ─── GerenciarTreino ──────────────────────────────────────────────────────────
 
 export default function GerenciarTreino() {
-  const currentUser = localStorage.getItem('frappe_user') || ''
   const [exercicios, setExercicios] = useState([])
   const [grupos, setGrupos] = useState([])
   const [loading, setLoading] = useState(true)
@@ -221,6 +222,7 @@ export default function GerenciarTreino() {
   const [editando, setEditando] = useState(null)
   const [deletando, setDeletando] = useState(null)
   const [deleting, setDeleting] = useState(false)
+  const [showBiblioteca, setShowBiblioteca] = useState(false)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const debounceRef = useRef(null)
@@ -333,7 +335,7 @@ export default function GerenciarTreino() {
       label: 'Ações',
       headerClass: 'text-right',
       cellClass: 'text-right',
-      render: (ex) => ex.owner === currentUser ? (
+      render: (ex) => (
         <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
           <button
             onClick={() => { setEditando(ex); setModalOpen(true) }}
@@ -344,14 +346,12 @@ export default function GerenciarTreino() {
           </button>
           <button
             onClick={() => setDeletando(ex)}
-            className="h-7 w-7 flex items-center justify-center text-[#2563eb] hover:text-white border border-[#2563eb]/30 hover:bg-[#2563eb] rounded-lg transition-colors"
+            className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded-lg transition-colors"
             title="Excluir"
           >
             <Trash2 size={12} />
           </button>
         </div>
-      ) : (
-        <span className="text-[10px] text-gray-600 italic">compartilhado</span>
       ),
     },
   ]
@@ -364,6 +364,9 @@ export default function GerenciarTreino() {
         actions={
           <>
             <Button variant="secondary" size="sm" icon={RefreshCw} onClick={carregar} loading={loading} />
+            <Button variant="secondary" size="sm" icon={BookOpen} onClick={() => setShowBiblioteca(true)}>
+              Explorar Biblioteca
+            </Button>
             <Button variant="primary" size="sm" icon={Plus} onClick={() => { setEditando(null); setModalOpen(true) }}>
               Novo Exercício
             </Button>
@@ -408,6 +411,19 @@ export default function GerenciarTreino() {
           />
         )}
       </ListPage>
+
+      <ExplorarBibliotecaModal
+        isOpen={showBiblioteca}
+        onClose={() => setShowBiblioteca(false)}
+        titulo="Explorar Biblioteca de Exercícios"
+        doctype="Treino Exercicio"
+        buscarFn={(q) => listarBibliotecaExercicios({ busca: q })}
+        colunas={[
+          { label: 'Exercício', render: (r) => <span className="text-white">{r.nome_do_exercicio}</span> },
+          { label: 'Grupo', headerClass: 'hidden sm:block', cellClass: 'hidden sm:block text-gray-400 text-xs', render: (r) => r.grupo_muscular || '—' },
+        ]}
+        onImportado={() => carregar()}
+      />
 
       {modalOpen && (
         <ModalExercicio

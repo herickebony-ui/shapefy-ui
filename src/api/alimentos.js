@@ -1,20 +1,12 @@
 import client from './client'
 
 const frappeOwner = () => localStorage.getItem('frappe_user') || ''
-const OWNERS_BASE = ['Administrator', 'teste@shapefy.com']
-
-export const OWNERS_PROTEGIDOS = ['administrator', 'teste@shapefy.com']
-
-export const podeExcluir = (owner) =>
-  !OWNERS_PROTEGIDOS.includes(String(owner || '').toLowerCase())
-
 export const listarAlimentos = async ({
   busca = '', grupo = '', enabled = '', page = 1, limit = 300,
 } = {}) => {
   const owner = frappeOwner()
-  const owners = owner ? [owner, ...OWNERS_BASE] : OWNERS_BASE
 
-  const filters = [['owner', 'in', owners]]
+  const filters = [['owner', '=', owner]]
   if (busca) filters.push(['food', 'like', `%${busca}%`])
   if (grupo) filters.push(['food_group', '=', grupo])
   if (enabled !== '') filters.push(['enabled', '=', Number(enabled)])
