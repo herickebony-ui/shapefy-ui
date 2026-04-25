@@ -3,7 +3,6 @@ import { Plus, Edit, Trash2, RefreshCw, BookOpen, ExternalLink } from 'lucide-re
 import {
   listarAlongamentos, salvarAlongamento, excluirAlongamento, toggleAlongamento,
 } from '../../api/fichas'
-import { listarBibliotecaAlongamentos } from '../../api/biblioteca'
 import {
   Button, FormGroup, Input, Select, Modal, DataTable, Badge,
 } from '../../components/ui'
@@ -337,7 +336,6 @@ export default function GerenciarAlongamentos() {
         onClose={() => setShowBiblioteca(false)}
         titulo="Explorar Biblioteca de Alongamentos"
         doctype="Alongamento"
-        buscarFn={(q) => listarBibliotecaAlongamentos({ busca: q })}
         colunas={[
           { label: 'Alongamento', render: (r) => <span className="text-white">{r['nome_do_exercício']}</span> },
         ]}

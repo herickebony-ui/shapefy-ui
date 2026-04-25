@@ -4,7 +4,6 @@ import {
   listarAlimentos, criarAlimento, salvarAlimento, excluirAlimento,
   toggleAlimento, listarGruposAlimentares,
 } from '../../api/alimentos'
-import { listarBibliotecaAlimentos } from '../../api/biblioteca'
 import {
   Button, FormGroup, Input, Select, Modal, Spinner, EmptyState,
   DataTable, Badge,
@@ -423,7 +422,6 @@ export default function AlimentosListagem() {
         onClose={() => setShowBiblioteca(false)}
         titulo="Explorar Biblioteca de Alimentos"
         doctype="Alimento"
-        buscarFn={(q) => listarBibliotecaAlimentos({ busca: q })}
         colunas={[
           { label: 'Alimento', render: (r) => <span className="text-white">{r.food}</span> },
           { label: 'Grupo', headerClass: 'hidden sm:block', cellClass: 'hidden sm:block text-gray-400 text-xs', render: (r) => r.food_group || '—' },

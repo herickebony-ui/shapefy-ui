@@ -3,7 +3,6 @@ import { Plus, Edit, Trash2, X, RefreshCw, BookOpen, ExternalLink } from 'lucide
 import {
   listarExercicios, salvarTreinoExercicio, excluirTreinoExercicio, listarGruposMusculares,
 } from '../../api/fichas'
-import { listarBibliotecaExercicios } from '../../api/biblioteca'
 import {
   Button, FormGroup, Input, Select, Modal, EmptyState, DataTable, Badge,
 } from '../../components/ui'
@@ -445,7 +444,6 @@ export default function GerenciarTreino() {
         onClose={() => setShowBiblioteca(false)}
         titulo="Explorar Biblioteca de Exercícios"
         doctype="Treino Exercicio"
-        buscarFn={(q) => listarBibliotecaExercicios({ busca: q })}
         colunas={[
           { label: 'Exercício', render: (r) => <span className="text-white">{r.nome_do_exercicio}</span> },
           { label: 'Grupo', headerClass: 'hidden sm:block', cellClass: 'hidden sm:block text-gray-400 text-xs', render: (r) => r.grupo_muscular || '—' },

@@ -3,7 +3,6 @@ import { Plus, Edit, Trash2, RefreshCw, BookOpen, ExternalLink } from 'lucide-re
 import {
   listarAerobicos, salvarAerobico, excluirAerobico, toggleAerobico,
 } from '../../api/fichas'
-import { listarBibliotecaAerobicos } from '../../api/biblioteca'
 import {
   Button, FormGroup, Input, Select, Modal, DataTable, Badge,
 } from '../../components/ui'
@@ -337,7 +336,6 @@ export default function GerenciarAerobicos() {
         onClose={() => setShowBiblioteca(false)}
         titulo="Explorar Biblioteca de Aeróbicos"
         doctype="Exercicio Aerobico"
-        buscarFn={(q) => listarBibliotecaAerobicos({ busca: q })}
         colunas={[
           { label: 'Exercício', render: (r) => <span className="text-white">{r.exercicio_aerobico}</span> },
         ]}
