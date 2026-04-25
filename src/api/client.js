@@ -19,6 +19,13 @@ client.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('frappe_token')
+      localStorage.removeItem('frappe_user')
+      localStorage.removeItem('frappe_user_name')
+      localStorage.removeItem('shapefy-auth')
+      localStorage.removeItem('shapefy-onboarding')
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }

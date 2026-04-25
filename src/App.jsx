@@ -30,7 +30,14 @@ import PrescricaoDetalhe from './pages/Prescricoes/PrescricaoDetalhe'
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
-  return isAuthenticated ? children : <Navigate to="/login" replace />
+  const clearAuth = useAuthStore((s) => s.clearAuth)
+  const hasToken = !!localStorage.getItem('frappe_token')
+
+  if (!isAuthenticated || !hasToken) {
+    if (isAuthenticated && !hasToken) clearAuth()
+    return <Navigate to="/login" replace />
+  }
+  return children
 }
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''

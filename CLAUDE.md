@@ -94,6 +94,7 @@ O `client.js` injeta automaticamente o header `Authorization: token <frappe_toke
 | `Textarea` | `value`, `onChange(string)`, `placeholder`, `rows`, `error`, `disabled` | `resize-none` padrão |
 | `Autocomplete` | `value`, `onChange`, `onSelect(item)`, `searchFn(query)→Promise`, `renderItem(item)`, `placeholder`, `icon`, `compact`, `emptyState` | Debounce 200ms; keyboard nav; bottom-sheet mobile >5 items; `compact` para uso inline em tabelas |
 | `Modal` | `isOpen`/`open`, `onClose`, `title`, `subtitle`, `size` (sm/md/lg/xl), `footer`, `closeOnOverlayClick` | Fullscreen mobile; footer `flex-col-reverse` mobile |
+| `InformativoModal` | `isOpen`, `onClose`, `title`, `subtitle`, `size`, `icon`, `iconVariant` (info/primary/success/warning), `steps [{icon,title,description,action?}]`, `primaryAction`, `secondaryAction`, `dismissLabel`, `dontShowAgainKey` | Modal padrão para onboarding/anúncios/changelogs. Passos numerados com ícone, ação por passo, checkbox opcional "Não mostrar novamente" persistido em `localStorage`. |
 | `CollapsibleBanner` | `title`, `variant` (primary/info/warning/danger), `defaultOpen`, `action` (ReactNode), `children` | |
 | `StatCard` | `label`, `value`, `unit`, `color` (default/success/warning/danger/muted), `size` (sm/md/lg) | Grid 2×2 em mobile |
 | `Tabs` | `tabs [{id,label,icon?,badge?,disabled?}]`, `active`, `onChange(id)`, `variant` (underline/pills) | Scroll horizontal mobile; `icon` é ReactNode |
@@ -356,6 +357,7 @@ src/
       DietaDetalhe.jsx   # Piloto de referência do DS v2
   store/
     authStore.js         # Zustand auth
+    onboardingStore.js   # Contagens de catálogo, exibição de modal de boas-vindas (max 3x), dismiss do banner
   styles/
     tokens.js            # Tokens legados (tw.*) — preferir classes Tailwind diretas
   App.jsx                # Router

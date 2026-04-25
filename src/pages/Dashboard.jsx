@@ -7,6 +7,9 @@ import {
 } from '../components/ui'
 import ListPage from '../components/templates/ListPage'
 import AlunoModal from './Alunos/AlunoModal'
+import OnboardingBanner from '../components/OnboardingBanner'
+import OnboardingModal from '../components/OnboardingModal'
+import useOnboardingStore from '../store/onboardingStore'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 const PAGE_SIZE = 30
@@ -97,6 +100,9 @@ export default function Dashboard() {
   useEffect(() => {
     buscarStatsAlunos().then(setStats).catch(console.error)
   }, [])
+
+  const refreshCounts = useOnboardingStore(s => s.refreshCounts)
+  useEffect(() => { refreshCounts().catch(console.error) }, [refreshCounts])
 
   const handleExcluir = async () => {
     if (!alunoExcluir) return
@@ -227,6 +233,8 @@ export default function Dashboard() {
           description: busca ? `Sem resultados para "${busca}"` : 'Clique em "Novo Aluno" para cadastrar',
         } : null}
       >
+        <OnboardingBanner />
+
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           {statCards.map(({ label, value, icon: Icon, color, bg }) => (
@@ -257,6 +265,8 @@ export default function Dashboard() {
       </ListPage>
 
       <AlunoModal aluno={alunoAberto} onClose={() => setAlunoAberto(null)} />
+
+      <OnboardingModal />
 
       {alunoExcluir && (
         <Modal

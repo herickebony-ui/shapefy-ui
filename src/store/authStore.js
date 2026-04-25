@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import useOnboardingStore from './onboardingStore'
 
 const useAuthStore = create(
   persist(
@@ -20,6 +21,7 @@ const useAuthStore = create(
       clearAuth: () => {
         localStorage.removeItem('frappe_token')
         localStorage.removeItem('frappe_user')
+        useOnboardingStore.getState().resetOnboarding()
         set({ user: null, token: null, isAuthenticated: false, modulos: { dieta: true, treino: true, feedback: true, anamnese: true } })
       },
     }),
