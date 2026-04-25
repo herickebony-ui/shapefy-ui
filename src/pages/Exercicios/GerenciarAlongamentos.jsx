@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Edit, Trash2, RefreshCw, BookOpen } from 'lucide-react'
+import { Plus, Edit, Trash2, RefreshCw, BookOpen, ExternalLink } from 'lucide-react'
 import {
   listarAlongamentos, salvarAlongamento, excluirAlongamento, toggleAlongamento,
 } from '../../api/fichas'
@@ -35,6 +35,18 @@ const extractVideoInfo = (input) => {
     }
   } catch { }
   return null
+}
+
+const buildVideoUrl = (id, platform) => {
+  if (!id) return ''
+  const trimmed = String(id).trim()
+  if (trimmed.includes('://')) return trimmed
+  switch (platform) {
+    case 'YouTube':      return `https://www.youtube.com/watch?v=${trimmed}`
+    case 'Google Drive': return `https://drive.google.com/file/d/${trimmed}/view`
+    case 'Vimeo':        return `https://vimeo.com/${trimmed}`
+    default:             return ''
+  }
 }
 
 // ─── ModalAlongamento ─────────────────────────────────────────────────────────
@@ -101,7 +113,23 @@ const ModalAlongamento = ({ alongamento, onSave, onClose }) => {
             label="Link ou ID do Vídeo"
             hint={videoDetected ? '✓ ID extraído automaticamente' : 'Cole o link ou o código do vídeo'}
           >
-            <Input value={video} onChange={handleVideoChange} placeholder="https://youtu.be/... ou código" />
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Input value={video} onChange={handleVideoChange} placeholder="https://youtu.be/... ou código" />
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const url = buildVideoUrl(video, plataforma)
+                  if (url) window.open(url, '_blank', 'noopener,noreferrer')
+                }}
+                disabled={!video}
+                title="Abrir vídeo em nova aba"
+                className="h-10 w-10 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors shrink-0 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-blue-400 disabled:hover:border-[#323238]"
+              >
+                <ExternalLink size={14} />
+              </button>
+            </div>
           </FormGroup>
           <FormGroup label="Plataforma">
             <Select value={plataforma} onChange={setPlataforma} options={PLATAFORMAS} />

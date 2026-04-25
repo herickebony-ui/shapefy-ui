@@ -6,7 +6,7 @@ import {
   criarFormularioFeedback, salvarFormularioFeedback, buscarFormularioFeedback,
 } from '../../api/formularios'
 import { TIPOS_ANAMNESE, TIPOS_FEEDBACK, TIPOS_CONFIG, FREQUENCIA_OPTS } from '../../utils/formularioUtils'
-import { Button, FormGroup, Input, Select, Textarea, Spinner, Tabs } from '../../components/ui'
+import { Button, FormGroup, Input, Select, Textarea, Spinner, Tabs, RichTextEditor } from '../../components/ui'
 
 const gerarId = () => `${Date.now()}_${Math.random().toString(36).slice(2)}`
 
@@ -299,11 +299,10 @@ export default function FormularioBuilder() {
                 {/* HTML */}
                 {config.hasHtml && (
                   <FormGroup label="Conteúdo HTML">
-                    <Textarea
+                    <RichTextEditor
                       value={p.conteudo_html}
                       onChange={v => updatePergunta(idx, 'conteudo_html', v)}
-                      rows={4}
-                      placeholder="<p>Texto HTML aqui...</p>"
+                      placeholder="Digite o conteúdo do bloco..."
                     />
                   </FormGroup>
                 )}

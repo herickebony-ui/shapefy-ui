@@ -10,32 +10,36 @@ import useAuthStore from '../../store/authStore'
 import { logout } from '../../api/auth'
 
 const NAV_ITEMS = [
-  { type: 'divider', label: 'Dashboard' },
-  { id: 'main',      label: 'Meus Alunos',          icon: Users,        path: '/' },
-  { type: 'divider', label: 'Central de Alunos' },
-  { id: 'alunos',    label: 'Gestão de Anamneses',   icon: ClipboardList, path: '/alunos',   modulo: 'anamnese' },
-  { id: 'avaliacoes',label: 'Avaliações Corporais',  icon: BarChart2,    path: '/avaliacoes' },
-  { type: 'divider', label: 'Module Trainning', modulo: 'treino' },
-  { id: 'fichas',    label: 'Fichas de Treino',      icon: Dumbbell,     path: '/fichas',       modulo: 'treino' },
-  { id: 'treinos',   label: 'Treinos Realizados',    icon: Activity,     path: '/treinos',      modulo: 'treino' },
-  { id: 'exercicios',   label: 'Gerenciar Exercícios',   icon: ListChecks, path: '/exercicios',   modulo: 'treino' },
-  { id: 'alongamentos', label: 'Gerenciar Alongamentos', icon: Waves,      path: '/alongamentos', modulo: 'treino' },
-  { id: 'aerobicos',    label: 'Gerenciar Aeróbicos',    icon: Wind,       path: '/aerobicos',    modulo: 'treino' },
-  { type: 'divider', label: 'Module Diet', modulo: 'dieta' },
-  { id: 'dietas',    label: 'Dietas',                icon: ClipboardList,    path: '/dietas',           modulo: 'dieta' },
-  { id: 'alimentos',         label: 'Cadastrar Alimentos',        icon: UtensilsCrossed, path: '/alimentos',         modulo: 'dieta' },
-  { id: 'refeicoes-prontas', label: 'Cadastrar Refeições Prontas', icon: BookOpen,        path: '/refeicoes-prontas', modulo: 'dieta' },
-  { type: 'divider', label: 'Gerenciamento de Alunos' },
-  { id: 'feedbacks',    label: 'Feedbacks Recebidos',  icon: MessageSquare, path: '/feedbacks',        modulo: 'feedback' },
-  { id: 'formularios', label: 'Criar Formulários',      icon: ClipboardList, path: '/criar-formularios' },
-  { type: 'divider', label: 'Gestão Consultoria' },
-  { id: 'textos',       label: 'Banco de Textos',        icon: FileText,     path: '/banco-textos' },
-  { id: 'prescricoes',  label: 'Prescrição Paciente',    icon: Pill,         path: '/prescricoes' },
+  { type: 'divider', label: 'Início' },
+  { id: 'main',         label: 'Meus Alunos',         icon: Users,           path: '/' },
+
+  { type: 'divider', label: 'Prescrições' },
+  { id: 'fichas',       label: 'Fichas de Treino',    icon: Dumbbell,        path: '/fichas',       modulo: 'treino' },
+  { id: 'dietas',       label: 'Dietas',              icon: ClipboardList,   path: '/dietas',       modulo: 'dieta' },
+  { id: 'prescricoes',  label: 'Prescrição Paciente', icon: Pill,            path: '/prescricoes' },
+
+  { type: 'divider', label: 'Acompanhamento' },
+  { id: 'feedbacks',    label: 'Feedbacks Recebidos', icon: MessageSquare,   path: '/feedbacks',    modulo: 'feedback' },
+  { id: 'treinos',      label: 'Treinos Realizados',  icon: Activity,        path: '/treinos',      modulo: 'treino' },
+  { id: 'avaliacoes',   label: 'Avaliações Corporais',icon: BarChart2,       path: '/avaliacoes' },
+  { id: 'alunos',       label: 'Gestão de Anamneses', icon: ClipboardList,   path: '/alunos',       modulo: 'anamnese' },
+
+  { type: 'divider', label: 'Catálogos' },
+  { id: 'exercicios',         label: 'Exercícios',        icon: ListChecks,      path: '/exercicios',         modulo: 'treino' },
+  { id: 'alongamentos',       label: 'Alongamentos',      icon: Waves,           path: '/alongamentos',       modulo: 'treino' },
+  { id: 'aerobicos',          label: 'Aeróbicos',         icon: Wind,            path: '/aerobicos',          modulo: 'treino' },
+  { id: 'alimentos',          label: 'Alimentos',         icon: UtensilsCrossed, path: '/alimentos',          modulo: 'dieta' },
+  { id: 'refeicoes-prontas',  label: 'Refeições Prontas', icon: BookOpen,        path: '/refeicoes-prontas',  modulo: 'dieta' },
+
+  { type: 'divider', label: 'Conteúdo' },
+  { id: 'textos',       label: 'Banco de Textos',     icon: FileText,        path: '/banco-textos' },
+  { id: 'formularios',  label: 'Criar Formulários',   icon: ClipboardList,   path: '/criar-formularios' },
+
   { type: 'divider', label: 'Conta' },
-  { id: 'assinatura',   label: 'Minha Assinatura',       icon: CreditCard,   path: '/assinatura' },
-  { id: 'perfil',       label: 'Perfil Profissional',    icon: Briefcase,    path: '/perfil' },
-  { id: 'me',           label: 'Usuário',                icon: UserCircle,   path: '/me' },
-  { id: 'suporte',      label: 'Suporte',                icon: HelpCircle,   path: '/suporte' },
+  { id: 'perfil',       label: 'Perfil Profissional', icon: Briefcase,       path: '/perfil' },
+  { id: 'assinatura',   label: 'Minha Assinatura',    icon: CreditCard,      path: '/assinatura' },
+  { id: 'me',           label: 'Usuário',             icon: UserCircle,      path: '/me' },
+  { id: 'suporte',      label: 'Suporte',             icon: HelpCircle,      path: '/suporte' },
 ]
 
 export default function AppLayout() {
@@ -99,6 +103,14 @@ export default function AppLayout() {
             if (item.modulo && !modulos?.[item.modulo]) return null
 
             if (item.type === 'divider') {
+              let hasChild = false
+              for (let j = idx + 1; j < NAV_ITEMS.length; j++) {
+                const next = NAV_ITEMS[j]
+                if (next.type === 'divider') break
+                if (!next.modulo || modulos?.[next.modulo]) { hasChild = true; break }
+              }
+              if (!hasChild) return null
+
               return expanded ? (
                 <p key={idx} className="px-3 pt-4 pb-1 text-[10px] font-bold text-gray-600 uppercase tracking-widest">
                   {item.label}

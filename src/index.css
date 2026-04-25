@@ -25,3 +25,58 @@ body {
   background: #323238;
   border-radius: 3px;
 }
+
+.prose-editor h1 { font-size: 1.4rem; font-weight: 700; margin: 0.6em 0 0.3em; color: #fff; }
+.prose-editor h2 { font-size: 1.2rem; font-weight: 700; margin: 0.6em 0 0.3em; color: #fff; }
+.prose-editor h3 { font-size: 1.05rem; font-weight: 600; margin: 0.5em 0 0.25em; color: #fff; }
+.prose-editor p  { margin: 0.35em 0; line-height: 1.55; }
+.prose-editor strong { font-weight: 700; color: #fff; }
+.prose-editor em { font-style: italic; }
+.prose-editor u  { text-decoration: underline; }
+.prose-editor s  { text-decoration: line-through; opacity: 0.7; }
+.prose-editor a  { color: #60a5fa; text-decoration: underline; cursor: pointer; }
+.prose-editor ul { list-style: disc; padding-left: 1.4em; margin: 0.4em 0; }
+.prose-editor ol { list-style: decimal; padding-left: 1.4em; margin: 0.4em 0; }
+.prose-editor li { margin: 0.15em 0; }
+.prose-editor li > p { margin: 0; }
+.prose-editor blockquote {
+  border-left: 3px solid #850000;
+  padding-left: 0.9em;
+  margin: 0.6em 0;
+  color: #d1d5db;
+  font-style: italic;
+}
+.prose-editor code {
+  background: #29292e;
+  border: 1px solid #323238;
+  border-radius: 4px;
+  padding: 0.05em 0.35em;
+  font-size: 0.85em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.prose-editor pre {
+  background: #1a1a1a;
+  border: 1px solid #323238;
+  border-radius: 8px;
+  padding: 0.7em 0.9em;
+  margin: 0.5em 0;
+  overflow-x: auto;
+  font-size: 0.8em;
+}
+.prose-editor pre code {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+.prose-editor hr {
+  border: 0;
+  border-top: 1px solid #323238;
+  margin: 0.8em 0;
+}
+.prose-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: #4b5563;
+  pointer-events: none;
+  height: 0;
+  float: left;
+}
