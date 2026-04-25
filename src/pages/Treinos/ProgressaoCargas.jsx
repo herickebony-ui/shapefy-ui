@@ -1,11 +1,11 @@
-import { useState, useMemo } from 'react'
-import { Search, TrendingUp, Dumbbell } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import { Search, TrendingUp, Dumbbell, ArrowLeft } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
 } from 'recharts'
 import {
-  buscarTreinoRealizado, listarIdsDoAluno,
+  buscarTreinoRealizado, listarIdsDoAluno, listarTreinosRealizados,
 } from '../../api/treinosRealizados'
 import { listarAlunos } from '../../api/alunos'
 import { listarFichas, buscarFicha } from '../../api/fichas'
@@ -103,6 +103,35 @@ export default function ProgressaoCargas() {
   const [fichaSelecionada, setFichaSelecionada] = useState(null)
   const [fichaDoc, setFichaDoc] = useState(null)
   const [loadingFicha, setLoadingFicha] = useState(false)
+  const [alunosRecentes, setAlunosRecentes] = useState([])
+  const [loadingRecentes, setLoadingRecentes] = useState(true)
+  const [filtroRecentes, setFiltroRecentes] = useState('')
+
+  useEffect(() => {
+    listarTreinosRealizados({ status: 'Finalizado', limit: 80 })
+      .then(({ list }) => {
+        const seen = new Set()
+        const unique = []
+        for (const t of list) {
+          if (!t.aluno || seen.has(t.aluno)) continue
+          seen.add(t.aluno)
+          unique.push({
+            name: t.aluno,
+            nome_completo: t.nome_completo,
+            ultimoTreino: t.data_e_hora_do_inicio,
+          })
+        }
+        setAlunosRecentes(unique)
+      })
+      .catch(console.error)
+      .finally(() => setLoadingRecentes(false))
+  }, [])
+
+  const recentesFiltrados = useMemo(() => {
+    const q = normalize(filtroRecentes)
+    if (!q) return alunosRecentes
+    return alunosRecentes.filter(a => normalize(a.nome_completo).includes(q))
+  }, [alunosRecentes, filtroRecentes])
 
   const exercicioStats = useMemo(() => {
     const map = {}
@@ -259,23 +288,77 @@ export default function ProgressaoCargas() {
     >
       <div className="p-4 md:p-6 space-y-4 max-w-7xl mx-auto pb-12">
         {/* Aluno */}
-        <div className="bg-[#29292e] rounded-lg border border-[#323238] p-4 space-y-3">
-          <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Selecionar Aluno</p>
-          <Autocomplete
-            value={alunoQuery}
-            onChange={setAlunoQuery}
-            onSelect={selecionarAluno}
-            searchFn={async (q) => { const r = await listarAlunos({ search: q, limit: 10 }); return r.list || r }}
-            renderItem={(a) => (
-              <div>
-                <p className="text-white text-sm font-medium">{a.nome_completo}</p>
-                <p className="text-gray-500 text-xs">{a.email}</p>
+        {!alunoSelecionado ? (
+          <div className="bg-[#29292e] rounded-lg border border-[#323238] p-4 space-y-3">
+            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Selecionar Aluno</p>
+            <Autocomplete
+              value={alunoQuery}
+              onChange={setAlunoQuery}
+              onSelect={selecionarAluno}
+              searchFn={async (q) => { const r = await listarAlunos({ search: q, limit: 10 }); return r.list || r }}
+              renderItem={(a) => (
+                <div>
+                  <p className="text-white text-sm font-medium">{a.nome_completo}</p>
+                  <p className="text-gray-500 text-xs">{a.email}</p>
+                </div>
+              )}
+              placeholder="Buscar qualquer aluno..."
+              icon={Search}
+            />
+
+            {loadingRecentes ? (
+              <div className="flex justify-center py-8"><Spinner /></div>
+            ) : alunosRecentes.length > 0 ? (
+              <div className="border border-[#323238] rounded-lg overflow-hidden">
+                <div className="px-3 py-2 bg-[#1a1a1a] border-b border-[#323238] flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Alunos com treinos recentes</span>
+                  <span className="text-gray-600 text-[10px]">({alunosRecentes.length})</span>
+                  <div className="ml-auto relative">
+                    <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500" />
+                    <input
+                      type="text"
+                      placeholder="Filtrar..."
+                      value={filtroRecentes}
+                      onChange={e => setFiltroRecentes(e.target.value)}
+                      className="h-6 pl-6 pr-2 w-32 bg-[#29292e] border border-[#323238] text-white rounded text-[11px] outline-none focus:border-[#2563eb]/60 transition-colors"
+                    />
+                  </div>
+                </div>
+                <div className="divide-y divide-[#323238]/50 max-h-[60vh] overflow-y-auto">
+                  {recentesFiltrados.length === 0 ? (
+                    <p className="text-gray-600 text-xs italic px-4 py-6 text-center">Nenhum aluno encontrado.</p>
+                  ) : recentesFiltrados.map(a => (
+                    <button
+                      key={a.name}
+                      onClick={() => selecionarAluno(a)}
+                      className="w-full text-left px-3 py-2.5 hover:bg-white/5 transition-colors flex items-center justify-between gap-2"
+                    >
+                      <p className="text-sm font-semibold text-white truncate">{a.nome_completo}</p>
+                      <span className="text-[10px] text-gray-500 shrink-0 font-mono">
+                        último: {fmtDate(a.ultimoTreino)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
+            ) : (
+              <p className="text-gray-600 text-xs italic px-1">Nenhum aluno com treinos finalizados.</p>
             )}
-            placeholder="Buscar aluno..."
-            icon={Search}
-          />
-        </div>
+          </div>
+        ) : (
+          <div className="bg-[#29292e] rounded-lg border border-[#323238] px-4 py-3 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Aluno</p>
+              <p className="text-white font-bold truncate">{alunoSelecionado.nome_completo}</p>
+            </div>
+            <button
+              onClick={() => { setAlunoSelecionado(null); setAlunoQuery(''); setTreinos([]); setFichas([]); setFichaDoc(null); setFichaSelecionada(null); setExercicioSelecionado('') }}
+              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg px-3 py-1.5 transition-colors shrink-0"
+            >
+              <ArrowLeft size={12} /> Trocar aluno
+            </button>
+          </div>
+        )}
 
         {alunoSelecionado && (
           <>
