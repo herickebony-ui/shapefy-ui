@@ -5,6 +5,7 @@ import { buscarAluno, salvarAluno } from '../../api/alunos'
 import { listarDietas } from '../../api/dietas'
 import { listarFichas } from '../../api/fichas'
 import { listarAnamneses, buscarAnamnese, salvarAnamnese, excluirAnamnese, listarFormularios, vincularAnamnese } from '../../api/anamneses'
+import { listarAvaliacoesPorAluno } from '../../api/avaliacoes'
 import {
   Button, Badge, Modal, Tabs, Spinner, EmptyState,
   FormGroup, Input, Select, Textarea,
@@ -558,6 +559,9 @@ export default function AlunoModal({ aluno: alunoBase, onClose }) {
   const [fichasCarregadas, setFichasCarregadas] = useState(false)
   const [anamneses, setAnamneses] = useState([])
   const [loadingAnamneses, setLoadingAnamneses] = useState(false)
+  const [avaliacoes, setAvaliacoes] = useState([])
+  const [loadingAvaliacoes, setLoadingAvaliacoes] = useState(false)
+  const [avaliacoesCarregadas, setAvaliacoesCarregadas] = useState(false)
 
   useEffect(() => {
     if (!alunoBase) return
@@ -578,6 +582,17 @@ export default function AlunoModal({ aluno: alunoBase, onClose }) {
     if (abaAtiva === 'treinos' && !fichasCarregadas) {
       setLoadingFichas(true)
       listarFichas({ aluno: id, limit: 50 }).then(r => { setFichas(r.list); setFichasCarregadas(true) }).catch(console.error).finally(() => setLoadingFichas(false))
+    }
+    if (abaAtiva === 'composicao' && !avaliacoesCarregadas) {
+      setLoadingAvaliacoes(true)
+      listarAvaliacoesPorAluno(id)
+        .then(list => {
+          // mais recente primeiro para exibição
+          setAvaliacoes([...list].sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))))
+          setAvaliacoesCarregadas(true)
+        })
+        .catch(console.error)
+        .finally(() => setLoadingAvaliacoes(false))
     }
   }, [abaAtiva, alunoBase])
 
@@ -655,7 +670,91 @@ export default function AlunoModal({ aluno: alunoBase, onClose }) {
             />
           )}
           {abaAtiva === 'composicao' && (
-            <EmptyState icon={BarChart2} title="Avaliação de Composição Corporal" description="Esta funcionalidade será disponibilizada em breve" />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">
+                  {avaliacoes.length} avaliaç{avaliacoes.length === 1 ? 'ão' : 'ões'}
+                </p>
+                <div className="flex items-center gap-2">
+                  {avaliacoes.length > 0 && (
+                    <Button
+                      variant="secondary"
+                      size="xs"
+                      icon={BarChart2}
+                      onClick={() => {
+                        onClose()
+                        navigate('/avaliacoes', { state: { aluno: { aluno: alunoBase.name, nome_completo: alunoBase.nome_completo } } })
+                      }}
+                    >
+                      Comparar
+                    </Button>
+                  )}
+                  <Button
+                    variant="primary"
+                    size="xs"
+                    icon={Plus}
+                    onClick={() => {
+                      onClose()
+                      navigate('/avaliacoes/nova', { state: { aluno: { aluno: alunoBase.name, nome_completo: alunoBase.nome_completo } } })
+                    }}
+                  >
+                    Nova Avaliação
+                  </Button>
+                </div>
+              </div>
+
+              {loadingAvaliacoes ? (
+                <div className="flex justify-center py-12"><Spinner /></div>
+              ) : avaliacoes.length === 0 && avaliacoesCarregadas ? (
+                <EmptyState
+                  icon={BarChart2}
+                  title="Sem avaliações"
+                  description="Nenhuma avaliação de composição corporal cadastrada para este aluno"
+                />
+              ) : (
+                <div className="border border-[#323238] rounded-lg overflow-hidden divide-y divide-[#323238]/50">
+                  {avaliacoes.map(av => (
+                    <button
+                      key={av.name}
+                      onClick={() => {
+                        onClose()
+                        navigate('/avaliacoes', { state: { aluno: { aluno: av.aluno, nome_completo: av.nome_completo } } })
+                      }}
+                      className="w-full text-left px-3 py-2.5 hover:bg-white/5 transition-colors flex items-center gap-3"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white text-sm font-semibold">{fmtData(av.date)}</p>
+                        <div className="flex items-center gap-3 mt-0.5">
+                          {av.weight > 0 && (
+                            <span className="text-gray-500 text-[10px] font-mono">{Number(av.weight).toFixed(1)} kg</span>
+                          )}
+                          {av.bmi > 0 && (
+                            <span className="text-gray-500 text-[10px] font-mono">IMC {Number(av.bmi).toFixed(1)}</span>
+                          )}
+                          {av.lean_mass > 0 && (
+                            <span className="text-emerald-400/80 text-[10px] font-mono">MM {Number(av.lean_mass).toFixed(1)}</span>
+                          )}
+                          {av.fat_mass > 0 && (
+                            <span className="text-orange-400/80 text-[10px] font-mono">MG {Number(av.fat_mass).toFixed(1)}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        {av.jp7_body_fat > 0 ? (
+                          <>
+                            <p className="text-[#2563eb] text-sm font-bold">{Number(av.jp7_body_fat).toFixed(1)}%</p>
+                            <p className="text-gray-600 text-[9px] uppercase tracking-wider">JP7</p>
+                          </>
+                        ) : (
+                          <span className="text-gray-600 text-[10px]">—</span>
+                        )}
+                      </div>
+                      <ChevronRight size={14} className="text-gray-600 shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
   ArrowLeft, Plus, RefreshCw, Trash2, FileDown, Check,
   Filter, GitCompare, X as XIcon, BarChart2, CheckSquare, Square,
@@ -70,6 +70,7 @@ function ChartTip({ active, payload, label }) {
 
 export default function AvaliacaoListagem() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [view, setView] = useState('list')
 
   // ─── List state ─────────────────────────────────────────────────────────────
@@ -140,6 +141,16 @@ export default function AvaliacaoListagem() {
       setHistorico(data)
     } catch (e) { console.error(e) }
     finally { setLoadingHistorico(false) }
+  }, [])
+
+  // ─── Auto-abrir comparação quando navegado com state.aluno ──────────────────
+  useEffect(() => {
+    const a = location.state?.aluno
+    if (a?.aluno) {
+      abrirCompare({ aluno: a.aluno, nome_completo: a.nome_completo })
+      window.history.replaceState({}, '')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // ─── Excluir avaliação ───────────────────────────────────────────────────────
