@@ -18,6 +18,7 @@ import FeedbackDetalhe from './pages/Feedbacks/FeedbackDetalhe'
 import AvaliacaoListagem from './pages/Avaliacoes/AvaliacaoListagem'
 import AvaliacaoForm from './pages/Avaliacoes/AvaliacaoForm'
 import TreinosRealizados from './pages/Treinos/TreinosRealizados'
+import ProgressaoCargas from './pages/Treinos/ProgressaoCargas'
 import BancoTextos from './pages/BancoTextos/BancoTextos'
 import FormularioListagem from './pages/Formularios/FormularioListagem'
 import FormularioBuilder from './pages/Formularios/FormularioBuilder'
@@ -80,10 +81,11 @@ function App() {
           <Route path="alongamentos" element={<ModuleRoute modulo="treino"><GerenciarAlongamentos /></ModuleRoute>} />
           <Route path="aerobicos" element={<ModuleRoute modulo="treino"><GerenciarAerobicos /></ModuleRoute>} />
           <Route path="treinos" element={<ModuleRoute modulo="treino"><TreinosRealizados /></ModuleRoute>} />
+          <Route path="progressao-cargas" element={<ModuleRoute modulo="treino"><ProgressaoCargas /></ModuleRoute>} />
 
-          {/* feedback */}
-          <Route path="feedbacks" element={<ModuleRoute modulo="feedback"><FeedbackListagem /></ModuleRoute>} />
-          <Route path="feedbacks/:id" element={<ModuleRoute modulo="feedback"><FeedbackDetalhe /></ModuleRoute>} />
+          {/* feedback (acesso liberado para todos) */}
+          <Route path="feedbacks" element={<FeedbackListagem />} />
+          <Route path="feedbacks/:id" element={<FeedbackDetalhe />} />
 
           {/* sem restrição */}
           <Route path="avaliacoes" element={<AvaliacaoListagem />} />
