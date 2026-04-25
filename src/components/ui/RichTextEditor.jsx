@@ -2,12 +2,21 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
+import { TextStyle, Color } from '@tiptap/extension-text-style'
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
   Heading1, Heading2, List, ListOrdered, Quote, Code,
-  Link as LinkIcon, Undo2, Redo2, Eraser,
+  Link as LinkIcon, Undo2, Redo2, Eraser, Palette,
 } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
+
+const PALETTE = [
+  ['#000000', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#a855f7'],
+  ['#ffffff', '#fecaca', '#fed7aa', '#fef08a', '#bbf7d0', '#bfdbfe', '#e9d5ff'],
+  ['#d1d5db', '#fca5a5', '#fdba74', '#fde047', '#86efac', '#93c5fd', '#d8b4fe'],
+  ['#6b7280', '#dc2626', '#ea580c', '#ca8a04', '#16a34a', '#2563eb', '#9333ea'],
+  ['#374151', '#7f1d1d', '#9a3412', '#854d0e', '#166534', '#1e40af', '#6b21a8'],
+]
 
 const ToolbarButton = ({ onClick, active, disabled, title, children }) => (
   <button
@@ -35,12 +44,24 @@ export default function RichTextEditor({
   placeholder = 'Digite o conteúdo...',
   minHeight = 200,
 }) {
+  const [colorOpen, setColorOpen] = useState(false)
+  const colorRef = useRef(null)
+
+  useEffect(() => {
+    if (!colorOpen) return
+    const handler = (e) => { if (!colorRef.current?.contains(e.target)) setColorOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [colorOpen])
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
       }),
       Underline,
+      TextStyle,
+      Color,
       Link.configure({
         openOnClick: false,
         HTMLAttributes: { class: 'text-[#60a5fa] underline' },
@@ -143,6 +164,56 @@ export default function RichTextEditor({
         ><Quote size={13} /></ToolbarButton>
 
         <ToolbarSep />
+
+        <div className="relative" ref={colorRef}>
+          <button
+            type="button"
+            onClick={() => setColorOpen(v => !v)}
+            title="Cor do texto"
+            className={`h-7 w-7 flex flex-col items-center justify-center rounded transition-colors shrink-0
+              ${colorOpen ? 'bg-[#323238]' : 'text-gray-400 hover:text-white hover:bg-[#323238]'}
+            `}
+          >
+            <Palette size={11} className="text-gray-300" />
+            <span
+              className="block w-4 h-1 rounded-sm mt-0.5"
+              style={{ background: editor.getAttributes('textStyle')?.color || '#ffffff' }}
+            />
+          </button>
+          {colorOpen && (
+            <div className="absolute top-full left-0 mt-1 z-20 p-2 bg-[#1a1a1a] border border-[#323238] rounded-lg shadow-xl">
+              <div className="space-y-1">
+                {PALETTE.map((row, ri) => (
+                  <div key={ri} className="flex gap-1">
+                    {row.map(c => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => {
+                          editor.chain().focus().setColor(c).run()
+                          setColorOpen(false)
+                        }}
+                        title={c}
+                        className="w-5 h-5 rounded border border-[#323238] hover:scale-110 transition-transform"
+                        style={{ background: c }}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  editor.chain().focus().unsetColor().run()
+                  setColorOpen(false)
+                }}
+                className="mt-2 w-full text-[10px] uppercase tracking-wider text-gray-400 hover:text-white py-1 px-2 border border-[#323238] hover:border-gray-500 rounded transition-colors"
+              >
+                Cor padrão
+              </button>
+            </div>
+          )}
+        </div>
 
         <ToolbarButton
           onClick={addLink}
