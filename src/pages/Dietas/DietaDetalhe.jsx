@@ -22,6 +22,62 @@ import {
 const fmt = (v, dec = 1) => v != null ? Number(v).toFixed(dec) : '0.0'
 const uid = () => `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
 
+const STEP_PESO = 5
+const roundStep = (n) => Math.max(STEP_PESO, Math.round(n / STEP_PESO) * STEP_PESO)
+
+const pesoParaCalorias = (item, targetCal) => {
+  const base = item._base || item
+  const baseCal = Number(base.calories || 0)
+  const baseRef = Number(base.ref_weight || 100)
+  if (!baseCal || !baseRef || !targetCal) return null
+  return roundStep((targetCal / baseCal) * baseRef)
+}
+
+const rescalarItem = (item, novoRef) => {
+  const base = item._base || item
+  const pesoBase = parseFloat(base.ref_weight) || 100
+  const prop = pesoBase > 0 ? novoRef / pesoBase : 0
+  const c = (v) => Math.round(Number(v || 0) * prop)
+  return {
+    ...item, _base: base, ref_weight: novoRef,
+    protein: c(base.protein), carbohydrate: c(base.carbohydrate),
+    lipid: c(base.lipid), fiber: c(base.fiber), calories: c(base.calories),
+    calcium: c(base.calcium), copper: c(base.copper), iron: c(base.iron),
+    phosphor: c(base.phosphor), magnesium: c(base.magnesium),
+    potassium: c(base.potassium), selenium: c(base.selenium),
+    sodium: c(base.sodium), zinc: c(base.zinc),
+    vitamin_a: c(base.vitamin_a), vitamin_b1: c(base.vitamin_b1),
+    vitamin_b2: c(base.vitamin_b2), vitamin_b3: c(base.vitamin_b3),
+    vitamin_b6: c(base.vitamin_b6), vitamin_b9: c(base.vitamin_b9),
+    vitamin_b12: c(base.vitamin_b12), vitamin_c: c(base.vitamin_c),
+    vitamin_d: c(base.vitamin_d), vitamin_e: c(base.vitamin_e),
+  }
+}
+
+const ajustarPorSelecao = (items, idx) => {
+  const arr = [...items]
+  const atual = arr[idx]
+  if (!atual) return arr
+  if (atual.substitute === 1) {
+    let mainIdx = -1
+    for (let i = idx - 1; i >= 0; i--) {
+      if (arr[i].substitute !== 1) { mainIdx = i; break }
+    }
+    if (mainIdx >= 0) {
+      const alvo = pesoParaCalorias(atual, Number(arr[mainIdx].calories || 0))
+      if (alvo) arr[idx] = rescalarItem(atual, alvo)
+    }
+    return arr
+  }
+  const targetCal = Number(atual.calories || 0)
+  for (let i = idx + 1; i < arr.length && arr[i].substitute === 1; i++) {
+    if (!arr[i].food) continue
+    const alvo = pesoParaCalorias(arr[i], targetCal)
+    if (alvo) arr[i] = rescalarItem(arr[i], alvo)
+  }
+  return arr
+}
+
 // ─── LegendaSug ───────────────────────────────────────────────────────────────
 // Input de legenda com auto-sugestão ao digitar (portal fixed).
 
@@ -930,9 +986,10 @@ const RefeicaoBlock = ({ n, draft, setDraft }) => {
         return { ...prev, [field]: arr }
       }),
       onUpdateItem: (idx, key, value) => setDraft(prev => {
-        const arr = [...(prev[field] || [])]
+        let arr = [...(prev[field] || [])]
         if (key === '__selecionarAlimento') {
           arr[idx] = { ...arr[idx], ...value }
+          arr = ajustarPorSelecao(arr, idx)
         } else if (key === 'ref_weight') {
           if (!arr[idx]._base) arr[idx]._base = { ...arr[idx] }
           const novoPeso = parseInt(value, 10) || 0
@@ -952,6 +1009,9 @@ const RefeicaoBlock = ({ n, draft, setDraft }) => {
             vitamin_b6: calc(arr[idx]._base.vitamin_b6), vitamin_b9: calc(arr[idx]._base.vitamin_b9),
             vitamin_b12: calc(arr[idx]._base.vitamin_b12), vitamin_c: calc(arr[idx]._base.vitamin_c),
             vitamin_d: calc(arr[idx]._base.vitamin_d), vitamin_e: calc(arr[idx]._base.vitamin_e),
+          }
+          if (arr[idx].substitute !== 1) {
+            arr = ajustarPorSelecao(arr, idx)
           }
         } else {
           arr[idx] = { ...arr[idx], [key]: value }
