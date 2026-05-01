@@ -15,6 +15,7 @@ import AlimentosListagem from './pages/Alimentos/AlimentosListagem'
 import RefeicoesProntasListagem from './pages/Dietas/RefeicoesProntasListagem'
 import FeedbackListagem from './pages/Feedbacks/FeedbackListagem'
 import FeedbackDetalhe from './pages/Feedbacks/FeedbackDetalhe'
+import CronogramaFeedbacks from './pages/Feedbacks/CronogramaFeedbacks'
 import AvaliacaoListagem from './pages/Avaliacoes/AvaliacaoListagem'
 import AvaliacaoForm from './pages/Avaliacoes/AvaliacaoForm'
 import TreinosRealizados from './pages/Treinos/TreinosRealizados'
@@ -86,6 +87,8 @@ function App() {
           {/* feedback (acesso liberado para todos) */}
           <Route path="feedbacks" element={<FeedbackListagem />} />
           <Route path="feedbacks/:id" element={<FeedbackDetalhe />} />
+          <Route path="cronograma-feedbacks" element={<CronogramaFeedbacks />} />
+          <Route path="cronograma-feedbacks/aluno/:alunoId" element={<CronogramaFeedbacks />} />
 
           {/* sem restrição */}
           <Route path="avaliacoes" element={<AvaliacaoListagem />} />
