@@ -28,6 +28,7 @@ import UsuarioHub from './pages/Usuario/UsuarioHub'
 import PerfilProfissional from './pages/Perfil/PerfilProfissional'
 import MinhaAssinatura from './pages/Assinatura/MinhaAssinatura'
 import UpdatePassword from './pages/UpdatePassword'
+import ForgotPassword from './pages/ForgotPassword'
 import PrescricaoListagem from './pages/Prescricoes/PrescricaoListagem'
 import PrescricaoDetalhe from './pages/Prescricoes/PrescricaoDetalhe'
 
@@ -58,6 +59,7 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/update-password" element={<UpdatePassword />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route
           path="/"
           element={

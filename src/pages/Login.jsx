@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
 import { login } from '../api/auth'
 import { buscarAssinatura, buscarPlano } from '../api/assinatura'
@@ -82,14 +82,21 @@ export default function Login() {
               required
             />
 
-            <Input
-              label="Senha"
-              type="password"
-              value={form.pwd}
-              onChange={(val) => setForm({ ...form, pwd: val })}
-              placeholder="••••••••"
-              required
-            />
+            <div className="space-y-1">
+              <Input
+                label="Senha"
+                type="password"
+                value={form.pwd}
+                onChange={(val) => setForm({ ...form, pwd: val })}
+                placeholder="••••••••"
+                required
+              />
+              <div className="flex justify-end">
+                <Link to="/forgot-password" className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
+                  Esqueci minha senha
+                </Link>
+              </div>
+            </div>
 
             {error && (
               <div className={`${tw.badge.danger} rounded-lg px-4 py-3`}>
