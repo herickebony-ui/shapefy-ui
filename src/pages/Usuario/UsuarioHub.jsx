@@ -26,9 +26,8 @@ export default function UsuarioHub() {
     if (novaSenha.length < 6) { setErroSenha('A senha deve ter ao menos 6 caracteres.'); return }
     setSalvandoSenha(true)
     try {
-      await client.post('/api/method/frappe.core.doctype.user.user.update_password', {
+      await client.post('/api/method/shapefy.api.api.set_initial_password', {
         new_password: novaSenha,
-        logout_all_sessions: 0,
       })
       setModalSenha(false)
       setSenhaAtual(''); setNovaSenha(''); setConfirmarSenha('')
