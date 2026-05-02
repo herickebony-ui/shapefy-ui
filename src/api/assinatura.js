@@ -22,7 +22,7 @@ export const listarFaturas = async (assinatura) => {
   const res = await client.get('/api/resource/Fatura%20de%20Assinatura', {
     params: {
       fields: JSON.stringify(['name', 'creation', 'status', 'montante', 'data_da_transacao']),
-      filters: JSON.stringify([['assinatura', '=', assinatura]]),
+      filters: JSON.stringify([['name', '=', assinatura]]),
       limit: 50,
       order_by: 'creation desc',
     },
