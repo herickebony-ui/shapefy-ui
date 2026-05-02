@@ -17,6 +17,14 @@ const StatusBadge = ({ status }) => {
   return <Badge variant={ativo ? 'success' : 'danger'}>{status}</Badge>
 }
 
+const FATURA_STATUS_VARIANT = { pago: 'success', pendente: 'warning', recusado: 'danger' }
+
+const FaturaStatusBadge = ({ status }) => {
+  if (!status) return null
+  const variant = FATURA_STATUS_VARIANT[status.toLowerCase()] || 'default'
+  return <Badge variant={variant}>{status}</Badge>
+}
+
 export default function MinhaAssinatura() {
   const user = useAuthStore((s) => s.user)
   const [loading, setLoading] = useState(true)
@@ -138,21 +146,22 @@ export default function MinhaAssinatura() {
             ) : (
               <div className="divide-y divide-[#323238]">
                 {faturas.map((f) => (
-                  <div key={f.name} className="flex items-center justify-between px-5 py-3">
-                    <div>
-                      <p className="text-white text-sm">{f.name}</p>
+                  <div key={f.name} className="flex items-center justify-between px-5 py-3 gap-3">
+                    <div className="min-w-0">
+                      <p className="text-white text-sm font-medium truncate">
+                        {f.id_da_transacao || f.name}
+                      </p>
                       <p className="text-gray-500 text-xs mt-0.5">
-                        Venc: {fmtDate(f.data_vencimento)}
-                        {f.data_pagamento ? ` · Pago: ${fmtDate(f.data_pagamento)}` : ''}
+                        {fmtDate(f.data_da_transacao)}
                       </p>
                     </div>
-                    <div className="flex items-center gap-3">
-                      {f.valor != null && (
-                        <span className="text-white text-sm font-medium">
-                          R$ {Number(f.valor).toFixed(2).replace('.', ',')}
+                    <div className="flex items-center gap-3 shrink-0">
+                      {f.montante != null && (
+                        <span className="text-white text-sm font-semibold tabular-nums">
+                          R$ {Number(f.montante).toFixed(2).replace('.', ',')}
                         </span>
                       )}
-                      <StatusBadge status={f.status} />
+                      <FaturaStatusBadge status={f.status} />
                     </div>
                   </div>
                 ))}
