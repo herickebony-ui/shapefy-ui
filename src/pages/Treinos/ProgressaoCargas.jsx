@@ -4,6 +4,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
 } from 'recharts'
+import { buscarSmart } from '../../utils/strings'
 import {
   buscarTreinoRealizado, listarIdsDoAluno, listarTreinosRealizados,
 } from '../../api/treinosRealizados'
@@ -128,9 +129,8 @@ export default function ProgressaoCargas() {
   }, [])
 
   const recentesFiltrados = useMemo(() => {
-    const q = normalize(filtroRecentes)
-    if (!q) return alunosRecentes
-    return alunosRecentes.filter(a => normalize(a.nome_completo).includes(q))
+    if (!filtroRecentes) return alunosRecentes
+    return alunosRecentes.filter(a => buscarSmart(a.nome_completo, filtroRecentes))
   }, [alunosRecentes, filtroRecentes])
 
   const exercicioStats = useMemo(() => {
@@ -185,7 +185,7 @@ export default function ProgressaoCargas() {
 
   const exerciciosFiltrados = useMemo(() => {
     return exercicioStats.filter(ex => {
-      const buscaOk = !buscaEx || normalize(ex.nome).includes(normalize(buscaEx))
+      const buscaOk = !buscaEx || buscarSmart(ex.nome, buscaEx)
       const fichaOk = filtroTreino === 'Todos' || ex.fichas.includes(filtroTreino)
       return buscaOk && fichaOk
     })

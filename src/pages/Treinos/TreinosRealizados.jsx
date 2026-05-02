@@ -4,6 +4,7 @@ import {
   Dumbbell, Activity, Clock, MessageSquare,
   Save, Search, Calendar,
 } from 'lucide-react'
+import { buscarSmart } from '../../utils/strings'
 import {
   listarTreinosRealizados, buscarTreinoRealizado,
   salvarFeedbackProfissional,
@@ -345,7 +346,8 @@ export default function TreinosRealizados() {
       const { list, hasMore: more } = await listarTreinosRealizados({
         busca: query, status, page: p, limit: 50,
       })
-      setLista(prev => reset ? list : [...prev, ...list])
+      const lista = query ? list.filter(t => buscarSmart(t.nome_completo, query)) : list
+      setLista(prev => reset ? lista : [...prev, ...lista])
       setHasMore(more)
       if (reset) setPage(1); else setPage(p)
     } catch (e) { console.error(e) }
@@ -365,7 +367,7 @@ export default function TreinosRealizados() {
 
   const listaFiltrada = useMemo(() => {
     return lista.filter(t => {
-      const fichaOk = !filtroTreino || normalize(t.treino_label || t.treino).includes(normalize(filtroTreino))
+      const fichaOk = !filtroTreino || buscarSmart([t.treino_label, t.treino], filtroTreino)
       const data = t.data_e_hora_do_inicio ? String(t.data_e_hora_do_inicio).substring(0, 10) : ''
       const dataInicioOk = !filtroDataInicio || data >= filtroDataInicio
       const dataFimOk = !filtroDataFim || data <= filtroDataFim

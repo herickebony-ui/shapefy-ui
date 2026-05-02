@@ -19,8 +19,8 @@ export const listarTreinosRealizados = async ({ busca, alunoId, status, page = 1
     params: {
       fields: JSON.stringify(LIST_FIELDS),
       filters: JSON.stringify(filters),
-      limit,
-      limit_start: (page - 1) * limit,
+      limit: busca ? 200 : limit,
+      limit_start: busca ? 0 : (page - 1) * limit,
       order_by: 'data_e_hora_do_inicio desc',
     },
   })

@@ -15,8 +15,8 @@ export const listarDietas = async ({ alunoId, busca, kcalMin, kcalMax, page = 1,
       "meal_1_label", "meal_2_label", "meal_3_label", "meal_4_label",
       "meal_5_label", "meal_6_label", "meal_7_label", "meal_8_label"
     ]),
-    limit,
-    limit_start: (page - 1) * limit,
+    limit: busca ? 200 : limit,
+    limit_start: busca ? 0 : (page - 1) * limit,
     order_by: 'creation desc',
   }
   const filtros = []

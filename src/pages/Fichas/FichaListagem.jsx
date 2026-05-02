@@ -8,6 +8,7 @@ import {
 import { listarFichas, buscarFicha, excluirFicha, criarFicha, salvarFicha, listarExercicios } from '../../api/fichas'
 import { listarAlunos } from '../../api/alunos'
 import { Button, FormGroup, Input, Autocomplete, Modal, EmptyState, Pagination, DataTable } from '../../components/ui'
+import { buscarSmart } from '../../utils/strings'
 
 // Indexa por nome_do_exercicio E name do DocType para cobrir fichas antigas e novas
 const buildIntensMap = (lista) => {
@@ -955,7 +956,8 @@ export default function FichaListagem() {
         busca: query || undefined,
         limit: FETCH_LIMIT,
       })
-      setFichas(list)
+      const lista = query ? list.filter(f => buscarSmart(f.nome_completo, query)) : list
+      setFichas(lista)
     } catch (err) {
       setError(err.message ?? 'Erro ao buscar fichas')
     } finally {

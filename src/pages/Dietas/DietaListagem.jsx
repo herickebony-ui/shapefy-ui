@@ -10,6 +10,7 @@ import { listarDietas, excluirDieta, buscarDieta, salvarDieta, criarDieta } from
 import { listarAlunos } from '../../api/alunos'
 import { ModalDuplicarDieta } from './DietaDetalhe'
 import { Button, FormGroup, Input, Autocomplete, Modal, EmptyState, Pagination, DataTable } from '../../components/ui'
+import { buscarSmart } from '../../utils/strings'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -537,7 +538,8 @@ export default function DietaListagem() {
         kcalMax: filtros.kcalMax || undefined,
         limit: FETCH_LIMIT,
       })
-      setDietas(list)
+      const lista = query ? list.filter(d => buscarSmart(d.nome_completo, query)) : list
+      setDietas(lista)
     } catch (err) {
       setError(err.message ?? 'Erro ao buscar dietas')
     } finally {

@@ -12,6 +12,7 @@ import {
   Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { listarAvaliacoes, listarAvaliacoesPorAluno, excluirAvaliacao } from '../../api/avaliacoes'
+import { buscarSmart } from '../../utils/strings'
 import { Button, Badge, Spinner, EmptyState, DataTable } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 import ImagemInterativa from '../Feedbacks/ImagemInterativa'
@@ -121,7 +122,10 @@ export default function AvaliacaoListagem() {
     setLoading(true)
     try {
       const res = await listarAvaliacoes({ busca: queryBusca, page, limit: 50 })
-      setAvaliacoes(res.list)
+      const lista = queryBusca
+        ? res.list.filter(a => buscarSmart(a.nome_completo, queryBusca))
+        : res.list
+      setAvaliacoes(lista)
       setHasMore(res.hasMore)
     } catch (e) { console.error(e) }
     finally { setLoading(false) }

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { RefreshCw, Plus, Search, Eye, Trash2, Copy, X, Pill, Database, Edit2, Check, ToggleLeft, ToggleRight } from 'lucide-react'
 import { listarPrescricoes, excluirPrescricao, buscarPrescricao, criarPrescricao, togglePrescricao } from '../../api/prescricoes'
+import { buscarSmart } from '../../utils/strings'
 import {
   listarManipulados, criarManipulado, salvarManipulado, excluirManipulado,
 } from '../../api/manipulados'
@@ -158,7 +159,8 @@ export default function PrescricaoListagem() {
     try {
       const p = reset ? 1 : page + 1
       const { list, hasMore: more } = await listarPrescricoes({ busca: query, page: p })
-      setLista(prev => reset ? list : [...prev, ...list])
+      const lista = query ? list.filter(p => buscarSmart(p.nome_completo, query)) : list
+      setLista(prev => reset ? lista : [...prev, ...lista])
       setHasMore(more)
       if (reset) setPage(1); else setPage(p)
     } catch (e) { console.error(e) }

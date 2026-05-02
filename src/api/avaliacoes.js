@@ -16,8 +16,8 @@ export const listarAvaliacoes = async ({ busca, page = 1, limit = 50 } = {}) => 
   const params = {
     fields: JSON.stringify(LIST_FIELDS),
     filters: JSON.stringify(filters),
-    limit,
-    limit_start: (page - 1) * limit,
+    limit: busca ? 200 : limit,
+    limit_start: busca ? 0 : (page - 1) * limit,
     order_by: 'date desc',
   }
   const res = await client.get(`/api/resource/${DOCTYPE}`, { params })

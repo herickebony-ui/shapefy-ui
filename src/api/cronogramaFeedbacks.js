@@ -43,6 +43,7 @@ export const listarAgendamentos = async ({
       'observacao',
       'nota',
       'is_start',
+      'is_training',
       'creation',
       'modified',
     ]),
@@ -77,6 +78,7 @@ export const listarAgendamentosDoAluno = async (alunoId) => {
       'observacao',
       'nota',
       'is_start',
+      'is_training',
     ]),
     filters: JSON.stringify([
       ['profissional', '=', profissional],
@@ -106,6 +108,7 @@ export const criarAgendamento = async (payload) => {
     observacao = '',
     nota = '',
     is_start = 0,
+    is_training = 0,
   } = payload
   const res = await client.post(`/api/resource/${ENC_FA}`, {
     aluno,
@@ -117,14 +120,15 @@ export const criarAgendamento = async (payload) => {
     observacao,
     nota,
     is_start: is_start ? 1 : 0,
+    is_training: is_training ? 1 : 0,
   })
   return res.data.data
 }
 
 export const salvarAgendamento = async (id, campos) => {
-  // Normaliza is_start (boolean → 0/1)
   const payload = { ...campos }
   if ('is_start' in payload) payload.is_start = payload.is_start ? 1 : 0
+  if ('is_training' in payload) payload.is_training = payload.is_training ? 1 : 0
   const res = await client.put(
     `/api/resource/${ENC_FA}/${encodeURIComponent(id)}`,
     payload
@@ -201,6 +205,7 @@ export const sincronizarCronogramaDoAluno = async (alunoId, payloads) => {
         observacao: p.observacao || '',
         nota: p.nota || '',
         is_start: p.is_start ? 1 : 0,
+        is_training: p.is_training ? 1 : 0,
         status: p.status || mapaExistentes[chave].status,
       })
       operacoes.atualizados.push(mapaExistentes[chave].name)
@@ -215,6 +220,7 @@ export const sincronizarCronogramaDoAluno = async (alunoId, payloads) => {
         observacao: p.observacao || '',
         nota: p.nota || '',
         is_start: p.is_start ? 1 : 0,
+        is_training: p.is_training ? 1 : 0,
       })
       operacoes.criados.push(novo.name)
     }
@@ -249,8 +255,62 @@ export const clonarCronograma = async (alunoOrigemId, alunoDestinoId) => {
     dias_aviso: o.dias_aviso || 1,
     status: 'Agendado', // Reset status no destino
     is_start: o.is_start || 0,
+    is_training: o.is_training || 0,
   }))
   return await criarAgendamentosEmLote(payloads)
+}
+
+// ─── Status de cronograma para Hub de Alunos ──────────────────────────────────
+
+/**
+ * Para uma lista de alunos, retorna { [alunoId]: { proximo, atrasados, total } }.
+ * Usado no Hub de Alunos para mostrar coluna "Cronograma".
+ *
+ * Implementação client-side: faz UMA query com filtro "in" pelos IDs de alunos.
+ * (Se o backend disponibilizar a função whitelist obter_status_cronograma_alunos,
+ *  trocar por essa chamada — é só otimização.)
+ */
+export const obterStatusCronogramaAlunos = async (alunosIds = []) => {
+  if (!alunosIds.length) return {}
+  const profissional = profissionalLogado()
+  const params = {
+    fields: JSON.stringify([
+      'name',
+      'aluno',
+      'data_agendada',
+      'status',
+      'is_start',
+    ]),
+    filters: JSON.stringify([
+      ['profissional', '=', profissional],
+      ['aluno', 'in', alunosIds],
+    ]),
+    limit: 5000,
+    order_by: 'data_agendada asc',
+  }
+  const res = await client.get(`/api/resource/${ENC_FA}`, { params })
+  const lista = res.data.data || []
+
+  const hoje = new Date().toISOString().slice(0, 10)
+  const out = {}
+  lista.forEach(item => {
+    if (!out[item.aluno]) out[item.aluno] = { proximo: null, atrasados: 0, total: 0 }
+    out[item.aluno].total += 1
+
+    const respondido = item.status === 'Respondido' || item.status === 'Concluido'
+
+    if (!respondido && !item.is_start && item.data_agendada < hoje) {
+      out[item.aluno].atrasados += 1
+    }
+    if (
+      !respondido && !item.is_start &&
+      item.data_agendada >= hoje &&
+      (!out[item.aluno].proximo || item.data_agendada < out[item.aluno].proximo)
+    ) {
+      out[item.aluno].proximo = item.data_agendada
+    }
+  })
+  return out
 }
 
 // ─── Estatísticas / Dashboard ─────────────────────────────────────────────────

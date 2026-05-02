@@ -16,8 +16,8 @@ export const listarFichas = async ({ busca, nivel, aluno, page = 1, limit = 50 }
       'nivel', 'objetivo', 'data_de_inicio', 'data_de_fim', 'estrutura_calculada',
     ]),
     filters: JSON.stringify(filters),
-    limit,
-    limit_start: (page - 1) * limit,
+    limit: busca ? 200 : limit,
+    limit_start: busca ? 0 : (page - 1) * limit,
     order_by: 'creation desc',
   }
 

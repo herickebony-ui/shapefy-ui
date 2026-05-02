@@ -1,13 +1,18 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { Send, RefreshCw, ChevronRight } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Send, RefreshCw, ChevronRight, Calendar } from 'lucide-react'
 
 const fmtData = (d) => {
   if (!d) return ''
   const [y, m, day] = String(d).split(' ')[0].split('-')
   return `${day}/${m}/${y}`
 }
+const todayISO = () => new Date().toISOString().slice(0, 10)
+
 import { listarAlunos } from '../../api/alunos'
 import { listarAnamnesesPorAlunos, listarAnamneses, listarFormularios, vincularAnamnese } from '../../api/anamneses'
+import { obterStatusCronogramaAlunos } from '../../api/cronogramaFeedbacks'
+import { buscarSmart } from '../../utils/strings'
 import {
   Button, Badge, Spinner, EmptyState, DataTable,
   Modal, FormGroup, Select,
@@ -19,12 +24,15 @@ const PAGE_SIZE = 30
 
 const STATUS_OPTS = [
   { value: '', label: 'Todos' },
-  { value: 'Respondido', label: 'Respondido' },
-  { value: 'Enviado', label: 'Enviado' },
+  { value: 'Respondido', label: 'Anamnese respondida' },
+  { value: 'Enviado', label: 'Anamnese enviada' },
   { value: 'pendente', label: 'Sem anamnese' },
+  { value: 'sem_cronograma', label: 'Sem cronograma' },
+  { value: 'atrasado_cronograma', label: 'Cronograma atrasado' },
 ]
 
 export default function HubAlunos() {
+  const navigate = useNavigate()
   const [alunos, setAlunos] = useState([])
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
@@ -33,6 +41,7 @@ export default function HubAlunos() {
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
   const [anamnesePorAluno, setAnamnesePorAluno] = useState({})
+  const [statusCronograma, setStatusCronograma] = useState({})
   const debounceRef = useRef(null)
 
   // Modal detalhe aluno
@@ -56,9 +65,23 @@ export default function HubAlunos() {
     setLoading(true)
     try {
       const res = await listarAlunos({ search: queryBusca, page, limit: PAGE_SIZE })
-      setAlunos(res.list)
+      let lista = res.list
+      // Refilter local pra resolver acento e substring (Frappe LIKE pode falhar em "joao" → "João")
+      if (queryBusca) {
+        lista = lista.filter(a => buscarSmart([a.nome_completo, a.email], queryBusca))
+        // Fallback: se nada veio do servidor, tenta carregar sem filtro e refiltrar
+        if (lista.length === 0) {
+          try {
+            const res2 = await listarAlunos({ page: 1, limit: 200 })
+            lista = (res2.list || []).filter(a => buscarSmart([a.nome_completo, a.email], queryBusca))
+          } catch { /* mantém vazio */ }
+        }
+      }
+      setAlunos(lista)
       setHasMore(res.hasMore)
-      carregarAnamneses(res.list.map(a => a.name))
+      const ids = lista.map(a => a.name)
+      carregarAnamneses(ids)
+      carregarStatusCronograma(ids)
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
   }, [queryBusca, page])
@@ -75,6 +98,14 @@ export default function HubAlunos() {
         map[a.aluno].push(a)
       })
       setAnamnesePorAluno(prev => ({ ...prev, ...map }))
+    } catch (e) { console.error(e) }
+  }
+
+  const carregarStatusCronograma = async (ids) => {
+    if (!ids.length) return
+    try {
+      const map = await obterStatusCronogramaAlunos(ids)
+      setStatusCronograma(prev => ({ ...prev, ...map }))
     } catch (e) { console.error(e) }
   }
 
@@ -109,9 +140,19 @@ export default function HubAlunos() {
     } finally { setEnviando(false) }
   }
 
-  const alunosFiltrados = filtroStatus
-    ? alunos.filter(a => getStatus(a.name) === filtroStatus)
-    : alunos
+  const alunosFiltrados = useMemo(() => {
+    if (!filtroStatus) return alunos
+    if (filtroStatus === 'sem_cronograma') {
+      return alunos.filter(a => {
+        const s = statusCronograma[a.name]
+        return !s || s.total === 0
+      })
+    }
+    if (filtroStatus === 'atrasado_cronograma') {
+      return alunos.filter(a => (statusCronograma[a.name]?.atrasados || 0) > 0)
+    }
+    return alunos.filter(a => getStatus(a.name) === filtroStatus)
+  }, [alunos, filtroStatus, statusCronograma, anamnesePorAluno])
 
   const columns = [
     {
@@ -136,8 +177,62 @@ export default function HubAlunos() {
       },
     },
     {
+      label: 'Cronograma',
+      headerClass: 'hidden md:table-cell w-44 text-center',
+      cellClass: 'hidden md:table-cell text-center',
+      render: (row) => {
+        const status = statusCronograma[row.name]
+        const planEnd = row.plan_end
+        const hoje = todayISO()
+
+        // Sem cronograma criado
+        if (!status || status.total === 0) {
+          return (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                navigate(`/cronograma-feedbacks/aluno/${encodeURIComponent(row.name)}`)
+              }}
+              className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border bg-[#2563eb]/10 text-[#2563eb] border-[#2563eb]/30 hover:bg-[#2563eb]/20 transition-colors"
+            >
+              Criar →
+            </button>
+          )
+        }
+
+        // Atrasado
+        if (status.atrasados > 0) {
+          return (
+            <Badge variant="danger" size="sm">
+              {status.atrasados === 1 ? '1 atraso' : `${status.atrasados} atrasos`}
+            </Badge>
+          )
+        }
+
+        // Plano vencido
+        if (planEnd && planEnd < hoje) {
+          return <Badge variant="default" size="sm">Plano vencido</Badge>
+        }
+
+        // Ativo com próxima data
+        if (status.proximo) {
+          const proxima = new Date(status.proximo + 'T12:00:00')
+          const hojeDate = new Date(hoje + 'T00:00:00')
+          const diffDias = Math.floor((proxima - hojeDate) / 86400000)
+          let label
+          if (diffDias === 0) label = 'Hoje'
+          else if (diffDias === 1) label = 'Amanhã'
+          else if (diffDias < 7) label = `Em ${diffDias}d`
+          else label = `${proxima.getDate()}/${proxima.getMonth() + 1}`
+          return <Badge variant="success" size="sm">Próx: {label}</Badge>
+        }
+
+        return <Badge variant="default" size="sm">—</Badge>
+      },
+    },
+    {
       label: 'Ações',
-      headerClass: 'w-24 text-center',
+      headerClass: 'w-32 text-center',
       cellClass: 'text-center',
       render: (row) => (
         <div className="flex items-center justify-center gap-1.5" onClick={e => e.stopPropagation()}>
@@ -147,6 +242,16 @@ export default function HubAlunos() {
             className="h-7 w-7 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors"
           >
             <Send size={12} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              navigate(`/cronograma-feedbacks/aluno/${encodeURIComponent(row.name)}`)
+            }}
+            title="Cronograma de feedbacks"
+            className="h-7 w-7 flex items-center justify-center text-[#2563eb] hover:text-white hover:bg-[#2563eb] border border-[#323238] hover:border-[#2563eb] rounded-lg transition-colors"
+          >
+            <Calendar size={12} />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); setAlunoAberto(row) }}

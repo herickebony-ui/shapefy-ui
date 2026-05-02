@@ -10,8 +10,8 @@ export const listarPrescricoes = async ({ busca, page = 1, limit = 50 } = {}) =>
     params: {
       fields: JSON.stringify(['name', 'aluno', 'nome_completo', 'date', 'description', 'published']),
       filters: JSON.stringify(filters),
-      limit,
-      limit_start: (page - 1) * limit,
+      limit: busca ? 200 : limit,
+      limit_start: busca ? 0 : (page - 1) * limit,
       order_by: 'date desc',
     },
   })

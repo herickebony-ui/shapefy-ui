@@ -1,14 +1,19 @@
 // Props: value, onChange, onSelect, searchFn(query)→Promise<item[]>,
 //        renderItem(item), placeholder, icon, disabled, emptyState, compact
-import { useState, useRef, useCallback, useEffect } from 'react'
+//        items (lista pré-fetchada — quando passada, faz filtro local com buscarSmart),
+//        searchFields (campos a buscar quando usar items)
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { Loader } from 'lucide-react'
+import { buscarSmart } from '../../utils/strings'
 
 export default function Autocomplete({
   value = '',
   onChange,
   onSelect,
   searchFn,
+  items,
+  searchFields = ['nome_completo', 'name'],
   renderItem,
   placeholder = 'Buscar...',
   icon: Icon,
@@ -17,7 +22,7 @@ export default function Autocomplete({
   compact = false,
 }) {
   const [query, setQuery] = useState(value)
-  const [items, setItems] = useState([])
+  const [results, setResults] = useState([])
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [activeIdx, setActiveIdx] = useState(-1)
@@ -35,20 +40,31 @@ export default function Autocomplete({
 
   useEffect(() => { setQuery(value) }, [value])
 
+  // Quando recebe `items` (lista pré-fetchada), usa filtro local com buscarSmart
+  // — evita o consumidor reescrever a função de busca.
+  const effectiveSearchFn = useMemo(() => {
+    if (Array.isArray(items)) {
+      return async (q) => items
+        .filter(it => buscarSmart(searchFields.map(f => it?.[f]), q))
+        .slice(0, 30)
+    }
+    return searchFn
+  }, [items, searchFields, searchFn])
+
   const search = useCallback(async (q) => {
     clearTimeout(timerRef.current)
-    if (!q || q.length < 1) { setItems([]); setOpen(false); return }
+    if (!q || q.length < 1) { setResults([]); setOpen(false); return }
     timerRef.current = setTimeout(async () => {
       setLoading(true)
       try {
-        const results = await searchFn(q)
-        setItems(results || [])
+        const r = await effectiveSearchFn(q)
+        setResults(r || [])
         setOpen(true)
         setActiveIdx(-1)
-      } catch { setItems([]); setOpen(false) }
+      } catch { setResults([]); setOpen(false) }
       finally { setLoading(false) }
     }, 200)
-  }, [searchFn])
+  }, [effectiveSearchFn])
 
   const computeDropdownPos = () => {
     if (!inputRef.current) return
@@ -77,15 +93,15 @@ export default function Autocomplete({
 
   const handleSelect = (item) => {
     setOpen(false)
-    setItems([])
+    setResults([])
     onSelect?.(item)
   }
 
   const handleKeyDown = (e) => {
     if (!open) return
-    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx(i => Math.min(i + 1, items.length - 1)) }
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx(i => Math.min(i + 1, results.length - 1)) }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx(i => Math.max(i - 1, 0)) }
-    else if (e.key === 'Enter' && activeIdx >= 0) { e.preventDefault(); handleSelect(items[activeIdx]) }
+    else if (e.key === 'Enter' && activeIdx >= 0) { e.preventDefault(); handleSelect(results[activeIdx]) }
     else if (e.key === 'Escape') { setOpen(false); setActiveIdx(-1) }
   }
 
@@ -93,7 +109,7 @@ export default function Autocomplete({
     ? 'w-full h-7 px-2 bg-transparent border border-transparent hover:border-[#323238] focus:border-[#2563eb]/60 text-white rounded text-xs outline-none transition-colors placeholder-gray-600'
     : `w-full h-10 bg-[#1a1a1a] border border-[#323238] rounded-lg text-white text-sm placeholder-gray-600 outline-none transition-colors focus:border-[#2563eb]/60 focus:ring-1 focus:ring-[#2563eb]/30 disabled:opacity-40 disabled:cursor-not-allowed ${Icon ? 'pl-10' : 'pl-3'} pr-3`
 
-  const useBottomSheet = isMobile && items.length > 5 && !compact
+  const useBottomSheet = isMobile && results.length > 5 && !compact
 
   const desktopDropdownStyle = dropdownPos ? {
     position: 'fixed',
@@ -106,7 +122,7 @@ export default function Autocomplete({
     ),
   } : {}
 
-  const dropdown = open && items.length > 0 && (
+  const dropdown = open && results.length > 0 && (
     useBottomSheet ? (
       createPortal(
         <div
@@ -122,7 +138,7 @@ export default function Autocomplete({
               <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-white text-lg leading-none">×</button>
             </div>
             <div className="overflow-y-auto flex-1">
-              {items.map((item, i) => (
+              {results.map((item, i) => (
                 <button
                   key={i}
                   onMouseDown={() => handleSelect(item)}
@@ -143,7 +159,7 @@ export default function Autocomplete({
         style={desktopDropdownStyle}
         className="bg-[#29292e] border border-[#323238] rounded-lg shadow-[0_10px_30px_rgba(0,0,0,0.5)] overflow-hidden max-h-56 overflow-y-auto"
       >
-        {items.map((item, i) => (
+        {results.map((item, i) => (
           <button
             key={i}
             onMouseDown={() => handleSelect(item)}
@@ -159,7 +175,7 @@ export default function Autocomplete({
     )
   )
 
-  const emptyDropdown = open && !loading && items.length === 0 && query.length >= 1 && createPortal(
+  const emptyDropdown = open && !loading && results.length === 0 && query.length >= 1 && createPortal(
     <div style={desktopDropdownStyle} className="bg-[#29292e] border border-[#323238] rounded-lg shadow-lg overflow-hidden">
       <p className="px-4 py-3 text-gray-500 text-sm text-center">{emptyState}</p>
     </div>,
@@ -180,7 +196,7 @@ export default function Autocomplete({
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           onBlur={() => setTimeout(() => setOpen(false), 200)}
-          onFocus={() => { computeDropdownPos(); query.length >= 1 && items.length > 0 && setOpen(true) }}
+          onFocus={() => { computeDropdownPos(); query.length >= 1 && results.length > 0 && setOpen(true) }}
           placeholder={placeholder}
           disabled={disabled}
           className={inputClass}

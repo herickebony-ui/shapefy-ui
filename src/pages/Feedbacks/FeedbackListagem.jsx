@@ -8,6 +8,7 @@ import {
 import { Button, Badge, Spinner, EmptyState, DataTable } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 import ImagemInterativa from './ImagemInterativa'
+import { buscarSmart } from '../../utils/strings'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 const PAGE_SIZE = 30
@@ -229,15 +230,19 @@ export default function FeedbackListagem() {
   const carregar = useCallback(async (opts = {}) => {
     setLoading(true)
     try {
+      const buscaUsada = opts.busca ?? busca
       const { list } = await listarFeedbacks({
-        busca: opts.busca ?? busca,
+        busca: buscaUsada,
         status: opts.status ?? filtroStatus,
         dataInicio: opts.dataInicio ?? filtroDataInicio,
         dataFim: opts.dataFim ?? filtroDataFim,
         page: 1,
         limit: 500,
       })
-      setFeedbacks(list)
+      const lista = buscaUsada
+        ? list.filter(f => buscarSmart([f.nome_completo, f.email, f.aluno], buscaUsada))
+        : list
+      setFeedbacks(lista)
       setPage(1)
     } catch (e) {
       console.error(e)

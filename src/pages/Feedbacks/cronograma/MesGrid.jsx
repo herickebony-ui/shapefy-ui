@@ -4,7 +4,7 @@ import { MONTHS, WEEKDAYS, ehFeriado, isoFromYMD, todayISO, fmtDateBR } from './
 
 export default function MesGrid({
   year, month, schedule, feriasList, planStart, planEnd,
-  ehTreino, onClickDate, onContextDate,
+  onClickDate, onContextDate,
 }) {
   const datesByISO = useMemo(() => {
     const m = {}
@@ -62,7 +62,7 @@ export default function MesGrid({
           }
 
           if (item) {
-            const isTr = ehTreino(item.formulario)
+            const isTr = !!item.is_training
             const isDone = item.status === 'Respondido' || item.status === 'Concluido'
             if (isDone) {
               bg = 'bg-[#29292e] text-gray-500 line-through'
