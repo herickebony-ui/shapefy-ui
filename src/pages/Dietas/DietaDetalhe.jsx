@@ -665,7 +665,7 @@ const TabelaAlimentos = ({ items, onUpdateItem, onAddItem, onDeleteItem, onDupli
                                 vitamin_b12: alimento.vitamin_b12 ?? 0, vitamin_c: alimento.vitamin_c ?? 0,
                                 vitamin_d: alimento.vitamin_d ?? 0, vitamin_e: alimento.vitamin_e ?? 0,
                               }
-                              onUpdateItem(realIdx, '__selecionarAlimento', { food: alimento.food, _base: base, ...base })
+                              onUpdateItem(realIdx, '__selecionarAlimento', { __autoMatch: true, food: alimento.food, _base: base, ...base })
                             }}
                             searchFn={buscarAlimentosFn}
                             renderItem={renderAlimentoItem}
@@ -727,7 +727,7 @@ const TabelaAlimentos = ({ items, onUpdateItem, onAddItem, onDeleteItem, onDupli
                         onChange={(v) => onUpdateItem(realIdx, 'food', v)}
                         onSelect={(alimento) => {
                           const base = { ref_weight: alimento.ref_weight ?? 100, protein: alimento.protein ?? 0, carbohydrate: alimento.carbohydrate ?? 0, lipid: alimento.lipid ?? 0, fiber: alimento.fiber ?? 0, calories: alimento.calories ?? 0 }
-                          onUpdateItem(realIdx, '__selecionarAlimento', { food: alimento.food, _base: base, ...base })
+                          onUpdateItem(realIdx, '__selecionarAlimento', { __autoMatch: true, food: alimento.food, _base: base, ...base })
                         }}
                         searchFn={buscarAlimentosFn}
                         renderItem={renderAlimentoItem}
@@ -988,8 +988,11 @@ const RefeicaoBlock = ({ n, draft, setDraft }) => {
       onUpdateItem: (idx, key, value) => setDraft(prev => {
         let arr = [...(prev[field] || [])]
         if (key === '__selecionarAlimento') {
-          arr[idx] = { ...arr[idx], ...value }
-          arr = ajustarPorSelecao(arr, idx)
+          const { __autoMatch, ...payload } = value
+          arr[idx] = { ...arr[idx], ...payload }
+          // Só rescala automaticamente quando o disparo é do Autocomplete
+          // (com __autoMatch). Edição via modal preserva valores manuais.
+          if (__autoMatch) arr = ajustarPorSelecao(arr, idx)
         } else if (key === 'ref_weight') {
           if (!arr[idx]._base) arr[idx]._base = { ...arr[idx] }
           const novoPeso = parseInt(value, 10) || 0
