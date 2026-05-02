@@ -21,7 +21,7 @@ export const buscarPlano = async (name) => {
 export const listarFaturas = async (assinatura) => {
   const res = await client.get('/api/resource/Fatura%20de%20Assinatura', {
     params: {
-      fields: JSON.stringify(['name', 'creation', 'status', 'valor', 'data_vencimento', 'data_pagamento']),
+      fields: JSON.stringify(['name', 'creation', 'status', 'montante', 'data_da_transacao']),
       filters: JSON.stringify([['assinatura', '=', assinatura]]),
       limit: 50,
       order_by: 'creation desc',
