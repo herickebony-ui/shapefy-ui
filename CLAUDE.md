@@ -49,8 +49,8 @@ O `client.js` injeta automaticamente o header `Authorization: token <frappe_toke
 | `surface-2` | `#222226` | Background de linhas de tabela |
 | `surface-3` | `#29292e` | Background de cards |
 | `surface-4` | `#323238` | Bordas e hover |
-| `brand` | `#850000` | Cor de destaque principal |
-| `brand-hover` | `#a00000` | Hover do brand |
+| `brand` | `#2563eb` | Cor de destaque principal (azul) |
+| `brand-hover` | `#1d4ed8` | Hover do brand |
 | `info` | `#0052cc` | Ações secundárias azuis |
 | `info-hover` | `#0043a8` | Hover do info |
 | `muscle-*` | vários | Grupos musculares (ver CategoricalBadge) |
@@ -71,7 +71,7 @@ O `client.js` injeta automaticamente o header `Authorization: token <frappe_toke
   - Texto uppercase ≤12px → `tracking-wider`.
   - Breadcrumbs / rótulos uppercase de card / cabeçalhos de tabela → `tracking-widest`.
   - Títulos grandes (h1/h2) → sem tracking ou `tracking-tight`.
-- **Hex hardcoded no JSX:** proibido. Usar tokens Tailwind tokenizados (`bg-[#850000]` é aceitável transitoriamente com comentário `// TODO: tokenizar`).
+- **Hex hardcoded no JSX:** proibido. Usar tokens Tailwind tokenizados (`bg-[#2563eb]` é aceitável transitoriamente com comentário `// TODO: tokenizar`).
 - **Responsividade:** todo componente deve funcionar em 375px sem scroll horizontal. Testar em `sm:640px`, `md:768px`, `lg:1024px`.
 - **Botões touch:** `min-height: 40px` em mobile.
 - **Modais mobile:** fullscreen (`h-[100dvh]`) em `<768px`; footer com botões empilhados verticalmente.
@@ -156,7 +156,7 @@ O `client.js` injeta automaticamente o header `Authorization: token <frappe_toke
 
 ```jsx
 // ❌ NUNCA — recriar primitivo do zero
-<button className="bg-[#850000] px-4 py-2 rounded-lg text-white">Salvar</button>
+<button className="bg-[#2563eb] px-4 py-2 rounded-lg text-white">Salvar</button>
 
 // ✅ SEMPRE
 <Button variant="primary">Salvar</Button>
@@ -197,9 +197,9 @@ Botões de ação inline (editar, excluir, duplicar, visualizar) dentro de `<tr>
   <Edit size={12} />
 </button>
 
-// Excluir (brand vermelho)
+// Excluir (brand azul)
 <button onClick={...} title="Excluir"
-  className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded-lg transition-colors">
+  className="h-7 w-7 flex items-center justify-center text-[#2563eb] hover:text-white border border-[#2563eb]/30 hover:bg-[#2563eb] rounded-lg transition-colors">
   <Trash2 size={12} />
 </button>
 
@@ -233,21 +233,21 @@ Inputs dentro de `<td>` precisam ser compactos (`h-7`) e com borda transparente 
 ```jsx
 // ✅ Input numérico de célula (qtd, macros)
 <input type="number" value={...} onChange={...}
-  className="w-full h-7 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60" />
+  className="w-full h-7 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60" />
 
 // ✅ Input de célula "fantasma" (medida caseira, campos opcionais)
 <input value={...} onChange={...}
-  className="w-full h-7 px-2 bg-transparent border border-transparent hover:border-[#323238] focus:border-[#850000]/60 text-white rounded text-xs outline-none transition-colors" />
+  className="w-full h-7 px-2 bg-transparent border border-transparent hover:border-[#323238] focus:border-[#2563eb]/60 text-white rounded text-xs outline-none transition-colors" />
 
 // ✅ Select de célula (unidade)
 <select value={...} onChange={...}
-  className="w-full h-7 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#850000]/60 appearance-none">
+  className="w-full h-7 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 appearance-none">
 ```
 
 #### 3. Botões de ação de listagem (toolbar)
 O pattern de DietaListagem é o padrão oficial para todas as telas de listagem:
 - Refresh, Filtros → `<Button variant="secondary" size="sm" icon={...} />`
-- Toggle grade/lista → raw `<button>` quadrado `h-7 w-7` com `bg-[#850000]` quando ativo
+- Toggle grade/lista → raw `<button>` quadrado `h-7 w-7` com `bg-[#2563eb]` quando ativo
 - Nova entidade → `<Button variant="primary" size="sm" icon={Plus}>Nova X</Button>`
 
 #### 4. Botões de scroll horizontal (ações de opção/seção)
@@ -306,7 +306,7 @@ Toda tela de listagem **deve** usar `ListPage` como wrapper. Padrão de toolbar 
 **Regras:**
 - `stats` prop: **não usar** — nenhuma listagem exibe cards de estatísticas acima da tabela
 - `icon` nos filtros `type: 'search'`: passar a referência do componente Lucide (`icon: Search`), **nunca JSX** (`icon: <Search />`)
-- Toggle grade/lista: raw `<button>` `h-7 w-7` com `bg-[#850000]` ativo — só quando a tela suporta dois modos de visualização (ex: DietaListagem)
+- Toggle grade/lista: raw `<button>` `h-7 w-7` com `bg-[#2563eb]` ativo — só quando a tela suporta dois modos de visualização (ex: DietaListagem)
 - Paginação: usar via `DataTable` props (`page`, `pageSize`, `onPage`, `onPageSize`) — não duplicar no `ListPage` `pagination` prop
 - Após DELETE: sempre recarregar do servidor (`await listarX(); setLista(data)`) — nunca confiar apenas em state local para confirmar exclusão
 
