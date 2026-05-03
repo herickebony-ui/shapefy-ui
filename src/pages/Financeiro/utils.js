@@ -158,6 +158,28 @@ export const sumParcelasPagasNoRange = (parcelas, start, end) => {
   }, 0)
 }
 
+/**
+ * Determina se uma parcela pode ser considerada "paga efetivamente" e em que data.
+ * Regra:
+ *   - se a parcela tem data_pagamento (baixa explícita) → usa essa
+ *   - se o contrato é à vista (1 parcela) e tem data_pagamento_principal → cobre
+ *   - se é parcelado e a parcela é a 1 (entrada) e há data_pagamento_principal → cobre
+ *
+ * Os campos `modalidade` e `contrato_data_pagamento_principal` precisam
+ * ter sido injetados na parcela achatada antes de chamar este helper.
+ *
+ * @returns {string|null} ISO da data efetiva de pagamento (ou null se não paga)
+ */
+export const dataPagamentoEfetivaParcela = (p) => {
+  const dp = normalizeDate(p?.data_pagamento)
+  if (dp) return dp
+  const cdp = normalizeDate(p?.contrato_data_pagamento_principal)
+  if (!cdp) return null
+  if (p.modalidade === 'A vista') return cdp
+  if (Number(p.numero_parcela) === 1) return cdp
+  return null
+}
+
 export const sumParcelasVencendoNoRange = (parcelas, start, end) => {
   if (!Array.isArray(parcelas)) return 0
   return parcelas.reduce((acc, p) => {

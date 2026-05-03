@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { formatCurrency, formatDateBr, normalizeDate } from './utils'
+import { formatCurrency, formatDateBr, normalizeDate, dataPagamentoEfetivaParcela } from './utils'
 
 // Paleta padronizada com o gerador do sistema (Avaliacao), com brand Shapefy azul
 const BRAND = [37, 99, 235] // #2563eb
@@ -106,11 +106,10 @@ export function gerarRelatorioFinanceiro({
     cx += cardW + 3
   })
 
-  // Extrato de pagamentos
-  const pagas = parcelas.filter((p) => {
-    const dp = normalizeDate(p.data_pagamento)
-    return dp && dp >= range.start && dp <= range.end
-  })
+  // Extrato de pagamentos — usa data efetiva (cobre pago e não iniciado)
+  const pagas = parcelas
+    .map((p) => ({ ...p, _dp_efetiva: dataPagamentoEfetivaParcela(p) }))
+    .filter((p) => p._dp_efetiva && p._dp_efetiva >= range.start && p._dp_efetiva <= range.end)
 
   doc.setTextColor(...TEXT)
   doc.setFontSize(11)
@@ -122,7 +121,7 @@ export function gerarRelatorioFinanceiro({
     head: [['Data pag.', 'Aluno', 'Plano', 'Contrato', 'Parcela', 'Valor']],
     body: pagas.length
       ? pagas.map((p) => [
-          formatDateBr(p.data_pagamento),
+          formatDateBr(p._dp_efetiva),
           alunosMap[p.aluno]?.nome_completo || p.aluno || '—',
           p.nome_plano_snapshot || p.plano || '—',
           p.contrato || '—',
@@ -170,7 +169,7 @@ export function gerarRelatorioFinanceiro({
           p.nome_plano_snapshot || p.plano || '—',
           p.contrato || '—',
           `${p.numero_parcela}/${p.qtd_parcelas || ''}`,
-          p.data_pagamento ? 'Paga' : 'Pendente',
+          dataPagamentoEfetivaParcela(p) ? 'Paga' : 'Pendente',
           formatCurrency(p.valor_parcela),
         ])
       : [['—', 'Nenhuma parcela vencendo', '—', '—', '—', '—', '—']],

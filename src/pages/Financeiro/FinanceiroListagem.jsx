@@ -17,7 +17,7 @@ import {
   formatCurrency, formatDateBr, isBetweenInclusive, normalizeDate,
   getRangeFromMonth, monthLabelFromYM, currentYM, smartSearch,
   isContratoCobreMes, contratoNoPeriodo, withConcurrency, getTodayISO,
-  computeContratoStatus,
+  computeContratoStatus, dataPagamentoEfetivaParcela,
 } from './utils'
 import { STATUS_BADGE } from './constants'
 import { gerarRelatorioFinanceiro } from './pdf'
@@ -115,14 +115,20 @@ export default function FinanceiroListagem() {
       const flat = []
       detalhes.forEach((row) => {
         if (!row?.detalhe?.parcelas) return
+        const c = row.contrato
         row.detalhe.parcelas.forEach((p) => {
           flat.push({
             ...p,
-            contrato: row.contrato.name,
-            aluno: row.contrato.aluno,
-            plano: row.contrato.plano,
-            nome_plano_snapshot: row.contrato.nome_plano_snapshot,
-            qtd_parcelas: row.contrato.qtd_parcelas,
+            contrato: c.name,
+            aluno: c.aluno,
+            plano: c.plano,
+            nome_plano_snapshot: c.nome_plano_snapshot,
+            qtd_parcelas: c.qtd_parcelas,
+            // Pra cálculo "pago efetivo": contratos com data_pagamento_principal
+            // preenchida cobrem a parcela 1 (entrada do parcelado ou única do à vista)
+            // sem precisar de baixa explícita por parcela.
+            modalidade: c.modalidade,
+            contrato_data_pagamento_principal: c.data_pagamento_principal,
           })
         })
       })
@@ -170,14 +176,21 @@ export default function FinanceiroListagem() {
     })
 
     // KPIs reais via parcelas (caixa + a receber)
+    // Usa dataPagamentoEfetivaParcela: parcela é paga se tem data_pagamento
+    // próprio OU se está coberta pela data_pagamento_principal do contrato
+    // (à vista, ou parcela 1 do parcelado).
     let faturamentoReal = 0
     let aReceber = 0
     parcelasDoPeriodo.forEach((p) => {
-      const dp = normalizeDate(p.data_pagamento)
+      const dataPag = dataPagamentoEfetivaParcela(p)
       const dv = normalizeDate(p.data_vencimento)
       const valor = parseFloat(p.valor_parcela) || 0
-      if (dp && dp >= dateRange.start && dp <= dateRange.end) faturamentoReal += valor
-      if (dv && dv >= dateRange.start && dv <= dateRange.end && !dp) aReceber += valor
+
+      if (dataPag && dataPag >= dateRange.start && dataPag <= dateRange.end) {
+        faturamentoReal += valor
+      } else if (dv && dv >= dateRange.start && dv <= dateRange.end && !dataPag) {
+        aReceber += valor
+      }
     })
 
     // Taxa de Retenção: dos que venceram no período (não pausados),
