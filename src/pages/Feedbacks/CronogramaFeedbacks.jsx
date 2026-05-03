@@ -930,19 +930,25 @@ export default function CronogramaFeedbacks() {
           {/* ─── Coluna direita ──────────────────────────────────────────── */}
           <div className="lg:col-span-6 space-y-4">
 
-            {/* Histórico */}
+            {/* Histórico & Feedback */}
             <div className="bg-[#29292e] border border-[#323238] rounded-xl">
-              <div className="px-4 py-3 border-b border-[#323238] flex items-center justify-between">
-                <h3 className="text-sm font-bold tracking-tight">Histórico</h3>
-                <Tabs
-                  variant="pills"
-                  active={historicoMode}
-                  onChange={setHistoricoMode}
-                  tabs={[
-                    { id: 'table',    label: 'Tabela' },
-                    { id: 'timeline', label: 'Timeline' },
-                  ]}
-                />
+              <div className="px-4 py-3 border-b border-[#323238] flex items-center justify-between gap-2 flex-wrap">
+                <h3 className="text-sm font-bold tracking-tight">Histórico &amp; Feedback</h3>
+                <div className="flex items-center gap-2">
+                  <Tabs
+                    variant="pills"
+                    active={historicoMode}
+                    onChange={setHistoricoMode}
+                    tabs={[
+                      { id: 'table',    label: 'Tabela' },
+                      { id: 'timeline', label: 'Timeline' },
+                    ]}
+                  />
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded-full border border-[#323238] bg-[#1a1a1a] text-white max-w-[160px]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                    <span className="truncate">{aluno.nome_completo}</span>
+                  </span>
+                </div>
               </div>
               <div className="p-4">
                 {historicoMode === 'table'

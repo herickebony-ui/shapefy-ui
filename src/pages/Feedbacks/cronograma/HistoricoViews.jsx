@@ -42,6 +42,14 @@ const EmptyHistorico = () => (
   </div>
 )
 
+// Separa hora/minuto do respondido_em pra exibir embaixo da data principal
+const splitRespondido = (raw) => {
+  if (!raw) return { data: '—', hora: '' }
+  const [d, t = ''] = String(raw).split(' ')
+  const [y, m, day] = d.split('-')
+  return { data: `${day}/${m}/${y}`, hora: t.slice(0, 5) }
+}
+
 // ─── Tabela ──────────────────────────────────────────────────────────────────
 export function HistoricoTabela({ schedule }) {
   const navigate = useNavigate()
@@ -52,10 +60,10 @@ export function HistoricoTabela({ schedule }) {
       <table className="w-full text-xs text-left">
         <thead>
           <tr className="border-b border-[#323238]">
-            <th className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">Recebido</th>
-            <th className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">Tipo</th>
-            <th className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">Prevista</th>
-            <th className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-500 text-center">Atraso</th>
+            <th className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">Data</th>
+            <th className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-500 text-center">Tipo</th>
+            <th className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">Data Enviada</th>
+            <th className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-500 text-center">Status</th>
             <th className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-500 text-center w-10"></th>
           </tr>
         </thead>
@@ -63,21 +71,33 @@ export function HistoricoTabela({ schedule }) {
           {dados.map((d, i) => {
             const isTr = !!d.is_training
             const atraso = calcAtraso(d)
+            const enviada = splitRespondido(d.respondido_em)
             return (
               <tr key={d.date} className={`border-b border-[#323238]/40 ${i % 2 === 0 ? 'bg-[#1a1a1a]' : 'bg-[#1e1e22]'}`}>
-                <td className="px-3 py-2 text-white font-medium">
-                  {d.respondido_em ? fmtDateTimeBR(d.respondido_em) : fmtDateBR(d.date)}
-                </td>
-                <td className="px-3 py-2">
+                <td className="px-3 py-2 text-white font-medium">{fmtDateBR(d.date)}</td>
+                <td className="px-3 py-2 text-center">
                   <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
                     isTr
                       ? 'text-purple-400 bg-purple-500/10 border-purple-500/20'
                       : 'text-orange-400 bg-orange-500/10 border-orange-500/20'
                   }`}>{isTr ? 'Troca' : 'Feedback'}</span>
                 </td>
-                <td className="px-3 py-2 text-gray-400">{fmtDateBR(d.date)}</td>
+                <td className="px-3 py-2">
+                  <div className="flex flex-col leading-tight">
+                    <span className="text-white font-bold">{enviada.data}</span>
+                    {enviada.hora && (
+                      <span className="text-[10px] text-gray-500 font-mono mt-0.5">{enviada.hora}</span>
+                    )}
+                    {atraso != null && atraso > 0 && (
+                      <span className="text-[9px] text-orange-400 font-bold mt-0.5">+{atraso}d</span>
+                    )}
+                  </div>
+                </td>
                 <td className="px-3 py-2 text-center">
-                  <BadgeAtraso dias={atraso} />
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border text-emerald-300 bg-emerald-500/10 border-emerald-500/40">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    Concluído
+                  </span>
                 </td>
                 <td className="px-3 py-2 text-center">
                   {d.feedback_resposta ? (
