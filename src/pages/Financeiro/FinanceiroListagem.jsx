@@ -16,7 +16,7 @@ import { listarAlunosByIds } from '../../api/alunos'
 import {
   formatCurrency, formatDateBr, isBetweenInclusive, normalizeDate,
   getRangeFromMonth, monthLabelFromYM, currentYM, smartSearch,
-  isContratoCobreMes, contratoNoPeriodo, withConcurrency,
+  isContratoCobreMes, contratoNoPeriodo, withConcurrency, getTodayISO,
 } from './utils'
 import { gerarRelatorioFinanceiro } from './pdf'
 import PlanosModal from './PlanosModal'
@@ -191,16 +191,33 @@ export default function FinanceiroListagem() {
   }, [contratos, parcelasDoPeriodo, dateRange])
 
   const filteredContratos = useMemo(() => {
+    const hoje = getTodayISO()
     let list = contratos.filter((c) => {
       const aluno = alunosMap[c.aluno]
       const nomeAluno = aluno?.nome_completo || c.aluno || ''
 
       if (busca && !smartSearch(nomeAluno, busca) && !smartSearch(c.name, busca)) return false
       if (filtroPlano && c.plano !== filtroPlano) return false
-      if (filtroStatus === 'Pausado' && c.status_manual !== 'Pausado') return false
-      if (filtroStatus === 'Ativo' && c.status_manual === 'Pausado') return false
 
-      if (!contratoNoPeriodo(c, dateRange.start, dateRange.end)) return false
+      // Filtros de status — cobrem os 6 tipos do antigo
+      const inicio = normalizeDate(c.data_inicio)
+      const fim = normalizeDate(c.data_fim)
+      const dp = normalizeDate(c.data_pagamento_principal)
+      const isPausado = c.status_manual === 'Pausado'
+      const isPagoNaoIniciado = !inicio && !!dp
+      const isVencido = !!fim && fim < hoje && !isPausado
+      const venceNoPeriodo = !!fim && fim >= dateRange.start && fim <= dateRange.end
+      const pagoNoPeriodo = !!dp && dp >= dateRange.start && dp <= dateRange.end
+
+      if (filtroStatus === 'Ativo' && isPausado) return false
+      if (filtroStatus === 'Pausado' && !isPausado) return false
+      if (filtroStatus === 'Pago_nao_iniciado' && !isPagoNaoIniciado) return false
+      if (filtroStatus === 'Vencido' && !isVencido) return false
+      if (filtroStatus === 'Renova_periodo' && !venceNoPeriodo) return false
+      if (filtroStatus === 'Pagos_periodo' && !pagoNoPeriodo) return false
+
+      // "Pagos no período" não exige contratoNoPeriodo (é atalho de caixa)
+      if (filtroStatus !== 'Pagos_periodo' && !contratoNoPeriodo(c, dateRange.start, dateRange.end)) return false
       return true
     })
 
@@ -584,6 +601,10 @@ export default function FinanceiroListagem() {
             <option value="">Todos os status</option>
             <option value="Ativo">Não pausados</option>
             <option value="Pausado">Pausados</option>
+            <option value="Pago_nao_iniciado">Pago, não iniciado</option>
+            <option value="Vencido">Vencidos</option>
+            <option value="Renova_periodo">Renova no período</option>
+            <option value="Pagos_periodo">💰 Pagos no período</option>
           </select>
         </div>
 

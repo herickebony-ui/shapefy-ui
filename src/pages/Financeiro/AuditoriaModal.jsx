@@ -33,18 +33,20 @@ export default function AuditoriaModal({ isOpen, onClose, alunosMap = {} }) {
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(false)
   const [filtroAcao, setFiltroAcao] = useState('')
+  const [dataInicio, setDataInicio] = useState('')
+  const [dataFim, setDataFim] = useState('')
 
   const carregar = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await listarAuditorias({ acao: filtroAcao, limit: 200 })
+      const res = await listarAuditorias({ acao: filtroAcao, dataInicio, dataFim, limit: 200 })
       setLogs(res || [])
     } catch (e) {
       alert('Erro ao carregar auditoria: ' + (e.response?.data?.exception || e.message))
     } finally {
       setLoading(false)
     }
-  }, [filtroAcao])
+  }, [filtroAcao, dataInicio, dataFim])
 
   useEffect(() => {
     if (isOpen) carregar()
@@ -77,7 +79,7 @@ export default function AuditoriaModal({ isOpen, onClose, alunosMap = {} }) {
       }
     >
       <div className="p-4 space-y-3">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <select
             value={filtroAcao}
             onChange={(e) => setFiltroAcao(e.target.value)}
@@ -88,6 +90,30 @@ export default function AuditoriaModal({ isOpen, onClose, alunosMap = {} }) {
               <option key={a} value={a}>{ACAO_LABEL[a] || a}</option>
             ))}
           </select>
+          <input
+            type="date"
+            value={dataInicio}
+            onChange={(e) => setDataInicio(e.target.value)}
+            title="Data inicial"
+            className="h-10 px-3 bg-[#1a1a1a] border border-[#323238] text-white rounded-lg text-sm outline-none focus:border-[#2563eb]/60"
+          />
+          <span className="text-gray-500 text-xs">até</span>
+          <input
+            type="date"
+            value={dataFim}
+            onChange={(e) => setDataFim(e.target.value)}
+            title="Data final"
+            className="h-10 px-3 bg-[#1a1a1a] border border-[#323238] text-white rounded-lg text-sm outline-none focus:border-[#2563eb]/60"
+          />
+          {(dataInicio || dataFim) && (
+            <button
+              onClick={() => { setDataInicio(''); setDataFim('') }}
+              className="text-[10px] text-gray-400 hover:text-white underline"
+              title="Limpar datas"
+            >
+              limpar
+            </button>
+          )}
           <div className="text-[11px] text-gray-500 ml-auto">
             {logs.length} registro{logs.length !== 1 ? 's' : ''}
           </div>
