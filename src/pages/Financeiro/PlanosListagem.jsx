@@ -3,9 +3,9 @@ import { Plus, RefreshCw, Edit2, Trash2, Layers, ArrowLeft, Save } from 'lucide-
 import { Button, Spinner, Badge, DataTable } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 import { listarPlanos, buscarPlano, criarPlano, salvarPlano, excluirPlano } from '../../api/planosShapefy'
-import { COLOR_DOT, COLOR_BADGE } from './constants'
 import { formatCurrency } from './utils'
 import { PlanoForm } from './PlanosManager'
+import PlanoBadge from '../../components/financeiro/PlanoBadge'
 
 const VARIACAO_VAZIA = {
   duracao_meses: 1,
@@ -164,20 +164,12 @@ export default function PlanosListagem() {
   const columns = [
     {
       label: 'Plano',
-      render: (row) => {
-        const cls = COLOR_BADGE[row.cor] || COLOR_BADGE.slate
-        return (
-          <div className="flex items-center gap-2 min-w-0">
-            <span className={`w-3 h-3 rounded-full shrink-0 ${COLOR_DOT[row.cor] || COLOR_DOT.slate}`} />
-            <div className="min-w-0">
-              <div className="font-bold text-white text-sm truncate">{row.nome_plano}</div>
-              <span className={`inline-block text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border mt-0.5 ${cls}`}>
-                {row.cor}
-              </span>
-            </div>
-          </div>
-        )
-      },
+      render: (row) => (
+        <div className="min-w-0">
+          <PlanoBadge nome={row.nome_plano || row.name} cor={row.cor} size="md" />
+          <div className="text-[10px] text-gray-500 mt-1 font-mono truncate">{row.name}</div>
+        </div>
+      ),
     },
     {
       label: 'Variações',
