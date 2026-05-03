@@ -723,12 +723,14 @@ export default function CronogramaFeedbacks() {
         </div>
       )}
 
-      {/* Estado normal — calendário central, sem coluna de tabela/histórico */}
+      {/* Estado normal */}
       {aluno && !emEstadoVazio && (
-        <div className="space-y-4">
-          {/* Linha 1: Aluno + Vigência lado a lado */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            <div className="lg:col-span-4 bg-[#29292e] border border-[#323238] rounded-xl p-4 flex items-center gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* ─── Coluna esquerda ─────────────────────────────────────────── */}
+          <div className="lg:col-span-5 space-y-4">
+
+            {/* Aluno + trocar */}
+            <div className="bg-[#29292e] border border-[#323238] rounded-xl p-4 flex items-center gap-3">
               <Avatar nome={aluno.nome_completo} size="sm" />
               <div className="flex-1 min-w-0">
                 <p className="text-white text-sm font-semibold truncate">{aluno.nome_completo}</p>
@@ -745,7 +747,27 @@ export default function CronogramaFeedbacks() {
               </button>
             </div>
 
-            <div className="lg:col-span-8 bg-[#29292e] border border-[#323238] rounded-xl p-4 space-y-3">
+            {/* Stats — só do ciclo atual (a partir do último Marco Zero) */}
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: 'Encontros', value: stats.encontros },
+                { label: 'Trocas',    value: stats.trocas },
+                { label: 'Semanas',   value: stats.semanas },
+              ].map(s => (
+                <div key={s.label} className="bg-[#29292e] border border-[#323238] rounded-xl p-3 text-center">
+                  <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold">{s.label}</p>
+                  <p className="text-xl font-bold text-white mt-1">{s.value}</p>
+                </div>
+              ))}
+            </div>
+            {stats.historicoCount > 0 && (
+              <p className="text-[10px] text-gray-500 italic -mt-2">
+                Stats do ciclo atual. Histórico passivo: {stats.historicoCount} data{stats.historicoCount === 1 ? '' : 's'} antes do Marco Zero.
+              </p>
+            )}
+
+            {/* Vigência: read-only quando há contrato, editável quando não */}
+            <div className="bg-[#29292e] border border-[#323238] rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400">Vigência do Plano</h3>
                 {contratoRelevante ? (
@@ -765,7 +787,7 @@ export default function CronogramaFeedbacks() {
                   </span>
                 )}
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <FormGroup label="Início">
                   <Input type="date" value={planForm.plan_start}
                     onChange={(v) => handlePlanFormChange('plan_start', v)}
@@ -776,105 +798,216 @@ export default function CronogramaFeedbacks() {
                     onChange={(v) => handlePlanFormChange('plan_duration', Number(v) || 0)}
                     disabled={!!contratoRelevante} />
                 </FormGroup>
-                <FormGroup label="Fim (auto)" hint={contratoRelevante ? 'Vem do contrato' : 'Início + duração'}>
-                  <Input type="date" value={planForm.plan_end} onChange={() => {}} disabled />
-                </FormGroup>
               </div>
+              <FormGroup label="Fim (auto)" hint={contratoRelevante ? 'Vem do contrato' : 'Início + duração'}>
+                <Input type="date" value={planForm.plan_end} onChange={() => {}} disabled />
+              </FormGroup>
             </div>
-          </div>
 
-          {/* Linha 2: Stats compactos + ano + ações rápidas */}
-          <div className="bg-[#29292e] border border-[#323238] rounded-xl p-3 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-4">
-              {[
-                { label: 'Encontros', value: stats.encontros },
-                { label: 'Trocas',    value: stats.trocas },
-                { label: 'Semanas',   value: stats.semanas },
-              ].map(s => (
-                <div key={s.label} className="text-center">
-                  <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold">{s.label}</p>
-                  <p className="text-xl font-bold text-white">{s.value}</p>
+            {/* Lista de datas agrupada por ciclo */}
+            <div className="bg-[#29292e] border border-[#323238] rounded-xl overflow-hidden">
+              <div className="px-3 py-3 border-b border-[#323238] flex items-center justify-between gap-2 flex-wrap">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400">Datas do Cronograma</h3>
+                <div className="flex items-center gap-1">
+                  <Button variant="secondary" size="xs" icon={Wand2}
+                    onClick={() => setModalGerarSerie(true)}>Padronizar</Button>
+                  <Button variant="secondary" size="xs" icon={Copy}
+                    onClick={handleCopiarMensagem}>Copiar msg</Button>
                 </div>
-              ))}
-              {stats.historicoCount > 0 && (
-                <p className="text-[10px] text-gray-500 italic max-w-[160px]">
-                  Stats do ciclo atual. {stats.historicoCount} antes do Marco Zero.
-                </p>
+              </div>
+
+              <div className="max-h-[520px] overflow-y-auto">
+                {schedule.dates.length === 0 ? (
+                  <div className="p-6 text-center">
+                    <p className="text-gray-500 text-xs">Nenhuma data ainda. Use o calendário ao lado ou clique em <span className="text-purple-300 font-semibold">Padronizar</span>.</p>
+                  </div>
+                ) : (
+                  <div>
+                    {/* Cabeçalho da tabela */}
+                    <div className="grid grid-cols-[78px_44px_1fr_44px_92px_24px] gap-1.5 px-3 py-2 border-b border-[#323238] bg-[#1a1a1a]/60">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Data</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 text-center">Tipo</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Formulário</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 text-center">Int.</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 text-center">Ciclo</span>
+                      <span />
+                    </div>
+                    {grupos.map((grupo, gi) => grupo.items.map((d, idx) => {
+                      const ehUltimaDoGrupo = idx === grupo.items.length - 1
+                      // Intervalo em semanas até a linha anterior do MESMO grupo
+                      const prev = idx > 0 ? grupo.items[idx - 1] : null
+                      const intervalo = prev
+                        ? Math.round((new Date(d.date) - new Date(prev.date)) / (7 * 86400000))
+                        : 0
+                      return (
+                        <div key={d.date}
+                          onContextMenu={(e) => {
+                            e.preventDefault()
+                            setMarcoZeroMenu({ date: d.date, x: e.clientX, y: e.clientY })
+                          }}
+                          className={`grid grid-cols-[78px_44px_1fr_44px_92px_24px] gap-1.5 px-3 py-2 border-b border-[#323238]/40 items-center transition-colors ${
+                            d.is_start ? 'bg-[#2563eb]/15' : 'hover:bg-[#1e1e22]'
+                          }`}>
+                          <span className="text-white font-medium text-xs">{fmtDateBR(d.date)}</span>
+                          <span className="flex justify-center">
+                            <TipoBotao item={d}
+                              onToggle={(_, v) => handleToggleTraining(d.date, v)}
+                              variant="icon"
+                              size="sm" />
+                          </span>
+                          <select
+                            value={d.formulario || planForm.formulario_padrao || ''}
+                            onChange={(e) => handleSetFormulario(d.date, e.target.value)}
+                            className="h-7 px-1 bg-[#1a1a1a] border border-[#323238] text-white rounded text-[11px] outline-none focus:border-[#2563eb]/60 truncate"
+                          >
+                            {formulariosCompativeis.map((f) => (
+                              <option key={f.name} value={f.name}>{f.titulo}</option>
+                            ))}
+                          </select>
+                          <span className="text-[10px] text-gray-500 text-center">
+                            {intervalo > 0 ? `${intervalo}s` : '—'}
+                          </span>
+                          <span className="text-center">
+                            {ehUltimaDoGrupo ? (
+                              <span className={`inline-block text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
+                                grupo.label === 'Ciclo a definir'
+                                  ? 'bg-gray-500/10 text-gray-400 border-gray-500/30 italic'
+                                  : 'bg-purple-500/10 text-purple-300 border-purple-500/30'
+                              }`}>
+                                {grupo.label}
+                              </span>
+                            ) : null}
+                          </span>
+                          <button onClick={() => handleRemoverDataLocal(d.date)}
+                            title="Remover"
+                            className="h-6 w-6 inline-flex items-center justify-center text-gray-500 hover:text-red-400">
+                            <X size={12} />
+                          </button>
+                        </div>
+                      )
+                    }))}
+
+                    {/* Total planejado */}
+                    {schedule.dates.length > 0 && (
+                      <div className="grid grid-cols-[78px_44px_1fr_44px_92px_24px] gap-1.5 px-3 py-2 border-t border-[#323238] bg-[#1a1a1a]/60 items-center">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 col-span-4">
+                          Total planejado
+                        </span>
+                        <span className="text-center">
+                          <span className="inline-block text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-[#850000]/10 text-red-300 border-[#850000]/40">
+                            {stats.semanas} semanas
+                          </span>
+                        </span>
+                        <span />
+                      </div>
+                    )}
+
+                    {/* Adicionar data avulsa */}
+                    <div className="px-3 py-2 border-t border-[#323238]">
+                      <Button variant="ghost" size="xs" icon={Plus}
+                        onClick={() => setModalNovoDia({
+                          date: todayISO(),
+                          formulario: planForm.formulario_padrao || '',
+                          dias_aviso: 1,
+                          is_start: false,
+                          nota: '',
+                        })}>
+                        Adicionar data avulsa
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {schedule.dates.length > 0 && (
+                <div className="px-3 py-2 border-t border-[#323238] text-[10px] text-gray-500">
+                  Clique direito em uma linha para definir Marco Zero.
+                </div>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="xs" icon={Copy} onClick={handleCopiarMensagem}>
-                Copiar mensagem
-              </Button>
-              <div className="flex items-center gap-1">
-                <button onClick={() => setViewYear(y => y - 1)}
-                  className="h-7 w-7 flex items-center justify-center rounded-lg border border-[#323238] text-gray-400 hover:text-white hover:bg-[#1a1a1a] transition-colors">
-                  <ChevronLeft size={14} />
-                </button>
-                <span className="text-sm font-bold tracking-tight px-3">{viewYear}</span>
-                <button onClick={() => setViewYear(y => y + 1)}
-                  className="h-7 w-7 flex items-center justify-center rounded-lg border border-[#323238] text-gray-400 hover:text-white hover:bg-[#1a1a1a] transition-colors">
-                  <ChevronRight size={14} />
-                </button>
-              </div>
-            </div>
           </div>
 
-          {/* Linha 3: Calendário Anual (12 meses) — visão central */}
-          <div className="bg-[#29292e] border border-[#323238] rounded-xl">
-            {carregandoAluno ? (
-              <div className="p-12 flex items-center justify-center">
-                <Spinner />
-              </div>
-            ) : (
-              <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {Array.from({ length: 12 }, (_, m) => (
-                  <MesGrid
-                    key={m}
-                    year={viewYear}
-                    month={m}
-                    schedule={schedule}
-                    feriasList={feriasList}
-                    planStart={planForm.plan_start}
-                    planEnd={planForm.plan_end}
-                    onClickDate={onClickDate}
-                    onContextDate={(e, dateStr) => {
-                      if (!dataJaAgendada(dateStr)) return
-                      e.preventDefault()
-                      setMarcoZeroMenu({ date: dateStr, x: e.clientX, y: e.clientY })
-                    }}
-                  />
-                ))}
-              </div>
-            )}
+          {/* ─── Coluna direita ──────────────────────────────────────────── */}
+          <div className="lg:col-span-7 space-y-4">
 
-            {/* Footer com legenda + adicionar avulsa */}
-            <div className="px-4 py-3 border-t border-[#323238] flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap gap-3 text-[10px] text-gray-500">
-                <Legenda cor="bg-[#2563eb]" label="Planejado" />
-                <Legenda cor="bg-emerald-700" label="Respondido" />
-                <Legenda cor="bg-red-700" label="Atrasado" />
+            {/* Histórico */}
+            <div className="bg-[#29292e] border border-[#323238] rounded-xl">
+              <div className="px-4 py-3 border-b border-[#323238] flex items-center justify-between">
+                <h3 className="text-sm font-bold tracking-tight">Histórico</h3>
+                <Tabs
+                  variant="pills"
+                  active={historicoMode}
+                  onChange={setHistoricoMode}
+                  tabs={[
+                    { id: 'table',    label: 'Tabela' },
+                    { id: 'timeline', label: 'Timeline' },
+                  ]}
+                />
+              </div>
+              <div className="p-4">
+                {historicoMode === 'table'
+                  ? <HistoricoTabela schedule={schedule} />
+                  : <HistoricoTimeline schedule={schedule} />}
+              </div>
+            </div>
+
+            {/* Calendário Anual */}
+            <div className="bg-[#29292e] border border-[#323238] rounded-xl">
+              <div className="px-4 py-3 border-b border-[#323238] flex items-center justify-between gap-2">
+                <h3 className="text-sm font-bold tracking-tight flex items-center gap-2">
+                  <CalendarIcon size={14} className="text-gray-400" />
+                  Calendário Anual
+                </h3>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setViewYear(y => y - 1)}
+                    className="h-7 w-7 flex items-center justify-center rounded-lg border border-[#323238] text-gray-400 hover:text-white hover:bg-[#1a1a1a] transition-colors">
+                    <ChevronLeft size={14} />
+                  </button>
+                  <span className="text-sm font-bold tracking-tight px-3">{viewYear}</span>
+                  <button onClick={() => setViewYear(y => y + 1)}
+                    className="h-7 w-7 flex items-center justify-center rounded-lg border border-[#323238] text-gray-400 hover:text-white hover:bg-[#1a1a1a] transition-colors">
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {carregandoAluno ? (
+                <div className="p-12 flex items-center justify-center">
+                  <Spinner />
+                </div>
+              ) : (
+                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+                  {Array.from({ length: 12 }, (_, m) => (
+                    <MesGrid
+                      key={m}
+                      year={viewYear}
+                      month={m}
+                      schedule={schedule}
+                      feriasList={feriasList}
+                      planStart={planForm.plan_start}
+                      planEnd={planForm.plan_end}
+                      onClickDate={onClickDate}
+                      onContextDate={(e, dateStr) => {
+                        if (!dataJaAgendada(dateStr)) return
+                        e.preventDefault()
+                        setMarcoZeroMenu({ date: dateStr, x: e.clientX, y: e.clientY })
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+
+              <div className="px-4 py-3 border-t border-[#323238] flex flex-wrap gap-3 text-[10px] text-gray-500">
+                <Legenda cor="bg-[#2563eb]" label="Feedback" />
                 <Legenda cor="bg-purple-500" label="Treino/Troca" />
-                <Legenda label="Marco Zero (clique direito)" />
+                <Legenda cor="bg-emerald-700" label="Segunda na vigência" />
+                <Legenda cor="bg-green-900/40 border border-green-700/40" label="Dentro da vigência" />
                 <Legenda cor="bg-[#1a1a1a] border border-blue-500/40" label="Férias" />
+                <Legenda label="Marco Zero (clique direito)" />
                 <Legenda cor="bg-orange-400" label="Feriado" />
               </div>
-              <Button variant="ghost" size="xs" icon={Plus}
-                onClick={() => setModalNovoDia({
-                  date: todayISO(),
-                  formulario: planForm.formulario_padrao || '',
-                  dias_aviso: 1,
-                  is_start: false,
-                  nota: '',
-                })}>
-                Adicionar data avulsa
-              </Button>
             </div>
           </div>
-
-          <p className="text-[10px] text-gray-500 italic text-center">
-            Clique numa data pra adicionar ou remover · Clique direito numa data preenchida pra definir Marco Zero, mudar formulário ou marcar troca.
-          </p>
         </div>
       )}
 
