@@ -686,6 +686,7 @@ export default function FinanceiroListagem() {
         mode={contratoForm === 'novo' ? 'novo' : 'editar'}
         contrato={contratoForm === 'novo' ? null : contratoForm?.contrato}
         planos={planos}
+        contratos={contratos}
         onClose={() => setContratoForm(null)}
         onSuccess={onSucessoMutacao}
       />
@@ -705,6 +706,7 @@ export default function FinanceiroListagem() {
         isOpen={renovarModalOpen}
         onClose={() => setRenovarModalOpen(false)}
         contratos={contratos}
+        planos={planos}
         alunosMap={alunosMap}
         onSuccess={onSucessoMutacao}
       />

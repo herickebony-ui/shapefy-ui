@@ -37,7 +37,7 @@ const FORM_VAZIO = {
 }
 
 export default function ContratoFormModal({
-  isOpen, mode = 'novo', contrato, planos = [], onClose, onSuccess,
+  isOpen, mode = 'novo', contrato, planos = [], contratos = [], onClose, onSuccess,
 }) {
   const editar = mode === 'editar' && !!contrato
   const [form, setForm] = useState(FORM_VAZIO)
@@ -138,6 +138,20 @@ export default function ContratoFormModal({
       .map((a) => ({ id: a.name, nome: a.nome_completo }))
     setVinculadosAtuais(list)
   }, [todosAlunos, vinculosOriginais])
+
+  // Aviso "aluna já tem contrato vigente" — só em modo "novo" + aluno selecionado
+  const contratoVigenteDoAluno = useMemo(() => {
+    if (editar) return null
+    if (!form?.aluno) return null
+    const hoje = getTodayISO()
+    return contratos.find((c) => {
+      if (c.aluno !== form.aluno) return false
+      if (c.status_manual === 'Pausado') return false
+      const fim = normalizeDate(c.data_fim)
+      const inicio = normalizeDate(c.data_inicio)
+      return inicio && fim && inicio <= hoje && hoje <= fim
+    }) || null
+  }, [editar, form?.aluno, contratos])
 
   // Carrega plano selecionado
   useEffect(() => {
@@ -610,6 +624,23 @@ export default function ContratoFormModal({
               vinculosOpen={vinculosOpen}
               setVinculosOpen={setVinculosOpen}
             />
+          )}
+
+          {contratoVigenteDoAluno && (
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-3 py-2 text-yellow-200 text-xs flex items-start gap-2">
+              <AlertTriangle size={14} className="text-yellow-400 mt-0.5 shrink-0" />
+              <div>
+                Esta aluna já tem um contrato vigente
+                {' ('}
+                <span className="font-mono text-yellow-300">{contratoVigenteDoAluno.name}</span>
+                {' · '}
+                {contratoVigenteDoAluno.nome_plano_snapshot || contratoVigenteDoAluno.plano}
+                {' · vence '}
+                {formatDateBr(contratoVigenteDoAluno.data_fim)}
+                {'). '}
+                Confirme se realmente quer criar um novo.
+              </div>
+            </div>
           )}
 
           {erroValidacao && (
