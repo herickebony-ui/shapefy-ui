@@ -766,20 +766,40 @@ export default function CronogramaFeedbacks() {
               </p>
             )}
 
-            {/* Vigência editável */}
+            {/* Vigência: read-only quando há contrato, editável quando não */}
             <div className="bg-[#29292e] border border-[#323238] rounded-xl p-4 space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400">Vigência do Plano</h3>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400">Vigência do Plano</h3>
+                {contratoRelevante ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded">
+                      {contratoRelevante.nome_plano_snapshot || contratoRelevante.plano || 'Contrato'} · do Financeiro
+                    </span>
+                    <button
+                      onClick={() => navigate('/financeiro')}
+                      className="text-[10px] font-bold uppercase tracking-widest text-blue-300 hover:text-blue-200 underline">
+                      Editar no Financeiro
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 italic">
+                    Aluno sem contrato — edição manual
+                  </span>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <FormGroup label="Início">
                   <Input type="date" value={planForm.plan_start}
-                    onChange={(v) => handlePlanFormChange('plan_start', v)} />
+                    onChange={(v) => handlePlanFormChange('plan_start', v)}
+                    disabled={!!contratoRelevante} />
                 </FormGroup>
                 <FormGroup label="Duração (meses)">
                   <Input type="number" value={String(planForm.plan_duration)}
-                    onChange={(v) => handlePlanFormChange('plan_duration', Number(v) || 0)} />
+                    onChange={(v) => handlePlanFormChange('plan_duration', Number(v) || 0)}
+                    disabled={!!contratoRelevante} />
                 </FormGroup>
               </div>
-              <FormGroup label="Fim (auto)" hint="Início + duração">
+              <FormGroup label="Fim (auto)" hint={contratoRelevante ? 'Vem do contrato' : 'Início + duração'}>
                 <Input type="date" value={planForm.plan_end} onChange={() => {}} disabled />
               </FormGroup>
             </div>
