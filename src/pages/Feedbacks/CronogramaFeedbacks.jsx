@@ -306,15 +306,20 @@ export default function CronogramaFeedbacks() {
   const dataJaAgendada = (dateStr) => schedule.dates.some(d => d.date === dateStr)
   const itemDoDia = (dateStr) => schedule.dates.find(d => d.date === dateStr)
 
-  // Click esquerdo no calendário: cria agendamento direto com defaults
-  // (formulário padrão do aluno, dia_aviso=1). Pra editar detalhes,
-  // botão direito → "Abrir detalhes".
+  // Click esquerdo no calendário: TOGGLE.
+  // Se a data já tem feedback, remove. Se não, adiciona com defaults.
+  // Marco Zero e edição detalhada via clique direito (MarcoZeroMenu).
   const onClickDate = (dateStr) => {
     if (!aluno) {
       showToast('Selecione um aluno primeiro', 'info')
       return
     }
-    if (dataJaAgendada(dateStr)) return
+    if (dataJaAgendada(dateStr)) {
+      // Toggle remove
+      setSchedule(prev => ({ dates: prev.dates.filter(d => d.date !== dateStr) }))
+      showToast(`${fmtDateBR(dateStr)} removido`, 'info')
+      return
+    }
     if (!planForm.formulario_padrao) {
       showToast('Defina um formulário padrão pro aluno antes', 'error')
       return
@@ -635,59 +640,57 @@ export default function CronogramaFeedbacks() {
           </button>
           <div>
             <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Planejamento</p>
-            <h1 className="text-lg md:text-2xl font-bold tracking-tight">Planejar Cronograma do Aluno</h1>
+            <h1 className="text-lg md:text-2xl font-bold tracking-tight">Planejar Feedbacks do Aluno</h1>
             {aluno && <p className="text-gray-500 text-xs mt-1">{aluno.nome_completo}</p>}
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Botões diretos — sem menu de 3 pontos */}
-          <Button variant="secondary" size="sm" icon={Palmtree}
-            onClick={() => setModalFerias(true)}>
-            Férias
-          </Button>
-          <Button variant="secondary" size="sm" icon={MessageSquare}
-            onClick={() => setModalTemplatesAberto(true)}>
-            Templates
-          </Button>
-          {/* Ações específicas do aluno selecionado — agrupadas em menu compacto */}
-          {aluno && !emEstadoVazio && (
-            <div className="relative" ref={maisMenuRef}>
-              <Button variant="secondary" size="sm" icon={MoreVertical}
-                onClick={() => setMaisMenuAberto(v => !v)}
-                title="Outras ações do aluno" />
-              {maisMenuAberto && (
-                <div className="absolute right-0 top-full mt-1 z-30 bg-[#1a1a1a] border border-[#323238] rounded-lg shadow-xl py-1 w-56 text-sm">
-                  <button onClick={() => { setModalGerarSerie(true); setMaisMenuAberto(false) }}
-                    className="w-full text-left px-3 py-2 hover:bg-[#29292e] flex items-center gap-2">
-                    <Wand2 size={14} className="text-gray-400" /> Padronizar (gerar série)
-                  </button>
-                  <button onClick={() => { setModalClonar(true); setMaisMenuAberto(false) }}
-                    className="w-full text-left px-3 py-2 hover:bg-[#29292e] flex items-center gap-2">
-                    <Users size={14} className="text-gray-400" /> Clonar de outro aluno
-                  </button>
-                  <button onClick={() => { setModalWizard(true); setMaisMenuAberto(false) }}
-                    className="w-full text-left px-3 py-2 hover:bg-[#29292e] flex items-center gap-2">
-                    <Plus size={14} className="text-gray-400" /> Refazer série (wizard)
-                  </button>
-                  <div className="my-1 border-t border-[#323238]" />
-                  <button onClick={handleRenovarCiclo}
-                    className="w-full text-left px-3 py-2 hover:bg-[#29292e] flex items-center gap-2 text-blue-300"
-                    title="Zera a vigência mantendo histórico de datas. Defina novo Marco Zero depois.">
-                    <Wand2 size={14} /> Renovar ciclo (preserva histórico)
-                  </button>
-                  <button onClick={handleLimparCronograma}
-                    className="w-full text-left px-3 py-2 hover:bg-[#29292e] flex items-center gap-2 text-red-400">
-                    <Trash2 size={14} /> Limpar tudo
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+        <div className="flex flex-row items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden py-0.5 max-w-full">
           {aluno && !emEstadoVazio && (
             <Button variant="primary" size="sm" icon={Save}
-              onClick={handleSalvar} loading={salvando}>
+              onClick={handleSalvar} loading={salvando}
+              className="whitespace-nowrap shrink-0">
               Salvar
             </Button>
+          )}
+          <Button variant="secondary" size="sm" icon={Palmtree}
+            onClick={() => setModalFerias(true)}
+            className="whitespace-nowrap shrink-0">
+            Cadastre suas férias
+          </Button>
+          <Button variant="secondary" size="sm" icon={MessageSquare}
+            onClick={() => setModalTemplatesAberto(true)}
+            className="whitespace-nowrap shrink-0">
+            Modelos de mensagem
+          </Button>
+          {aluno && !emEstadoVazio && (
+            <>
+              <Button variant="secondary" size="sm" icon={Wand2}
+                onClick={() => setModalGerarSerie(true)}
+                className="whitespace-nowrap shrink-0">
+                Padronizar
+              </Button>
+              <Button variant="secondary" size="sm" icon={Users}
+                onClick={() => setModalClonar(true)}
+                className="whitespace-nowrap shrink-0">
+                Clonar de outro aluno
+              </Button>
+              <Button variant="secondary" size="sm" icon={Plus}
+                onClick={() => setModalWizard(true)}
+                className="whitespace-nowrap shrink-0">
+                Refazer série
+              </Button>
+              <Button variant="secondary" size="sm" icon={Wand2}
+                onClick={handleRenovarCiclo}
+                title="Zera a vigência mantendo histórico de datas. Defina novo Marco Zero depois."
+                className="whitespace-nowrap shrink-0 !text-blue-300 !border-blue-500/30">
+                Renovar ciclo
+              </Button>
+              <Button variant="danger" size="sm" icon={Trash2}
+                onClick={handleLimparCronograma}
+                className="whitespace-nowrap shrink-0">
+                Limpar cronograma
+              </Button>
+            </>
           )}
         </div>
       </div>

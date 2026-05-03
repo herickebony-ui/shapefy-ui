@@ -63,9 +63,14 @@ export default function MesGrid({
 
           if (item) {
             const isTr = !!item.is_training
-            const isDone = item.status === 'Respondido' || item.status === 'Concluido'
+            const isDone = item.status === 'Respondido' || item.status === 'Concluido' || !!item.respondido_em
+            const isAtrasado = !isDone && iso < today
             if (isDone) {
-              bg = 'bg-[#29292e] text-gray-500 line-through'
+              bg = 'bg-emerald-700/40 text-emerald-100'
+              ring = 'ring-1 ring-emerald-500/50'
+            } else if (isAtrasado) {
+              bg = 'bg-red-700/40 text-red-100'
+              ring = 'ring-1 ring-red-500/60'
             } else if (item.is_start) {
               bg = 'bg-[#0a0a0a] text-blue-300'
               ring = 'ring-2 ring-[#2563eb]/60'
