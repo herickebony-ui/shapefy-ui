@@ -22,6 +22,7 @@ import {
 } from '../../api/templates'
 import { listarAlunos, buscarAluno, salvarAluno } from '../../api/alunos'
 import { listarFormulariosFeedback } from '../../api/formularios'
+import { listarContratos } from '../../api/contratosAluno'
 
 import {
   TEMPLATE_LS_KEY,
@@ -55,6 +56,7 @@ export default function CronogramaFeedbacks() {
 
   // ─── Aluno + cronograma ─────────────────────────────────────────────────────
   const [aluno, setAluno] = useState(null)
+  const [contratoRelevante, setContratoRelevante] = useState(null)
   const [schedule, setSchedule] = useState({ dates: [] })
   const [planForm, setPlanForm] = useState({
     plan_start: '', plan_end: '', plan_duration: 6, formulario_padrao: '',
@@ -123,17 +125,36 @@ export default function CronogramaFeedbacks() {
   const carregarAluno = useCallback(async (id) => {
     if (!id) {
       setAluno(null)
+      setContratoRelevante(null)
       setSchedule({ dates: [] })
       setPlanForm({ plan_start: '', plan_end: '', plan_duration: 6, formulario_padrao: '' })
       return
     }
     setCarregandoAluno(true)
     try {
-      const [a, ags] = await Promise.all([
+      const [a, ags, contratosRes] = await Promise.all([
         buscarAluno(id),
         listarAgendamentosDoAluno(id),
+        // Busca contratos do aluno pra linkar com Financeiro (vigência + pago-e-não-iniciado)
+        listarContratos({ aluno: id, limit: 20 }).catch(() => ({ list: [] })),
       ])
       setAluno(a)
+      // Escolhe contrato relevante: prioriza vigente; depois pago-e-não-iniciado;
+      // depois o mais recente por data_fim
+      const hojeISO = new Date().toISOString().slice(0, 10)
+      const cs = (contratosRes?.list || []).filter(c => c.status_manual !== 'Pausado')
+      const vigente = cs.find(c => {
+        const ini = (c.data_inicio || '').slice(0, 10)
+        const fim = (c.data_fim || '').slice(0, 10)
+        return ini && fim && ini <= hojeISO && hojeISO <= fim
+      })
+      const pagoNaoIniciado = !vigente && cs.find(c =>
+        !c.data_inicio && c.data_pagamento_principal,
+      )
+      const maisRecente = !vigente && !pagoNaoIniciado && [...cs].sort((a, b) =>
+        (b.data_fim || '').localeCompare(a.data_fim || ''),
+      )[0]
+      setContratoRelevante(vigente || pagoNaoIniciado || maisRecente || null)
       const dates = (ags || []).map(ag => ({
         _name: ag.name,
         date: ag.data_agendada,
@@ -874,6 +895,8 @@ export default function CronogramaFeedbacks() {
         <WizardCriacao
           alunoId={alunoId}
           alunoNome={aluno.nome_completo}
+          aluno={aluno}
+          contratoRelevante={contratoRelevante}
           formularios={formularios}
           feriasList={feriasList}
           initial={{

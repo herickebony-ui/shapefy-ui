@@ -21,6 +21,8 @@ const DIAS_SEMANA_OPTS = [
 export default function WizardCriacao({
   alunoId,
   alunoNome,
+  aluno = null,
+  contratoRelevante = null,
   formularios,
   feriasList = [],
   initial = {},
@@ -31,11 +33,38 @@ export default function WizardCriacao({
   const [step, setStep] = useState(1)
   const [salvando, setSalvando] = useState(false)
 
+  // Filtra formulários compatíveis com o plano do aluno (dieta/treino)
+  // Se o aluno não tem dieta/treino preenchidos, mostra todos.
+  const formulariosCompativeis = useMemo(() => {
+    if (!aluno || (aluno.dieta == null && aluno.treino == null)) return formularios
+    const aDieta = !!aluno.dieta
+    const aTreino = !!aluno.treino
+    const matches = formularios.filter(f => !!f.dieta === aDieta && !!f.treino === aTreino)
+    // Fallback: se nenhum bate exatamente, mostra todos pra não bloquear
+    return matches.length ? matches : formularios
+  }, [aluno, formularios])
+
+  // Pré-preenche plan_start: aluno.plan_start > contrato pago-e-não-iniciado
+  // (data_pagamento_principal) > hoje. data_inicio do contrato vigente também
+  // serve se existir.
+  const planStartSugerido = useMemo(() => {
+    if (initial.plan_start) return initial.plan_start
+    const ini = contratoRelevante?.data_inicio?.slice(0, 10)
+    if (ini) return ini
+    const dp = contratoRelevante?.data_pagamento_principal?.slice(0, 10)
+    if (dp) return dp
+    return todayISO()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Step 1
   const [vigencia, setVigencia] = useState({
-    plan_start: initial.plan_start || todayISO(),
+    plan_start: planStartSugerido,
     plan_duration: initial.plan_duration || 6,
-    formulario_padrao: initial.formulario_padrao || formularios.find(f => f.enabled !== 0)?.name || formularios[0]?.name || '',
+    formulario_padrao: initial.formulario_padrao
+      || formulariosCompativeis.find(f => f.enabled !== 0)?.name
+      || formulariosCompativeis[0]?.name
+      || '',
   })
   const planEnd = useMemo(
     () => calcPlanEnd(vigencia.plan_start, vigencia.plan_duration),
@@ -209,6 +238,21 @@ export default function WizardCriacao({
         {/* ── Step 1: Vigência ──────────────────────────────────────────── */}
         {step === 1 && (
           <div className="space-y-3">
+            {/* Banner: contrato pago e não iniciado encontrado no Financeiro */}
+            {contratoRelevante && !contratoRelevante.data_inicio && contratoRelevante.data_pagamento_principal && (
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl px-3 py-2 text-blue-200 text-xs">
+                <strong>Contrato pago em {fmtDateBR(contratoRelevante.data_pagamento_principal)}</strong> ainda
+                sem data de início no Financeiro. Sugerimos iniciar o cronograma a partir dessa data —
+                ajuste se for outro dia.
+              </div>
+            )}
+            {contratoRelevante && contratoRelevante.data_inicio && (
+              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-3 py-2 text-emerald-200 text-xs">
+                Vigência puxada do contrato <span className="font-mono text-emerald-300">{contratoRelevante.name}</span>
+                {' ('}{fmtDateBR(contratoRelevante.data_inicio)} → {fmtDateBR(contratoRelevante.data_fim)}{').'}
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <FormGroup label="Quando começa o plano?" required>
                 <Input type="date" value={vigencia.plan_start}
@@ -228,11 +272,15 @@ export default function WizardCriacao({
             </div>
 
             <FormGroup label="Formulário padrão deste aluno" required
-              hint="Será usado em todos os agendamentos do cronograma">
+              hint={
+                aluno && (aluno.dieta != null || aluno.treino != null)
+                  ? `Mostrando só formulários compatíveis com o plano da aluna (dieta: ${aluno.dieta ? 'sim' : 'não'} · treino: ${aluno.treino ? 'sim' : 'não'})`
+                  : 'Será usado em todos os agendamentos do cronograma'
+              }>
               <Select
                 value={vigencia.formulario_padrao}
                 onChange={(v) => setVigencia(p => ({ ...p, formulario_padrao: v }))}
-                options={formularios.map(f => ({ value: f.name, label: f.titulo }))}
+                options={formulariosCompativeis.map(f => ({ value: f.name, label: f.titulo }))}
                 placeholder="Selecione um formulário..."
               />
             </FormGroup>

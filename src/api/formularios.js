@@ -66,7 +66,10 @@ export const excluirFormularioAnamnese = async (id) => {
 export const listarFormulariosFeedback = async () => {
   const res = await client.get(`/api/resource/${ENC_FEEDBACK}`, {
     params: {
-      fields: JSON.stringify(['name', 'titulo', 'enabled', 'automacao', 'frequencia']),
+      fields: JSON.stringify([
+        'name', 'titulo', 'enabled', 'automacao', 'frequencia',
+        'dieta', 'treino', 'feedback_inicial',
+      ]),
       limit: 100,
       order_by: 'creation desc',
     },
