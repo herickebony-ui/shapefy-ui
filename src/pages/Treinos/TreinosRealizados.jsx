@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import {
   ArrowLeft, RefreshCw, ChevronLeft, ChevronRight,
   Dumbbell, Activity, Clock, MessageSquare,
-  Save, Search, Calendar,
+  Save, Search, Calendar, TrendingUp,
 } from 'lucide-react'
 import { buscarSmart } from '../../utils/strings'
 import {
