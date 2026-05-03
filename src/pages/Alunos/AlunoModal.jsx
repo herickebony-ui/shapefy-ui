@@ -20,8 +20,9 @@ const fmtData = (d) => {
   return `${day}/${m}/${y}`
 }
 
+// Os arrays NÃO incluem 'Selecionar...' — o componente Select do DS já injeta
+// o placeholder automaticamente quando value é vazio.
 const FREQUENCIA_OPTS = [
-  { value: '', label: 'Selecionar...' },
   { value: 'Sedentário', label: 'Sedentário' },
   { value: 'Levemente Ativo', label: 'Levemente Ativo' },
   { value: 'Moderadamente Ativo', label: 'Moderadamente Ativo' },
@@ -30,7 +31,6 @@ const FREQUENCIA_OPTS = [
 ]
 
 const SEXO_OPTS = [
-  { value: '', label: 'Selecionar...' },
   { value: 'Masculino', label: 'Masculino' },
   { value: 'Feminino', label: 'Feminino' },
 ]
@@ -135,6 +135,7 @@ function TabPerfil({ aluno: inicial, alunoId }) {
     senha_de_acesso: inicial.senha_de_acesso || '',
     cpf: inicial.cpf || '',
     'profissão': inicial['profissão'] || '',
+    objetivo: inicial.objetivo || '',
     sexo: inicial.sexo || '',
     age: inicial.age || '',
     height: inicial.height || '',
@@ -220,6 +221,10 @@ function TabPerfil({ aluno: inicial, alunoId }) {
         <FormGroup label="CPF"><Input value={form.cpf} onChange={set('cpf')} /></FormGroup>
         <FormGroup label="Profissão"><Input value={form['profissão']} onChange={set('profissão')} /></FormGroup>
       </div>
+      <FormGroup label="Objetivo" hint="Resumo curto — visível no perfil">
+        <Textarea value={form.objetivo} onChange={set('objetivo')} rows={2}
+          placeholder="Ex: emagrecimento, hipertrofia, performance..." />
+      </FormGroup>
 
       <SecaoPerfil titulo="Endereço" />
       <div className="grid grid-cols-2 gap-3">

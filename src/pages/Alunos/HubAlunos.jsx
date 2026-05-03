@@ -129,6 +129,20 @@ export default function HubAlunos() {
 
   const handleEnviar = async () => {
     if (!formularioSelecionado) return alert('Selecione um formulário.')
+    if (enviando) return // guard contra double-click
+    // Idempotência: se o aluno já tem uma anamnese deste formulário, avisa
+    // antes de criar outra (evita duplicação acidental)
+    const anamnesesDoAluno = anamnesePorAluno[alunoEnvio.name] || []
+    const formNome = formularios.find(f => f.name === formularioSelecionado)?.titulo || formularioSelecionado
+    const jaExiste = anamnesesDoAluno.some(a =>
+      a.titulo === formNome
+      || (a.formulario && a.formulario === formularioSelecionado),
+    )
+    if (jaExiste && !window.confirm(
+      `Esta aluna já tem uma anamnese "${formNome}". Deseja criar mais uma assim mesmo?`,
+    )) {
+      return
+    }
     setEnviando(true)
     try {
       await vincularAnamnese(alunoEnvio.name, formularioSelecionado, true)
