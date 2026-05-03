@@ -11,7 +11,7 @@ import {
 } from '../../api/contratosAluno'
 import { buscarPlano } from '../../api/planosShapefy'
 import { listarAlunos, buscarAluno } from '../../api/alunos'
-import { METODOS_PAGAMENTO, MODALIDADES, MODALIDADE_HINT, COLOR_DOT } from './constants'
+import { METODOS_PAGAMENTO, MODALIDADES, MODALIDADE_HINT, MODALIDADE_AVISO, COLOR_DOT } from './constants'
 import {
   addMonths, formatCurrency, formatDateBr, getTodayISO, normalizeDate, smartSearch,
 } from './utils'
@@ -640,6 +640,17 @@ export default function ContratoFormModal({
               />
             </FormGroup>
           </div>
+
+          {/* Aviso destacado da modalidade — pra reduzir erro de cadastro */}
+          {MODALIDADE_AVISO[form.modalidade] && (
+            <div className={`rounded-xl px-3 py-2 text-xs flex items-start gap-2 border ${
+              form.modalidade === 'A vista'
+                ? 'bg-blue-500/10 border-blue-500/30 text-blue-200'
+                : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-200'
+            }`}>
+              <span className="leading-snug">{MODALIDADE_AVISO[form.modalidade]}</span>
+            </div>
+          )}
 
           {/* Bloco valores */}
           <div className="grid grid-cols-2 gap-3 bg-[#222226] border border-[#323238] rounded-xl p-3">

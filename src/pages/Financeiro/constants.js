@@ -106,8 +106,14 @@ export const METODOS_PAGAMENTO = ['Pix', 'Cartao', 'Boleto']
 export const MODALIDADES = ['A vista', 'Parcelado']
 
 export const MODALIDADE_HINT = {
-  'A vista': 'Cobrança única no momento da venda (mesmo se a aluna parcelou no cartão dela).',
-  'Parcelado': 'N cobranças mensais separadas. Cada parcela tem vencimento próprio.',
+  'A vista': 'Você recebe TUDO de uma vez (Pix, Cartão à vista ou Cartão parcelado pelo cliente — quem divide é a operadora dele, você recebe o valor cheio).',
+  'Parcelado': 'VOCÊ vai cobrar mensalmente (boleto, Pix mensal etc.). Cada parcela tem vencimento separado e baixa individual. NÃO use se o cliente parcelou no cartão dele.',
+}
+
+// Aviso destacado pra evitar erro comum de cadastro
+export const MODALIDADE_AVISO = {
+  'A vista': '💡 Se a aluna parcelou no cartão dela em 5x, escolha À VISTA — o cartão divide pra ela, você recebe o valor inteiro de uma vez.',
+  'Parcelado': '⚠️ Use só quando VOCÊ vai cobrar mês a mês. Cartão parcelado pelo cliente NÃO é parcelado aqui — é À vista.',
 }
 
 export const ACOES_AUDITORIA = [

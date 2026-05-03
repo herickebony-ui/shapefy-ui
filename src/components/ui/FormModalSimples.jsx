@@ -58,13 +58,11 @@ export default function FormModalSimples({
       closeOnOverlayClick={closeOnOverlayClick && !loading}
       footer={
         <div className="flex items-center justify-between w-full gap-2">
+          <Button variant="ghost" onClick={onClose} disabled={loading}>
+            {cancelLabel}
+          </Button>
           <div className="flex items-center gap-2">
             {extraActions}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={onClose} disabled={loading}>
-              {cancelLabel}
-            </Button>
             <Button
               variant={submitVariant}
               onClick={onSubmit}
