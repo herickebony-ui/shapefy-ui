@@ -32,10 +32,8 @@ export default function Login() {
           const plano = await buscarPlano(assinatura.plano_de_assinatura)
           if (plano) {
             setModulos({
-              dieta:    !!plano.dieta,
-              treino:   !!plano.treino,
-              feedback: !!plano.feedback,
-              anamnese: !!plano.anamnese,
+              dieta:  !!plano.dieta,
+              treino: !!plano.treino,
             })
           }
         }
