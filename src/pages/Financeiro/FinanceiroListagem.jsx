@@ -57,6 +57,7 @@ export default function FinanceiroListagem() {
   const [planosModalOpen, setPlanosModalOpen] = useState(false)
   const [auditoriaModalOpen, setAuditoriaModalOpen] = useState(false)
   const [renovarModalOpen, setRenovarModalOpen] = useState(false)
+  const [renovarPreSelecionado, setRenovarPreSelecionado] = useState(null)
   const [historicoAluno, setHistoricoAluno] = useState(null) // { id, nome }
   const [contratoForm, setContratoForm] = useState(null) // null | 'novo' | { contrato, alunoNome }
   const [contratoDetalhe, setContratoDetalhe] = useState(null) // { contratoId, alunoNome }
@@ -794,6 +795,11 @@ export default function FinanceiroListagem() {
         contratos={contratos}
         onClose={() => setContratoForm(null)}
         onSuccess={onSucessoMutacao}
+        onUsarRenovacao={(contratoOrigem) => {
+          setContratoForm(null)
+          setRenovarPreSelecionado(contratoOrigem)
+          setRenovarModalOpen(true)
+        }}
       />
       <ContratoDetalheModal
         isOpen={!!contratoDetalhe}
@@ -809,10 +815,11 @@ export default function FinanceiroListagem() {
       />
       <RenovarContratoModal
         isOpen={renovarModalOpen}
-        onClose={() => setRenovarModalOpen(false)}
+        onClose={() => { setRenovarModalOpen(false); setRenovarPreSelecionado(null) }}
         contratos={contratos}
         planos={planos}
         alunosMap={alunosMap}
+        contratoPreSelecionado={renovarPreSelecionado}
         onSuccess={onSucessoMutacao}
       />
       <AuditoriaModal

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  AlertTriangle, X, Link2, Search, Wand2, Trash2, Plus,
+  AlertTriangle, X, Link2, Search, Wand2, Trash2, Plus, RefreshCcw,
 } from 'lucide-react'
 import {
   FormModalSimples, FormGroup, Input, Select, Spinner, Button,
@@ -39,6 +39,7 @@ const FORM_VAZIO = {
 
 export default function ContratoFormModal({
   isOpen, mode = 'novo', contrato, alunoNome = '', planos = [], contratos = [], onClose, onSuccess,
+  onUsarRenovacao,
 }) {
   const editar = mode === 'editar' && !!contrato
   const [form, setForm] = useState(FORM_VAZIO)
@@ -189,19 +190,52 @@ export default function ContratoFormModal({
     setVinculadosAtuais(list)
   }, [todosAlunos, vinculosOriginais])
 
-  // Aviso "aluna já tem contrato vigente" — só em modo "novo" + aluno selecionado
-  const contratoVigenteDoAluno = useMemo(() => {
+  // Aviso "aluna já tem contrato" — em modo "novo" + aluno selecionado.
+  // Cobre: vigente, pago-e-não-iniciado, vencido nos últimos 30 dias.
+  const contratoExistenteDoAluno = useMemo(() => {
     if (editar) return null
     if (!form?.aluno) return null
     const hoje = getTodayISO()
-    return contratos.find((c) => {
+    const candidatos = contratos.filter((c) => {
       if (c.aluno !== form.aluno) return false
       if (c.status_manual === 'Pausado') return false
       const fim = normalizeDate(c.data_fim)
       const inicio = normalizeDate(c.data_inicio)
-      return inicio && fim && inicio <= hoje && hoje <= fim
-    }) || null
+      const dp = normalizeDate(c.data_pagamento_principal)
+
+      // Vigente
+      if (inicio && fim && inicio <= hoje && hoje <= fim) return true
+
+      // Pago e não iniciado
+      if (!inicio && dp) return true
+
+      // Vencido nos últimos 30 dias (provavelmente uma renovação)
+      if (fim && fim < hoje) {
+        const fimDate = new Date(fim + 'T12:00:00')
+        const hojeDate = new Date(hoje + 'T12:00:00')
+        const dias = Math.floor((hojeDate - fimDate) / 86400000)
+        if (dias <= 30) return true
+      }
+
+      return false
+    })
+    // Pega o mais relevante (data_fim mais recente)
+    return candidatos.sort((a, b) =>
+      (normalizeDate(b.data_fim) || '').localeCompare(normalizeDate(a.data_fim) || '')
+    )[0] || null
   }, [editar, form?.aluno, contratos])
+
+  // Texto contextualizado do banner
+  const tipoContratoExistente = useMemo(() => {
+    if (!contratoExistenteDoAluno) return null
+    const c = contratoExistenteDoAluno
+    const hoje = getTodayISO()
+    const fim = normalizeDate(c.data_fim)
+    const inicio = normalizeDate(c.data_inicio)
+    if (!inicio && c.data_pagamento_principal) return 'pago e não iniciado'
+    if (fim && fim < hoje) return 'recém-vencido'
+    return 'vigente'
+  }, [contratoExistenteDoAluno])
 
   // Carrega plano selecionado
   useEffect(() => {
@@ -735,19 +769,38 @@ export default function ContratoFormModal({
             />
           )}
 
-          {contratoVigenteDoAluno && (
+          {contratoExistenteDoAluno && (
             <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-3 py-2 text-yellow-200 text-xs flex items-start gap-2">
               <AlertTriangle size={14} className="text-yellow-400 mt-0.5 shrink-0" />
-              <div>
-                Esta aluna já tem um contrato vigente
-                {' ('}
-                <span className="font-mono text-yellow-300">{contratoVigenteDoAluno.name}</span>
-                {' · '}
-                {contratoVigenteDoAluno.nome_plano_snapshot || contratoVigenteDoAluno.plano}
-                {' · vence '}
-                {formatDateBr(contratoVigenteDoAluno.data_fim)}
-                {'). '}
-                Confirme se realmente quer criar um novo.
+              <div className="flex-1">
+                <div>
+                  Esta aluna já tem um contrato{' '}
+                  <strong>{tipoContratoExistente}</strong>
+                  {' ('}
+                  <span className="font-mono text-yellow-300">{contratoExistenteDoAluno.name}</span>
+                  {' · '}
+                  {contratoExistenteDoAluno.nome_plano_snapshot || contratoExistenteDoAluno.plano}
+                  {' · '}
+                  {tipoContratoExistente === 'recém-vencido' ? 'venceu' : 'vence'}
+                  {' '}
+                  {formatDateBr(contratoExistenteDoAluno.data_fim) || '—'}
+                  {').'}
+                </div>
+                {onUsarRenovacao && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onUsarRenovacao(contratoExistenteDoAluno)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/40 text-yellow-100 text-[11px] font-bold transition-colors"
+                    >
+                      <RefreshCcw size={11} />
+                      Renovar este contrato
+                    </button>
+                    <span className="text-yellow-300/70 text-[10px]">
+                      ou continue se for mesmo um pagamento avulso
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           )}

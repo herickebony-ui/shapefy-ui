@@ -6,6 +6,7 @@ import { formatCurrency, formatDateBr, normalizeDate, smartSearch } from './util
 
 export default function RenovarContratoModal({
   isOpen, onClose, contratos, planos = [], alunosMap, onSuccess,
+  contratoPreSelecionado = null,
 }) {
   const [query, setQuery] = useState('')
   const [selecionado, setSelecionado] = useState(null)
@@ -25,8 +26,11 @@ export default function RenovarContratoModal({
       setSelecionado(null)
       setRenovando(false)
       setOverrides({ plano: '', valor_liquido_total: '', data_pagamento_principal: '', observacoes: '' })
+    } else if (contratoPreSelecionado) {
+      // Quando vem de "Renovar este contrato" do banner do Novo pagamento
+      setSelecionado(contratoPreSelecionado)
     }
-  }, [isOpen])
+  }, [isOpen, contratoPreSelecionado])
 
   // Quando seleciona um contrato, pré-preenche os campos editáveis
   // com os valores atuais (assim user só muda o que precisar).
