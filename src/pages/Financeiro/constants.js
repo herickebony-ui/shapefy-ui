@@ -107,8 +107,8 @@ export const MODALIDADES = ['A vista', 'Parcelado']
 
 // Labels exibidos no select. Os values acima são os strings que vão pro backend.
 export const MODALIDADE_LABEL = {
-  'A vista': 'À vista (Pix, Cartão à vista ou Cartão parcelado pelo cliente)',
-  'Parcelado': 'Parcelado por mim (cobranças mensais separadas)',
+  'A vista': 'À vista (Pix / Cartão)',
+  'Parcelado': 'Parcelado por mim (mensal)',
 }
 
 export const MODALIDADE_HINT = {
