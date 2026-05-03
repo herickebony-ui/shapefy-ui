@@ -17,7 +17,9 @@ import {
   formatCurrency, formatDateBr, isBetweenInclusive, normalizeDate,
   getRangeFromMonth, monthLabelFromYM, currentYM, smartSearch,
   isContratoCobreMes, contratoNoPeriodo, withConcurrency, getTodayISO,
+  computeContratoStatus,
 } from './utils'
+import { STATUS_BADGE } from './constants'
 import { gerarRelatorioFinanceiro } from './pdf'
 import PlanosModal from './PlanosModal'
 import ContratoFormModal from './ContratoFormModal'
@@ -38,7 +40,7 @@ export default function FinanceiroListagem() {
   const [busca, setBusca] = useState('')
   const [filtroPlano, setFiltroPlano] = useState('')
   const [filtroStatus, setFiltroStatus] = useState('')
-  const [sortType, setSortType] = useState('date_asc')
+  const [sortType, setSortType] = useState('date_desc')
 
   const [dateMode, setDateMode] = useState('month')
   const [selectedMonth, setSelectedMonth] = useState(currentYM())
@@ -270,22 +272,28 @@ export default function FinanceiroListagem() {
       headerClass: 'hidden md:table-cell',
       cellClass: 'hidden md:table-cell',
       render: (row) => {
-        if (!normalizeDate(row.data_inicio)) {
-          return (
-            <div className="flex flex-col gap-1 items-start">
-              <Badge variant="blue" size="sm">Pago, não iniciado</Badge>
+        const statusKey = computeContratoStatus(row, getTodayISO(), dateRange)
+        const cfg = STATUS_BADGE[statusKey] || STATUS_BADGE.Pendente
+        const inicio = normalizeDate(row.data_inicio)
+        const dp = normalizeDate(row.data_pagamento_principal)
+        return (
+          <div className="flex flex-col gap-1 items-start">
+            <span className={`inline-flex items-center text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${cfg.className}`}>
+              {cfg.label}
+            </span>
+            {!inicio && dp && (
               <div className="text-[11px] text-gray-400">
                 Pago em <span className="text-white font-mono">{formatDateBr(row.data_pagamento_principal)}</span>
               </div>
-            </div>
-          )
-        }
-        return (
-          <div>
-            <div className="text-[10px] text-gray-500 mb-1">
-              Início: <span className="text-gray-400">{formatDateBr(row.data_inicio)}</span>
-            </div>
-            <MesBadge data={row.data_fim} />
+            )}
+            {inicio && (
+              <>
+                <div className="text-[10px] text-gray-500">
+                  Início: <span className="text-gray-400">{formatDateBr(row.data_inicio)}</span>
+                </div>
+                <MesBadge data={row.data_fim} />
+              </>
+            )}
           </div>
         )
       },
@@ -615,8 +623,8 @@ export default function FinanceiroListagem() {
             className="w-full h-10 px-2 bg-[#1a1a1a] border border-[#323238] text-white rounded-lg text-xs outline-none focus:border-[#2563eb]/60"
             title="Ordenar"
           >
-            <option value="date_asc">Linha do tempo (Jan→Dez)</option>
             <option value="date_desc">Recentes</option>
+            <option value="date_asc">Antigos</option>
             <option value="alpha_asc">A→Z</option>
             <option value="valor_desc">Maior valor</option>
           </select>

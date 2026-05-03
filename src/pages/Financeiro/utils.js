@@ -28,6 +28,43 @@ export const isBetweenInclusive = (iso, start, end) => {
   return iso >= start && iso <= end
 }
 
+/**
+ * Calcula o status visual de um contrato — usado pelo badge da coluna Vigência.
+ * Prioridade: Pausado > Pago_e_nao_iniciado > Vencido/Nao_renovou > Renova_esse_mes > Ativo > Pendente.
+ *
+ * @param c Contrato (com status_manual, data_inicio, data_fim, data_pagamento_principal)
+ * @param hojeISO Data de hoje 'YYYY-MM-DD'
+ * @param dateRange { start, end } do mês visualizado (pra "Renova esse mês")
+ * @returns Uma chave de STATUS_BADGE
+ */
+export const computeContratoStatus = (c, hojeISO, dateRange = null) => {
+  if (!c) return 'Pendente'
+  if (c.status_manual === 'Pausado') return 'Pausado'
+
+  const inicio = normalizeDate(c.data_inicio)
+  const fim = normalizeDate(c.data_fim)
+  const dp = normalizeDate(c.data_pagamento_principal)
+
+  if (!inicio && dp) return 'Pago_e_nao_iniciado'
+
+  if (fim && fim < hojeISO) {
+    // Vencido (≤30d) vs Nao_renovou (>30d)
+    const fimDate = new Date(fim + 'T12:00:00')
+    const hojeDate = new Date(hojeISO + 'T12:00:00')
+    const dias = Math.floor((hojeDate - fimDate) / 86400000)
+    return dias > 30 ? 'Nao_renovou' : 'Vencido'
+  }
+
+  if (inicio && fim && inicio <= hojeISO && hojeISO <= fim) {
+    if (dateRange && fim >= dateRange.start && fim <= dateRange.end) {
+      return 'Renova_esse_mes'
+    }
+    return 'Ativo'
+  }
+
+  return 'Pendente'
+}
+
 export const formatDateBr = (dateStr) => {
   if (!dateStr) return '—'
   const iso = normalizeDate(dateStr)
