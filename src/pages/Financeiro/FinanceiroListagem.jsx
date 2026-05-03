@@ -448,14 +448,6 @@ export default function FinanceiroListagem() {
             Auditoria
           </Button>
           <Button
-            variant="secondary"
-            size="sm"
-            icon={TrendingUp}
-            onClick={() => setPlanosModalOpen(true)}
-          >
-            Planos
-          </Button>
-          <Button
             variant="primary"
             size="sm"
             icon={RefreshCcw}
