@@ -69,7 +69,7 @@ export const STATUS_BADGE = {
     className: 'bg-red-600 text-white border-red-700',
   },
   Nao_renovou: {
-    label: 'Inativo',
+    label: 'Não renovou',
     className: 'bg-red-600 text-white border-red-700',
   },
   Ativo: {

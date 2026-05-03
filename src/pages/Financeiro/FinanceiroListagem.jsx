@@ -38,7 +38,7 @@ export default function FinanceiroListagem() {
   const [busca, setBusca] = useState('')
   const [filtroPlano, setFiltroPlano] = useState('')
   const [filtroStatus, setFiltroStatus] = useState('')
-  const [sortType, setSortType] = useState('date_desc')
+  const [sortType, setSortType] = useState('date_asc')
 
   const [dateMode, setDateMode] = useState('month')
   const [selectedMonth, setSelectedMonth] = useState(currentYM())
@@ -255,10 +255,10 @@ export default function FinanceiroListagem() {
       render: (row) => {
         if (!normalizeDate(row.data_inicio)) {
           return (
-            <div>
-              <div className="text-[10px] text-blue-400 font-bold mb-1">Pago, não iniciado</div>
-              <div className="text-[11px] text-gray-300">
-                Pago em <span className="text-white">{formatDateBr(row.data_pagamento_principal)}</span>
+            <div className="flex flex-col gap-1 items-start">
+              <Badge variant="blue" size="sm">Pago, não iniciado</Badge>
+              <div className="text-[11px] text-gray-400">
+                Pago em <span className="text-white font-mono">{formatDateBr(row.data_pagamento_principal)}</span>
               </div>
             </div>
           )
@@ -594,8 +594,8 @@ export default function FinanceiroListagem() {
             className="w-full h-10 px-2 bg-[#1a1a1a] border border-[#323238] text-white rounded-lg text-xs outline-none focus:border-[#2563eb]/60"
             title="Ordenar"
           >
+            <option value="date_asc">Linha do tempo (Jan→Dez)</option>
             <option value="date_desc">Recentes</option>
-            <option value="date_asc">Antigos</option>
             <option value="alpha_asc">A→Z</option>
             <option value="valor_desc">Maior valor</option>
           </select>
