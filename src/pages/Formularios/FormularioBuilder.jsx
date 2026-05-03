@@ -5,7 +5,7 @@ import {
   criarFormularioAnamnese, salvarFormularioAnamnese, buscarFormularioAnamnese,
   criarFormularioFeedback, salvarFormularioFeedback, buscarFormularioFeedback,
 } from '../../api/formularios'
-import { TIPOS_ANAMNESE, TIPOS_FEEDBACK, TIPOS_CONFIG, FREQUENCIA_OPTS } from '../../utils/formularioUtils'
+import { TIPOS_ANAMNESE, TIPOS_FEEDBACK, TIPOS_CONFIG } from '../../utils/formularioUtils'
 import { Button, FormGroup, Input, Select, Textarea, Spinner, Tabs, RichTextEditor } from '../../components/ui'
 
 const gerarId = () => `${Date.now()}_${Math.random().toString(36).slice(2)}`
@@ -49,12 +49,11 @@ export default function FormularioBuilder() {
   const [titulo, setTitulo] = useState('')
   const [perguntas, setPerguntas] = useState([perguntaVazia()])
   const [enabled, setEnabled] = useState(true)
-  const [automacao, setAutomacao] = useState(false)
+  // automacao/frequencia removidos do DocType — frequência agora vive só no
+  // cronograma do aluno. Mantém só os campos de configuração ativos.
   const [feedbackInicial, setFeedbackInicial] = useState(false)
   const [dieta, setDieta] = useState(false)
   const [treino, setTreino] = useState(false)
-  const [frequencia, setFrequencia] = useState('')
-  const [frequenciaEmDias, setFrequenciaEmDias] = useState(0)
   const [loading, setLoading] = useState(!isNovo)
   const [salvando, setSalvando] = useState(false)
   const [abaAtiva, setAbaAtiva] = useState('perguntas')
@@ -70,12 +69,9 @@ export default function FormularioBuilder() {
         setPerguntas(doc.perguntas?.length ? doc.perguntas : [perguntaVazia()])
         if (isFeedback) {
           setEnabled(!!doc.enabled)
-          setAutomacao(!!doc.automacao)
           setFeedbackInicial(!!doc.feedback_inicial)
           setDieta(!!doc.dieta)
           setTreino(!!doc.treino)
-          setFrequencia(doc.frequencia || '')
-          setFrequenciaEmDias(doc.frequencia_em_dias || 0)
         }
       })
       .catch(e => { console.error(e); alert('Erro ao carregar formulário.') })
@@ -112,7 +108,7 @@ export default function FormularioBuilder() {
     setSalvando(true)
     try {
       if (isFeedback) {
-        const payload = { titulo, enabled, automacao, feedback_inicial: feedbackInicial, dieta, treino, frequencia, frequencia_em_dias: frequenciaEmDias, perguntas }
+        const payload = { titulo, enabled, feedback_inicial: feedbackInicial, dieta, treino, perguntas }
         if (isNovo) {
           const doc = await criarFormularioFeedback(payload)
           navigate(`/criar-formularios/feedback/${doc.name}`, { replace: true })
@@ -174,7 +170,7 @@ export default function FormularioBuilder() {
         <Tabs
           tabs={[
             { id: 'perguntas', label: 'Perguntas' },
-            { id: 'automacao', label: 'Automação' },
+            { id: 'config', label: 'Configurações' },
           ]}
           active={abaAtiva}
           onChange={setAbaAtiva}
@@ -182,31 +178,10 @@ export default function FormularioBuilder() {
         />
       )}
 
-      {/* Aba Automação */}
-      {isFeedback && abaAtiva === 'automacao' && (
+      {/* Aba Configurações (antiga Automação, simplificada) */}
+      {isFeedback && abaAtiva === 'config' && (
         <div className="bg-[#29292e] rounded-lg border border-[#323238] p-4 space-y-1">
           <ToggleRow label="Ativo" descricao="Formulário disponível para envio" value={enabled} onChange={setEnabled} />
-          <ToggleRow label="Automação" descricao="Enviar automaticamente conforme frequência definida" value={automacao} onChange={setAutomacao} />
-          {automacao && (
-            <div className="pt-2 space-y-3">
-              <FormGroup label="Frequência">
-                <Select
-                  value={frequencia}
-                  onChange={setFrequencia}
-                  options={[{ value: '', label: 'Selecionar...' }, ...FREQUENCIA_OPTS]}
-                />
-              </FormGroup>
-              {frequencia === 'Personalizado' && (
-                <FormGroup label="Frequência em dias">
-                  <Input
-                    value={String(frequenciaEmDias)}
-                    onChange={v => setFrequenciaEmDias(Number(v) || 0)}
-                    type="number"
-                  />
-                </FormGroup>
-              )}
-            </div>
-          )}
           <div className="pt-3 pb-1">
             <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-2">Campos exibidos no feedback do aluno</p>
             <ToggleRow label="Feedback inicial" descricao="Campo de comentário inicial" value={feedbackInicial} onChange={setFeedbackInicial} />

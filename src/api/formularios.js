@@ -67,7 +67,7 @@ export const listarFormulariosFeedback = async () => {
   const res = await client.get(`/api/resource/${ENC_FEEDBACK}`, {
     params: {
       fields: JSON.stringify([
-        'name', 'titulo', 'enabled', 'automacao', 'frequencia',
+        'name', 'titulo', 'enabled',
         'dieta', 'treino', 'feedback_inicial',
       ]),
       limit: 100,
@@ -84,30 +84,26 @@ export const buscarFormularioFeedback = async (id) => {
 }
 
 export const criarFormularioFeedback = async (payload) => {
-  const { titulo, enabled, automacao, feedback_inicial, dieta, treino, frequencia, frequencia_em_dias, perguntas } = payload
+  const { titulo, enabled, feedback_inicial, dieta, treino, perguntas } = payload
   const res = await client.post(`/api/resource/${ENC_FEEDBACK}`, {
-    titulo, profissional: profissionalLogado(), enabled: enabled ? 1 : 0,
-    automacao: automacao ? 1 : 0,
+    titulo, profissional: profissionalLogado(),
+    enabled: enabled ? 1 : 0,
     feedback_inicial: feedback_inicial ? 1 : 0,
     dieta: dieta ? 1 : 0,
     treino: treino ? 1 : 0,
-    frequencia: frequencia || '',
-    frequencia_em_dias: frequencia_em_dias || 0,
     perguntas: serializarPerguntas(perguntas, 'feedback'),
   })
   return res.data.data
 }
 
 export const salvarFormularioFeedback = async (id, payload) => {
-  const { titulo, enabled, automacao, feedback_inicial, dieta, treino, frequencia, frequencia_em_dias, perguntas } = payload
+  const { titulo, enabled, feedback_inicial, dieta, treino, perguntas } = payload
   const res = await client.put(`/api/resource/${ENC_FEEDBACK}/${encodeURIComponent(id)}`, {
-    titulo, enabled: enabled ? 1 : 0,
-    automacao: automacao ? 1 : 0,
+    titulo,
+    enabled: enabled ? 1 : 0,
     feedback_inicial: feedback_inicial ? 1 : 0,
     dieta: dieta ? 1 : 0,
     treino: treino ? 1 : 0,
-    frequencia: frequencia || '',
-    frequencia_em_dias: frequencia_em_dias || 0,
     perguntas: serializarPerguntas(perguntas, 'feedback'),
   })
   return res.data.data
