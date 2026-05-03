@@ -396,9 +396,11 @@ export default function FinanceiroListagem() {
         const qtd = row.qtd_parcelas || 1
         const isParcelado = qtd > 1
         const valorParcela = isParcelado ? total / qtd : total
-        // valor pago calculado a partir das parcelas em cache (se disponíveis)
+        // Valor pago via parcelas — usa data efetiva (cobre data_pagamento_principal)
         const parcelasContrato = parcelasDoPeriodo.filter((p) => p.contrato === row.name)
-        const pago = parcelasContrato.reduce((acc, p) => p.data_pagamento ? acc + (parseFloat(p.valor_parcela) || 0) : acc, 0)
+        const pago = parcelasContrato.reduce((acc, p) =>
+          dataPagamentoEfetivaParcela(p) ? acc + (parseFloat(p.valor_parcela) || 0) : acc, 0)
+        const obs = (row.observacoes || '').trim()
         return (
           <div>
             <div className="font-mono font-bold text-white text-sm">
@@ -413,6 +415,14 @@ export default function FinanceiroListagem() {
             {pago > 0 && (
               <div className="text-[10px] text-green-400 font-sans mt-0.5">
                 pago {formatCurrency(pago)}
+              </div>
+            )}
+            {obs && (
+              <div
+                title={obs}
+                className="text-[10px] text-gray-400 italic font-sans mt-0.5 max-w-[180px] truncate text-right"
+              >
+                “{obs}”
               </div>
             )}
           </div>

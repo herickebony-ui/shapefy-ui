@@ -43,6 +43,7 @@ export default function FormModalSimples({
   cancelLabel = 'Cancelar',
   loading = false,
   closeOnOverlayClick = true,
+  extraActions = null,
 }) {
   const visible = isOpen ?? open ?? true
   if (!visible) return null
@@ -56,19 +57,24 @@ export default function FormModalSimples({
       size={size}
       closeOnOverlayClick={closeOnOverlayClick && !loading}
       footer={
-        <>
-          <Button variant="ghost" onClick={onClose} disabled={loading}>
-            {cancelLabel}
-          </Button>
-          <Button
-            variant={submitVariant}
-            onClick={onSubmit}
-            loading={loading}
-            disabled={submitDisabled}
-          >
-            {submitLabel}
-          </Button>
-        </>
+        <div className="flex items-center justify-between w-full gap-2">
+          <div className="flex items-center gap-2">
+            {extraActions}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={onClose} disabled={loading}>
+              {cancelLabel}
+            </Button>
+            <Button
+              variant={submitVariant}
+              onClick={onSubmit}
+              loading={loading}
+              disabled={submitDisabled}
+            >
+              {submitLabel}
+            </Button>
+          </div>
+        </div>
       }
     >
       {quickFill && (

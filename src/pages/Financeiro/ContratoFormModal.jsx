@@ -3,10 +3,11 @@ import {
   AlertTriangle, X, Link2, Search, Wand2, Trash2, Plus,
 } from 'lucide-react'
 import {
-  FormModalSimples, FormGroup, Input, Select, Spinner,
+  FormModalSimples, FormGroup, Input, Select, Spinner, Button,
 } from '../../components/ui'
 import {
   criarContrato, salvarContrato, sincronizarVinculos, sugerirParcelas, buscarContrato,
+  excluirContrato,
 } from '../../api/contratosAluno'
 import { buscarPlano } from '../../api/planosShapefy'
 import { listarAlunos, buscarAluno } from '../../api/alunos'
@@ -455,6 +456,22 @@ export default function ContratoFormModal({
     }
   }
 
+  const [excluindo, setExcluindo] = useState(false)
+  const handleExcluir = async () => {
+    if (!editar || !contrato?.name) return
+    if (!window.confirm('Excluir este contrato?\n\nEssa ação remove todas as parcelas e atualiza o espelho do aluno. Não pode ser desfeita.')) return
+    setExcluindo(true)
+    try {
+      await excluirContrato(contrato.name)
+      onSuccess?.()
+      onClose()
+    } catch (e) {
+      alert('Erro ao excluir: ' + (e.response?.data?.exception || e.message))
+    } finally {
+      setExcluindo(false)
+    }
+  }
+
   // Busca de aluno: combina cache local (lista pré-carregada) + busca server
   // pra alcançar alunos antigos que não estão nos 500 mais recentes.
   const [alunoSearchResults, setAlunoSearchResults] = useState([])
@@ -498,9 +515,14 @@ export default function ContratoFormModal({
       title={editar ? `Editar contrato ${contrato?.name || ''}` : 'Novo lançamento'}
       subtitle={editar && !contrato?.data_inicio ? 'Contrato pago e não iniciado — preencha "Data início" para ativar' : undefined}
       size="xl"
-      loading={salvando}
+      loading={salvando || excluindo}
       onSubmit={submit}
       submitLabel={editar ? 'Salvar alterações' : 'Criar contrato'}
+      extraActions={editar && (
+        <Button variant="danger" icon={Trash2} onClick={handleExcluir} loading={excluindo} disabled={salvando}>
+          Excluir
+        </Button>
+      )}
       quickFill={
         !editar ? (
           <QuickFill
