@@ -779,6 +779,7 @@ export default function FinanceiroListagem() {
         isOpen={!!contratoForm}
         mode={contratoForm === 'novo' ? 'novo' : 'editar'}
         contrato={contratoForm === 'novo' ? null : contratoForm?.contrato}
+        alunoNome={contratoForm === 'novo' ? '' : contratoForm?.alunoNome}
         planos={planos}
         contratos={contratos}
         onClose={() => setContratoForm(null)}

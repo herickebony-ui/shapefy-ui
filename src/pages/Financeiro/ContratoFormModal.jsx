@@ -6,7 +6,7 @@ import {
   FormModalSimples, FormGroup, Input, Select, Spinner,
 } from '../../components/ui'
 import {
-  criarContrato, salvarContrato, sincronizarVinculos, sugerirParcelas,
+  criarContrato, salvarContrato, sincronizarVinculos, sugerirParcelas, buscarContrato,
 } from '../../api/contratosAluno'
 import { buscarPlano } from '../../api/planosShapefy'
 import { listarAlunos, buscarAluno } from '../../api/alunos'
@@ -37,7 +37,7 @@ const FORM_VAZIO = {
 }
 
 export default function ContratoFormModal({
-  isOpen, mode = 'novo', contrato, planos = [], contratos = [], onClose, onSuccess,
+  isOpen, mode = 'novo', contrato, alunoNome = '', planos = [], contratos = [], onClose, onSuccess,
 }) {
   const editar = mode === 'editar' && !!contrato
   const [form, setForm] = useState(FORM_VAZIO)
@@ -76,7 +76,10 @@ export default function ContratoFormModal({
       .catch(() => setTodosAlunos([]))
 
     if (editar && contrato) {
-      setForm({
+      // Preenche o form com os dados básicos imediatamente (resumo da listagem
+      // não inclui parcelas) e depois busca o detalhe completo pra trazer as
+      // parcelas e quaisquer campos que possam estar faltando.
+      const base = {
         aluno: contrato.aluno || '',
         plano: contrato.plano || '',
         variacao_idx: -1,
@@ -95,16 +98,59 @@ export default function ContratoFormModal({
         status_manual: contrato.status_manual || '',
         observacoes: contrato.observacoes || '',
         parcelas: [],
-      })
-      setAlunoNomeAtual(contrato.nome_aluno_snapshot || contrato.aluno || '')
+      }
+      setForm(base)
+      // Prioridade: snapshot do backend > nome passado pelo callsite > ID
+      setAlunoNomeAtual(contrato.nome_aluno_snapshot || alunoNome || contrato.aluno || '')
+
+      // Busca o detalhe completo pra hidratar parcelas (e campos que podem
+      // não ter vindo no resumo, como variacao_duracao_meses)
+      let cancel = false
+      buscarContrato(contrato.name)
+        .then((doc) => {
+          if (cancel || !doc) return
+          const docDp = normalizeDate(doc.data_pagamento_principal)
+          const parcelas = (doc.parcelas || []).map((p) => {
+            const pagaPropria = normalizeDate(p.data_pagamento)
+            // Pra parcela 1 sem data_pagamento próprio mas com data_pagamento_principal
+            // do contrato preenchida: a entrada/única já fica marcada como paga.
+            const cobertaPorPrincipal = !pagaPropria
+              && Number(p.numero_parcela) === 1
+              && !!docDp
+            return {
+              numero_parcela: p.numero_parcela,
+              data_vencimento: normalizeDate(p.data_vencimento) || '',
+              valor_parcela: parseFloat(p.valor_parcela) || 0,
+              data_pagamento: pagaPropria || (cobertaPorPrincipal ? docDp : ''),
+            }
+          })
+          setForm((f) => ({
+            ...f,
+            parcelas,
+            // Reaproveita campos do detalhe que podem complementar o resumo
+            variacao_duracao_meses: doc.variacao_duracao_meses || f.variacao_duracao_meses,
+            valor_bruto_total: doc.valor_bruto_total ?? f.valor_bruto_total,
+            valor_liquido_total: doc.valor_liquido_total ?? f.valor_liquido_total,
+            dia_vencimento_parcela: doc.dia_vencimento_parcela ?? f.dia_vencimento_parcela,
+            qtd_parcelas: doc.qtd_parcelas ?? f.qtd_parcelas,
+            qtd_parcelas_aluna: doc.qtd_parcelas_aluna ?? f.qtd_parcelas_aluna,
+            observacoes: doc.observacoes ?? f.observacoes,
+            metodo_pagamento: doc.metodo_pagamento ?? f.metodo_pagamento,
+            rotulo_variacao: doc.rotulo_variacao ?? f.rotulo_variacao,
+          }))
+        })
+        .catch(() => {})
+        .finally(() => { if (!cancel) setCarregando(false) })
+
+      return () => { cancel = true }
     } else {
       setForm({ ...FORM_VAZIO, data_pagamento_principal: getTodayISO() })
       setAlunoNomeAtual('')
       setVinculosOriginais([])
       setVinculadosAtuais([])
       setQuickFillKey('')
+      setCarregando(false)
     }
-    setCarregando(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, editar, contrato])
 
