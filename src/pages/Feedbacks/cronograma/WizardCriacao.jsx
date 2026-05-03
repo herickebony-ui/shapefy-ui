@@ -404,7 +404,7 @@ export default function WizardCriacao({
               </div>
 
               {grupos.map((grupo, gi) => grupo.items.map((d, idx) => {
-                const ehPrimeiraDoGrupo = idx === 0
+                const ehUltimaDoGrupo = idx === grupo.items.length - 1
                 const prev = idx > 0 ? grupo.items[idx - 1] : null
                 const intervalo = prev
                   ? Math.round((new Date(d.date) - new Date(prev.date)) / (7 * 86400000))
@@ -431,7 +431,7 @@ export default function WizardCriacao({
                       {intervalo > 0 ? `${intervalo}s` : '—'}
                     </span>
                     <span className="text-center">
-                      {ehPrimeiraDoGrupo ? (
+                      {ehUltimaDoGrupo ? (
                         <span className={`inline-block text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
                           grupo.label === 'Ciclo a definir'
                             ? 'bg-gray-500/10 text-gray-400 border-gray-500/30 italic'

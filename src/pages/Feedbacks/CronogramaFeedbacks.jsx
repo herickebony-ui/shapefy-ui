@@ -245,6 +245,35 @@ export default function CronogramaFeedbacks() {
   // [{ label: '4 semanas' | 'Ciclo a definir', items: [...dates] }].
   const grupos = useMemo(() => agruparPorCiclo(schedule.dates), [schedule.dates])
 
+  // Formulários compatíveis com o plano da aluna (dieta/treino)
+  const formulariosCompativeis = useMemo(() => {
+    if (!aluno || (aluno.dieta == null && aluno.treino == null)) return formularios
+    const aDieta = !!aluno.dieta
+    const aTreino = !!aluno.treino
+    const matches = formularios.filter(f => !!f.dieta === aDieta && !!f.treino === aTreino)
+    return matches.length ? matches : formularios
+  }, [aluno, formularios])
+
+  const handleSetFormulario = useCallback(async (date, formId) => {
+    const atual = schedule.dates.find(d => d.date === date)
+    if (!atual) return
+    setSchedule(prev => ({
+      dates: prev.dates.map(d => d.date === date ? { ...d, formulario: formId } : d),
+    }))
+    if (atual._name) {
+      try {
+        await salvarAgendamento(atual._name, { formulario: formId })
+      } catch (e) {
+        console.error(e)
+        showToast('Falha ao salvar formulário', 'error')
+        // reverte
+        setSchedule(prev => ({
+          dates: prev.dates.map(d => d.date === date ? { ...d, formulario: atual.formulario } : d),
+        }))
+      }
+    }
+  }, [schedule.dates, showToast])
+
   // ═════════════════════════════════════════════════════════════════════════
   // Handlers
   // ═════════════════════════════════════════════════════════════════════════
@@ -693,15 +722,16 @@ export default function CronogramaFeedbacks() {
                 ) : (
                   <div>
                     {/* Cabeçalho da tabela */}
-                    <div className="grid grid-cols-[80px_1fr_50px_110px_28px] gap-2 px-3 py-2 border-b border-[#323238] bg-[#1a1a1a]/60">
+                    <div className="grid grid-cols-[78px_44px_1fr_44px_92px_24px] gap-1.5 px-3 py-2 border-b border-[#323238] bg-[#1a1a1a]/60">
                       <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Data</span>
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Tipo</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 text-center">Tipo</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Formulário</span>
                       <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 text-center">Int.</span>
                       <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 text-center">Ciclo</span>
                       <span />
                     </div>
                     {grupos.map((grupo, gi) => grupo.items.map((d, idx) => {
-                      const ehPrimeiraDoGrupo = idx === 0
+                      const ehUltimaDoGrupo = idx === grupo.items.length - 1
                       // Intervalo em semanas até a linha anterior do MESMO grupo
                       const prev = idx > 0 ? grupo.items[idx - 1] : null
                       const intervalo = prev
@@ -713,21 +743,30 @@ export default function CronogramaFeedbacks() {
                             e.preventDefault()
                             setMarcoZeroMenu({ date: d.date, x: e.clientX, y: e.clientY })
                           }}
-                          className={`grid grid-cols-[80px_1fr_50px_110px_28px] gap-2 px-3 py-2 border-b border-[#323238]/40 items-center transition-colors ${
+                          className={`grid grid-cols-[78px_44px_1fr_44px_92px_24px] gap-1.5 px-3 py-2 border-b border-[#323238]/40 items-center transition-colors ${
                             d.is_start ? 'bg-[#2563eb]/15' : 'hover:bg-[#1e1e22]'
                           }`}>
                           <span className="text-white font-medium text-xs">{fmtDateBR(d.date)}</span>
-                          <span>
+                          <span className="flex justify-center">
                             <TipoBotao item={d}
                               onToggle={(_, v) => handleToggleTraining(d.date, v)}
                               variant="icon"
                               size="sm" />
                           </span>
+                          <select
+                            value={d.formulario || planForm.formulario_padrao || ''}
+                            onChange={(e) => handleSetFormulario(d.date, e.target.value)}
+                            className="h-7 px-1 bg-[#1a1a1a] border border-[#323238] text-white rounded text-[11px] outline-none focus:border-[#2563eb]/60 truncate"
+                          >
+                            {formulariosCompativeis.map((f) => (
+                              <option key={f.name} value={f.name}>{f.titulo}</option>
+                            ))}
+                          </select>
                           <span className="text-[10px] text-gray-500 text-center">
                             {intervalo > 0 ? `${intervalo}s` : '—'}
                           </span>
                           <span className="text-center">
-                            {ehPrimeiraDoGrupo ? (
+                            {ehUltimaDoGrupo ? (
                               <span className={`inline-block text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
                                 grupo.label === 'Ciclo a definir'
                                   ? 'bg-gray-500/10 text-gray-400 border-gray-500/30 italic'
@@ -748,8 +787,8 @@ export default function CronogramaFeedbacks() {
 
                     {/* Total planejado */}
                     {schedule.dates.length > 0 && (
-                      <div className="grid grid-cols-[80px_1fr_50px_110px_28px] gap-2 px-3 py-2 border-t border-[#323238] bg-[#1a1a1a]/60 items-center">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 col-span-3">
+                      <div className="grid grid-cols-[78px_44px_1fr_44px_92px_24px] gap-1.5 px-3 py-2 border-t border-[#323238] bg-[#1a1a1a]/60 items-center">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 col-span-4">
                           Total planejado
                         </span>
                         <span className="text-center">

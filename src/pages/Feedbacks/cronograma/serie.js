@@ -116,19 +116,21 @@ export function agruparPorCiclo(dates) {
   const grupos = []
   let atual = { label: 'Início', items: [] }
 
+  // Cálculo de semanas: contagem INCLUSIVA (sistema legado de referência).
+  // Ex: 28 dias entre Marco Zero e Troca = 5 semanas (não 4) porque conta
+  // a semana inicial + as completas.
+  const semanasInclusivo = (dataIni, dataFim) =>
+    Math.round((new Date(dataFim) - new Date(dataIni)) / (7 * 86400000)) + 1
+
   for (let i = 0; i < sorted.length; i++) {
     const d = sorted[i]
     atual.items.push(d)
     if (d.is_training) {
       grupos.push(atual)
-      // calcula label do PRÓXIMO grupo (semanas até a próxima Troca, se houver)
       const proxMarcoIdx = sorted.findIndex((x, j) => j > i && x.is_training)
       let label = 'Ciclo a definir'
       if (proxMarcoIdx !== -1) {
-        const sem = Math.round(
-          (new Date(sorted[proxMarcoIdx].date) - new Date(d.date)) / (7 * 86400000),
-        )
-        label = `${sem} semanas`
+        label = `${semanasInclusivo(d.date, sorted[proxMarcoIdx].date)} semanas`
       }
       atual = { label, items: [] }
     }
@@ -139,11 +141,7 @@ export function agruparPorCiclo(dates) {
   if (grupos.length > 0) {
     const primeiraTrocaIdx = sorted.findIndex(x => x.is_training)
     if (primeiraTrocaIdx !== -1) {
-      const inicio = sorted[0]
-      const sem = Math.round(
-        (new Date(sorted[primeiraTrocaIdx].date) - new Date(inicio.date)) / (7 * 86400000),
-      )
-      grupos[0].label = `${sem} semanas`
+      grupos[0].label = `${semanasInclusivo(sorted[0].date, sorted[primeiraTrocaIdx].date)} semanas`
     } else {
       grupos[0].label = 'Ciclo a definir'
     }
