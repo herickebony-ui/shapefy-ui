@@ -222,17 +222,29 @@ export default function FinanceiroListagem() {
       ? Math.round((renovadosNoPeriodo.length / venceramNoPeriodo.length) * 100)
       : null
 
-    // Parcelamentos a receber — carteira futura (todos os meses, hoje em diante)
-    const hojeISO = getTodayISO()
+    // Parcelamentos a receber — parcelas pendentes que vencem no mês selecionado
+    // (não a carteira inteira). Pra ter visibilidade do mês.
     let parcelamentosAReceberValor = 0
     let parcelamentosAReceberQtd = 0
     parcelasDoPeriodo.forEach((p) => {
       const dataPag = dataPagamentoEfetivaParcela(p)
       if (dataPag) return
       const dv = normalizeDate(p.data_vencimento)
-      if (!dv || dv < hojeISO) return
+      if (!dv || dv < dateRange.start || dv > dateRange.end) return
       parcelamentosAReceberValor += parseFloat(p.valor_parcela) || 0
       parcelamentosAReceberQtd += 1
+    })
+
+    // Forecast — receita potencial de renovação: contratos não pausados
+    // com data_fim caindo no mês selecionado, somando valor_liquido_total.
+    let forecastRenovacaoValor = 0
+    let forecastRenovacaoQtd = 0
+    contratos.forEach((c) => {
+      if (c.status_manual === 'Pausado') return
+      const fim = normalizeDate(c.data_fim)
+      if (!fim || fim < dateRange.start || fim > dateRange.end) return
+      forecastRenovacaoValor += parseFloat(c.valor_liquido_total) || 0
+      forecastRenovacaoQtd += 1
     })
 
     return {
@@ -243,7 +255,9 @@ export default function FinanceiroListagem() {
       valorVigentes,
       faturamentoReal,
       aReceber,
-      previsao: faturamentoReal + aReceber, // Forecast = caixa + a receber no período
+      previsao: faturamentoReal + aReceber, // legacy (PDF ainda usa)
+      forecastRenovacaoValor,
+      forecastRenovacaoQtd,
       parcelamentosAReceberValor,
       parcelamentosAReceberQtd,
       taxaRetencao,
@@ -532,14 +546,15 @@ export default function FinanceiroListagem() {
               color="success"
             />
             <StatCard
-              label={carregandoParcelas ? 'Forecast…' : 'Forecast do período'}
-              value={formatCurrency(stats.previsao)}
+              label="Forecast (renovações)"
+              value={formatCurrency(stats.forecastRenovacaoValor)}
+              unit={`${stats.forecastRenovacaoQtd} contrato${stats.forecastRenovacaoQtd === 1 ? '' : 's'}`}
               color="success"
             />
             <StatCard
-              label="Parcelamentos a receber"
+              label={carregandoParcelas ? 'Parcelas (período)…' : 'Parcelamentos a receber'}
               value={formatCurrency(stats.parcelamentosAReceberValor)}
-              unit={`${stats.parcelamentosAReceberQtd} pendente${stats.parcelamentosAReceberQtd === 1 ? '' : 's'}`}
+              unit={`${stats.parcelamentosAReceberQtd} parcela${stats.parcelamentosAReceberQtd === 1 ? '' : 's'}`}
               color="warning"
             />
             <div title={stats.taxaRetencao != null
