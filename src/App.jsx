@@ -33,6 +33,7 @@ import ForgotPassword from './pages/ForgotPassword'
 import PrescricaoListagem from './pages/Prescricoes/PrescricaoListagem'
 import PrescricaoDetalhe from './pages/Prescricoes/PrescricaoDetalhe'
 import FinanceiroListagem from './pages/Financeiro/FinanceiroListagem'
+import PlanosListagem from './pages/Financeiro/PlanosListagem'
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -110,6 +111,7 @@ function App() {
           <Route path="prescricoes" element={<PrescricaoListagem />} />
           <Route path="prescricoes/:id" element={<PrescricaoDetalhe />} />
           <Route path="financeiro" element={<FinanceiroListagem />} />
+          <Route path="planos" element={<PlanosListagem />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

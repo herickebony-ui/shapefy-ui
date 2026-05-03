@@ -4,7 +4,7 @@ import {
   MessageSquare, Activity, FileText, LogOut, ListChecks,
   PanelLeftClose, PanelLeftOpen, UtensilsCrossed, BookOpen,
   Wind, Waves, Pill, CreditCard, UserCircle, HelpCircle, Briefcase,
-  TrendingUp, Calendar, LayoutDashboard, Wallet,
+  TrendingUp, Calendar, LayoutDashboard, Wallet, Tag,
 } from 'lucide-react'
 import { useState } from 'react'
 import useAuthStore from '../../store/authStore'
@@ -29,7 +29,8 @@ const NAV_ITEMS = [
   { id: 'alunos',       label: 'Gestão de Anamneses', icon: ClipboardList,   path: '/alunos',       modulo: 'anamnese' },
 
   { type: 'divider', label: 'Financeiro' },
-  { id: 'financeiro',   label: 'Contratos e Planos',  icon: Wallet,          path: '/financeiro' },
+  { id: 'financeiro',   label: 'Pagamentos',          icon: Wallet,          path: '/financeiro' },
+  { id: 'planos',       label: 'Planos',              icon: Tag,             path: '/planos' },
 
   { type: 'divider', label: 'Catálogos' },
   { id: 'exercicios',         label: 'Exercícios',        icon: ListChecks,      path: '/exercicios',         modulo: 'treino' },

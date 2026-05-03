@@ -438,16 +438,16 @@ export default function FinanceiroListagem() {
             Planos
           </Button>
           <Button
-            variant="secondary"
+            variant="primary"
             size="sm"
             icon={RefreshCcw}
             onClick={() => setRenovarModalOpen(true)}
             className="hidden sm:inline-flex"
           >
-            Renovar
+            Renovar pagamento
           </Button>
           <Button variant="primary" size="sm" icon={Plus} onClick={() => setContratoForm('novo')}>
-            Novo lançamento
+            Novo pagamento
           </Button>
         </>
       }
@@ -457,7 +457,7 @@ export default function FinanceiroListagem() {
         <Tabs
           variant="pills"
           tabs={[
-            { id: 'records', label: 'Lançamentos', icon: <Wallet size={14} /> },
+            { id: 'records', label: 'Pagamentos', icon: <Wallet size={14} /> },
             { id: 'students', label: 'Gestão de Alunos', icon: <Users size={14} /> },
           ]}
           active={view}
