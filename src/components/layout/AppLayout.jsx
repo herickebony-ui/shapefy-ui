@@ -22,12 +22,12 @@ const NAV_ITEMS = [
 
   { type: 'divider', label: 'Avaliação' },
   { id: 'avaliacoes',   label: 'Avaliações Corporais', icon: BarChart2,      path: '/avaliacoes' },
-  { id: 'anamneses',    label: 'Anamneses',            icon: ClipboardList,  path: '/anamneses' },
+  { id: 'anamneses',    label: 'Gestão de Anamnese',   icon: ClipboardList,  path: '/anamneses' },
 
   { type: 'divider', label: 'Acompanhamento' },
   { id: 'painel-feedbacks',     label: 'Central de Feedbacks',         icon: LayoutDashboard, path: '/painel-feedbacks' },
   { id: 'feedbacks',            label: 'Feedbacks Recebidos',          icon: Inbox,           path: '/feedbacks' },
-  { id: 'cronograma-feedbacks', label: 'Planejar Cronograma do Aluno', icon: CalendarClock,   path: '/cronograma-feedbacks' },
+  { id: 'cronograma-feedbacks', label: 'Planejar Feedbacks do Aluno', icon: CalendarClock,   path: '/cronograma-feedbacks' },
   { id: 'treinos',              label: 'Treinos Realizados',           icon: Activity,        path: '/treinos',           modulo: 'treino' },
   { id: 'progressao-cargas',    label: 'Progressão de Cargas',         icon: TrendingUp,      path: '/progressao-cargas', modulo: 'treino' },
 
