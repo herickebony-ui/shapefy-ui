@@ -42,6 +42,7 @@ import WizardCriacao from './cronograma/WizardCriacao'
 import TipoBotao from './cronograma/TipoBotao'
 import { agruparPorCiclo } from './cronograma/serie'
 import { todayISO } from './cronograma/utils'
+import HubAlunosCronograma from './cronograma/HubAlunosCronograma'
 
 // ═════════════════════════════════════════════════════════════════════════════
 export default function CronogramaFeedbacks() {
@@ -588,30 +589,8 @@ export default function CronogramaFeedbacks() {
         </div>
       </div>
 
-      {/* Sem aluno selecionado: pedir busca */}
-      {!aluno && (
-        <div className="bg-[#29292e] border border-[#323238] rounded-xl p-6 max-w-xl mx-auto space-y-4">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400">Selecione um aluno</h3>
-          <Autocomplete
-            searchFn={async (q) => {
-              const res = await listarAlunos({ search: q, limit: 200 })
-              return res.list || []
-            }}
-            onSelect={(a) => irParaAluno(a.name)}
-            renderItem={(a) => (
-              <div className="flex items-center gap-2">
-                <Avatar nome={a.nome_completo} size="xs" />
-                <span className="truncate">{a.nome_completo}</span>
-              </div>
-            )}
-            placeholder="Digite o nome do aluno..."
-            icon={Search}
-          />
-          <p className="text-xs text-gray-500">
-            Para abrir o painel diário use a barra lateral. Esta tela é dedicada a planejar o cronograma de um aluno.
-          </p>
-        </div>
-      )}
+      {/* Sem aluno selecionado: hub com lista de alunos + status do cronograma */}
+      {!aluno && <HubAlunosCronograma />}
 
       {/* Estado vazio: aluno sem cronograma → wizard onboarding */}
       {emEstadoVazio && (
