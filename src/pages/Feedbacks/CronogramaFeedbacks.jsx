@@ -520,51 +520,50 @@ export default function CronogramaFeedbacks() {
             {aluno && <p className="text-gray-500 text-xs mt-1">{aluno.nome_completo}</p>}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Botões diretos — sem menu de 3 pontos */}
+          <Button variant="secondary" size="sm" icon={Palmtree}
+            onClick={() => setModalFerias(true)}>
+            Férias
+          </Button>
+          <Button variant="secondary" size="sm" icon={MessageSquare}
+            onClick={() => setModalTemplatesAberto(true)}>
+            Templates
+          </Button>
+          {/* Ações específicas do aluno selecionado — agrupadas em menu compacto */}
+          {aluno && !emEstadoVazio && (
+            <div className="relative" ref={maisMenuRef}>
+              <Button variant="secondary" size="sm" icon={MoreVertical}
+                onClick={() => setMaisMenuAberto(v => !v)}
+                title="Outras ações do aluno" />
+              {maisMenuAberto && (
+                <div className="absolute right-0 top-full mt-1 z-30 bg-[#1a1a1a] border border-[#323238] rounded-lg shadow-xl py-1 w-56 text-sm">
+                  <button onClick={() => { setModalGerarSerie(true); setMaisMenuAberto(false) }}
+                    className="w-full text-left px-3 py-2 hover:bg-[#29292e] flex items-center gap-2">
+                    <Wand2 size={14} className="text-gray-400" /> Padronizar (gerar série)
+                  </button>
+                  <button onClick={() => { setModalClonar(true); setMaisMenuAberto(false) }}
+                    className="w-full text-left px-3 py-2 hover:bg-[#29292e] flex items-center gap-2">
+                    <Users size={14} className="text-gray-400" /> Clonar de outro aluno
+                  </button>
+                  <button onClick={() => { setModalWizard(true); setMaisMenuAberto(false) }}
+                    className="w-full text-left px-3 py-2 hover:bg-[#29292e] flex items-center gap-2">
+                    <Plus size={14} className="text-gray-400" /> Refazer série (wizard)
+                  </button>
+                  <button onClick={handleLimparCronograma}
+                    className="w-full text-left px-3 py-2 hover:bg-[#29292e] flex items-center gap-2 text-red-400">
+                    <Trash2 size={14} /> Limpar tudo
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
           {aluno && !emEstadoVazio && (
             <Button variant="primary" size="sm" icon={Save}
               onClick={handleSalvar} loading={salvando}>
               Salvar
             </Button>
           )}
-          {/* Menu Mais */}
-          <div className="relative" ref={maisMenuRef}>
-            <Button variant="secondary" size="sm" icon={MoreVertical}
-              onClick={() => setMaisMenuAberto(v => !v)} />
-            {maisMenuAberto && (
-              <div className="absolute right-0 top-full mt-1 z-30 bg-[#1a1a1a] border border-[#323238] rounded-lg shadow-xl py-1 w-56 text-sm">
-                {aluno && (
-                  <>
-                    <button onClick={() => { setModalGerarSerie(true); setMaisMenuAberto(false) }}
-                      className="w-full text-left px-3 py-2 hover:bg-[#29292e] flex items-center gap-2">
-                      <Wand2 size={14} className="text-gray-400" /> Gerar série
-                    </button>
-                    <button onClick={() => { setModalClonar(true); setMaisMenuAberto(false) }}
-                      className="w-full text-left px-3 py-2 hover:bg-[#29292e] flex items-center gap-2">
-                      <Users size={14} className="text-gray-400" /> Clonar de outro aluno
-                    </button>
-                    <button onClick={() => { setModalWizard(true); setMaisMenuAberto(false) }}
-                      className="w-full text-left px-3 py-2 hover:bg-[#29292e] flex items-center gap-2">
-                      <Plus size={14} className="text-gray-400" /> Refazer série (wizard)
-                    </button>
-                    <button onClick={handleLimparCronograma}
-                      className="w-full text-left px-3 py-2 hover:bg-[#29292e] flex items-center gap-2 text-red-400">
-                      <Trash2 size={14} /> Limpar tudo
-                    </button>
-                    <div className="my-1 border-t border-[#323238]" />
-                  </>
-                )}
-                <button onClick={() => { setModalFerias(true); setMaisMenuAberto(false) }}
-                  className="w-full text-left px-3 py-2 hover:bg-[#29292e] flex items-center gap-2">
-                  <Palmtree size={14} className="text-gray-400" /> Gerenciar férias
-                </button>
-                <button onClick={() => { setModalTemplatesAberto(true); setMaisMenuAberto(false) }}
-                  className="w-full text-left px-3 py-2 hover:bg-[#29292e] flex items-center gap-2">
-                  <MessageSquare size={14} className="text-gray-400" /> Gerenciar templates
-                </button>
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
@@ -573,8 +572,10 @@ export default function CronogramaFeedbacks() {
         <div className="bg-[#29292e] border border-[#323238] rounded-xl p-6 max-w-xl mx-auto space-y-4">
           <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400">Selecione um aluno</h3>
           <Autocomplete
-            items={todosAlunos}
-            searchFields={['nome_completo', 'email']}
+            searchFn={async (q) => {
+              const res = await listarAlunos({ search: q, limit: 200 })
+              return res.list || []
+            }}
             onSelect={(a) => irParaAluno(a.name)}
             renderItem={(a) => (
               <div className="flex items-center gap-2">
@@ -691,43 +692,73 @@ export default function CronogramaFeedbacks() {
                   </div>
                 ) : (
                   <div>
-                    {grupos.map((grupo, gi) => (
-                      <section key={gi} aria-label={grupo.label}>
-                        {/* Header da ficha — separador com label */}
-                        <div className="flex items-center gap-2 px-3 pt-3 pb-1.5 bg-[#1a1a1a]/40">
-                          <div className="flex-1 h-px bg-[#323238]" />
-                          <span className={`text-[10px] font-bold uppercase tracking-widest whitespace-nowrap ${
-                            grupo.label === 'Ciclo a definir'
-                              ? 'text-gray-500 italic'
-                              : 'text-purple-300'
+                    {/* Cabeçalho da tabela */}
+                    <div className="grid grid-cols-[80px_1fr_50px_110px_28px] gap-2 px-3 py-2 border-b border-[#323238] bg-[#1a1a1a]/60">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Data</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Tipo</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 text-center">Int.</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 text-center">Ciclo</span>
+                      <span />
+                    </div>
+                    {grupos.map((grupo, gi) => grupo.items.map((d, idx) => {
+                      const ehPrimeiraDoGrupo = idx === 0
+                      // Intervalo em semanas até a linha anterior do MESMO grupo
+                      const prev = idx > 0 ? grupo.items[idx - 1] : null
+                      const intervalo = prev
+                        ? Math.round((new Date(d.date) - new Date(prev.date)) / (7 * 86400000))
+                        : 0
+                      return (
+                        <div key={d.date}
+                          onContextMenu={(e) => {
+                            e.preventDefault()
+                            setMarcoZeroMenu({ date: d.date, x: e.clientX, y: e.clientY })
+                          }}
+                          className={`grid grid-cols-[80px_1fr_50px_110px_28px] gap-2 px-3 py-2 border-b border-[#323238]/40 items-center transition-colors ${
+                            d.is_start ? 'bg-[#2563eb]/15' : 'hover:bg-[#1e1e22]'
                           }`}>
-                            {grupo.label}
-                          </span>
-                          <div className="flex-1 h-px bg-[#323238]" />
-                        </div>
-                        {grupo.items.map((d) => (
-                          <div key={d.date}
-                            onContextMenu={(e) => {
-                              e.preventDefault()
-                              setMarcoZeroMenu({ date: d.date, x: e.clientX, y: e.clientY })
-                            }}
-                            className={`px-3 py-2 flex items-center gap-2 border-b border-[#323238]/40 transition-colors ${
-                              d.is_start ? 'bg-[#2563eb]/15' : 'hover:bg-[#1e1e22]'
-                            }`}>
-                            <span className="text-white font-medium text-xs w-20 shrink-0">{fmtDateBR(d.date)}</span>
+                          <span className="text-white font-medium text-xs">{fmtDateBR(d.date)}</span>
+                          <span>
                             <TipoBotao item={d}
                               onToggle={(_, v) => handleToggleTraining(d.date, v)}
                               size="sm" />
-                            <span className="flex-1" />
-                            <button onClick={() => handleRemoverDataLocal(d.date)}
-                              title="Remover"
-                              className="h-6 w-6 inline-flex items-center justify-center text-gray-500 hover:text-red-400 shrink-0">
-                              <X size={12} />
-                            </button>
-                          </div>
-                        ))}
-                      </section>
-                    ))}
+                          </span>
+                          <span className="text-[10px] text-gray-500 text-center">
+                            {intervalo > 0 ? `${intervalo}s` : '—'}
+                          </span>
+                          <span className="text-center">
+                            {ehPrimeiraDoGrupo ? (
+                              <span className={`inline-block text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
+                                grupo.label === 'Ciclo a definir'
+                                  ? 'bg-gray-500/10 text-gray-400 border-gray-500/30 italic'
+                                  : 'bg-purple-500/10 text-purple-300 border-purple-500/30'
+                              }`}>
+                                {grupo.label}
+                              </span>
+                            ) : null}
+                          </span>
+                          <button onClick={() => handleRemoverDataLocal(d.date)}
+                            title="Remover"
+                            className="h-6 w-6 inline-flex items-center justify-center text-gray-500 hover:text-red-400">
+                            <X size={12} />
+                          </button>
+                        </div>
+                      )
+                    }))}
+
+                    {/* Total planejado */}
+                    {schedule.dates.length > 0 && (
+                      <div className="grid grid-cols-[80px_1fr_50px_110px_28px] gap-2 px-3 py-2 border-t border-[#323238] bg-[#1a1a1a]/60 items-center">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 col-span-3">
+                          Total planejado
+                        </span>
+                        <span className="text-center">
+                          <span className="inline-block text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-[#850000]/10 text-red-300 border-[#850000]/40">
+                            {stats.semanas} semanas
+                          </span>
+                        </span>
+                        <span />
+                      </div>
+                    )}
 
                     {/* Adicionar data avulsa */}
                     <div className="px-3 py-2 border-t border-[#323238]">
