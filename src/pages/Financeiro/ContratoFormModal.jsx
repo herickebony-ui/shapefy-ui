@@ -68,7 +68,10 @@ export default function ContratoFormModal({
     setAlunoDropdownOpen(false)
     setErroValidacao('')
 
-    listarAlunos({ limit: 200 })
+    // Carrega lista inicial — usada como cache rápido E como pool pra
+    // hidratar nomes dos vínculos. A busca por query (autocomplete) usa
+    // listarAlunos com search server-side abaixo, pra cobrir alunos antigos.
+    listarAlunos({ limit: 500 })
       .then((res) => setTodosAlunos(res.list || []))
       .catch(() => setTodosAlunos([]))
 
@@ -406,13 +409,39 @@ export default function ContratoFormModal({
     }
   }
 
-  // Filtro autocomplete aluno
+  // Busca de aluno: combina cache local (lista pré-carregada) + busca server
+  // pra alcançar alunos antigos que não estão nos 500 mais recentes.
+  const [alunoSearchResults, setAlunoSearchResults] = useState([])
+  const alunoSearchTimerRef = useRef(null)
+
+  useEffect(() => {
+    const q = (alunoQuery || '').trim()
+    clearTimeout(alunoSearchTimerRef.current)
+    if (!q) { setAlunoSearchResults([]); return }
+    alunoSearchTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await listarAlunos({ search: q, limit: 200 })
+        setAlunoSearchResults(res.list || [])
+      } catch { setAlunoSearchResults([]) }
+    }, 300)
+    return () => clearTimeout(alunoSearchTimerRef.current)
+  }, [alunoQuery])
+
   const alunoCandidates = useMemo(() => {
     const q = (alunoQuery || '').trim()
-    const list = todosAlunos
-    if (!q) return list.slice(0, 30)
-    return list.filter((s) => smartSearch(s.nome_completo, q)).slice(0, 30)
-  }, [todosAlunos, alunoQuery])
+    if (!q) return todosAlunos.slice(0, 30)
+    // Une cache local + resultados do server, dedup por name
+    const seen = new Set()
+    const merged = []
+    const localHits = todosAlunos.filter((s) => smartSearch(s.nome_completo, q))
+    for (const a of [...localHits, ...alunoSearchResults]) {
+      if (!a?.name || seen.has(a.name)) continue
+      seen.add(a.name)
+      merged.push(a)
+      if (merged.length >= 30) break
+    }
+    return merged
+  }, [todosAlunos, alunoQuery, alunoSearchResults])
 
   if (!isOpen) return null
 
