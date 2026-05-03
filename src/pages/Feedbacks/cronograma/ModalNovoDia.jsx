@@ -1,19 +1,22 @@
-import { Plus } from 'lucide-react'
+import { Plus, Save } from 'lucide-react'
 import { Modal, Button, FormGroup, Input, Select, Textarea } from '../../../components/ui'
 import { fmtDateBR } from './utils'
 
 export default function ModalNovoDia({
   draft, formularios, setDraft, onAdicionar, onClose,
 }) {
+  const editando = !!draft._editando
   return (
     <Modal isOpen onClose={onClose}
-      title="Novo agendamento"
+      title={editando ? 'Detalhes do agendamento' : 'Novo agendamento'}
       subtitle={fmtDateBR(draft.date)}
       size="md"
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button variant="primary" icon={Plus} onClick={onAdicionar}>Adicionar</Button>
+          <Button variant="primary" icon={editando ? Save : Plus} onClick={onAdicionar}>
+            {editando ? 'Salvar' : 'Adicionar'}
+          </Button>
         </>
       }>
       <div className="p-4 space-y-3">

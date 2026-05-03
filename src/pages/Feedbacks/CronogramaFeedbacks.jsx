@@ -155,7 +155,8 @@ export default function CronogramaFeedbacks() {
       const maisRecente = !vigente && !pagoNaoIniciado && [...cs].sort((a, b) =>
         (b.data_fim || '').localeCompare(a.data_fim || ''),
       )[0]
-      setContratoRelevante(vigente || pagoNaoIniciado || maisRecente || null)
+      const contrato = vigente || pagoNaoIniciado || maisRecente || null
+      setContratoRelevante(contrato)
       const dates = (ags || []).map(ag => ({
         _name: ag.name,
         date: ag.data_agendada,
@@ -169,14 +170,23 @@ export default function CronogramaFeedbacks() {
         respondido_em: ag.respondido_em,
       })).sort((x, y) => (x.date || '').localeCompare(y.date || ''))
       setSchedule({ dates })
+      // Vigência: contrato é fonte de verdade. Se há contrato relevante com
+      // data_inicio definida, sobrescreve o espelho do aluno (que pode estar
+      // desatualizado). Caso contrário, usa o espelho.
+      const usarContrato = contrato?.data_inicio && contrato?.data_fim
+      const planStart = usarContrato ? contrato.data_inicio.slice(0, 10) : (a.plan_start || '')
+      const planEnd = usarContrato ? contrato.data_fim.slice(0, 10) : (a.plan_end || '')
+      const planDuration = usarContrato
+        ? (contrato.variacao_duracao_meses || a.plan_duration || 6)
+        : (a.plan_duration || 6)
       setPlanForm({
-        plan_start: a.plan_start || '',
-        plan_end: a.plan_end || '',
-        plan_duration: a.plan_duration || 6,
+        plan_start: planStart,
+        plan_end: planEnd,
+        plan_duration: planDuration,
         formulario_padrao: a.formulario_padrao || '',
       })
-      setViewYear(a.plan_start
-        ? new Date(a.plan_start + 'T12:00:00').getFullYear()
+      setViewYear(planStart
+        ? new Date(planStart + 'T12:00:00').getFullYear()
         : new Date().getFullYear())
     } catch (e) {
       console.error(e)
@@ -226,19 +236,32 @@ export default function CronogramaFeedbacks() {
   // ═════════════════════════════════════════════════════════════════════════
   // Stats e ciclos derivados
   // ═════════════════════════════════════════════════════════════════════════
+  // Stats — calculados a partir do ÚLTIMO Marco Zero. Tudo antes vira
+  // histórico passivo (renovação preserva). Se não tem nenhum Marco Zero,
+  // considera todas as datas.
   const stats = useMemo(() => {
-    const dias = schedule.dates.filter(d => !d.is_start)
+    const sorted = [...schedule.dates].sort((a, b) => a.date.localeCompare(b.date))
+    let inicioIdx = -1
+    for (let i = sorted.length - 1; i >= 0; i--) {
+      if (sorted[i].is_start) { inicioIdx = i; break }
+    }
+    const cicloAtual = inicioIdx >= 0 ? sorted.slice(inicioIdx) : sorted
+    const dias = cicloAtual.filter(d => !d.is_start)
     const trocas = dias.filter(d => d.is_training).length
     const encontros = dias.length
     let semanas = 0
-    if (schedule.dates.length >= 2) {
-      const sorted = [...schedule.dates].sort((a, b) => a.date.localeCompare(b.date))
+    if (cicloAtual.length >= 2) {
       semanas = Math.round(
-        (new Date(sorted[sorted.length - 1].date) - new Date(sorted[0].date))
+        (new Date(cicloAtual[cicloAtual.length - 1].date) - new Date(cicloAtual[0].date))
         / (7 * 86400000),
-      )
+      ) + 1 // inclusivo
     }
-    return { encontros, trocas, semanas }
+    return {
+      encontros,
+      trocas,
+      semanas,
+      historicoCount: inicioIdx >= 0 ? inicioIdx : 0,
+    }
   }, [schedule.dates])
 
   // CICLOS: cada grupo é uma ficha (Marco Zero ou Troca encerra). Helper retorna
@@ -283,41 +306,70 @@ export default function CronogramaFeedbacks() {
   const dataJaAgendada = (dateStr) => schedule.dates.some(d => d.date === dateStr)
   const itemDoDia = (dateStr) => schedule.dates.find(d => d.date === dateStr)
 
-  // Click esquerdo no calendário: abre modal de novo dia (calendário continua editável
-  // para adicionar datas avulsas, mas a navegação principal é a tabela à esquerda)
+  // Click esquerdo no calendário: cria agendamento direto com defaults
+  // (formulário padrão do aluno, dia_aviso=1). Pra editar detalhes,
+  // botão direito → "Abrir detalhes".
   const onClickDate = (dateStr) => {
     if (!aluno) {
       showToast('Selecione um aluno primeiro', 'info')
       return
     }
     if (dataJaAgendada(dateStr)) return
-    setModalNovoDia({
-      date: dateStr,
-      formulario: planForm.formulario_padrao || '',
-      dias_aviso: 1,
-      is_start: false,
-      nota: '',
+    if (!planForm.formulario_padrao) {
+      showToast('Defina um formulário padrão pro aluno antes', 'error')
+      return
+    }
+    setSchedule(prev => {
+      const novos = [...prev.dates, {
+        date: dateStr,
+        formulario: planForm.formulario_padrao,
+        dias_aviso: 1,
+        status: 'Agendado',
+        is_start: false,
+        is_training: false,
+        nota: '',
+        observacao: '',
+      }]
+      novos.sort((a, b) => a.date.localeCompare(b.date))
+      return { dates: novos }
     })
+    showToast(`${fmtDateBR(dateStr)} adicionado · clique direito pra detalhes`, 'success')
   }
 
   const handleAdicionarNovoDia = () => {
     if (!modalNovoDia.formulario) {
       showToast('Selecione um formulário', 'error'); return
     }
-    setSchedule(prev => {
-      const novos = [...prev.dates, {
-        date: modalNovoDia.date,
-        formulario: modalNovoDia.formulario,
-        dias_aviso: Number(modalNovoDia.dias_aviso) || 1,
-        status: 'Agendado',
-        is_start: !!modalNovoDia.is_start,
-        is_training: false,
-        nota: modalNovoDia.nota || '',
-        observacao: '',
-      }]
-      novos.sort((a, b) => a.date.localeCompare(b.date))
-      return { dates: novos }
-    })
+    if (modalNovoDia._editando) {
+      // Modo edição: atualiza a linha existente
+      setSchedule(prev => ({
+        dates: prev.dates.map(d => d.date === modalNovoDia.date
+          ? {
+              ...d,
+              formulario: modalNovoDia.formulario,
+              dias_aviso: Number(modalNovoDia.dias_aviso) || 1,
+              is_start: !!modalNovoDia.is_start,
+              nota: modalNovoDia.nota || '',
+            }
+          : d,
+        ),
+      }))
+    } else {
+      setSchedule(prev => {
+        const novos = [...prev.dates, {
+          date: modalNovoDia.date,
+          formulario: modalNovoDia.formulario,
+          dias_aviso: Number(modalNovoDia.dias_aviso) || 1,
+          status: 'Agendado',
+          is_start: !!modalNovoDia.is_start,
+          is_training: false,
+          nota: modalNovoDia.nota || '',
+          observacao: '',
+        }]
+        novos.sort((a, b) => a.date.localeCompare(b.date))
+        return { dates: novos }
+      })
+    }
     setModalNovoDia(null)
   }
 
@@ -399,6 +451,22 @@ export default function CronogramaFeedbacks() {
     setSchedule({ dates: [] })
     setMaisMenuAberto(false)
     showToast('Datas limpas (clique Salvar pra persistir)', 'info')
+  }
+
+  // Renovação preservando histórico: zera vigência mas mantém todas as datas.
+  // Profissional define o novo Marco Zero via botão direito numa data futura.
+  const handleRenovarCiclo = () => {
+    if (!window.confirm(
+      'Renovar ciclo?\n\n• Histórico de datas preservado (nada apagado)\n'
+      + '• Vigência será zerada\n'
+      + '• Defina o novo Marco Zero clicando com botão direito numa data\n'
+      + '• Stats passam a contar a partir do novo Marco Zero',
+    )) return
+    setPlanForm(prev => ({ ...prev, plan_start: '', plan_end: '', plan_duration: 3 }))
+    // Tira o is_start de todos pra forçar redefinição manual
+    setSchedule(prev => ({ dates: prev.dates.map(d => ({ ...d, is_start: false })) }))
+    setMaisMenuAberto(false)
+    showToast('Defina novo Marco Zero (botão direito numa data)', 'info')
   }
 
   const handleGerarSerie = (datas) => {
@@ -601,6 +669,12 @@ export default function CronogramaFeedbacks() {
                     className="w-full text-left px-3 py-2 hover:bg-[#29292e] flex items-center gap-2">
                     <Plus size={14} className="text-gray-400" /> Refazer série (wizard)
                   </button>
+                  <div className="my-1 border-t border-[#323238]" />
+                  <button onClick={handleRenovarCiclo}
+                    className="w-full text-left px-3 py-2 hover:bg-[#29292e] flex items-center gap-2 text-blue-300"
+                    title="Zera a vigência mantendo histórico de datas. Defina novo Marco Zero depois.">
+                    <Wand2 size={14} /> Renovar ciclo (preserva histórico)
+                  </button>
                   <button onClick={handleLimparCronograma}
                     className="w-full text-left px-3 py-2 hover:bg-[#29292e] flex items-center gap-2 text-red-400">
                     <Trash2 size={14} /> Limpar tudo
@@ -670,7 +744,7 @@ export default function CronogramaFeedbacks() {
               </button>
             </div>
 
-            {/* Stats */}
+            {/* Stats — só do ciclo atual (a partir do último Marco Zero) */}
             <div className="grid grid-cols-3 gap-2">
               {[
                 { label: 'Encontros', value: stats.encontros },
@@ -683,6 +757,11 @@ export default function CronogramaFeedbacks() {
                 </div>
               ))}
             </div>
+            {stats.historicoCount > 0 && (
+              <p className="text-[10px] text-gray-500 italic -mt-2">
+                Stats do ciclo atual. Histórico passivo: {stats.historicoCount} data{stats.historicoCount === 1 ? '' : 's'} antes do Marco Zero.
+              </p>
+            )}
 
             {/* Vigência editável */}
             <div className="bg-[#29292e] border border-[#323238] rounded-xl p-4 space-y-3">
@@ -998,6 +1077,15 @@ export default function CronogramaFeedbacks() {
           itemAtual={itemDoDia(marcoZeroMenu.date)}
           onClose={() => setMarcoZeroMenu(null)}
           onSet={(novoVal) => handleSetMarcoZero(marcoZeroMenu.date, novoVal)}
+          onAbrirDetalhes={(item) => setModalNovoDia({
+            date: item.date,
+            formulario: item.formulario || planForm.formulario_padrao || '',
+            dias_aviso: item.dias_aviso || 1,
+            is_start: !!item.is_start,
+            nota: item.nota || '',
+            _editando: true,
+          })}
+          onRemover={(item) => handleRemoverDataLocal(item.date)}
         />
       )}
 
