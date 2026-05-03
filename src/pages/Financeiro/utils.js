@@ -55,7 +55,10 @@ export const computeContratoStatus = (c, hojeISO, dateRange = null) => {
     return dias > 30 ? 'Nao_renovou' : 'Vencido'
   }
 
-  if (inicio && fim && inicio <= hojeISO && hojeISO <= fim) {
+  // Ativo: tem inicio + fim definidos e fim ainda não passou.
+  // Inclui contratos com data_inicio futura (programados) — semanticamente
+  // já estão "ativos" do ponto de vista do profissional.
+  if (inicio && fim && fim >= hojeISO) {
     if (dateRange && fim >= dateRange.start && fim <= dateRange.end) {
       return 'Renova_esse_mes'
     }

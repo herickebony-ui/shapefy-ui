@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Plus, RefreshCw, Search, CalendarDays, SlidersHorizontal,
-  TrendingUp, History, Wallet, Users, FileDown, RefreshCcw, Eye,
+  TrendingUp, History, Wallet, Users, FileDown, RefreshCcw, Eye, Edit2,
 } from 'lucide-react'
 import {
   Button, Spinner, EmptyState, DataTable, Tabs, StatCard, Badge,
@@ -423,27 +423,34 @@ export default function FinanceiroListagem() {
       label: '',
       headerClass: 'w-24',
       cellClass: 'text-right',
-      render: (row) => (
-        <div className="flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-          <button
-            onClick={() => {
-              const nome = alunosMap[row.aluno]?.nome_completo || row.aluno
-              setHistoricoAluno({ id: row.aluno, nome })
-            }}
-            title="Histórico do aluno"
-            className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors"
-          >
-            <History size={12} />
-          </button>
-          <button
-            onClick={() => setContratoDetalhe({ contratoId: row.name, alunoNome: alunosMap[row.aluno]?.nome_completo || row.aluno })}
-            title="Detalhes"
-            className="h-7 w-7 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors"
-          >
-            <Eye size={12} />
-          </button>
-        </div>
-      ),
+      render: (row) => {
+        const alunoNome = alunosMap[row.aluno]?.nome_completo || row.aluno
+        return (
+          <div className="flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setHistoricoAluno({ id: row.aluno, nome: alunoNome })}
+              title="Histórico do aluno (todos os contratos)"
+              className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors"
+            >
+              <History size={12} />
+            </button>
+            <button
+              onClick={() => setContratoForm({ contrato: row, alunoNome })}
+              title="Editar contrato"
+              className="h-7 w-7 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors"
+            >
+              <Edit2 size={12} />
+            </button>
+            <button
+              onClick={() => setContratoDetalhe({ contratoId: row.name, alunoNome })}
+              title="Detalhes do contrato (parcelas e ações)"
+              className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors"
+            >
+              <Eye size={12} />
+            </button>
+          </div>
+        )
+      },
     },
   ], [alunosMap, planosByName, parcelasDoPeriodo])
 
