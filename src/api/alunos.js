@@ -11,7 +11,7 @@ export const criarAluno = async (campos) => {
 }
 
 export const listarAlunos = async ({ search = '', enabled = '', sexo = '', page = 1, limit = 20 } = {}) => {
-  const filtros = []
+  const filtros = [["profissional", "=", profissionalLogado()]]
   if (search) {
     filtros.push(["nome_completo", "like", `%${search}%`])
   } else {
@@ -37,7 +37,12 @@ export const buscarStatsAlunos = async () => {
 
 export const buscarAluno = async (id) => {
   const res = await client.get(`/api/resource/Aluno/${id}`)
-  return res.data.data
+  const aluno = res.data.data
+  // Defesa multi-tenant: se vier aluno de outro profissional, devolve null
+  if (aluno && aluno.profissional && aluno.profissional !== profissionalLogado()) {
+    return null
+  }
+  return aluno
 }
 
 export const listarAlunosByIds = async (ids = []) => {
@@ -45,7 +50,10 @@ export const listarAlunosByIds = async (ids = []) => {
   if (!unicos.length) return []
   const params = {
     fields: JSON.stringify(['name', 'nome_completo', 'foto', 'telefone', 'enabled', 'plan_start', 'plan_end', 'plan_duration']),
-    filters: JSON.stringify([['name', 'in', unicos]]),
+    filters: JSON.stringify([
+      ['profissional', '=', profissionalLogado()],
+      ['name', 'in', unicos],
+    ]),
     limit: unicos.length,
   }
   const res = await client.get('/api/resource/Aluno', { params })

@@ -243,7 +243,7 @@ export default function FinanceiroListagem() {
             {row.status_manual === 'Pausado' && (
               <Badge variant="default" size="sm">Pausado</Badge>
             )}
-            <StudentBadge aluno={aluno} showText={true} />
+            <StudentBadge aluno={aluno} />
           </div>
         )
       },
@@ -782,7 +782,7 @@ function GestaoAlunosTab({
     },
     {
       label: 'Status',
-      render: (row) => <StudentBadge aluno={row.aluno} showText={true} />,
+      render: (row) => <StudentBadge aluno={row.aluno} />,
     },
     {
       label: 'Plano vigente',
