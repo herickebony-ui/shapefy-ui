@@ -57,10 +57,17 @@ export default function WizardCriacao({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Step 1
+  // Step 1 — plan_duration: aluno > variação do contrato vigente > 6 meses
+  const planDurationSugerido = useMemo(() => {
+    if (initial.plan_duration) return initial.plan_duration
+    if (contratoRelevante?.variacao_duracao_meses) return contratoRelevante.variacao_duracao_meses
+    return 6
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const [vigencia, setVigencia] = useState({
     plan_start: planStartSugerido,
-    plan_duration: initial.plan_duration || 6,
+    plan_duration: planDurationSugerido,
     formulario_padrao: initial.formulario_padrao
       || formulariosCompativeis.find(f => f.enabled !== 0)?.name
       || formulariosCompativeis[0]?.name
@@ -101,15 +108,20 @@ export default function WizardCriacao({
 
   const passoStep2ParaStep3 = () => {
     // Materializa as datas no estado: primeira é Marco Zero, demais Feedback comum
+    // Cada linha começa com o formulario_padrao do aluno; user pode override por linha.
     const arr = datasValidas.map((d, i) => ({
       date: d.iso,
       is_start: i === 0,
       is_training: false,
+      formulario: vigencia.formulario_padrao,
     }))
     setDatas(arr)
     setStep(3)
   }
 
+  const setFormularioLinha = (date, formId) => {
+    setDatas(prev => prev.map(d => d.date === date ? { ...d, formulario: formId } : d))
+  }
   const toggleTraining = (date, novoVal) => {
     setDatas(prev => prev.map(d => d.date === date ? { ...d, is_training: novoVal } : d))
   }
@@ -143,7 +155,8 @@ export default function WizardCriacao({
         formulario_padrao: vigencia.formulario_padrao,
       })
       await sincronizarCronogramaDoAluno(alunoId, datas.map(d => ({
-        formulario: vigencia.formulario_padrao,
+        // Cada linha pode ter override de formulário (default: padrão do aluno)
+        formulario: d.formulario || vigencia.formulario_padrao,
         data_agendada: d.date,
         dias_aviso: 1,
         status: 'Agendado',
@@ -374,40 +387,63 @@ export default function WizardCriacao({
         {step === 3 && (
           <div className="space-y-3">
             <p className="text-xs text-gray-400">
-              Clique em <span className="text-orange-400 font-semibold">Feedback</span> para marcá-la
-              como <span className="text-purple-400 font-semibold">Troca de Treino</span>.
-              Marco Zero é fixo (primeira data).
+              Cada linha tem o formulário padrão do aluno. Clique no select pra
+              trocar por outro formulário, ou clique em
+              <span className="text-orange-400 font-semibold"> Feedback</span> para
+              marcar como <span className="text-purple-400 font-semibold">Troca de Treino</span>.
             </p>
 
-            <div className="bg-[#0a0a0a] border border-[#323238] rounded-lg overflow-hidden max-h-80 overflow-y-auto">
-              {grupos.map((grupo, gi) => (
-                <section key={gi} aria-label={grupo.label}>
-                  <div className="flex items-center gap-2 px-3 pt-3 pb-1.5 bg-[#1a1a1a]/40">
-                    <div className="flex-1 h-px bg-[#323238]" />
-                    <span className={`text-[10px] font-bold uppercase tracking-widest whitespace-nowrap ${
-                      grupo.label === 'Ciclo a definir'
-                        ? 'text-gray-500 italic'
-                        : 'text-purple-300'
+            <div className="bg-[#0a0a0a] border border-[#323238] rounded-lg overflow-hidden max-h-[420px] overflow-y-auto">
+              {/* Cabeçalho */}
+              <div className="grid grid-cols-[80px_1fr_110px_50px_90px] gap-2 px-3 py-2 border-b border-[#323238] bg-[#1a1a1a]/60 sticky top-0 z-10">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Data</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Formulário</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Tipo / Troca</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 text-center">Int.</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 text-center">Ciclo</span>
+              </div>
+
+              {grupos.map((grupo, gi) => grupo.items.map((d, idx) => {
+                const ehPrimeiraDoGrupo = idx === 0
+                const prev = idx > 0 ? grupo.items[idx - 1] : null
+                const intervalo = prev
+                  ? Math.round((new Date(d.date) - new Date(prev.date)) / (7 * 86400000))
+                  : 0
+                return (
+                  <div key={d.date}
+                    className={`grid grid-cols-[80px_1fr_110px_50px_90px] gap-2 px-3 py-1.5 border-b border-[#323238]/40 items-center ${
+                      d.is_start ? 'bg-[#2563eb]/15' : 'hover:bg-[#1e1e22]'
                     }`}>
-                      {grupo.label}
+                    <span className="text-white font-medium text-xs">{fmtDateBR(d.date)}</span>
+                    <select
+                      value={d.formulario || vigencia.formulario_padrao}
+                      onChange={(e) => setFormularioLinha(d.date, e.target.value)}
+                      className="h-7 px-1 bg-[#1a1a1a] border border-[#323238] text-white rounded text-[11px] outline-none focus:border-[#2563eb]/60 truncate"
+                    >
+                      {formulariosCompativeis.map((f) => (
+                        <option key={f.name} value={f.name}>{f.titulo}</option>
+                      ))}
+                    </select>
+                    <span>
+                      <TipoBotao item={d} onToggle={(_, v) => toggleTraining(d.date, v)} size="sm" />
                     </span>
-                    <div className="flex-1 h-px bg-[#323238]" />
-                  </div>
-                  {grupo.items.map((d) => {
-                    const dt = new Date(d.date + 'T12:00:00')
-                    return (
-                      <div key={d.date}
-                        className={`px-3 py-2 flex items-center gap-2 border-b border-[#323238]/40 ${
-                          d.is_start ? 'bg-[#2563eb]/15' : 'hover:bg-[#1e1e22]'
+                    <span className="text-[10px] text-gray-500 text-center">
+                      {intervalo > 0 ? `${intervalo}s` : '—'}
+                    </span>
+                    <span className="text-center">
+                      {ehPrimeiraDoGrupo ? (
+                        <span className={`inline-block text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
+                          grupo.label === 'Ciclo a definir'
+                            ? 'bg-gray-500/10 text-gray-400 border-gray-500/30 italic'
+                            : 'bg-purple-500/10 text-purple-300 border-purple-500/30'
                         }`}>
-                        <span className="text-white font-medium text-xs w-20 shrink-0">{fmtDateBR(d.date)}</span>
-                        <span className="text-gray-500 text-[10px] w-8 shrink-0">{WEEKDAYS[dt.getDay()]}</span>
-                        <TipoBotao item={d} onToggle={(_, v) => toggleTraining(d.date, v)} size="sm" />
-                      </div>
-                    )
-                  })}
-                </section>
-              ))}
+                          {grupo.label}
+                        </span>
+                      ) : null}
+                    </span>
+                  </div>
+                )
+              }))}
             </div>
 
             <div className="flex flex-wrap gap-3 pt-2 border-t border-[#323238]">

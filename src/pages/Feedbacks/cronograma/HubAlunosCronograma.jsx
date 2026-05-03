@@ -12,7 +12,8 @@ import { listarPlanos } from '../../../api/planosShapefy'
 import { buscarSmart } from '../../../utils/strings'
 import { fmtDateBR, todayISO } from './utils'
 
-const PAGE_SIZE = 50
+const PAGE_SIZE = 30
+const ALUNO_RECENTE_DIAS = 30
 
 /**
  * Hub de alunos pra escolher quem vai ter o cronograma editado.
@@ -30,16 +31,19 @@ export default function HubAlunosCronograma() {
   const [statusCronograma, setStatusCronograma] = useState({})
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
-  const [filtro, setFiltro] = useState('') // '' | 'sem_cronograma' | 'atrasado'
+  const [filtro, setFiltro] = useState('') // '' | 'sem_cronograma' | 'atrasado' | 'recentes'
+  const [page, setPage] = useState(1)
 
   const carregar = useCallback(async () => {
     setLoading(true)
     try {
-      // Carrega tudo em paralelo
+      // Carrega tudo em paralelo. 1000 alunos = essencialmente "todos" para
+      // este hub. Filtragem aplicada client-side: só alunos com contrato OU
+      // cadastrados nos últimos 30 dias.
       const [alunosRes, planosRes, contratosRes] = await Promise.all([
-        listarAlunos({ limit: PAGE_SIZE }),
+        listarAlunos({ limit: 1000 }),
         listarPlanos({ limit: 100 }).catch(() => ({ list: [] })),
-        listarContratos({ limit: 500 }).catch(() => ({ list: [] })),
+        listarContratos({ limit: 1000 }).catch(() => ({ list: [] })),
       ])
       const alunosLista = alunosRes.list || []
       setAlunos(alunosLista)
@@ -65,11 +69,17 @@ export default function HubAlunosCronograma() {
       })
       setContratosPorAluno(map)
 
-      // Status do cronograma pra todos os alunos da página
-      const ids = alunosLista.map((a) => a.name)
-      if (ids.length) {
+      // Status do cronograma — só pra alunos com contrato OU recentes
+      // (os mesmos que vão ser exibidos depois do filtro client-side)
+      const limiarRecente = new Date()
+      limiarRecente.setDate(limiarRecente.getDate() - ALUNO_RECENTE_DIAS)
+      const limiarISO = limiarRecente.toISOString().slice(0, 10)
+      const idsParaStatus = alunosLista
+        .filter((a) => map[a.name] || (a.creation && a.creation.slice(0, 10) >= limiarISO))
+        .map((a) => a.name)
+      if (idsParaStatus.length) {
         try {
-          const stat = await obterStatusCronogramaAlunos(ids)
+          const stat = await obterStatusCronogramaAlunos(idsParaStatus)
           setStatusCronograma(stat || {})
         } catch (e) { console.error(e) }
       }
@@ -90,7 +100,18 @@ export default function HubAlunosCronograma() {
 
   const lista = useMemo(() => {
     const hojeISO = todayISO()
-    return alunos.map((a) => {
+    const limiarRecente = new Date()
+    limiarRecente.setDate(limiarRecente.getDate() - ALUNO_RECENTE_DIAS)
+    const limiarISO = limiarRecente.toISOString().slice(0, 10)
+
+    // Só alunos com contrato OU cadastrados nos últimos 30 dias
+    const filtrados = alunos.filter((a) => {
+      if (contratosPorAluno[a.name]) return true
+      if (a.creation && a.creation.slice(0, 10) >= limiarISO) return true
+      return false
+    })
+
+    return filtrados.map((a) => {
       const c = contratosPorAluno[a.name]
       const sc = statusCronograma[a.name]
       const total = sc?.total || 0
@@ -120,6 +141,7 @@ export default function HubAlunosCronograma() {
           cronogramaCor = 'default'
         }
       }
+      const ehRecente = a.creation && a.creation.slice(0, 10) >= limiarISO
       return {
         ...a,
         _contrato: c || null,
@@ -132,6 +154,7 @@ export default function HubAlunosCronograma() {
         _proximoFeedback: proximo || null,
         _qtdAtrasados: atrasados,
         _temCronograma: total > 0,
+        _ehRecente: ehRecente && !c,
       }
     })
   }, [alunos, contratosPorAluno, planosByName, statusCronograma])
@@ -140,15 +163,20 @@ export default function HubAlunosCronograma() {
     let l = lista
     if (filtro === 'sem_cronograma') l = l.filter((a) => !a._temCronograma)
     else if (filtro === 'atrasado') l = l.filter((a) => a._qtdAtrasados > 0)
+    else if (filtro === 'recentes') l = l.filter((a) => a._ehRecente)
     if (busca) l = l.filter((a) => buscarSmart([a.nome_completo, a.email], busca))
     return l
   }, [lista, busca, filtro])
+
+  // Reset de página quando muda filtro/busca
+  useEffect(() => { setPage(1) }, [busca, filtro])
 
   const stats = useMemo(() => {
     const ativos = lista.filter((a) => a._contrato).length
     const semCronograma = lista.filter((a) => !a._temCronograma).length
     const atrasados = lista.filter((a) => a._qtdAtrasados > 0).length
-    return { ativos, semCronograma, atrasados }
+    const recentes = lista.filter((a) => a._ehRecente).length
+    return { ativos, semCronograma, atrasados, recentes, total: lista.length }
   }, [lista])
 
   const goToAluno = (alunoId) => navigate(`/cronograma-feedbacks/aluno/${encodeURIComponent(alunoId)}`)
@@ -228,15 +256,15 @@ export default function HubAlunosCronograma() {
 
   return (
     <div className="space-y-4">
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
+      {/* Stats — 4 cards clicáveis (filtros) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <button
           onClick={() => setFiltro('')}
           className={`text-left bg-[#29292e] border rounded-xl p-3 transition-colors ${
             filtro === '' ? 'border-[#2563eb]/40 ring-1 ring-[#2563eb]/30' : 'border-[#323238] hover:border-[#444]'
           }`}>
-          <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Alunos ativos</p>
-          <p className="text-2xl font-bold text-white mt-1">{stats.ativos}</p>
+          <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Total no hub</p>
+          <p className="text-2xl font-bold text-white mt-1">{stats.total}</p>
         </button>
         <button
           onClick={() => setFiltro(filtro === 'sem_cronograma' ? '' : 'sem_cronograma')}
@@ -256,6 +284,16 @@ export default function HubAlunosCronograma() {
           <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Cronograma atrasado</p>
           <p className={`text-2xl font-bold mt-1 ${stats.atrasados > 0 ? 'text-amber-400' : 'text-gray-500'}`}>
             {stats.atrasados}
+          </p>
+        </button>
+        <button
+          onClick={() => setFiltro(filtro === 'recentes' ? '' : 'recentes')}
+          className={`text-left bg-[#29292e] border rounded-xl p-3 transition-colors ${
+            filtro === 'recentes' ? 'border-emerald-500/40 ring-1 ring-emerald-500/30' : 'border-[#323238] hover:border-[#444]'
+          }`}>
+          <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Cadastrados ≤30 dias</p>
+          <p className={`text-2xl font-bold mt-1 ${stats.recentes > 0 ? 'text-emerald-400' : 'text-gray-500'}`}>
+            {stats.recentes}
           </p>
         </button>
       </div>
@@ -286,8 +324,9 @@ export default function HubAlunosCronograma() {
           rows={filtrado}
           rowKey="name"
           onRowClick={(row) => goToAluno(row.name)}
-          page={1}
+          page={page}
           pageSize={PAGE_SIZE}
+          onPage={setPage}
         />
       )}
     </div>
