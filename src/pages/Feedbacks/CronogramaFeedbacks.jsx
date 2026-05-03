@@ -727,7 +727,7 @@ export default function CronogramaFeedbacks() {
       {aluno && !emEstadoVazio && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* ─── Coluna esquerda ─────────────────────────────────────────── */}
-          <div className="lg:col-span-5 space-y-4">
+          <div className="lg:col-span-6 space-y-4">
 
             {/* Aluno + trocar */}
             <div className="bg-[#29292e] border border-[#323238] rounded-xl p-4 flex items-center gap-3">
@@ -928,7 +928,7 @@ export default function CronogramaFeedbacks() {
           </div>
 
           {/* ─── Coluna direita ──────────────────────────────────────────── */}
-          <div className="lg:col-span-7 space-y-4">
+          <div className="lg:col-span-6 space-y-4">
 
             {/* Histórico */}
             <div className="bg-[#29292e] border border-[#323238] rounded-xl">
@@ -976,7 +976,7 @@ export default function CronogramaFeedbacks() {
                   <Spinner />
                 </div>
               ) : (
-                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {Array.from({ length: 12 }, (_, m) => (
                     <MesGrid
                       key={m}
