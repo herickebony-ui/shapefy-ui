@@ -282,7 +282,7 @@ export default function HubAlunos() {
   return (
     <>
       <ListPage
-        title="Anamneses"
+        title="Gestão de Anamneses"
         subtitle="Envie e acompanhe anamneses dos seus alunos"
         actions={
           <Button variant="secondary" size="sm" icon={RefreshCw} onClick={carregar} loading={loading} />

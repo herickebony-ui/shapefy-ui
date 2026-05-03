@@ -22,7 +22,8 @@ const NAV_ITEMS = [
 
   { type: 'divider', label: 'Avaliação' },
   { id: 'avaliacoes',   label: 'Avaliações Corporais', icon: BarChart2,      path: '/avaliacoes' },
-  { id: 'alunos',       label: 'Anamneses',           icon: ClipboardList,   path: '/alunos',       modulo: 'anamnese' },
+  { id: 'anamneses',    label: 'Anamneses',            icon: ClipboardList,  path: '/anamneses',    modulo: 'anamnese' },
+  { id: 'alunos',       label: 'Gestão de Anamneses',  icon: ClipboardList,  path: '/alunos',       modulo: 'anamnese' },
 
   { type: 'divider', label: 'Acompanhamento' },
   { id: 'painel-feedbacks',     label: 'Central de Feedbacks',         icon: LayoutDashboard, path: '/painel-feedbacks' },
