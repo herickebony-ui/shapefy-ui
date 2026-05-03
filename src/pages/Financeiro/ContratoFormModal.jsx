@@ -11,7 +11,7 @@ import {
 } from '../../api/contratosAluno'
 import { buscarPlano } from '../../api/planosShapefy'
 import { listarAlunos, buscarAluno } from '../../api/alunos'
-import { METODOS_PAGAMENTO, MODALIDADES, MODALIDADE_HINT, MODALIDADE_AVISO, COLOR_DOT } from './constants'
+import { METODOS_PAGAMENTO, MODALIDADES, MODALIDADE_AVISO, MODALIDADE_LABEL, COLOR_DOT } from './constants'
 import {
   addMonths, formatCurrency, formatDateBr, getTodayISO, normalizeDate, smartSearch,
 } from './utils'
@@ -615,11 +615,11 @@ export default function ContratoFormModal({
 
           {/* Modalidade + Método + Pausar */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <FormGroup label="Modalidade" required hint={MODALIDADE_HINT[form.modalidade]}>
+            <FormGroup label="Modalidade" required>
               <Select
                 value={form.modalidade}
                 onChange={aplicarModalidade}
-                options={MODALIDADES.map((m) => ({ value: m, label: m }))}
+                options={MODALIDADES.map((m) => ({ value: m, label: MODALIDADE_LABEL[m] || m }))}
               />
             </FormGroup>
             <FormGroup label="Método de pagamento">
@@ -641,7 +641,8 @@ export default function ContratoFormModal({
             </FormGroup>
           </div>
 
-          {/* Aviso destacado da modalidade — pra reduzir erro de cadastro */}
+          {/* Aviso da modalidade — substitui o hint pequeno e ocupa o espaço
+              efetivamente pra reduzir erro de cadastro */}
           {MODALIDADE_AVISO[form.modalidade] && (
             <div className={`rounded-xl px-3 py-2 text-xs flex items-start gap-2 border ${
               form.modalidade === 'A vista'

@@ -105,6 +105,12 @@ export const METODOS_PAGAMENTO = ['Pix', 'Cartao', 'Boleto']
 
 export const MODALIDADES = ['A vista', 'Parcelado']
 
+// Labels exibidos no select. Os values acima são os strings que vão pro backend.
+export const MODALIDADE_LABEL = {
+  'A vista': 'À vista (Pix, Cartão à vista ou Cartão parcelado pelo cliente)',
+  'Parcelado': 'Parcelado por mim (cobranças mensais separadas)',
+}
+
 export const MODALIDADE_HINT = {
   'A vista': 'Você recebe TUDO de uma vez (Pix, Cartão à vista ou Cartão parcelado pelo cliente — quem divide é a operadora dele, você recebe o valor cheio).',
   'Parcelado': 'VOCÊ vai cobrar mensalmente (boleto, Pix mensal etc.). Cada parcela tem vencimento separado e baixa individual. NÃO use se o cliente parcelou no cartão dele.',
