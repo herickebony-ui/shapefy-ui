@@ -165,10 +165,7 @@ export default function PlanosListagem() {
     {
       label: 'Plano',
       render: (row) => (
-        <div className="min-w-0">
-          <PlanoBadge nome={row.nome_plano || row.name} cor={row.cor} size="md" />
-          <div className="text-[10px] text-gray-500 mt-1 font-mono truncate">{row.name}</div>
-        </div>
+        <PlanoBadge nome={row.nome_plano || row.name} cor={row.cor} size="md" />
       ),
     },
     {
@@ -185,15 +182,15 @@ export default function PlanosListagem() {
     },
     {
       label: 'Faixa de valor',
-      headerClass: 'hidden md:table-cell w-44 text-right',
-      cellClass: 'hidden md:table-cell text-right',
+      headerClass: 'hidden md:table-cell w-56 text-right',
+      cellClass: 'hidden md:table-cell text-right whitespace-nowrap',
       render: (row) => {
         if (!row.qtd_variacoes) return <span className="text-gray-600">—</span>
         if (row.qtd_variacoes === 1 || row.valor_min === row.valor_max) {
           return <span className="font-mono text-sm text-white">{formatCurrency(row.valor_min)}</span>
         }
         return (
-          <span className="font-mono text-sm text-white">
+          <span className="font-mono text-sm text-white whitespace-nowrap">
             {formatCurrency(row.valor_min)} <span className="text-gray-500">→</span> {formatCurrency(row.valor_max)}
           </span>
         )
