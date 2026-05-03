@@ -13,23 +13,36 @@ const TABS = [
   { id: 'feedback', label: 'Feedback' },
 ]
 
-export default function FormularioListagem() {
+const TITULOS = {
+  anamnese: { title: 'Formulários de Anamnese', subtitle: 'Templates de anamnese para enviar aos alunos' },
+  feedback: { title: 'Formulários de Feedback', subtitle: 'Templates de feedback recorrente para enviar aos alunos' },
+}
+
+export default function FormularioListagem({ tipoFixo }) {
   const navigate = useNavigate()
-  const [aba, setAba] = useState('anamnese')
+  const [aba, setAba] = useState(tipoFixo || 'anamnese')
   const [listaAnamnese, setListaAnamnese] = useState([])
   const [listaFeedback, setListaFeedback] = useState([])
   const [loading, setLoading] = useState(false)
   const [excluindo, setExcluindo] = useState(null)
 
+  useEffect(() => { if (tipoFixo) setAba(tipoFixo) }, [tipoFixo])
+
   const carregar = async () => {
     setLoading(true)
     try {
-      const [a, f] = await Promise.all([
-        listarFormulariosAnamnese(),
-        listarFormulariosFeedback(),
-      ])
-      setListaAnamnese(a)
-      setListaFeedback(f)
+      if (tipoFixo === 'anamnese') {
+        setListaAnamnese(await listarFormulariosAnamnese())
+      } else if (tipoFixo === 'feedback') {
+        setListaFeedback(await listarFormulariosFeedback())
+      } else {
+        const [a, f] = await Promise.all([
+          listarFormulariosAnamnese(),
+          listarFormulariosFeedback(),
+        ])
+        setListaAnamnese(a)
+        setListaFeedback(f)
+      }
     } catch (e) {
       console.error(e)
     } finally {
@@ -37,7 +50,7 @@ export default function FormularioListagem() {
     }
   }
 
-  useEffect(() => { carregar() }, [])
+  useEffect(() => { carregar() }, [tipoFixo])
 
   const handleExcluir = async (tipo, item) => {
     if (!window.confirm(`Excluir "${item.titulo || item.name}"?`)) return
@@ -55,10 +68,14 @@ export default function FormularioListagem() {
 
   const lista = aba === 'anamnese' ? listaAnamnese : listaFeedback
 
+  const { title, subtitle } = tipoFixo
+    ? TITULOS[tipoFixo]
+    : { title: 'Formulários', subtitle: 'Templates de anamnese e feedback para enviar aos alunos' }
+
   return (
     <ListPage
-      title="Formulários"
-      subtitle="Templates de anamnese e feedback para enviar aos alunos"
+      title={title}
+      subtitle={subtitle}
       actions={
         <>
           <Button variant="secondary" size="sm" icon={RefreshCw} onClick={carregar} loading={loading} />
@@ -78,9 +95,11 @@ export default function FormularioListagem() {
         description: 'Crie um template para enviar aos alunos',
       } : null}
     >
-      <div className="px-4 pb-2 pt-1">
-        <Tabs tabs={TABS} active={aba} onChange={setAba} variant="pills" />
-      </div>
+      {!tipoFixo && (
+        <div className="px-4 pb-2 pt-1">
+          <Tabs tabs={TABS} active={aba} onChange={setAba} variant="pills" />
+        </div>
+      )}
       {!loading && lista.length > 0 && (
         <div className="bg-[#29292e] rounded-lg border border-[#323238] divide-y divide-[#323238]/50 mx-4 mb-4">
           {lista.map((item) => (
@@ -96,8 +115,6 @@ export default function FormularioListagem() {
                     {item.enabled
                       ? <Badge variant="success" size="sm">Ativo</Badge>
                       : <Badge variant="default" size="sm">Inativo</Badge>}
-                    {item.automacao ? <Badge variant="info" size="sm">Automação</Badge> : null}
-                    {item.frequencia ? <span className="text-gray-500 text-xs">{item.frequencia}</span> : null}
                   </div>
                 )}
               </div>

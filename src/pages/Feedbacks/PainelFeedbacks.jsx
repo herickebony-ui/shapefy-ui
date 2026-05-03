@@ -451,7 +451,7 @@ export default function PainelFeedbacks() {
   return (
     <>
       <ListPage
-        title="Painel de Feedbacks"
+        title="Central de Feedbacks"
         subtitle={subtitle}
         actions={
           <>

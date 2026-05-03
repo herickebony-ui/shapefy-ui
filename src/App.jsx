@@ -4,6 +4,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import AppLayout from './components/layout/AppLayout'
 import HubAlunos from './pages/Alunos/HubAlunos'
+import AnamneseListagem from './pages/Anamneses/AnamneseListagem'
 import DietaListagem from './pages/Dietas/DietaListagem'
 import DietaDetalhe from './pages/Dietas/DietaDetalhe'
 import FichaListagem from './pages/Fichas/FichaListagem'
@@ -75,6 +76,7 @@ function App() {
 
           {/* anamnese */}
           <Route path="alunos" element={<ModuleRoute modulo="anamnese"><HubAlunos /></ModuleRoute>} />
+          <Route path="anamneses" element={<ModuleRoute modulo="anamnese"><AnamneseListagem /></ModuleRoute>} />
 
           {/* dieta */}
           <Route path="dietas" element={<ModuleRoute modulo="dieta"><DietaListagem /></ModuleRoute>} />
@@ -102,7 +104,9 @@ function App() {
           <Route path="avaliacoes" element={<AvaliacaoListagem />} />
           <Route path="avaliacoes/nova" element={<AvaliacaoForm />} />
           <Route path="banco-textos" element={<BancoTextos />} />
-          <Route path="criar-formularios" element={<FormularioListagem />} />
+          <Route path="formularios/feedback" element={<FormularioListagem tipoFixo="feedback" />} />
+          <Route path="formularios/anamnese" element={<FormularioListagem tipoFixo="anamnese" />} />
+          <Route path="criar-formularios" element={<Navigate to="/formularios/anamnese" replace />} />
           <Route path="criar-formularios/:tipo/:id" element={<FormularioBuilder />} />
           <Route path="suporte" element={<Suporte />} />
           <Route path="me" element={<UsuarioHub />} />

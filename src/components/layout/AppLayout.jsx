@@ -5,6 +5,7 @@ import {
   PanelLeftClose, PanelLeftOpen, UtensilsCrossed, BookOpen,
   Wind, Waves, Pill, CreditCard, UserCircle, HelpCircle, Briefcase,
   TrendingUp, Calendar, LayoutDashboard, Wallet, Layers,
+  Inbox, CalendarClock, FileEdit, FileQuestion,
 } from 'lucide-react'
 import { useState } from 'react'
 import useAuthStore from '../../store/authStore'
@@ -19,14 +20,16 @@ const NAV_ITEMS = [
   { id: 'dietas',       label: 'Dietas',              icon: ClipboardList,   path: '/dietas',       modulo: 'dieta' },
   { id: 'prescricoes',  label: 'Prescrição Paciente', icon: Pill,            path: '/prescricoes' },
 
+  { type: 'divider', label: 'Avaliação' },
+  { id: 'avaliacoes',   label: 'Avaliações Corporais', icon: BarChart2,      path: '/avaliacoes' },
+  { id: 'alunos',       label: 'Anamneses',           icon: ClipboardList,   path: '/alunos',       modulo: 'anamnese' },
+
   { type: 'divider', label: 'Acompanhamento' },
-  { id: 'painel-feedbacks',       label: 'Painel de Feedbacks',  icon: LayoutDashboard, path: '/painel-feedbacks' },
-  { id: 'feedbacks',              label: 'Feedbacks Recebidos',  icon: MessageSquare, path: '/feedbacks' },
-  { id: 'cronograma-feedbacks',   label: 'Cronograma por Aluno', icon: Calendar,       path: '/cronograma-feedbacks' },
-  { id: 'treinos',           label: 'Treinos Realizados',  icon: Activity,    path: '/treinos',           modulo: 'treino' },
-  { id: 'progressao-cargas', label: 'Progressão de Cargas',icon: TrendingUp,  path: '/progressao-cargas', modulo: 'treino' },
-  { id: 'avaliacoes',   label: 'Avaliações Corporais',icon: BarChart2,       path: '/avaliacoes' },
-  { id: 'alunos',       label: 'Gestão de Anamneses', icon: ClipboardList,   path: '/alunos',       modulo: 'anamnese' },
+  { id: 'painel-feedbacks',     label: 'Central de Feedbacks',         icon: LayoutDashboard, path: '/painel-feedbacks' },
+  { id: 'feedbacks',            label: 'Feedbacks Recebidos',          icon: Inbox,           path: '/feedbacks' },
+  { id: 'cronograma-feedbacks', label: 'Planejar Cronograma do Aluno', icon: CalendarClock,   path: '/cronograma-feedbacks' },
+  { id: 'treinos',              label: 'Treinos Realizados',           icon: Activity,        path: '/treinos',           modulo: 'treino' },
+  { id: 'progressao-cargas',    label: 'Progressão de Cargas',         icon: TrendingUp,      path: '/progressao-cargas', modulo: 'treino' },
 
   { type: 'divider', label: 'Financeiro' },
   { id: 'financeiro',   label: 'Pagamentos',          icon: Wallet,          path: '/financeiro' },
@@ -40,8 +43,9 @@ const NAV_ITEMS = [
   { id: 'refeicoes-prontas',  label: 'Refeições Prontas', icon: BookOpen,        path: '/refeicoes-prontas',  modulo: 'dieta' },
 
   { type: 'divider', label: 'Conteúdo' },
-  { id: 'textos',       label: 'Banco de Textos',     icon: FileText,        path: '/banco-textos' },
-  { id: 'formularios',  label: 'Criar Formulários',   icon: ClipboardList,   path: '/criar-formularios' },
+  { id: 'textos',          label: 'Banco de Textos',          icon: FileText,     path: '/banco-textos' },
+  { id: 'form-feedback',   label: 'Formulários de Feedback',  icon: FileEdit,     path: '/formularios/feedback' },
+  { id: 'form-anamnese',   label: 'Formulários de Anamnese',  icon: FileQuestion, path: '/formularios/anamnese' },
 
   { type: 'divider', label: 'Conta' },
   { id: 'perfil',       label: 'Perfil Profissional', icon: Briefcase,       path: '/perfil' },

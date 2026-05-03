@@ -474,7 +474,7 @@ export default function FeedbackListagem() {
     <>
       <ListPage
         title="Feedbacks Recebidos"
-        subtitle={`${feedbacksFiltrados.length} feedback(s) encontrado(s)`}
+        subtitle={`Respostas que chegaram dos seus alunos · ${feedbacksFiltrados.length} feedback(s)`}
         actions={
           <>
             <Button variant="secondary" size="sm" icon={RefreshCw} onClick={() => carregar()} loading={loading} />

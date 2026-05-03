@@ -634,8 +634,8 @@ export default function CronogramaFeedbacks() {
             <ArrowLeft size={16} />
           </button>
           <div>
-            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Gestão de Ciclos</p>
-            <h1 className="text-lg md:text-2xl font-bold tracking-tight">Cronograma de Feedbacks</h1>
+            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Planejamento</p>
+            <h1 className="text-lg md:text-2xl font-bold tracking-tight">Planejar Cronograma do Aluno</h1>
             {aluno && <p className="text-gray-500 text-xs mt-1">{aluno.nome_completo}</p>}
           </div>
         </div>
