@@ -9,11 +9,10 @@ import {
 import ListPage from '../../components/templates/ListPage'
 import PlanoBadge from '../../components/financeiro/PlanoBadge'
 import MesBadge from '../../components/financeiro/MesBadge'
-import StatusAlunoBadge from '../../components/financeiro/StatusAlunoBadge'
+import StudentBadge from '../../components/financeiro/StudentBadge'
 import { listarContratos, renovarContrato, buscarContrato } from '../../api/contratosAluno'
 import { listarPlanos } from '../../api/planosShapefy'
 import { listarAlunosByIds } from '../../api/alunos'
-import { invalidateStatusCache } from '../../hooks/useStatusAluno'
 import {
   formatCurrency, formatDateBr, isBetweenInclusive, normalizeDate,
   getRangeFromMonth, monthLabelFromYM, currentYM, smartSearch,
@@ -237,14 +236,17 @@ export default function FinanceiroListagem() {
     },
     {
       label: 'Status',
-      render: (row) => (
-        <div className="flex flex-col gap-1">
-          {row.status_manual === 'Pausado' && (
-            <Badge variant="default" size="sm">Pausado</Badge>
-          )}
-          <StatusAlunoBadge alunoId={row.aluno} />
-        </div>
-      ),
+      render: (row) => {
+        const aluno = alunosMap[row.aluno]
+        return (
+          <div className="flex flex-col gap-1">
+            {row.status_manual === 'Pausado' && (
+              <Badge variant="default" size="sm">Pausado</Badge>
+            )}
+            <StudentBadge aluno={aluno} showText={true} />
+          </div>
+        )
+      },
     },
     {
       label: 'Vigência',
@@ -635,7 +637,6 @@ export default function FinanceiroListagem() {
             if (!window.confirm(`Renovar contrato ${contrato.name} de ${alunoNome}?`)) return
             try {
               await renovarContrato(contrato.name)
-              invalidateStatusCache(contrato.aluno)
               await carregar()
             } catch (e) {
               alert('Erro ao renovar: ' + (e.response?.data?.exception || e.message))
@@ -688,6 +689,7 @@ export default function FinanceiroListagem() {
         alunoId={historicoAluno?.id}
         alunoNome={historicoAluno?.nome}
         planos={planos}
+        alunosMap={alunosMap}
         onClose={() => setHistoricoAluno(null)}
       />
     </ListPage>
@@ -780,7 +782,7 @@ function GestaoAlunosTab({
     },
     {
       label: 'Status',
-      render: (row) => <StatusAlunoBadge alunoId={row.alunoId} />,
+      render: (row) => <StudentBadge aluno={row.aluno} showText={true} />,
     },
     {
       label: 'Plano vigente',

@@ -7,7 +7,6 @@ import {
   buscarContrato, darBaixaParcela, removerBaixaParcela, pausarContrato,
   retomarContrato, renovarContrato, excluirContrato,
 } from '../../api/contratosAluno'
-import { invalidateStatusCache } from '../../hooks/useStatusAluno'
 import PlanoBadge from '../../components/financeiro/PlanoBadge'
 import {
   formatCurrency, formatDateBr, getTodayISO, normalizeDate,
@@ -58,7 +57,6 @@ export default function ContratoDetalheModal({
     setAcaoPendente(`baixa-${numero}`)
     try {
       await darBaixaParcela(contratoId, numero, todayISO)
-      invalidateStatusCache(contrato?.aluno)
       await carregar()
       onMutate?.()
     } catch (e) {
@@ -73,7 +71,6 @@ export default function ContratoDetalheModal({
     setAcaoPendente(`remover-${numero}`)
     try {
       await removerBaixaParcela(contratoId, numero)
-      invalidateStatusCache(contrato?.aluno)
       await carregar()
       onMutate?.()
     } catch (e) {
@@ -87,7 +84,6 @@ export default function ContratoDetalheModal({
     setAcaoPendente('pausar')
     try {
       await pausarContrato(contratoId)
-      invalidateStatusCache(contrato?.aluno)
       await carregar()
       onMutate?.()
     } catch (e) {
@@ -101,7 +97,6 @@ export default function ContratoDetalheModal({
     setAcaoPendente('retomar')
     try {
       await retomarContrato(contratoId)
-      invalidateStatusCache(contrato?.aluno)
       await carregar()
       onMutate?.()
     } catch (e) {
@@ -116,7 +111,6 @@ export default function ContratoDetalheModal({
     setAcaoPendente('renovar')
     try {
       const r = await renovarContrato(contratoId)
-      invalidateStatusCache(contrato?.aluno)
       onMutate?.()
       onClose()
       if (r?.name) alert(`Renovação criada: ${r.name}`)
@@ -132,7 +126,6 @@ export default function ContratoDetalheModal({
     setAcaoPendente('excluir')
     try {
       await excluirContrato(contratoId)
-      invalidateStatusCache(contrato?.aluno)
       onMutate?.()
       onClose()
     } catch (e) {

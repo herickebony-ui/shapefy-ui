@@ -2,11 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Modal, Spinner, EmptyState, Button } from '../../components/ui'
 import { listarContratos, buscarContrato } from '../../api/contratosAluno'
 import PlanoBadge from '../../components/financeiro/PlanoBadge'
-import StatusAlunoBadge from '../../components/financeiro/StatusAlunoBadge'
+import StudentBadge from '../../components/financeiro/StudentBadge'
 import { formatCurrency, formatDateBr, normalizeDate } from './utils'
 
 export default function HistoricoAlunoModal({
-  isOpen, alunoId, alunoNome, planos = [], onClose,
+  isOpen, alunoId, alunoNome, planos = [], alunosMap = {}, onClose,
 }) {
   const [loading, setLoading] = useState(false)
   const [contratos, setContratos] = useState([])
@@ -91,7 +91,7 @@ export default function HistoricoAlunoModal({
               <span className="font-mono text-sm font-bold text-green-400">{formatCurrency(totais.totalPago)}</span>
             </Box>
             <Box label="Status atual">
-              <StatusAlunoBadge alunoId={alunoId} size="md" />
+              <StudentBadge aluno={alunosMap?.[alunoId]} showText={true} />
             </Box>
           </div>
 

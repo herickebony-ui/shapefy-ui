@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { Search, RefreshCcw } from 'lucide-react'
 import { Modal, Button, Spinner, EmptyState } from '../../components/ui'
 import { renovarContrato } from '../../api/contratosAluno'
-import { invalidateStatusCache } from '../../hooks/useStatusAluno'
 import { formatCurrency, formatDateBr, normalizeDate, smartSearch } from './utils'
 
 export default function RenovarContratoModal({
@@ -50,7 +49,6 @@ export default function RenovarContratoModal({
     setRenovando(true)
     try {
       const r = await renovarContrato(selecionado.name)
-      invalidateStatusCache(selecionado.aluno)
       onSuccess?.(r?.name)
       onClose()
       if (r?.name) alert(`Renovação criada: ${r.name}`)

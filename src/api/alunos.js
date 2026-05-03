@@ -44,7 +44,7 @@ export const listarAlunosByIds = async (ids = []) => {
   const unicos = [...new Set(ids.filter(Boolean))]
   if (!unicos.length) return []
   const params = {
-    fields: JSON.stringify(['name', 'nome_completo', 'foto', 'telefone', 'enabled']),
+    fields: JSON.stringify(['name', 'nome_completo', 'foto', 'telefone', 'enabled', 'plan_start', 'plan_end', 'plan_duration']),
     filters: JSON.stringify([['name', 'in', unicos]]),
     limit: unicos.length,
   }
