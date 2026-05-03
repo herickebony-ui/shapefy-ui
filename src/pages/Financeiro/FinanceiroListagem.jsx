@@ -97,12 +97,26 @@ export default function FinanceiroListagem() {
 
   useEffect(() => { carregar() }, [carregar])
 
-  // Carrega parcelas dos contratos relevantes do período (concorrência limitada)
+  // Carrega parcelas dos contratos relevantes (concorrência limitada)
+  // Inclui: contratos no dateRange selecionado + carteira ativa
+  // (vigentes ou pago-e-não-iniciado) pra alimentar "Parcelamentos a receber".
   useEffect(() => {
     let cancelado = false
     const carregarParcelas = async () => {
       if (!contratos.length) { setParcelasDoPeriodo([]); return }
-      const candidatos = contratos.filter((c) => contratoNoPeriodo(c, dateRange.start, dateRange.end))
+      const hojeISO = getTodayISO()
+      const candidatos = contratos.filter((c) => {
+        if (c.status_manual === 'Pausado') return false
+        // Carteira ativa: contrato vigente OU pago e não iniciado
+        const fim = normalizeDate(c.data_fim)
+        const dp = normalizeDate(c.data_pagamento_principal)
+        const inicio = normalizeDate(c.data_inicio)
+        if (fim && fim >= hojeISO) return true
+        if (!inicio && dp) return true
+        // Contrato no dateRange selecionado (pra Recebido/Forecast)
+        if (contratoNoPeriodo(c, dateRange.start, dateRange.end)) return true
+        return false
+      })
       if (!candidatos.length) { setParcelasDoPeriodo([]); return }
       setCarregandoParcelas(true)
       const detalhes = await withConcurrency(candidatos, 4, async (c) => {
@@ -208,6 +222,19 @@ export default function FinanceiroListagem() {
       ? Math.round((renovadosNoPeriodo.length / venceramNoPeriodo.length) * 100)
       : null
 
+    // Parcelamentos a receber — carteira futura (todos os meses, hoje em diante)
+    const hojeISO = getTodayISO()
+    let parcelamentosAReceberValor = 0
+    let parcelamentosAReceberQtd = 0
+    parcelasDoPeriodo.forEach((p) => {
+      const dataPag = dataPagamentoEfetivaParcela(p)
+      if (dataPag) return
+      const dv = normalizeDate(p.data_vencimento)
+      if (!dv || dv < hojeISO) return
+      parcelamentosAReceberValor += parseFloat(p.valor_parcela) || 0
+      parcelamentosAReceberQtd += 1
+    })
+
     return {
       ativos: ativos.size,
       renovamNoMes: renovamNoMes.size,
@@ -217,6 +244,8 @@ export default function FinanceiroListagem() {
       faturamentoReal,
       aReceber,
       previsao: faturamentoReal + aReceber, // Forecast = caixa + a receber no período
+      parcelamentosAReceberValor,
+      parcelamentosAReceberQtd,
       taxaRetencao,
       taxaRetencaoNum: { renovados: renovadosNoPeriodo.length, venceram: venceramNoPeriodo.length },
       totalContratos: contratos.length,
@@ -489,7 +518,11 @@ export default function FinanceiroListagem() {
       </div>
 
       {/* KPIs (mudam por aba) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+      <div className={`grid gap-3 mb-4 ${
+        view === 'records'
+          ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-5'
+          : 'grid-cols-2 md:grid-cols-4'
+      }`}>
         {view === 'records' ? (
           <>
             <StatCard label="Alunos com plano vigente" value={stats.ativos} />
@@ -499,8 +532,14 @@ export default function FinanceiroListagem() {
               color="success"
             />
             <StatCard
-              label={carregandoParcelas ? 'A receber…' : 'A receber no período'}
-              value={formatCurrency(stats.aReceber)}
+              label={carregandoParcelas ? 'Forecast…' : 'Forecast do período'}
+              value={formatCurrency(stats.previsao)}
+              color="success"
+            />
+            <StatCard
+              label="Parcelamentos a receber"
+              value={formatCurrency(stats.parcelamentosAReceberValor)}
+              unit={`${stats.parcelamentosAReceberQtd} pendente${stats.parcelamentosAReceberQtd === 1 ? '' : 's'}`}
               color="warning"
             />
             <div title={stats.taxaRetencao != null
