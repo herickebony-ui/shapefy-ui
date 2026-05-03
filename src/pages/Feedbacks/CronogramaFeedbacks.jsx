@@ -720,6 +720,7 @@ export default function CronogramaFeedbacks() {
                           <span>
                             <TipoBotao item={d}
                               onToggle={(_, v) => handleToggleTraining(d.date, v)}
+                              variant="icon"
                               size="sm" />
                           </span>
                           <span className="text-[10px] text-gray-500 text-center">

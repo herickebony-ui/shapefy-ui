@@ -425,7 +425,7 @@ export default function WizardCriacao({
                       ))}
                     </select>
                     <span>
-                      <TipoBotao item={d} onToggle={(_, v) => toggleTraining(d.date, v)} size="sm" />
+                      <TipoBotao item={d} onToggle={(_, v) => toggleTraining(d.date, v)} variant="icon" size="sm" />
                     </span>
                     <span className="text-[10px] text-gray-500 text-center">
                       {intervalo > 0 ? `${intervalo}s` : '—'}
