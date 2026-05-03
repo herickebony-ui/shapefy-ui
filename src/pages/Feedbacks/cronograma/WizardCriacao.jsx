@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { ChevronLeft, ChevronRight, Save } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Save, List, Calendar as CalendarIcon } from 'lucide-react'
 import { Modal, Button, FormGroup, Input, Select } from '../../../components/ui'
 
 import { calcPlanEnd, fmtDateBR, todayISO, WEEKDAYS } from './utils'
@@ -7,6 +7,7 @@ import { gerarDatasSerie, agruparPorCiclo } from './serie'
 import { salvarAluno } from '../../../api/alunos'
 import { sincronizarCronogramaDoAluno } from '../../../api/cronogramaFeedbacks'
 import TipoBotao from './TipoBotao'
+import MesGrid, { Legenda } from './MesGrid'
 
 const DIAS_SEMANA_OPTS = [
   { value: '0', label: 'Domingo' },
@@ -78,7 +79,8 @@ export default function WizardCriacao({
     [vigencia.plan_start, vigencia.plan_duration],
   )
 
-  // Step 2
+  // Step 2 — visualização: lista de chips OU calendário
+  const [step2View, setStep2View] = useState('lista')
   const [serie, setSerie] = useState({
     intervalo: 14,
     unidade: 'dias',
@@ -341,19 +343,43 @@ export default function WizardCriacao({
             </div>
 
             <div className="bg-[#0a0a0a] border border-[#323238] rounded-lg p-3">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
                 <span className="text-[10px] uppercase tracking-widest text-gray-500 font-bold">
                   Datas geradas
                 </span>
-                <span className="text-[10px] text-gray-400">
-                  {datasValidas.length} datas
-                  {(datasPreview.length - datasValidas.length) > 0 &&
-                    ` · ${datasPreview.length - datasValidas.length} puladas`}
-                </span>
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-gray-400 mr-2">
+                    {datasValidas.length} datas
+                    {(datasPreview.length - datasValidas.length) > 0 &&
+                      ` · ${datasPreview.length - datasValidas.length} puladas`}
+                  </span>
+                  {/* Toggle Lista / Calendário */}
+                  <button type="button"
+                    onClick={() => setStep2View('lista')}
+                    className={`h-7 w-7 inline-flex items-center justify-center rounded-lg border transition-colors ${
+                      step2View === 'lista'
+                        ? 'bg-[#2563eb]/15 border-[#2563eb]/40 text-[#2563eb]'
+                        : 'bg-[#1a1a1a] border-[#323238] text-gray-400 hover:text-white'
+                    }`}
+                    title="Ver como lista">
+                    <List size={12} />
+                  </button>
+                  <button type="button"
+                    onClick={() => setStep2View('calendario')}
+                    className={`h-7 w-7 inline-flex items-center justify-center rounded-lg border transition-colors ${
+                      step2View === 'calendario'
+                        ? 'bg-[#2563eb]/15 border-[#2563eb]/40 text-[#2563eb]'
+                        : 'bg-[#1a1a1a] border-[#323238] text-gray-400 hover:text-white'
+                    }`}
+                    title="Ver no calendário">
+                    <CalendarIcon size={12} />
+                  </button>
+                </div>
               </div>
+
               {datasPreview.length === 0 ? (
                 <p className="text-xs text-gray-600 italic">Configure os filtros acima.</p>
-              ) : (
+              ) : step2View === 'lista' ? (
                 <div className="flex flex-wrap gap-1 max-h-40 overflow-y-auto">
                   {datasPreview.map((d, i) => {
                     const pulada = d.emFerias || d.emFeriado
@@ -373,7 +399,15 @@ export default function WizardCriacao({
                     )
                   })}
                 </div>
+              ) : (
+                <CalendarPreview
+                  datasValidas={datasValidas}
+                  planStart={vigencia.plan_start}
+                  planEnd={planEnd}
+                  feriasList={feriasList}
+                />
               )}
+
               {datasValidas.length > 0 && (
                 <p className="text-[10px] text-blue-300/80 mt-2">
                   A primeira data ({fmtDateBR(datasValidas[0].iso)}) será o Marco Zero do aluno.
@@ -464,5 +498,60 @@ export default function WizardCriacao({
         )}
       </div>
     </Modal>
+  )
+}
+
+// Visualização das datas geradas em grid de meses (read-only)
+function CalendarPreview({ datasValidas, planStart, planEnd, feriasList }) {
+  const previewSchedule = useMemo(() => ({
+    dates: datasValidas.map((d, i) => ({
+      date: d.iso,
+      is_start: i === 0,
+      is_training: false,
+      status: 'Agendado',
+    })),
+  }), [datasValidas])
+
+  const meses = useMemo(() => {
+    if (!planStart || !planEnd) return []
+    const ini = new Date(planStart + 'T12:00:00')
+    const fim = new Date(planEnd + 'T12:00:00')
+    const arr = []
+    const cursor = new Date(ini.getFullYear(), ini.getMonth(), 1)
+    let safety = 0
+    while (cursor <= fim && safety < 36) {
+      arr.push({ year: cursor.getFullYear(), month: cursor.getMonth() })
+      cursor.setMonth(cursor.getMonth() + 1)
+      safety++
+    }
+    return arr
+  }, [planStart, planEnd])
+
+  if (!meses.length) {
+    return <p className="text-xs text-gray-600 italic">Configure a vigência no Step 1.</p>
+  }
+
+  return (
+    <div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-72 overflow-y-auto">
+        {meses.map(({ year, month }) => (
+          <MesGrid key={`${year}-${month}`}
+            year={year} month={month}
+            schedule={previewSchedule}
+            feriasList={feriasList}
+            planStart={planStart}
+            planEnd={planEnd}
+            onClickDate={() => {}}
+            onContextDate={() => {}}
+          />
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-3 text-[9px] text-gray-500 mt-2 pt-2 border-t border-[#323238]">
+        <Legenda cor="bg-[#2563eb]" label="Feedback agendado" />
+        <Legenda cor="bg-[#0a0a0a] ring-1 ring-[#2563eb]/60" label="Marco Zero (1ª data)" />
+        <Legenda cor="bg-[#1a1a1a] border border-blue-500/40" label="Férias" />
+        <Legenda cor="bg-orange-400" label="Feriado" />
+      </div>
+    </div>
   )
 }
