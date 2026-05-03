@@ -338,7 +338,9 @@ function AnamneseViewer({ anamnese: inicial, onVoltar }) {
   const salvar = async () => {
     setSalvando(true)
     try {
-      await salvarAnamnese(inicial.name, respostas)
+      const limpas = dedupePerguntas(respostas)
+      await salvarAnamnese(inicial.name, limpas)
+      if (limpas.length !== respostas.length) setRespostas(limpas.map(p => ({ ...p })))
       setSalvo(true); setEditando(false)
       setTimeout(() => setSalvo(false), 2000)
     } catch (e) { console.error(e); alert('Erro ao salvar anamnese.') }
