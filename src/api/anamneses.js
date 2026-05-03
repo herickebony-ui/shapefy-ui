@@ -2,14 +2,17 @@ import client from './client'
 
 export const listarAnamneses = async ({ alunoId, page = 1, limit = 50 } = {}) => {
   const params = {
-    fields: JSON.stringify(["name","titulo","status","date","enviar_aluno","aluno_preencheu","aluno"]),
+    fields: JSON.stringify([
+      "name","titulo","status","date","enviar_aluno","aluno_preencheu","aluno",
+      "nome_completo","entregue","data_entrega","formulario","creation",
+    ]),
     limit,
     limit_start: (page - 1) * limit,
     order_by: 'creation desc',
   }
   if (alunoId) params.filters = JSON.stringify([["aluno","=", alunoId]])
   const res = await client.get('/api/resource/Anamnese', { params })
-  return { list: res.data.data || [] }
+  return { list: res.data.data || [], hasMore: (res.data.data || []).length === limit }
 }
 
 export const listarAnamnesesPorAlunos = async (ids) => {
@@ -61,4 +64,18 @@ export const vincularAnamnese = async (alunoId, formulario, enviarAluno = true) 
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
   })
   return res.data.message
+}
+
+const nowFrappeDatetime = () => {
+  const d = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
+
+export const marcarEntregueAnamnese = async (id, entregue = true) => {
+  const payload = entregue
+    ? { entregue: 1, data_entrega: nowFrappeDatetime() }
+    : { entregue: 0, data_entrega: null }
+  const res = await client.put(`/api/resource/Anamnese/${encodeURIComponent(id)}`, payload)
+  return res.data?.data
 }

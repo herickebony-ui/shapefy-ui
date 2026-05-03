@@ -2,12 +2,12 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import {
   ArrowLeft, RefreshCw, ChevronLeft, ChevronRight,
   Dumbbell, Activity, Clock, MessageSquare,
-  Save, Search, Calendar, TrendingUp,
+  Save, Search, Calendar, TrendingUp, Check, Eye, EyeOff,
 } from 'lucide-react'
 import { buscarSmart } from '../../utils/strings'
 import {
   listarTreinosRealizados, buscarTreinoRealizado,
-  salvarFeedbackProfissional,
+  salvarFeedbackProfissional, marcarEntregueTreino,
 } from '../../api/treinosRealizados'
 import { Button, Badge, Spinner } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
@@ -130,12 +130,13 @@ function SectionTable({ title, items, tipo, icon }) {
 
 // ─── DetalheView ─────────────────────────────────────────────────────────────
 
-function DetalheView({ treinoBase, listaFiltrada, onVoltar }) {
+function DetalheView({ treinoBase, listaFiltrada, onVoltar, onEntregueAtualizado }) {
   const [detalhe, setDetalhe] = useState(null)
   const [loading, setLoading] = useState(true)
   const [feedback, setFeedback] = useState('')
   const [salvando, setSalvando] = useState(false)
   const [salvo, setSalvo] = useState(false)
+  const [marcandoEntrega, setMarcandoEntrega] = useState(false)
   const scrollRef = useRef(null)
   const scrollPosRef = useRef(0)
 
@@ -179,6 +180,20 @@ function DetalheView({ treinoBase, listaFiltrada, onVoltar }) {
       setTimeout(() => setSalvo(false), 2000)
     } catch (e) { console.error(e); alert('Erro ao salvar feedback.') }
     finally { setSalvando(false) }
+  }
+
+  const toggleEntregue = async () => {
+    if (!detalhe) return
+    setMarcandoEntrega(true)
+    try {
+      const novo = !detalhe.entregue
+      await marcarEntregueTreino(detalhe.name, novo)
+      setDetalhe(d => ({ ...d, entregue: novo ? 1 : 0 }))
+      onEntregueAtualizado?.(detalhe.name, novo ? 1 : 0)
+    } catch (e) {
+      console.error(e)
+      alert('Erro ao marcar conferido. Verifique se o campo "entregue" existe no DocType Treino Realizado.')
+    } finally { setMarcandoEntrega(false) }
   }
 
   const idxCurrent = listaFiltrada.findIndex(t => t.name === treinoAtual.name)
@@ -241,7 +256,7 @@ function DetalheView({ treinoBase, listaFiltrada, onVoltar }) {
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Badge variant={STATUS_VARIANT[detalhe.status] || 'default'} size="sm">
                     {detalhe.status}
                   </Badge>
@@ -250,6 +265,18 @@ function DetalheView({ treinoBase, listaFiltrada, onVoltar }) {
                       {detalhe.intensidade_do_treino}
                     </Badge>
                   )}
+                  <button
+                    onClick={toggleEntregue}
+                    disabled={marcandoEntrega}
+                    title={detalhe.entregue ? 'Desmarcar conferido' : 'Marcar como conferido'}
+                    className={`h-7 px-3 flex items-center gap-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-colors disabled:opacity-40 ${
+                      detalhe.entregue
+                        ? 'text-green-300 bg-green-500/10 border border-green-500/30 hover:border-green-500/60'
+                        : 'text-gray-400 hover:text-white border border-[#323238] hover:bg-green-700 hover:border-green-700'
+                    }`}
+                  >
+                    <Check size={11} /> {detalhe.entregue ? 'Conferido' : 'Marcar conferido'}
+                  </button>
                 </div>
               </div>
 
@@ -382,6 +409,9 @@ export default function TreinosRealizados() {
           treinoBase={treinoAberto}
           listaFiltrada={listaFiltrada}
           onVoltar={() => { setView('lista'); setTreinoAberto(null) }}
+          onEntregueAtualizado={(id, entregue) => {
+            setLista(prev => prev.map(t => t.name === id ? { ...t, entregue } : t))
+          }}
         />
       </div>
     )
@@ -463,7 +493,43 @@ export default function TreinosRealizados() {
                   className="hover:bg-white/5 transition-colors cursor-pointer group"
                 >
                   <td className="px-4 py-3">
-                    <p className="text-white text-sm font-medium group-hover:text-[#2563eb] transition-colors">{t.nome_completo}</p>
+                    <div className="flex items-center gap-2.5">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          const anterior = t.entregue
+                          const novo = anterior ? 0 : 1
+                          setLista(prev => prev.map(x => x.name === t.name ? { ...x, entregue: novo } : x))
+                          marcarEntregueTreino(t.name, !!novo).catch(err => {
+                            console.error(err)
+                            setLista(prev => prev.map(x => x.name === t.name ? { ...x, entregue: anterior } : x))
+                            alert('Erro ao marcar visto. Verifique o campo "entregue" no backend.')
+                          })
+                        }}
+                        title={t.entregue ? 'Treino visto — clique para desmarcar' : 'Marcar treino como visto'}
+                        className={`shrink-0 h-6 w-6 flex items-center justify-center rounded-full border transition-colors ${
+                          t.entregue
+                            ? 'bg-green-500/15 border-green-500/60 text-green-400 hover:bg-green-500/25'
+                            : 'bg-transparent border-[#3a3a40] text-gray-600 hover:border-gray-400 hover:text-gray-300'
+                        }`}
+                      >
+                        {t.entregue ? <Eye size={11} /> : <EyeOff size={11} />}
+                      </button>
+                      <div className="min-w-0">
+                        <p className={`text-sm font-medium transition-colors ${
+                          t.entregue
+                            ? 'text-gray-500 group-hover:text-gray-400'
+                            : 'text-white group-hover:text-[#2563eb]'
+                        }`}>
+                          {t.nome_completo}
+                        </p>
+                        {t.entregue ? (
+                          <p className="text-[9px] text-green-500/80 font-bold uppercase tracking-wider mt-0.5">
+                            Visto
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell">
                     <span className="text-xs font-mono text-blue-300 bg-[#1a1a1a] border border-[#323238] px-2 py-0.5 rounded">

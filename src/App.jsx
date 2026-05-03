@@ -3,7 +3,6 @@ import useAuthStore from './store/authStore'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import AppLayout from './components/layout/AppLayout'
-import HubAlunos from './pages/Alunos/HubAlunos'
 import AnamneseListagem from './pages/Anamneses/AnamneseListagem'
 import DietaListagem from './pages/Dietas/DietaListagem'
 import DietaDetalhe from './pages/Dietas/DietaDetalhe'
@@ -75,8 +74,8 @@ function App() {
           <Route index element={<Dashboard />} />
 
           {/* anamnese */}
-          <Route path="alunos" element={<ModuleRoute modulo="anamnese"><HubAlunos /></ModuleRoute>} />
           <Route path="anamneses" element={<ModuleRoute modulo="anamnese"><AnamneseListagem /></ModuleRoute>} />
+          <Route path="alunos" element={<Navigate to="/anamneses" replace />} />
 
           {/* dieta */}
           <Route path="dietas" element={<ModuleRoute modulo="dieta"><DietaListagem /></ModuleRoute>} />

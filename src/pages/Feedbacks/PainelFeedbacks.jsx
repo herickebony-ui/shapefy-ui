@@ -417,8 +417,8 @@ export default function PainelFeedbacks() {
           title="Nenhum cronograma criado ainda"
           description="Comece criando o cronograma do primeiro aluno."
           action={
-            <Button variant="primary" onClick={() => navigate('/alunos')}>
-              Ir para alunos
+            <Button variant="primary" onClick={() => navigate('/cronograma-feedbacks')}>
+              Planejar cronograma
             </Button>
           }
         />

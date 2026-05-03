@@ -6,8 +6,14 @@ const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
 const LIST_FIELDS = [
   'name', 'nome_completo', 'aluno', 'ficha', 'treino', 'treino_label',
   'data_e_hora_do_inicio', 'data_e_hora_do_conclusao', 'tempo_total_de_treino',
-  'status', 'intensidade_do_treino',
+  'status', 'intensidade_do_treino', 'entregue', 'data_entrega',
 ]
+
+const nowFrappeDatetime = () => {
+  const d = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
 
 export const listarTreinosRealizados = async ({ busca, alunoId, status, page = 1, limit = 50 } = {}) => {
   const filters = [['profissional', '=', profissionalLogado()]]
@@ -38,6 +44,14 @@ export const salvarFeedbackProfissional = async (id, feedback) => {
     feedback_do_profissional: feedback,
   })
   return res.data.data
+}
+
+export const marcarEntregueTreino = async (id, entregue = true) => {
+  const payload = entregue
+    ? { entregue: 1, data_entrega: nowFrappeDatetime() }
+    : { entregue: 0, data_entrega: null }
+  const res = await client.put(`/api/resource/${DOCTYPE}/${encodeURIComponent(id)}`, payload)
+  return res.data?.data
 }
 
 export const listarIdsDoAluno = async (alunoId, limit = 300) => {
