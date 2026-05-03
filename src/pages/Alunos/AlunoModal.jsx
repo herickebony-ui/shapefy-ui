@@ -306,8 +306,25 @@ function TabPerfil({ aluno: inicial, alunoId }) {
 
 // ─── Tab Anamnese ─────────────────────────────────────────────────────────────
 
+// Workaround: backend (vincular_anamnese) está duplicando perguntas_e_respostas.
+// Se a primeira pergunta volta a aparecer mais à frente com mesmo título e tipo,
+// trunca o array no ponto onde a duplicação começa.
+function dedupePerguntas(perguntas) {
+  if (!Array.isArray(perguntas) || perguntas.length < 2) return perguntas || []
+  const primeira = perguntas[0]
+  const idxRep = perguntas.findIndex((p, i) =>
+    i > 0
+    && p?.pergunta === primeira?.pergunta
+    && p?.tipo === primeira?.tipo,
+  )
+  if (idxRep === -1) return perguntas
+  return perguntas.slice(0, idxRep)
+}
+
 function AnamneseViewer({ anamnese: inicial, onVoltar }) {
-  const [respostas, setRespostas] = useState((inicial.perguntas_e_respostas || []).map(p => ({ ...p })))
+  const [respostas, setRespostas] = useState(
+    dedupePerguntas(inicial.perguntas_e_respostas || []).map(p => ({ ...p })),
+  )
   const [editando, setEditando] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [salvo, setSalvo] = useState(false)
