@@ -241,7 +241,7 @@ function PlanosLista({ planos, onEdit, onDelete, excluindo, loadingDetalhe }) {
   )
 }
 
-function PlanoForm({ formData, setFormData, updateVariacao, addVariacao, removeVariacao }) {
+export function PlanoForm({ formData, setFormData, updateVariacao, addVariacao, removeVariacao }) {
   if (!formData) return null
 
   return (
