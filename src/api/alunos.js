@@ -40,6 +40,18 @@ export const buscarAluno = async (id) => {
   return res.data.data
 }
 
+export const listarAlunosByIds = async (ids = []) => {
+  const unicos = [...new Set(ids.filter(Boolean))]
+  if (!unicos.length) return []
+  const params = {
+    fields: JSON.stringify(['name', 'nome_completo', 'foto', 'telefone', 'enabled']),
+    filters: JSON.stringify([['name', 'in', unicos]]),
+    limit: unicos.length,
+  }
+  const res = await client.get('/api/resource/Aluno', { params })
+  return res.data.data || []
+}
+
 export const salvarAluno = async (id, campos) => {
   const res = await client.put(`/api/resource/Aluno/${id}`, campos)
   return res.data.data
