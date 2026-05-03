@@ -3,7 +3,7 @@ import { Modal, Spinner, EmptyState, Button } from '../../components/ui'
 import { listarContratos, buscarContrato } from '../../api/contratosAluno'
 import PlanoBadge from '../../components/financeiro/PlanoBadge'
 import StudentBadge from '../../components/financeiro/StudentBadge'
-import { formatCurrency, formatDateBr, normalizeDate } from './utils'
+import { formatCurrency, formatDateBr, normalizeDate, withConcurrency } from './utils'
 
 export default function HistoricoAlunoModal({
   isOpen, alunoId, alunoNome, planos = [], alunosMap = {}, onClose,
@@ -16,18 +16,20 @@ export default function HistoricoAlunoModal({
     if (!alunoId) return
     setLoading(true)
     try {
-      const res = await listarContratos({ aluno: alunoId, limit: 100 })
+      const res = await listarContratos({ aluno: alunoId, limit: 200 })
       const list = (res.list || []).sort((a, b) =>
         (normalizeDate(b.data_fim) || '').localeCompare(normalizeDate(a.data_fim) || '')
       )
       setContratos(list)
-      // busca parcelas para os 5 contratos mais recentes (otimização)
-      const top = list.slice(0, 5)
-      const detalhes = await Promise.all(
-        top.map((c) => buscarContrato(c.name).catch(() => null))
+      // LTV completo: busca parcelas de TODOS os contratos com concorrência
+      // limitada a 5 simultâneas (evita sobrecarregar o backend).
+      const detalhes = await withConcurrency(
+        list,
+        5,
+        (c) => buscarContrato(c.name).catch(() => null),
       )
       const map = {}
-      detalhes.forEach((d, i) => { if (d) map[top[i].name] = d.parcelas || [] })
+      detalhes.forEach((d, i) => { if (d) map[list[i].name] = d.parcelas || [] })
       setParcelasPorContrato(map)
     } catch (e) {
       alert('Erro ao carregar histórico: ' + (e.response?.data?.exception || e.message))
@@ -143,11 +145,6 @@ export default function HistoricoAlunoModal({
             </table>
           </div>
 
-          {contratos.length > 5 && (
-            <p className="text-[10px] text-gray-500 italic">
-              * Total pago calculado apenas sobre os 5 contratos mais recentes.
-            </p>
-          )}
         </div>
       )}
     </Modal>

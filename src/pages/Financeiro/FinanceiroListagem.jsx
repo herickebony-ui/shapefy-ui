@@ -180,6 +180,21 @@ export default function FinanceiroListagem() {
       if (dv && dv >= dateRange.start && dv <= dateRange.end && !dp) aReceber += valor
     })
 
+    // Taxa de Retenção: dos que venceram no período (não pausados),
+    // quantos foram renovados (existe outro contrato com renovacao_de === c.name)
+    const idsRenovados = new Set(
+      contratos.map((c) => c.renovacao_de).filter(Boolean),
+    )
+    const venceramNoPeriodo = contratos.filter((c) => {
+      const fim = normalizeDate(c.data_fim)
+      if (!fim || c.status_manual === 'Pausado') return false
+      return fim >= dateRange.start && fim <= dateRange.end
+    })
+    const renovadosNoPeriodo = venceramNoPeriodo.filter((c) => idsRenovados.has(c.name))
+    const taxaRetencao = venceramNoPeriodo.length
+      ? Math.round((renovadosNoPeriodo.length / venceramNoPeriodo.length) * 100)
+      : null
+
     return {
       ativos: ativos.size,
       renovamNoMes: renovamNoMes.size,
@@ -188,6 +203,9 @@ export default function FinanceiroListagem() {
       valorVigentes,
       faturamentoReal,
       aReceber,
+      previsao: faturamentoReal + aReceber, // Forecast = caixa + a receber no período
+      taxaRetencao,
+      taxaRetencaoNum: { renovados: renovadosNoPeriodo.length, venceram: venceramNoPeriodo.length },
       totalContratos: contratos.length,
     }
   }, [contratos, parcelasDoPeriodo, dateRange])
@@ -480,11 +498,21 @@ export default function FinanceiroListagem() {
               value={formatCurrency(stats.aReceber)}
               color="warning"
             />
-            <StatCard
-              label="Pagos, não iniciados"
-              value={stats.pagosNaoIniciados}
-              color={stats.pagosNaoIniciados > 0 ? 'warning' : 'muted'}
-            />
+            <div title={stats.taxaRetencao != null
+                ? `${stats.taxaRetencaoNum.renovados} renovaram de ${stats.taxaRetencaoNum.venceram} que venceram`
+                : 'Sem contratos vencendo no período'}>
+              <StatCard
+                label="Taxa de retenção"
+                value={stats.taxaRetencao != null ? `${stats.taxaRetencao}%` : '—'}
+                unit={stats.taxaRetencao != null ? `${stats.taxaRetencaoNum.renovados}/${stats.taxaRetencaoNum.venceram}` : ''}
+                color={
+                  stats.taxaRetencao == null ? 'muted'
+                  : stats.taxaRetencao >= 70 ? 'success'
+                  : stats.taxaRetencao >= 40 ? 'warning'
+                  : 'danger'
+                }
+              />
+            </div>
           </>
         ) : (
           <>
