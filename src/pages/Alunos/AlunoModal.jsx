@@ -20,6 +20,18 @@ const fmtData = (d) => {
   return `${day}/${m}/${y}`
 }
 
+const calcularIdade = (dataIso) => {
+  if (!dataIso) return ''
+  const ymd = String(dataIso).split(' ')[0]
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return ''
+  const nasc = new Date(`${ymd}T00:00:00`)
+  const hoje = new Date()
+  let anos = hoje.getFullYear() - nasc.getFullYear()
+  const m = hoje.getMonth() - nasc.getMonth()
+  if (m < 0 || (m === 0 && hoje.getDate() < nasc.getDate())) anos--
+  return anos >= 0 && anos < 150 ? anos : ''
+}
+
 // Os arrays NÃO incluem 'Selecionar...' — o componente Select do DS já injeta
 // o placeholder automaticamente quando value é vazio.
 const FREQUENCIA_OPTS = [
@@ -126,7 +138,7 @@ function formatarEndereco(address) {
   return partes.join(', ')
 }
 
-function TabPerfil({ aluno: inicial, alunoId }) {
+export function TabPerfil({ aluno: inicial, alunoId }) {
   const [form, setForm] = useState({
     nome_completo: inicial.nome_completo || '',
     email: inicial.email || '',
@@ -138,6 +150,7 @@ function TabPerfil({ aluno: inicial, alunoId }) {
     objetivo: inicial.objetivo || '',
     sexo: inicial.sexo || '',
     age: inicial.age || '',
+    data_nascimento: inicial.data_nascimento || '',
     height: inicial.height || '',
     weight: inicial.weight || '',
     frequencia_atividade: inicial.frequencia_atividade || '',
@@ -208,18 +221,42 @@ function TabPerfil({ aluno: inicial, alunoId }) {
   return (
     <div className="space-y-3">
       <SecaoPerfil titulo="Informações Básicas" />
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <FormGroup label="Nome completo"><Input value={form.nome_completo} onChange={set('nome_completo')} /></FormGroup>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <FormGroup label="Nome completo" className="lg:col-span-2">
+          <Input value={form.nome_completo} onChange={set('nome_completo')} />
+        </FormGroup>
+        <FormGroup label="Senha de Acesso">
+          <Input value={form.senha_de_acesso} onChange={() => {}} disabled />
+        </FormGroup>
         <FormGroup label="E-mail"><Input value={form.email} onChange={set('email')} type="email" /></FormGroup>
         <FormGroup label="Telefone"><Input value={form.telefone} onChange={set('telefone')} /></FormGroup>
         <FormGroup label="Instagram"><Input value={form.instagram} onChange={set('instagram')} placeholder="@usuario" /></FormGroup>
-        <FormGroup label="Senha de Acesso"><Input value={form.senha_de_acesso} onChange={() => {}} disabled /></FormGroup>
       </div>
 
       <SecaoPerfil titulo="Dados Pessoais" />
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <FormGroup label="Data de Nascimento">
+          <Input value={form.data_nascimento} onChange={set('data_nascimento')} type="date" />
+        </FormGroup>
+        <FormGroup
+          label="Idade"
+          hint={form.data_nascimento ? 'Calculada da data' : undefined}
+        >
+          <Input
+            value={String(form.data_nascimento ? (calcularIdade(form.data_nascimento) || '') : (form.age || ''))}
+            onChange={v => set('age')(Number(v) || '')}
+            type="number"
+            disabled={!!form.data_nascimento}
+          />
+        </FormGroup>
         <FormGroup label="CPF"><Input value={form.cpf} onChange={set('cpf')} /></FormGroup>
         <FormGroup label="Profissão"><Input value={form['profissão']} onChange={set('profissão')} /></FormGroup>
+        <FormGroup label="Sexo"><Select value={form.sexo} onChange={set('sexo')} options={SEXO_OPTS} /></FormGroup>
+        <FormGroup label="Altura (cm)"><Input value={String(form.height)} onChange={v => set('height')(Number(v) || '')} type="number" /></FormGroup>
+        <FormGroup label="Peso (kg)"><Input value={String(form.weight)} onChange={v => set('weight')(Number(v) || '')} type="number" /></FormGroup>
+        <FormGroup label="Frequência">
+          <Select value={form.frequencia_atividade} onChange={set('frequencia_atividade')} options={FREQUENCIA_OPTS} />
+        </FormGroup>
       </div>
       <FormGroup label="Objetivo" hint="Resumo curto — visível no perfil">
         <Textarea value={form.objetivo} onChange={set('objetivo')} rows={2}
@@ -256,17 +293,6 @@ function TabPerfil({ aluno: inicial, alunoId }) {
           <Input value={address.uf} onChange={v => setAddr('uf')(v.toUpperCase().slice(0, 2))} placeholder="BA" />
         </FormGroup>
       </div>
-
-      <SecaoPerfil titulo="Corpo" />
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <FormGroup label="Sexo"><Select value={form.sexo} onChange={set('sexo')} options={SEXO_OPTS} /></FormGroup>
-        <FormGroup label="Idade"><Input value={String(form.age)} onChange={v => set('age')(Number(v) || '')} type="number" /></FormGroup>
-        <FormGroup label="Altura (cm)"><Input value={String(form.height)} onChange={v => set('height')(Number(v) || '')} type="number" /></FormGroup>
-        <FormGroup label="Peso (kg)"><Input value={String(form.weight)} onChange={v => set('weight')(Number(v) || '')} type="number" /></FormGroup>
-      </div>
-      <FormGroup label="Frequência de atividade">
-        <Select value={form.frequencia_atividade} onChange={set('frequencia_atividade')} options={FREQUENCIA_OPTS} />
-      </FormGroup>
 
       <SecaoPerfil titulo="Saúde" />
       <FormGroup label="Doenças / Condições"><Textarea value={form.doencas} onChange={set('doencas')} rows={3} /></FormGroup>
@@ -471,7 +497,7 @@ function ModalNovaAnamnese({ alunoId, onClose, onCriada }) {
   )
 }
 
-function TabAnamnese({ anamneses: inicial, loading, alunoId, onRecarregar }) {
+export function TabAnamnese({ anamneses: inicial, loading, alunoId, onRecarregar }) {
   const [lista, setLista] = useState(inicial)
   const [detalhe, setDetalhe] = useState(null)
   const [loadingDetalhe, setLoadingDetalhe] = useState(false)
@@ -555,7 +581,7 @@ function TabAnamnese({ anamneses: inicial, loading, alunoId, onRecarregar }) {
   )
 }
 
-function TabLista({ itens, renderItem, onClick }) {
+export function TabLista({ itens, renderItem, onClick }) {
   return (
     <div className="bg-[#29292e] rounded-lg border border-[#323238] divide-y divide-[#323238]/50">
       {itens.map((item, i) => (
@@ -623,7 +649,7 @@ export default function AlunoModal({ aluno: alunoBase, onClose }) {
   if (!alunoBase) return null
 
   return (
-    <Modal isOpen onClose={onClose} title={alunoBase.nome_completo} subtitle={alunoBase.email} size="lg">
+    <Modal isOpen onClose={onClose} title={alunoBase.nome_completo} subtitle={alunoBase.email} size="xl">
       <div className="flex flex-col">
         <Tabs
           tabs={[

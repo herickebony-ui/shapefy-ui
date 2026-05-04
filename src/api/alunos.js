@@ -19,7 +19,7 @@ export const listarAlunos = async ({ search = '', enabled = '', sexo = '', page 
     if (sexo) filtros.push(["sexo", "=", sexo])
   }
   const params = {
-    fields: JSON.stringify(["name","nome_completo","email","telefone","foto","enabled","dieta","treino","sexo","age","height","weight","creation","plan_start","plan_end","formulario_padrao"]),
+    fields: JSON.stringify(["name","nome_completo","email","telefone","foto","enabled","dieta","treino","sexo","age","data_nascimento","height","weight","creation","plan_start","plan_end","formulario_padrao"]),
     filters: JSON.stringify(filtros),
     limit: search ? 200 : limit,
     limit_start: search ? 0 : (page - 1) * limit,

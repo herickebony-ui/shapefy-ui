@@ -3,6 +3,7 @@ import useAuthStore from './store/authStore'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import AppLayout from './components/layout/AppLayout'
+import AlunoDetalhe from './pages/Alunos/AlunoDetalhe'
 import AnamneseListagem from './pages/Anamneses/AnamneseListagem'
 import DietaListagem from './pages/Dietas/DietaListagem'
 import DietaDetalhe from './pages/Dietas/DietaDetalhe'
@@ -75,6 +76,7 @@ function App() {
 
           {/* anamnese */}
           <Route path="anamneses" element={<ModuleRoute modulo="anamnese"><AnamneseListagem /></ModuleRoute>} />
+          <Route path="alunos/:id" element={<AlunoDetalhe />} />
           <Route path="alunos" element={<Navigate to="/anamneses" replace />} />
 
           {/* dieta */}

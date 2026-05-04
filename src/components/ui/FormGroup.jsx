@@ -1,7 +1,7 @@
-// Props: label, required, hint, error, success, counter {current, max}, children
-export default function FormGroup({ label, required, hint, error, success, counter, children }) {
+// Props: label, required, hint, error, success, counter {current, max}, className, children
+export default function FormGroup({ label, required, hint, error, success, counter, className = '', children }) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className={`flex flex-col gap-1.5 ${className}`}>
       {label && (
         <div className="flex items-center justify-between">
           <label className="text-gray-400 text-xs font-medium">

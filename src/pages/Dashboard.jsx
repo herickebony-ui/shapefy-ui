@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Users, UserCheck, UserX, CalendarPlus, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { listarAlunos, criarAluno, buscarStatsAlunos, excluirAluno } from '../api/alunos'
 import {
@@ -6,7 +7,6 @@ import {
   Modal, FormGroup, Input, Select,
 } from '../components/ui'
 import ListPage from '../components/templates/ListPage'
-import AlunoModal from './Alunos/AlunoModal'
 import OnboardingBanner from '../components/OnboardingBanner'
 import OnboardingModal from '../components/OnboardingModal'
 import useOnboardingStore from '../store/onboardingStore'
@@ -39,6 +39,7 @@ const fmtData = (d) => {
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate()
   // List
   const [alunos, setAlunos] = useState([])
   const [loading, setLoading] = useState(true)
@@ -58,7 +59,6 @@ export default function Dashboard() {
   const [excluindo, setExcluindo] = useState(false)
 
   // Modal novo aluno
-  const [alunoAberto, setAlunoAberto] = useState(null)
   const [showModal, setShowModal] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [novoAluno, setNovoAluno] = useState({ nome_completo: '', email: '', telefone: '', sexo: '' })
@@ -255,7 +255,7 @@ export default function Dashboard() {
             columns={columns}
             rows={alunos}
             rowKey="name"
-            onRowClick={(row) => setAlunoAberto(row)}
+            onRowClick={(row) => navigate(`/alunos/${encodeURIComponent(row.name)}`)}
             page={page}
             pageSize={PAGE_SIZE}
             onPage={setPage}
@@ -263,8 +263,6 @@ export default function Dashboard() {
           />
         )}
       </ListPage>
-
-      <AlunoModal aluno={alunoAberto} onClose={() => setAlunoAberto(null)} />
 
       <OnboardingModal />
 
