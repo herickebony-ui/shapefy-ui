@@ -812,12 +812,8 @@ export default function CronogramaFeedbacks() {
             <div className="bg-[#29292e] border border-[#323238] rounded-xl overflow-hidden">
               <div className="px-3 py-3 border-b border-[#323238] flex items-center justify-between gap-2 flex-wrap">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400">Datas do Cronograma</h3>
-                <div className="flex items-center gap-1">
-                  <Button variant="secondary" size="xs" icon={Wand2}
-                    onClick={() => setModalGerarSerie(true)}>Padronizar</Button>
-                  <Button variant="secondary" size="xs" icon={Copy}
-                    onClick={handleCopiarMensagem}>Copiar msg</Button>
-                </div>
+                <Button variant="secondary" size="xs" icon={Copy}
+                  onClick={handleCopiarMensagem}>Copiar msg</Button>
               </div>
 
               <div className="max-h-[520px] overflow-y-auto">
@@ -1055,12 +1051,10 @@ export default function CronogramaFeedbacks() {
 
       {modalClonar && (
         <ModalClonar
-          alunos={todosAlunos}
           alunoIdAtual={alunoId}
-          busca={buscaClonar}
-          setBusca={setBuscaClonar}
+          nomeAlunoAtual={aluno?.nome_completo}
           onSelecionar={handleClonar}
-          onClose={() => { setModalClonar(false); setBuscaClonar('') }}
+          onClose={() => setModalClonar(false)}
         />
       )}
 
