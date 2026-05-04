@@ -37,7 +37,7 @@ export default function ModalNovoDia({
             <label className="inline-flex items-center gap-2 px-3 h-10 rounded-lg border border-[#323238] bg-[#1a1a1a] cursor-pointer w-full">
               <input type="checkbox" checked={!!draft.is_start}
                 onChange={(e) => setDraft(p => ({ ...p, is_start: e.target.checked }))} />
-              <span className="text-xs text-gray-300 font-medium">Marco Zero</span>
+              <span className="text-xs text-gray-300 font-medium">Ponto de partida</span>
             </label>
           </div>
         </div>

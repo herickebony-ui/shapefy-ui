@@ -90,7 +90,7 @@ export default function MesGrid({
               key={c.key}
               onClick={() => onClickDate(iso)}
               onContextMenu={(e) => onContextDate(e, iso)}
-              title={isHoliday || (item ? `${fmtDateBR(iso)} · ${item.is_start ? 'Marco Zero' : ''}` : fmtDateBR(iso))}
+              title={isHoliday || (item ? `${fmtDateBR(iso)} · ${item.is_start ? 'Ponto de partida' : ''}` : fmtDateBR(iso))}
               className={`aspect-square flex items-center justify-center text-xs font-semibold rounded relative transition-transform hover:scale-105 ${bg} ${ring} ${extra}`}
             >
               {c.day}

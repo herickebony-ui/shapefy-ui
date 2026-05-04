@@ -41,20 +41,20 @@ export default function MarcoZeroMenu({
           </button>
           <button onClick={() => { onAdicionar(true); onClose() }}
             className="w-full text-left px-3 py-2 text-sm font-semibold text-yellow-300 hover:bg-[#29292e] transition-colors">
-            Adicionar como Marco Zero
+            Adicionar como Ponto de partida
           </button>
         </>
       )}
       {itemAtual && !itemAtual.is_start && (
         <button onClick={() => onSet(true)}
           className="w-full text-left px-3 py-2 text-sm font-semibold text-blue-300 hover:bg-[#29292e] transition-colors">
-          Definir como Marco Zero
+          Definir como Ponto de partida
         </button>
       )}
       {itemAtual?.is_start && (
         <button onClick={() => onSet(false)}
           className="w-full text-left px-3 py-2 text-sm font-semibold text-yellow-300 hover:bg-[#29292e] transition-colors">
-          Remover Marco Zero
+          Remover Ponto de partida
         </button>
       )}
       {itemAtual && onAbrirDetalhes && (

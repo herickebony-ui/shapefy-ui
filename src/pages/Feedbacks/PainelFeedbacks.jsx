@@ -2,18 +2,17 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   RefreshCw, ChevronLeft, ChevronRight, Calendar, MessageCircle,
-  Eye, Search, AlertCircle, Clock, Check, UserPlus, Send,
+  Eye, Search, AlertCircle, Clock, Check, UserPlus,
+  CalendarPlus, CalendarClock, CalendarX, ArrowRight,
 } from 'lucide-react'
 
 import {
-  Button, Badge, Avatar, DataTable, EmptyState,
-  Modal, FormGroup, Select, Textarea,
+  Button, Badge, Avatar, DataTable, EmptyState, Modal,
 } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 
 import { listarAgendamentos } from '../../api/cronogramaFeedbacks'
 import { listarAlunos } from '../../api/alunos'
-import { listarTemplates, aplicarTemplate, TEMPLATE_PADRAO } from '../../api/templates'
 
 import Toast from './cronograma/Toast'
 import { fmtDateBR, todayISO } from './cronograma/utils'
@@ -89,7 +88,6 @@ export default function PainelFeedbacks() {
   // ─── Dados base ─────────────────────────────────────────────────────────────
   const [agendamentos, setAgendamentos] = useState([])
   const [alunosPorId, setAlunosPorId] = useState({})
-  const [templates, setTemplates] = useState([])
   const [loading, setLoading] = useState(true)
 
   // ─── Filtros ────────────────────────────────────────────────────────────────
@@ -100,9 +98,8 @@ export default function PainelFeedbacks() {
   const [semanaOffset, setSemanaOffset] = useState(0)
 
   // ─── Modais ─────────────────────────────────────────────────────────────────
-  const [modalCobranca, setModalCobranca] = useState(null)
-  const [templateAtualId, setTemplateAtualId] = useState(TEMPLATE_PADRAO.name)
-  const [mensagemEditada, setMensagemEditada] = useState('')
+  const [modalPendencia, setModalPendencia] = useState(null) // { titulo, descricao, alunos, icon, color }
+  const [modalSemResposta, setModalSemResposta] = useState(null) // agendamento sem feedback respondido
 
   // ─── Toast ──────────────────────────────────────────────────────────────────
   const [toast, setToast] = useState({ show: false, msg: '', type: 'success' })
@@ -142,17 +139,7 @@ export default function PainelFeedbacks() {
     }
   }, [showToast])
 
-  const carregarTemplates = useCallback(async () => {
-    try {
-      const list = await listarTemplates()
-      setTemplates(list)
-    } catch (e) {
-      console.error(e)
-    }
-  }, [])
-
   useEffect(() => { carregar() }, [carregar])
-  useEffect(() => { carregarTemplates() }, [carregarTemplates])
 
   // Polling 60s em background
   useEffect(() => {
@@ -221,6 +208,60 @@ export default function PainelFeedbacks() {
     }
   }, [agendamentosHidratados, hojeISO])
 
+  // Pendências de planejamento — foco em alunos (não em agendamentos).
+  // Vigentes sem cronograma = plano rodando hoje mas sem nenhum feedback agendado.
+  // Pago não iniciado = plano com data_inicio no futuro.
+  // Plano vencido = data_fim já passou.
+  // Novos sem cronograma = cadastrados ≤30 dias, sem feedback, e sem plano útil (não cobertos pelos outros).
+  const pendencias = useMemo(() => {
+    const alunos = Object.values(alunosPorId)
+    const temFeedback = new Set()
+    agendamentos.forEach(a => {
+      if (!a.is_start) temFeedback.add(a.aluno)
+    })
+
+    // Limite "novo" = 30 dias atrás (em ISO)
+    const limiteNovo = new Date()
+    limiteNovo.setDate(limiteNovo.getDate() - 30)
+    const limiteNovoISO = limiteNovo.toISOString().slice(0, 10)
+
+    const vigentesSemCronograma = []
+    const pagosNaoIniciados = []
+    const planoVencido = []
+    const novosSemCronograma = []
+
+    for (const aluno of alunos) {
+      const inicio = (aluno.plan_start || '').slice(0, 10)
+      const fim = (aluno.plan_end || '').slice(0, 10)
+      const vigente = inicio && fim && inicio <= hojeISO && hojeISO <= fim
+      const naoIniciado = inicio && inicio > hojeISO
+      const vencido = fim && fim < hojeISO
+      const semFeedback = !temFeedback.has(aluno.name)
+      const criacaoISO = (aluno.creation || '').slice(0, 10)
+      const recemCadastrado = criacaoISO && criacaoISO >= limiteNovoISO
+
+      if (vigente && semFeedback) vigentesSemCronograma.push(aluno)
+      if (naoIniciado) pagosNaoIniciados.push(aluno)
+      if (vencido) planoVencido.push(aluno)
+
+      // Novo "do zero": cadastrado recente, sem feedback, e não cabe nas outras categorias
+      if (recemCadastrado && semFeedback && !vigente && !naoIniciado && !vencido) {
+        novosSemCronograma.push(aluno)
+      }
+    }
+
+    const ordPorFim = (a, b) => (a.plan_end || '').localeCompare(b.plan_end || '')
+    const ordPorInicio = (a, b) => (a.plan_start || '').localeCompare(b.plan_start || '')
+    const ordPorCriacaoDesc = (a, b) => (b.creation || '').localeCompare(a.creation || '')
+
+    return {
+      vigentesSemCronograma: vigentesSemCronograma.sort(ordPorFim),
+      pagosNaoIniciados: pagosNaoIniciados.sort(ordPorInicio),
+      planoVencido: planoVencido.sort((a, b) => (b.plan_end || '').localeCompare(a.plan_end || '')),
+      novosSemCronograma: novosSemCronograma.sort(ordPorCriacaoDesc),
+    }
+  }, [alunosPorId, agendamentos, hojeISO])
+
   // Lista filtrada
   const filtrados = useMemo(() => {
     let lista = agendamentosHidratados.filter(a => !a.is_start)
@@ -263,45 +304,27 @@ export default function PainelFeedbacks() {
   const irParaCronograma = (alunoId) =>
     navigate(`/cronograma-feedbacks/aluno/${encodeURIComponent(alunoId)}`)
 
-  const abrirCobranca = (item) => {
+  // Clique no nome do aluno na lista: abre o feedback respondido daquela linha.
+  // Se ainda não foi respondido, abre modal informativo com ações disponíveis.
+  const abrirFeedbackDaLinha = (row) => {
+    if (row.feedback_resposta) {
+      navigate(`/feedbacks/${encodeURIComponent(row.feedback_resposta)}`)
+    } else {
+      setModalSemResposta(row)
+    }
+  }
+
+  // Abre o WhatsApp do aluno direto, sem mensagem pré-preenchida.
+  // O usuário digita o que quiser na conversa.
+  const abrirWhatsapp = (item) => {
     const aluno = alunosPorId[item.aluno]
     if (!aluno?.telefone) {
       showToast('Aluno sem telefone cadastrado', 'error')
       return
     }
-    const tplObj = templates.find(t => t.name === templateAtualId) || templates[0] || TEMPLATE_PADRAO
-    const mensagem = aplicarTemplate(tplObj.texto || TEMPLATE_PADRAO.texto, {
-      nome: aluno.nome_completo || '',
-      fim_plano: aluno.plan_end ? fmtDateBR(aluno.plan_end) : '',
-      lista_datas: '',
-      senha_acesso: aluno.senha_de_acesso || '(não cadastrada)',
-    })
-    setMensagemEditada(mensagem)
-    setModalCobranca(item)
-  }
-
-  const handleEnviarWhatsapp = () => {
-    const aluno = alunosPorId[modalCobranca?.aluno]
-    if (!aluno?.telefone) return
     const tel = String(aluno.telefone).replace(/\D/g, '')
     const numero = tel.startsWith('55') ? tel : `55${tel}`
-    const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensagemEditada)}`
-    window.open(url, '_blank')
-    setModalCobranca(null)
-  }
-
-  const handleTrocarTemplate = (id) => {
-    setTemplateAtualId(id)
-    const tpl = templates.find(t => t.name === id) || TEMPLATE_PADRAO
-    const aluno = alunosPorId[modalCobranca?.aluno]
-    if (!aluno) return
-    const mensagem = aplicarTemplate(tpl.texto || TEMPLATE_PADRAO.texto, {
-      nome: aluno.nome_completo || '',
-      fim_plano: aluno.plan_end ? fmtDateBR(aluno.plan_end) : '',
-      lista_datas: '',
-      senha_acesso: aluno.senha_de_acesso || '(não cadastrada)',
-    })
-    setMensagemEditada(mensagem)
+    window.open(`https://wa.me/${numero}`, '_blank')
   }
 
   // ═════════════════════════════════════════════════════════════════════════
@@ -312,7 +335,8 @@ export default function PainelFeedbacks() {
       label: 'Aluno',
       render: (row) => (
         <button
-          onClick={(e) => { e.stopPropagation(); irParaCronograma(row.aluno) }}
+          onClick={(e) => { e.stopPropagation(); abrirFeedbackDaLinha(row) }}
+          title={row.feedback_resposta ? 'Abrir feedback respondido' : 'Feedback ainda não respondido'}
           className="flex items-center gap-2.5 min-w-0 text-left group/aluno hover:opacity-80 transition-opacity"
         >
           <Avatar nome={row._alunoNome} size="sm" />
@@ -384,7 +408,7 @@ export default function PainelFeedbacks() {
             </button>
             {podeCobrar && (
               <button
-                onClick={() => abrirCobranca(row)}
+                onClick={() => abrirWhatsapp(row)}
                 title="Cobrar via WhatsApp"
                 className="h-7 w-7 flex items-center justify-center text-green-400 hover:text-white hover:bg-green-700 border border-[#323238] hover:border-green-600 rounded-lg transition-colors"
               >
@@ -513,6 +537,75 @@ export default function PainelFeedbacks() {
         ]}
         loading={loading}
       >
+        {/* Pendências de planejamento — só aparece se há pelo menos uma pendência */}
+        {(pendencias.vigentesSemCronograma.length > 0
+          || pendencias.pagosNaoIniciados.length > 0
+          || pendencias.planoVencido.length > 0
+          || pendencias.novosSemCronograma.length > 0) && (
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
+                Pendências de planejamento
+              </span>
+              <div className="h-px flex-1 bg-[#323238]" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <CardPendencia
+                icon={UserPlus}
+                label="Alunos novos sem cronograma"
+                description="Cadastrados há ≤30 dias e sem nada planejado"
+                value={pendencias.novosSemCronograma.length}
+                color="blue"
+                onClick={() => setModalPendencia({
+                  titulo: 'Alunos novos sem cronograma',
+                  descricao: 'Esses alunos foram cadastrados nos últimos 30 dias e ainda não têm plano nem cronograma. Comece configurando.',
+                  alunos: pendencias.novosSemCronograma,
+                  color: 'blue',
+                })}
+              />
+              <CardPendencia
+                icon={CalendarPlus}
+                label="Vigentes sem cronograma"
+                description="Plano rodando, mas sem nenhum feedback agendado"
+                value={pendencias.vigentesSemCronograma.length}
+                color="amber"
+                onClick={() => setModalPendencia({
+                  titulo: 'Vigentes sem cronograma',
+                  descricao: 'Esses alunos têm plano vigente mas nenhum feedback agendado. Precisam de planejamento agora.',
+                  alunos: pendencias.vigentesSemCronograma,
+                  color: 'amber',
+                })}
+              />
+              <CardPendencia
+                icon={CalendarClock}
+                label="Plano pago, não iniciado"
+                description="Vai começar — bom planejar com antecedência"
+                value={pendencias.pagosNaoIniciados.length}
+                color="emerald"
+                onClick={() => setModalPendencia({
+                  titulo: 'Plano pago, não iniciado',
+                  descricao: 'Alunos que pagaram mas o plano ainda não começou. Você pode adiantar o planejamento.',
+                  alunos: pendencias.pagosNaoIniciados,
+                  color: 'emerald',
+                })}
+              />
+              <CardPendencia
+                icon={CalendarX}
+                label="Plano vencido"
+                description="Já passou — considerar renovação"
+                value={pendencias.planoVencido.length}
+                color="slate"
+                onClick={() => setModalPendencia({
+                  titulo: 'Plano vencido',
+                  descricao: 'Alunos com plano que já terminou. Considere renovar o ciclo.',
+                  alunos: pendencias.planoVencido,
+                  color: 'slate',
+                })}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Cards clicáveis acima da tabela — sempre visíveis */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           <CardClicavel
@@ -554,59 +647,169 @@ export default function PainelFeedbacks() {
         )}
       </ListPage>
 
-      {/* Modal de cobrança */}
-      {modalCobranca && (
+      {/* Modal de pendência — lista alunos da categoria escolhida */}
+      {modalPendencia && (
         <Modal
           isOpen
-          onClose={() => setModalCobranca(null)}
-          title="Cobrar feedback"
-          subtitle={modalCobranca._alunoNome}
+          onClose={() => setModalPendencia(null)}
+          title={modalPendencia.titulo}
+          subtitle={`${modalPendencia.alunos.length} aluno${modalPendencia.alunos.length === 1 ? '' : 's'}`}
           size="md"
           footer={
-            <>
-              <Button variant="ghost" onClick={() => setModalCobranca(null)}>Cancelar</Button>
-              <Button variant="primary" icon={Send} onClick={handleEnviarWhatsapp}
-                disabled={!modalCobranca._alunoTelefone}>
-                Abrir WhatsApp
-              </Button>
-            </>
+            <Button variant="ghost" onClick={() => setModalPendencia(null)}>Fechar</Button>
           }
         >
           <div className="p-4 space-y-3">
-            <FormGroup label="Template">
-              <Select
-                value={templateAtualId}
-                onChange={handleTrocarTemplate}
-                options={templates.map(t => ({ value: t.name, label: t.nome }))}
-              />
-            </FormGroup>
-
-            <FormGroup label="Mensagem" hint="Edite à vontade antes de enviar">
-              <Textarea
-                value={mensagemEditada}
-                onChange={setMensagemEditada}
-                rows={10}
-              />
-            </FormGroup>
-
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-400">
-                Telefone: <span className="text-white font-mono">
-                  {modalCobranca._alunoTelefone || '— não cadastrado'}
-                </span>
-              </span>
-              {modalCobranca.data_agendada && (
-                <span className="text-gray-500">
-                  Agendado para {fmtDateBR(modalCobranca.data_agendada)}
-                </span>
-              )}
+            <p className="text-xs text-gray-400">{modalPendencia.descricao}</p>
+            <div className="max-h-[60vh] overflow-y-auto -mx-1 px-1 space-y-1.5">
+              {modalPendencia.alunos.map(a => (
+                <button
+                  key={a.name}
+                  onClick={() => { setModalPendencia(null); irParaCronograma(a.name) }}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-[#1a1a1a] border border-[#323238] hover:border-[#2563eb]/40 hover:bg-[#1a1a1a]/80 transition-all text-left group"
+                >
+                  <Avatar nome={a.nome_completo} foto={a.foto} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-sm font-semibold truncate">{a.nome_completo}</p>
+                    <p className="text-gray-500 text-[11px] truncate">
+                      {a.plan_start && a.plan_end
+                        ? `Plano: ${fmtDateBR(a.plan_start)} → ${fmtDateBR(a.plan_end)}`
+                        : a.plan_start
+                          ? `Início: ${fmtDateBR(a.plan_start)}`
+                          : a.plan_end
+                            ? `Fim: ${fmtDateBR(a.plan_end)}`
+                            : '—'
+                      }
+                    </p>
+                  </div>
+                  <span className="h-7 px-2.5 inline-flex items-center gap-1.5 rounded-lg bg-[#2563eb]/10 text-[#2563eb] text-[10px] font-bold uppercase tracking-widest border border-[#2563eb]/30 group-hover:bg-[#2563eb] group-hover:text-white transition-colors shrink-0">
+                    Planejar
+                    <ArrowRight size={11} />
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
         </Modal>
       )}
 
+      {/* Modal informativo: agendamento sem feedback respondido ainda */}
+      {modalSemResposta && (() => {
+        const s = statusOperacional(modalSemResposta, hojeISO)
+        const StatusIcon = s.icon
+        const statusColorMap = {
+          danger:  { bg: 'bg-red-500/10',    text: 'text-red-300',    border: 'border-red-500/30',    iconBg: 'bg-red-500/20',    iconText: 'text-red-400' },
+          warning: { bg: 'bg-amber-500/10',  text: 'text-amber-300',  border: 'border-amber-500/30',  iconBg: 'bg-amber-500/20',  iconText: 'text-amber-400' },
+          default: { bg: 'bg-blue-500/10',   text: 'text-blue-300',   border: 'border-blue-500/30',   iconBg: 'bg-blue-500/20',   iconText: 'text-blue-400' },
+          success: { bg: 'bg-emerald-500/10',text: 'text-emerald-300',border: 'border-emerald-500/30',iconBg: 'bg-emerald-500/20',iconText: 'text-emerald-400' },
+        }
+        const c = statusColorMap[s.variant] || statusColorMap.default
+        const aluno = alunosPorId[modalSemResposta.aluno]
+        const podeCobrar = !!aluno?.telefone
+        return (
+          <Modal
+            isOpen
+            onClose={() => setModalSemResposta(null)}
+            title="Feedback ainda não respondido"
+            subtitle={modalSemResposta._alunoNome}
+            size="md"
+            footer={
+              <>
+                <Button variant="ghost" onClick={() => setModalSemResposta(null)}>Fechar</Button>
+                <Button
+                  variant="secondary" icon={Calendar}
+                  onClick={() => { setModalSemResposta(null); irParaCronograma(modalSemResposta.aluno) }}>
+                  Abrir cronograma
+                </Button>
+                {podeCobrar && (
+                  <Button
+                    variant="primary" icon={MessageCircle}
+                    onClick={() => { const r = modalSemResposta; setModalSemResposta(null); abrirWhatsapp(r) }}>
+                    Cobrar via WhatsApp
+                  </Button>
+                )}
+              </>
+            }
+          >
+            <div className="p-4 space-y-3">
+              <div className={`flex items-start gap-3 p-3.5 rounded-xl border ${c.bg} ${c.border}`}>
+                <span className={`h-9 w-9 inline-flex items-center justify-center rounded-lg ${c.iconBg} ${c.iconText} shrink-0`}>
+                  {StatusIcon ? <StatusIcon size={18} /> : <Clock size={18} />}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-bold ${c.text}`}>{s.label}</p>
+                  <p className="text-gray-400 text-xs mt-0.5">
+                    Esse agendamento está marcado para <span className="text-white font-mono">{fmtDateBR(modalSemResposta.data_agendada)}</span> e ainda não recebeu resposta.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-[#1a1a1a] border border-[#323238] rounded-lg p-2.5">
+                  <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-0.5">Tipo</p>
+                  <p className="text-white font-semibold">
+                    {modalSemResposta.is_training ? 'Troca de treino' : 'Feedback'}
+                  </p>
+                </div>
+                <div className="bg-[#1a1a1a] border border-[#323238] rounded-lg p-2.5">
+                  <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-0.5">Telefone</p>
+                  <p className={`font-mono ${aluno?.telefone ? 'text-white' : 'text-gray-600 italic'}`}>
+                    {aluno?.telefone || 'não cadastrado'}
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-gray-500 leading-relaxed">
+                {podeCobrar
+                  ? 'Você pode cobrar o aluno via WhatsApp pra acelerar a resposta, ou abrir o cronograma pra revisar a programação.'
+                  : 'Cadastre o telefone do aluno pra poder cobrar via WhatsApp. Por enquanto, você pode revisar o cronograma.'}
+              </p>
+            </div>
+          </Modal>
+        )
+      })()}
+
       <Toast {...toast} />
     </>
+  )
+}
+
+// ─── Card de pendência de planejamento ───────────────────────────────────────
+function CardPendencia({ icon: Icon, label, description, value, color = 'amber', onClick }) {
+  const colorMap = {
+    amber:   { icon: 'text-amber-400',   iconBg: 'bg-amber-500/15',   border: 'hover:border-amber-500/40',   value: 'text-amber-400' },
+    emerald: { icon: 'text-emerald-400', iconBg: 'bg-emerald-500/15', border: 'hover:border-emerald-500/40', value: 'text-emerald-400' },
+    slate:   { icon: 'text-slate-300',   iconBg: 'bg-slate-500/15',   border: 'hover:border-slate-400/40',   value: 'text-slate-300' },
+    blue:    { icon: 'text-blue-400',    iconBg: 'bg-blue-500/15',    border: 'hover:border-blue-500/40',    value: 'text-blue-400' },
+  }
+  const c = colorMap[color] || colorMap.amber
+  const vazio = value === 0
+  return (
+    <button
+      onClick={vazio ? undefined : onClick}
+      disabled={vazio}
+      className={`group relative bg-[#29292e] border border-[#323238] rounded-xl p-3.5 text-left transition-all
+        ${vazio ? 'opacity-50 cursor-default' : `hover:bg-[#1a1a1a] ${c.border} hover:shadow-lg`}`}
+    >
+      <div className="flex items-start gap-2.5">
+        <span className={`h-9 w-9 inline-flex items-center justify-center rounded-lg ${c.iconBg} ${c.icon} shrink-0`}>
+          <Icon size={16} />
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-1.5 mb-0.5">
+            <span className={`text-2xl font-bold leading-none ${c.value}`}>{value}</span>
+            <span className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">
+              {value === 1 ? 'aluno' : 'alunos'}
+            </span>
+          </div>
+          <p className="text-white text-xs font-semibold leading-tight">{label}</p>
+          <p className="text-gray-500 text-[10px] mt-0.5 leading-tight">{description}</p>
+        </div>
+        {!vazio && (
+          <ArrowRight size={14} className="text-gray-600 group-hover:text-white transition-colors mt-1 shrink-0" />
+        )}
+      </div>
+    </button>
   )
 }
 

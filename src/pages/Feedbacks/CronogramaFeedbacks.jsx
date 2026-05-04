@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  Search, Palmtree, MessageSquare,
+  Search, Plane, MessageSquare,
   Save, Copy, Trash2, X, ChevronLeft, ChevronRight, ArrowLeft,
-  Users, Calendar as CalendarIcon, Wand2, MoreVertical, Plus,
+  Users, Calendar as CalendarIcon, Wand2, Plus, Loader2,
 } from 'lucide-react'
 
 import {
@@ -65,7 +65,7 @@ export default function CronogramaFeedbacks() {
   const [salvando, setSalvando] = useState(false)
   const [viewYear, setViewYear] = useState(new Date().getFullYear())
   const [carregandoAluno, setCarregandoAluno] = useState(false)
-  const [calendarMode, setCalendarMode] = useState('calendar') // 'calendar' | 'list'
+  const [calendarMode, setCalendarMode] = useState('list') // 'list' (Data automática) | 'calendar' (Marcar no calendário)
 
   // ─── Toast ──────────────────────────────────────────────────────────────────
   const [toast, setToast] = useState({ show: false, msg: '', type: 'success' })
@@ -278,11 +278,11 @@ export default function CronogramaFeedbacks() {
   }, [aluno, formularios])
 
   // Formulário a ser usado por padrão ao criar/preencher datas:
-  // 1. formulario_padrao do aluno se ele estiver nos compatíveis
-  // 2. primeiro compatível (match exato dieta/treino)
+  // 1. formulario_padrao do aluno se existir na lista geral
+  // 2. primeiro compatível (match dieta/treino)
   // 3. primeiro disponível
   const formularioSugerido = useMemo(() => {
-    if (planForm.formulario_padrao && formulariosCompativeis.some(f => f.name === planForm.formulario_padrao)) {
+    if (planForm.formulario_padrao && formularios.some(f => f.name === planForm.formulario_padrao)) {
       return planForm.formulario_padrao
     }
     return formulariosCompativeis[0]?.name || formularios[0]?.name || ''
@@ -475,28 +475,31 @@ export default function CronogramaFeedbacks() {
     if (!window.confirm(
       'Renovar ciclo?\n\n• Histórico de datas preservado (nada apagado)\n'
       + '• Vigência será zerada\n'
-      + '• Defina o novo Marco Zero clicando com botão direito numa data\n'
-      + '• Stats passam a contar a partir do novo Marco Zero',
+      + '• Defina o novo Ponto de partida clicando com botão direito numa data\n'
+      + '• Stats passam a contar a partir do novo Ponto de partida',
     )) return
     setPlanForm(prev => ({ ...prev, plan_start: '', plan_end: '', plan_duration: 3 }))
     // Tira o is_start de todos pra forçar redefinição manual
     setSchedule(prev => ({ dates: prev.dates.map(d => ({ ...d, is_start: false })) }))
     setMaisMenuAberto(false)
-    showToast('Defina novo Marco Zero (botão direito numa data)', 'info')
+    showToast('Defina novo Ponto de partida (botão direito numa data)', 'info')
   }
 
   const handleGerarSerie = (datas) => {
-    const existentes = new Set(schedule.dates.map(d => d.date))
-    const novas = datas.filter(d => !existentes.has(d.date))
-    const ignoradas = datas.length - novas.length
-    setSchedule(prev => ({
-      dates: [...prev.dates, ...novas].sort((a, b) => a.date.localeCompare(b.date)),
-    }))
+    // Data automática SUBSTITUI o cronograma (são dois modos alternativos:
+    // ou planeja manual no calendário, ou gera automaticamente). Se já há
+    // datas, pede confirmação.
+    if (schedule.dates.length > 0) {
+      if (!window.confirm(
+        `Substituir ${schedule.dates.length} data(s) atual(is) por ${datas.length} data(s) gerada(s)?\n\n`
+        + 'A geração automática é uma forma alternativa de planejar — substitui o cronograma atual.',
+      )) return
+    }
+    setSchedule({
+      dates: [...datas].sort((a, b) => a.date.localeCompare(b.date)),
+    })
     setModalGerarSerie(false)
-    const msg = ignoradas > 0
-      ? `${novas.length} datas geradas · ${ignoradas} já existiam`
-      : `${novas.length} datas geradas`
-    showToast(msg + ' (clique Salvar pra persistir)', 'success')
+    showToast(`${datas.length} datas geradas (clique Salvar pra persistir)`, 'success')
   }
 
   const handleClonar = async (origemId) => {
@@ -652,93 +655,103 @@ export default function CronogramaFeedbacks() {
             {aluno && <p className="text-gray-500 text-xs mt-1">{aluno.nome_completo}</p>}
           </div>
         </div>
-        <div className="flex flex-row items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden py-0.5 max-w-full">
-          {aluno && (
-            <Button variant="primary" size="sm" icon={Save}
-              onClick={handleSalvar} loading={salvando}
-              className="whitespace-nowrap shrink-0">
-              Salvar
-            </Button>
-          )}
-          <Button variant="secondary" size="sm" icon={Palmtree}
+        <div className="flex flex-row items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden py-0.5 max-w-full">
+          {/* Chip: Férias */}
+          <button
             onClick={() => setModalFerias(true)}
-            className="whitespace-nowrap shrink-0">
+            className="group h-9 pl-1.5 pr-3 inline-flex items-center gap-2 rounded-xl border border-[#323238] bg-[#1a1a1a]/60 hover:bg-[#1a1a1a] hover:border-emerald-500/40 text-gray-300 hover:text-white transition-all text-xs font-semibold whitespace-nowrap shrink-0">
+            <span className="h-6 w-6 inline-flex items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400 group-hover:bg-emerald-500/25 transition-colors">
+              <Plane size={13} />
+            </span>
             Cadastre suas férias
-          </Button>
-          <Button variant="secondary" size="sm" icon={MessageSquare}
+          </button>
+
+          {/* Chip: Modelos */}
+          <button
             onClick={() => setModalTemplatesAberto(true)}
-            className="whitespace-nowrap shrink-0">
-            Modelos de mensagem
-          </Button>
+            className="group h-9 pl-1.5 pr-3 inline-flex items-center gap-2 rounded-xl border border-[#323238] bg-[#1a1a1a]/60 hover:bg-[#1a1a1a] hover:border-violet-500/40 text-gray-300 hover:text-white transition-all text-xs font-semibold whitespace-nowrap shrink-0">
+            <span className="h-6 w-6 inline-flex items-center justify-center rounded-lg bg-violet-500/15 text-violet-400 group-hover:bg-violet-500/25 transition-colors">
+              <MessageSquare size={13} />
+            </span>
+            Modelos
+          </button>
+
           {aluno && (
             <>
-              <Button variant="secondary" size="sm" icon={Users}
+              {/* Chip: Clonar */}
+              <button
                 onClick={() => setModalClonar(true)}
-                className="whitespace-nowrap shrink-0">
-                Clonar de outro aluno
-              </Button>
-              <Button variant="secondary" size="sm" icon={Wand2}
+                className="group h-9 pl-1.5 pr-3 inline-flex items-center gap-2 rounded-xl border border-[#323238] bg-[#1a1a1a]/60 hover:bg-[#1a1a1a] hover:border-sky-500/40 text-gray-300 hover:text-white transition-all text-xs font-semibold whitespace-nowrap shrink-0">
+                <span className="h-6 w-6 inline-flex items-center justify-center rounded-lg bg-sky-500/15 text-sky-400 group-hover:bg-sky-500/25 transition-colors">
+                  <Users size={13} />
+                </span>
+                Clonar
+              </button>
+
+              {/* Chip: Renovar ciclo */}
+              <button
                 onClick={handleRenovarCiclo}
-                title="Zera a vigência mantendo histórico de datas. Defina novo Marco Zero depois."
-                className="whitespace-nowrap shrink-0 !text-blue-300 !border-blue-500/30">
+                title="Zera a vigência mantendo histórico de datas. Defina novo Ponto de partida depois."
+                className="group h-9 pl-1.5 pr-3 inline-flex items-center gap-2 rounded-xl border border-[#323238] bg-[#1a1a1a]/60 hover:bg-[#1a1a1a] hover:border-cyan-500/40 text-gray-300 hover:text-white transition-all text-xs font-semibold whitespace-nowrap shrink-0">
+                <span className="h-6 w-6 inline-flex items-center justify-center rounded-lg bg-cyan-500/15 text-cyan-400 group-hover:bg-cyan-500/25 transition-colors">
+                  <Wand2 size={13} />
+                </span>
                 Renovar ciclo
-              </Button>
-              <Button variant="danger" size="sm" icon={Trash2}
+              </button>
+
+              {/* Chip: Limpar cronograma */}
+              <button
                 onClick={handleLimparCronograma}
-                className="whitespace-nowrap shrink-0">
-                Limpar cronograma
-              </Button>
+                className="group h-9 pl-1.5 pr-3 inline-flex items-center gap-2 rounded-xl border border-[#323238] bg-[#1a1a1a]/60 hover:bg-red-500/5 hover:border-red-500/40 text-gray-300 hover:text-red-300 transition-all text-xs font-semibold whitespace-nowrap shrink-0">
+                <span className="h-6 w-6 inline-flex items-center justify-center rounded-lg bg-red-500/15 text-red-400 group-hover:bg-red-500/25 transition-colors">
+                  <Trash2 size={13} />
+                </span>
+                Limpar
+              </button>
+
+              {/* Separador */}
+              <div className="h-6 w-px bg-[#323238] mx-0.5 shrink-0" />
+
+              {/* Salvar — ação primária destacada */}
+              <button
+                onClick={handleSalvar}
+                disabled={salvando}
+                className="group h-9 pl-1.5 pr-3.5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-b from-[#3b82f6] to-[#2563eb] hover:from-[#4c8df7] hover:to-[#1d4ed8] text-white transition-all text-xs font-bold whitespace-nowrap shrink-0 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed">
+                <span className="h-6 w-6 inline-flex items-center justify-center rounded-lg bg-white/15">
+                  {salvando ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                </span>
+                {salvando ? 'Salvando…' : 'Salvar'}
+              </button>
             </>
           )}
         </div>
       </div>
 
-      {/* Sem aluno: bloco central pra escolher quem vai ter cronograma. */}
-      {!aluno && (
-        <div className="max-w-xl mx-auto py-12 space-y-4">
-          <div className="text-center space-y-1.5">
-            <h2 className="text-xl font-bold text-white">Selecionar aluno</h2>
-            <p className="text-gray-500 text-sm">Escolha um aluno para começar a planejar os feedbacks.</p>
-          </div>
-          <Autocomplete
-            searchFn={async (q) => {
-              if (!q || q.length < 2) return []
-              const res = await listarAlunos({ search: q, limit: 50 })
-              return res.list || []
-            }}
-            onSelect={(a) => a?.name && navigate(`/cronograma-feedbacks/aluno/${encodeURIComponent(a.name)}`)}
-            renderItem={(a) => (
-              <div className="flex items-center gap-2.5 min-w-0">
-                <Avatar nome={a.nome_completo} foto={a.foto} size="sm" />
-                <div className="min-w-0">
-                  <p className="text-white text-sm font-medium truncate">{a.nome_completo}</p>
-                  {a.email && <p className="text-gray-500 text-[11px] truncate">{a.email}</p>}
-                </div>
-              </div>
-            )}
-            placeholder="Digite o nome do aluno..."
-            icon={Search}
-          />
-        </div>
-      )}
-
-      {/* Estado normal */}
-      {aluno && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      {/* Layout completo — renderiza sempre, mesmo sem aluno selecionado */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* ─── Coluna esquerda ─────────────────────────────────────────── */}
-          <div className="lg:col-span-6 space-y-4">
+          <div className="lg:col-span-5 space-y-4">
 
-            {/* Aluno: autocomplete pra trocar inline */}
+            {/* Aluno: autocomplete pra selecionar/trocar inline */}
             <div className="bg-[#29292e] border border-[#323238] rounded-xl p-4 space-y-2">
               <div className="flex items-center gap-3">
-                <Avatar nome={aluno.nome_completo} size="sm" />
+                {aluno
+                  ? <Avatar nome={aluno.nome_completo} size="sm" />
+                  : <div className="h-8 w-8 rounded-full bg-[#1a1a1a] border border-dashed border-[#323238] flex items-center justify-center shrink-0">
+                      <Search size={14} className="text-gray-500" />
+                    </div>}
                 <div className="flex-1 min-w-0">
                   <Autocomplete
                     searchFn={async (q) => {
                       if (!q || q.length < 2) return []
                       const res = await listarAlunos({ search: q, limit: 30 })
-                      return (res.list || []).filter(a => a.name !== aluno.name)
+                      return (res.list || []).filter(a => a.name !== aluno?.name)
                     }}
+                    loadInitial={async () => {
+                      const res = await listarAlunos({ limit: 8 })
+                      return (res.list || []).filter(a => a.name !== aluno?.name)
+                    }}
+                    initialHeader="Últimos cadastrados"
                     onSelect={(a) => a?.name && navigate(`/cronograma-feedbacks/aluno/${encodeURIComponent(a.name)}`)}
                     renderItem={(a) => (
                       <div className="flex items-center gap-2.5 min-w-0">
@@ -749,13 +762,13 @@ export default function CronogramaFeedbacks() {
                         </div>
                       </div>
                     )}
-                    placeholder={aluno.nome_completo}
+                    placeholder={aluno ? aluno.nome_completo : 'Digite o nome do aluno...'}
                     icon={Search}
                     compact
                   />
                 </div>
               </div>
-              {planForm.plan_start && planForm.plan_end && (
+              {aluno && planForm.plan_start && planForm.plan_end && (
                 <p className="text-gray-500 text-[11px] truncate pl-12">
                   Plano: {fmtDateBR(planForm.plan_start)} → {fmtDateBR(planForm.plan_end)} ({planForm.plan_duration} meses)
                 </p>
@@ -777,7 +790,7 @@ export default function CronogramaFeedbacks() {
             </div>
             {stats.historicoCount > 0 && (
               <p className="text-[10px] text-gray-500 italic -mt-2">
-                Stats do ciclo atual. Histórico passivo: {stats.historicoCount} data{stats.historicoCount === 1 ? '' : 's'} antes do Marco Zero.
+                Stats do ciclo atual. Histórico passivo: {stats.historicoCount} data{stats.historicoCount === 1 ? '' : 's'} antes do Ponto de partida.
               </p>
             )}
 
@@ -792,7 +805,7 @@ export default function CronogramaFeedbacks() {
               <div className="max-h-[520px] overflow-y-auto">
                 {schedule.dates.length === 0 ? (
                   <div className="p-6 text-center">
-                    <p className="text-gray-500 text-xs">Nenhuma data ainda. Use o calendário ao lado ou clique em <span className="text-purple-300 font-semibold">Padronizar</span>.</p>
+                    <p className="text-gray-500 text-xs">Nenhuma data ainda. Use a <span className="text-purple-300 font-semibold">Data automática</span> ao lado ou marque no calendário.</p>
                   </div>
                 ) : (
                   <div>
@@ -833,7 +846,7 @@ export default function CronogramaFeedbacks() {
                             onChange={(e) => handleSetFormulario(d.date, e.target.value)}
                             className="h-7 px-1 bg-[#1a1a1a] border border-[#323238] text-white rounded text-[11px] outline-none focus:border-[#2563eb]/60 truncate"
                           >
-                            {formulariosCompativeis.map((f) => (
+                            {formularios.map((f) => (
                               <option key={f.name} value={f.name}>{f.titulo}</option>
                             ))}
                           </select>
@@ -894,14 +907,14 @@ export default function CronogramaFeedbacks() {
 
               {schedule.dates.length > 0 && (
                 <div className="px-3 py-2 border-t border-[#323238] text-[10px] text-gray-500">
-                  Clique direito em uma linha para definir Marco Zero.
+                  Clique direito em uma linha para definir Ponto de partida (não envia feedback — só serve de âncora pra contar o intervalo).
                 </div>
               )}
             </div>
           </div>
 
           {/* ─── Coluna direita ──────────────────────────────────────────── */}
-          <div className="lg:col-span-6 space-y-4">
+          <div className="lg:col-span-7 space-y-4">
 
             {/* Vigência: read-only quando há contrato, editável quando não */}
             <div className="bg-[#29292e] border border-[#323238] rounded-xl p-4 space-y-3">
@@ -947,23 +960,23 @@ export default function CronogramaFeedbacks() {
                 <div className="flex items-center gap-3">
                   <h3 className="text-sm font-bold tracking-tight flex items-center gap-2">
                     <CalendarIcon size={14} className="text-gray-400" />
-                    {calendarMode === 'calendar' ? 'Calendário Anual' : 'Lista de Datas'}
+                    {calendarMode === 'list' ? 'Data automática' : 'Marcar no calendário'}
                   </h3>
-                  {/* Toggle Calendário | Lista */}
+                  {/* Toggle Data automática | Marcar no calendário */}
                   <div className="inline-flex bg-[#1a1a1a] border border-[#323238] rounded-lg p-0.5">
-                    <button
-                      onClick={() => setCalendarMode('calendar')}
-                      className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded transition-colors ${
-                        calendarMode === 'calendar' ? 'bg-[#2563eb] text-white' : 'text-gray-400 hover:text-white'
-                      }`}>
-                      Calendário
-                    </button>
                     <button
                       onClick={() => setCalendarMode('list')}
                       className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded transition-colors ${
                         calendarMode === 'list' ? 'bg-[#2563eb] text-white' : 'text-gray-400 hover:text-white'
                       }`}>
-                      Lista
+                      Data automática
+                    </button>
+                    <button
+                      onClick={() => setCalendarMode('calendar')}
+                      className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded transition-colors ${
+                        calendarMode === 'calendar' ? 'bg-[#2563eb] text-white' : 'text-gray-400 hover:text-white'
+                      }`}>
+                      Marcar no calendário
                     </button>
                   </div>
                 </div>
@@ -987,28 +1000,47 @@ export default function CronogramaFeedbacks() {
                   <Spinner />
                 </div>
               ) : calendarMode === 'calendar' ? (
-                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {Array.from({ length: 12 }, (_, m) => (
-                    <MesGrid
-                      key={m}
-                      year={viewYear}
-                      month={m}
-                      schedule={schedule}
-                      feriasList={feriasList}
-                      planStart={planForm.plan_start}
-                      planEnd={planForm.plan_end}
-                      onClickDate={onClickDate}
-                      onContextDate={(e, dateStr) => {
-                        e.preventDefault()
-                        setMarcoZeroMenu({ date: dateStr, x: e.clientX, y: e.clientY })
-                      }}
-                    />
-                  ))}
-                </div>
+                <>
+                  {/* Sub-barra: formulário padrão das próximas datas marcadas */}
+                  <div className="px-4 py-2.5 border-b border-[#323238]/60 bg-[#1a1a1a]/40 flex items-center gap-2.5 flex-wrap">
+                    <span className="text-[10px] uppercase tracking-widest text-gray-500 font-bold shrink-0">
+                      Formulário padrão
+                    </span>
+                    <select
+                      value={formularioSugerido || ''}
+                      onChange={(e) => setPlanForm(p => ({ ...p, formulario_padrao: e.target.value }))}
+                      className="flex-1 min-w-[180px] h-8 px-2 bg-[#1a1a1a] border border-[#323238] hover:border-gray-500 focus:border-[#2563eb]/60 text-white rounded-lg text-xs outline-none transition-colors">
+                      {formularios.map(f => (
+                        <option key={f.name} value={f.name}>{f.titulo}</option>
+                      ))}
+                    </select>
+                    <span className="text-[10px] text-gray-500 italic shrink-0">
+                      Aplicado às próximas datas marcadas
+                    </span>
+                  </div>
+                  <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                    {Array.from({ length: 12 }, (_, m) => (
+                      <MesGrid
+                        key={m}
+                        year={viewYear}
+                        month={m}
+                        schedule={schedule}
+                        feriasList={feriasList}
+                        planStart={planForm.plan_start}
+                        planEnd={planForm.plan_end}
+                        onClickDate={onClickDate}
+                        onContextDate={(e, dateStr) => {
+                          e.preventDefault()
+                          setMarcoZeroMenu({ date: dateStr, x: e.clientX, y: e.clientY })
+                        }}
+                      />
+                    ))}
+                  </div>
+                </>
               ) : (
                 /* Modo Lista: formulário "Padronizar Datas" inline */
                 <PadronizarFormulario
-                  formularios={formulariosCompativeis.length ? formulariosCompativeis : formularios}
+                  formularios={formularios}
                   planEnd={planForm.plan_end}
                   feriasList={feriasList}
                   onGerar={handleGerarSerie}
@@ -1023,14 +1055,13 @@ export default function CronogramaFeedbacks() {
                   <Legenda cor="bg-emerald-700" label="Segunda na vigência" />
                   <Legenda cor="bg-green-900/40 border border-green-700/40" label="Dentro da vigência" />
                   <Legenda cor="bg-[#1a1a1a] border border-blue-500/40" label="Férias" />
-                  <Legenda label="Marco Zero (clique direito)" />
+                  <Legenda label="Ponto de partida (clique direito)" />
                   <Legenda cor="bg-orange-400" label="Feriado" />
                 </div>
               )}
             </div>
           </div>
         </div>
-      )}
 
       {/* ─── Modais ───────────────────────────────────────────────────── */}
       {modalNovoDia && (

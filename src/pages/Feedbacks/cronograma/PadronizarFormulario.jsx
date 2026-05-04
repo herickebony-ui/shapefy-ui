@@ -37,6 +37,7 @@ export default function PadronizarFormulario({
     dia_semana: '',
     data_fim: planEnd || '',
     formulario: formularioPadrao,
+    dias_aviso: 1,
     pular_ferias: true,
     pular_feriados: true,
   })
@@ -64,7 +65,7 @@ export default function PadronizarFormulario({
     const novas = datasValidas.map(d => ({
       date: d.iso,
       formulario: form.formulario,
-      dias_aviso: 1,
+      dias_aviso: Number(form.dias_aviso) || 1,
       status: 'Agendado',
       is_start: false,
       is_training: false,
@@ -161,14 +162,22 @@ export default function PadronizarFormulario({
         </FormGroup>
       )}
 
-      <FormGroup label="Formulário padrão" required>
-        <Select
-          value={form.formulario}
-          onChange={(v) => setForm(p => ({ ...p, formulario: v }))}
-          options={formularios.map(f => ({ value: f.name, label: f.titulo }))}
-          placeholder="Selecione um formulário..."
-        />
-      </FormGroup>
+      <div className="grid grid-cols-3 gap-2">
+        <div className="col-span-2">
+          <FormGroup label="Formulário padrão" required>
+            <Select
+              value={form.formulario}
+              onChange={(v) => setForm(p => ({ ...p, formulario: v }))}
+              options={formularios.map(f => ({ value: f.name, label: f.titulo }))}
+              placeholder="Selecione um formulário..."
+            />
+          </FormGroup>
+        </div>
+        <FormGroup label="Dias de aviso" hint="Quantos dias antes avisar">
+          <Input type="number" value={String(form.dias_aviso)}
+            onChange={(v) => setForm(p => ({ ...p, dias_aviso: Number(v) || 1 }))} />
+        </FormGroup>
+      </div>
 
       <div className="space-y-1.5">
         <label className="inline-flex items-center gap-2 cursor-pointer select-none">
@@ -218,7 +227,7 @@ export default function PadronizarFormulario({
       </div>
 
       <p className="text-[11px] text-gray-500">
-        As datas são adicionadas ao cronograma atual (não substituem). Datas já agendadas serão ignoradas.
+        As datas geradas <span className="text-yellow-400/90 font-medium">substituem</span> o cronograma atual. É um modo alternativo ao calendário manual.
       </p>
 
       {showFooter && (

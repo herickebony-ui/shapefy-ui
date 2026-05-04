@@ -18,7 +18,7 @@ export default function TipoBotao({ item, onToggle, size = 'md', variant = 'labe
   if (variant === 'icon') {
     if (item.is_start) {
       return (
-        <span title="Marco Zero"
+        <span title="Ponto de partida"
           className="h-7 w-7 inline-flex items-center justify-center rounded-lg
                      bg-[#2563eb]/15 text-[#2563eb] border border-[#2563eb]/40">
           <Crosshair size={iconSize} />
@@ -55,7 +55,7 @@ export default function TipoBotao({ item, onToggle, size = 'md', variant = 'labe
       <span className={`inline-flex items-center gap-1 ${sizeClasses} rounded
                        bg-[#2563eb]/10 text-[#2563eb] font-semibold border border-[#2563eb]/30`}>
         <Crosshair size={size === 'sm' ? 10 : 12} />
-        Marco Zero
+        Ponto de partida
       </span>
     )
   }

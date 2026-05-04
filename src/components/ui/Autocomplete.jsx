@@ -2,6 +2,8 @@
 //        renderItem(item), placeholder, icon, disabled, emptyState, compact
 //        items (lista pré-fetchada — quando passada, faz filtro local com buscarSmart),
 //        searchFields (campos a buscar quando usar items)
+//        loadInitial: () => Promise<item[]> — carrega lista quando foca sem query
+//        initialHeader: string — rótulo no topo da lista inicial (ex: "Últimos cadastrados")
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { Loader } from 'lucide-react'
@@ -20,6 +22,8 @@ export default function Autocomplete({
   disabled = false,
   emptyState = 'Nenhum resultado',
   compact = false,
+  loadInitial,
+  initialHeader,
 }) {
   const [query, setQuery] = useState(value)
   const [results, setResults] = useState([])
@@ -27,6 +31,7 @@ export default function Autocomplete({
   const [loading, setLoading] = useState(false)
   const [activeIdx, setActiveIdx] = useState(-1)
   const [dropdownPos, setDropdownPos] = useState(null)
+  const [showingInitial, setShowingInitial] = useState(false)
   const timerRef = useRef(null)
   const inputRef = useRef(null)
   const [isMobile, setIsMobile] = useState(false)
@@ -53,9 +58,10 @@ export default function Autocomplete({
 
   const search = useCallback(async (q) => {
     clearTimeout(timerRef.current)
-    if (!q || q.length < 1) { setResults([]); setOpen(false); return }
+    if (!q || q.length < 1) { setResults([]); setOpen(false); setShowingInitial(false); return }
     timerRef.current = setTimeout(async () => {
       setLoading(true)
+      setShowingInitial(false)
       try {
         const r = await effectiveSearchFn(q)
         setResults(r || [])
@@ -65,6 +71,19 @@ export default function Autocomplete({
       finally { setLoading(false) }
     }, 200)
   }, [effectiveSearchFn])
+
+  const carregarInicial = useCallback(async () => {
+    if (!loadInitial) return
+    setLoading(true)
+    setShowingInitial(true)
+    try {
+      const r = await loadInitial()
+      setResults(r || [])
+      setOpen(true)
+      setActiveIdx(-1)
+    } catch { setResults([]); setOpen(false) }
+    finally { setLoading(false) }
+  }, [loadInitial])
 
   const computeDropdownPos = () => {
     if (!inputRef.current) return
@@ -134,7 +153,7 @@ export default function Autocomplete({
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-[#323238]">
-              <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">Resultados</span>
+              <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">{showingInitial && initialHeader ? initialHeader : 'Resultados'}</span>
               <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-white text-lg leading-none">×</button>
             </div>
             <div className="overflow-y-auto flex-1">
@@ -159,6 +178,11 @@ export default function Autocomplete({
         style={desktopDropdownStyle}
         className="bg-[#29292e] border border-[#323238] rounded-lg shadow-[0_10px_30px_rgba(0,0,0,0.5)] overflow-hidden max-h-56 overflow-y-auto"
       >
+        {showingInitial && initialHeader && (
+          <div className="px-3.5 py-1.5 border-b border-[#323238] bg-[#1a1a1a]/60 text-[10px] uppercase tracking-widest text-gray-500 font-bold">
+            {initialHeader}
+          </div>
+        )}
         {results.map((item, i) => (
           <button
             key={i}
@@ -196,7 +220,11 @@ export default function Autocomplete({
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           onBlur={() => setTimeout(() => setOpen(false), 200)}
-          onFocus={() => { computeDropdownPos(); query.length >= 1 && results.length > 0 && setOpen(true) }}
+          onFocus={() => {
+            computeDropdownPos()
+            if (query.length >= 1 && results.length > 0) setOpen(true)
+            else if (!query && loadInitial) carregarInicial()
+          }}
           placeholder={placeholder}
           disabled={disabled}
           className={inputClass}
