@@ -13,10 +13,8 @@ import {
 
 import {
   listarAgendamentosDoAluno, sincronizarCronogramaDoAluno,
-  clonarCronograma, salvarAgendamento, obterStatusCronogramaAlunos,
+  clonarCronograma, salvarAgendamento,
 } from '../../api/cronogramaFeedbacks'
-
-const LS_ULTIMO_ALUNO = 'shapefy-cronograma-ultimo-aluno'
 import { listarFerias, criarFerias, excluirFerias } from '../../api/ferias'
 import {
   listarTemplates, criarTemplate, excluirTemplate,
@@ -199,43 +197,6 @@ export default function CronogramaFeedbacks() {
 
   useEffect(() => { carregarAluno(alunoId) }, [alunoId, carregarAluno])
 
-  // Salva o último aluno carregado, pra abrir nele direto da próxima vez
-  useEffect(() => {
-    if (aluno?.name) localStorage.setItem(LS_ULTIMO_ALUNO, aluno.name)
-  }, [aluno?.name])
-
-  // Entrou em /cronograma-feedbacks sem aluno → SEMPRE redireciona pra um
-  // aluno. Prioridade: último aberto (localStorage) → primeiro com cronograma
-  // → primeiro aluno qualquer. Só fica sem aluno se o profissional não tiver
-  // nenhum cadastrado (estado raríssimo, tratado no render).
-  const [semAlunos, setSemAlunos] = useState(false)
-  useEffect(() => {
-    if (alunoId) return
-    if (carregandoBase) return
-    let cancel = false
-    ;(async () => {
-      const ultimo = localStorage.getItem(LS_ULTIMO_ALUNO)
-      if (ultimo) {
-        navigate(`/cronograma-feedbacks/aluno/${encodeURIComponent(ultimo)}`, { replace: true })
-        return
-      }
-      try {
-        const res = await listarAlunos({ limit: 30 })
-        if (cancel) return
-        const lista = res.list || []
-        if (!lista.length) {
-          setSemAlunos(true)
-          return
-        }
-        const ids = lista.map(a => a.name)
-        const stat = await obterStatusCronogramaAlunos(ids).catch(() => ({}))
-        if (cancel) return
-        const escolhido = lista.find(a => (stat?.[a.name]?.total || 0) > 0) || lista[0]
-        navigate(`/cronograma-feedbacks/aluno/${encodeURIComponent(escolhido.name)}`, { replace: true })
-      } catch (e) { console.error(e) }
-    })()
-    return () => { cancel = true }
-  }, [alunoId, carregandoBase, navigate])
 
   useEffect(() => {
     localStorage.setItem(TEMPLATE_LS_KEY, templateAtualId)
@@ -735,18 +696,33 @@ export default function CronogramaFeedbacks() {
         </div>
       </div>
 
-      {/* Sem aluno: ou redireciona em background (Spinner), ou avisa que
-          é preciso cadastrar um aluno antes (caso raro). */}
+      {/* Sem aluno: bloco central pra escolher quem vai ter cronograma. */}
       {!aluno && (
-        semAlunos ? (
-          <div className="bg-[#29292e] border border-[#323238] rounded-xl p-8 max-w-lg mx-auto text-center space-y-4">
-            <p className="text-white text-sm font-bold">Você ainda não tem alunos cadastrados</p>
-            <p className="text-gray-500 text-xs">Cadastre um aluno antes de planejar feedbacks.</p>
-            <Button variant="primary" size="sm" onClick={() => navigate('/')}>Ir para Meus Alunos</Button>
+        <div className="max-w-xl mx-auto py-12 space-y-4">
+          <div className="text-center space-y-1.5">
+            <h2 className="text-xl font-bold text-white">Selecionar aluno</h2>
+            <p className="text-gray-500 text-sm">Escolha um aluno para começar a planejar os feedbacks.</p>
           </div>
-        ) : (
-          <div className="flex justify-center py-12"><Spinner /></div>
-        )
+          <Autocomplete
+            searchFn={async (q) => {
+              if (!q || q.length < 2) return []
+              const res = await listarAlunos({ search: q, limit: 50 })
+              return res.list || []
+            }}
+            onSelect={(a) => a?.name && navigate(`/cronograma-feedbacks/aluno/${encodeURIComponent(a.name)}`)}
+            renderItem={(a) => (
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Avatar nome={a.nome_completo} foto={a.foto} size="sm" />
+                <div className="min-w-0">
+                  <p className="text-white text-sm font-medium truncate">{a.nome_completo}</p>
+                  {a.email && <p className="text-gray-500 text-[11px] truncate">{a.email}</p>}
+                </div>
+              </div>
+            )}
+            placeholder="Digite o nome do aluno..."
+            icon={Search}
+          />
+        </div>
       )}
 
       {/* Estado normal */}
