@@ -740,22 +740,38 @@ export default function CronogramaFeedbacks() {
           {/* ─── Coluna esquerda ─────────────────────────────────────────── */}
           <div className="lg:col-span-6 space-y-4">
 
-            {/* Aluno + trocar */}
-            <div className="bg-[#29292e] border border-[#323238] rounded-xl p-4 flex items-center gap-3">
-              <Avatar nome={aluno.nome_completo} size="sm" />
-              <div className="flex-1 min-w-0">
-                <p className="text-white text-sm font-semibold truncate">{aluno.nome_completo}</p>
-                {planForm.plan_start && planForm.plan_end && (
-                  <p className="text-gray-500 text-[11px] truncate">
-                    Plano: {fmtDateBR(planForm.plan_start)} → {fmtDateBR(planForm.plan_end)} ({planForm.plan_duration} meses)
-                  </p>
-                )}
+            {/* Aluno: autocomplete pra trocar inline */}
+            <div className="bg-[#29292e] border border-[#323238] rounded-xl p-4 space-y-2">
+              <div className="flex items-center gap-3">
+                <Avatar nome={aluno.nome_completo} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <Autocomplete
+                    searchFn={async (q) => {
+                      if (!q || q.length < 2) return []
+                      const res = await listarAlunos({ search: q, limit: 30 })
+                      return (res.list || []).filter(a => a.name !== aluno.name)
+                    }}
+                    onSelect={(a) => a?.name && navigate(`/cronograma-feedbacks/aluno/${encodeURIComponent(a.name)}`)}
+                    renderItem={(a) => (
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Avatar nome={a.nome_completo} foto={a.foto} size="sm" />
+                        <div className="min-w-0">
+                          <p className="text-white text-sm font-medium truncate">{a.nome_completo}</p>
+                          {a.email && <p className="text-gray-500 text-[11px] truncate">{a.email}</p>}
+                        </div>
+                      </div>
+                    )}
+                    placeholder={aluno.nome_completo}
+                    icon={Search}
+                    compact
+                  />
+                </div>
               </div>
-              <button onClick={trocarAluno}
-                title="Trocar aluno"
-                className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors">
-                <ArrowLeft size={12} />
-              </button>
+              {planForm.plan_start && planForm.plan_end && (
+                <p className="text-gray-500 text-[11px] truncate pl-12">
+                  Plano: {fmtDateBR(planForm.plan_start)} → {fmtDateBR(planForm.plan_end)} ({planForm.plan_duration} meses)
+                </p>
+              )}
             </div>
 
             {/* Stats — só do ciclo atual (a partir do último Marco Zero) */}
