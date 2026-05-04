@@ -13,8 +13,10 @@ import {
 
 import {
   listarAgendamentosDoAluno, sincronizarCronogramaDoAluno,
-  clonarCronograma, salvarAgendamento,
+  clonarCronograma, salvarAgendamento, obterStatusCronogramaAlunos,
 } from '../../api/cronogramaFeedbacks'
+
+const LS_ULTIMO_ALUNO = 'shapefy-cronograma-ultimo-aluno'
 import { listarFerias, criarFerias, excluirFerias } from '../../api/ferias'
 import {
   listarTemplates, criarTemplate, excluirTemplate,
@@ -199,6 +201,40 @@ export default function CronogramaFeedbacks() {
   useEffect(() => { carregarBase() }, [carregarBase])
 
   useEffect(() => { carregarAluno(alunoId) }, [alunoId, carregarAluno])
+
+  // Salva o último aluno carregado, pra abrir nele direto da próxima vez
+  useEffect(() => {
+    if (aluno?.name) localStorage.setItem(LS_ULTIMO_ALUNO, aluno.name)
+  }, [aluno?.name])
+
+  // Entrou em /cronograma-feedbacks sem aluno → tenta abrir o último ou o
+  // primeiro com cronograma. Fallback: deixa o hub de busca aparecer.
+  useEffect(() => {
+    if (alunoId) return
+    if (carregandoBase) return
+    let cancel = false
+    ;(async () => {
+      const ultimo = localStorage.getItem(LS_ULTIMO_ALUNO)
+      if (ultimo) {
+        navigate(`/cronograma-feedbacks/aluno/${encodeURIComponent(ultimo)}`, { replace: true })
+        return
+      }
+      try {
+        const res = await listarAlunos({ limit: 30 })
+        if (cancel) return
+        const lista = res.list || []
+        if (!lista.length) return
+        const ids = lista.map(a => a.name)
+        const stat = await obterStatusCronogramaAlunos(ids).catch(() => ({}))
+        if (cancel) return
+        const primeiro = lista.find(a => (stat?.[a.name]?.total || 0) > 0)
+        if (primeiro) {
+          navigate(`/cronograma-feedbacks/aluno/${encodeURIComponent(primeiro.name)}`, { replace: true })
+        }
+      } catch (e) { console.error(e) }
+    })()
+    return () => { cancel = true }
+  }, [alunoId, carregandoBase, navigate])
 
   useEffect(() => {
     localStorage.setItem(TEMPLATE_LS_KEY, templateAtualId)
