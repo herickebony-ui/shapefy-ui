@@ -277,6 +277,17 @@ export default function CronogramaFeedbacks() {
     return matches.length ? matches : formularios
   }, [aluno, formularios])
 
+  // Formulário a ser usado por padrão ao criar/preencher datas:
+  // 1. formulario_padrao do aluno se ele estiver nos compatíveis
+  // 2. primeiro compatível (match exato dieta/treino)
+  // 3. primeiro disponível
+  const formularioSugerido = useMemo(() => {
+    if (planForm.formulario_padrao && formulariosCompativeis.some(f => f.name === planForm.formulario_padrao)) {
+      return planForm.formulario_padrao
+    }
+    return formulariosCompativeis[0]?.name || formularios[0]?.name || ''
+  }, [planForm.formulario_padrao, formulariosCompativeis, formularios])
+
   const handleSetFormulario = useCallback(async (date, formId) => {
     const atual = schedule.dates.find(d => d.date === date)
     if (!atual) return
@@ -320,14 +331,14 @@ export default function CronogramaFeedbacks() {
       showToast(`${fmtDateBR(dateStr)} removido`, 'info')
       return
     }
-    if (!planForm.formulario_padrao) {
-      showToast('Defina um formulário padrão pro aluno antes', 'error')
+    if (!formularioSugerido) {
+      showToast('Cadastre um Formulário de Feedback antes', 'error')
       return
     }
     setSchedule(prev => {
       const novos = [...prev.dates, {
         date: dateStr,
-        formulario: planForm.formulario_padrao,
+        formulario: formularioSugerido,
         dias_aviso: 1,
         status: 'Agendado',
         is_start: false,
@@ -429,7 +440,7 @@ export default function CronogramaFeedbacks() {
         plan_start: planForm.plan_start || null,
         plan_end: planForm.plan_end || null,
         plan_duration: Number(planForm.plan_duration) || 0,
-        formulario_padrao: planForm.formulario_padrao || null,
+        formulario_padrao: planForm.formulario_padrao || formularioSugerido || null,
       })
       await sincronizarCronogramaDoAluno(alunoId, schedule.dates.map(d => ({
         formulario: d.formulario || planForm.formulario_padrao,
@@ -766,44 +777,6 @@ export default function CronogramaFeedbacks() {
               </p>
             )}
 
-            {/* Vigência: read-only quando há contrato, editável quando não */}
-            <div className="bg-[#29292e] border border-[#323238] rounded-xl p-4 space-y-3">
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400">Vigência do Plano</h3>
-                {contratoRelevante ? (
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded">
-                      {contratoRelevante.nome_plano_snapshot || contratoRelevante.plano || 'Contrato'} · do Financeiro
-                    </span>
-                    <button
-                      onClick={() => navigate('/financeiro')}
-                      className="text-[10px] font-bold uppercase tracking-widest text-blue-300 hover:text-blue-200 underline">
-                      Editar no Financeiro
-                    </button>
-                  </div>
-                ) : (
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 italic">
-                    Aluno sem contrato — edição manual
-                  </span>
-                )}
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <FormGroup label="Início">
-                  <Input type="date" value={planForm.plan_start}
-                    onChange={(v) => handlePlanFormChange('plan_start', v)}
-                    disabled={!!contratoRelevante} />
-                </FormGroup>
-                <FormGroup label="Duração (meses)">
-                  <Input type="number" value={String(planForm.plan_duration)}
-                    onChange={(v) => handlePlanFormChange('plan_duration', Number(v) || 0)}
-                    disabled={!!contratoRelevante} />
-                </FormGroup>
-              </div>
-              <FormGroup label="Fim (auto)" hint={contratoRelevante ? 'Vem do contrato' : 'Início + duração'}>
-                <Input type="date" value={planForm.plan_end} onChange={() => {}} disabled />
-              </FormGroup>
-            </div>
-
             {/* Lista de datas agrupada por ciclo */}
             <div className="bg-[#29292e] border border-[#323238] rounded-xl overflow-hidden">
               <div className="px-3 py-3 border-b border-[#323238] flex items-center justify-between gap-2 flex-wrap">
@@ -856,7 +829,7 @@ export default function CronogramaFeedbacks() {
                               size="sm" />
                           </span>
                           <select
-                            value={d.formulario || planForm.formulario_padrao || ''}
+                            value={d.formulario || formularioSugerido || ''}
                             onChange={(e) => handleSetFormulario(d.date, e.target.value)}
                             className="h-7 px-1 bg-[#1a1a1a] border border-[#323238] text-white rounded text-[11px] outline-none focus:border-[#2563eb]/60 truncate"
                           >
@@ -907,7 +880,7 @@ export default function CronogramaFeedbacks() {
                       <Button variant="ghost" size="xs" icon={Plus}
                         onClick={() => setModalNovoDia({
                           date: todayISO(),
-                          formulario: planForm.formulario_padrao || '',
+                          formulario: formularioSugerido || '',
                           dias_aviso: 1,
                           is_start: false,
                           nota: '',
@@ -930,30 +903,41 @@ export default function CronogramaFeedbacks() {
           {/* ─── Coluna direita ──────────────────────────────────────────── */}
           <div className="lg:col-span-6 space-y-4">
 
-            {/* Histórico & Feedback */}
-            <div className="bg-[#29292e] border border-[#323238] rounded-xl">
-              <div className="px-4 py-3 border-b border-[#323238] flex items-center justify-between gap-2 flex-wrap">
-                <h3 className="text-sm font-bold tracking-tight">Histórico &amp; Feedback</h3>
-                <div className="flex items-center gap-2">
-                  <Tabs
-                    variant="pills"
-                    active={historicoMode}
-                    onChange={setHistoricoMode}
-                    tabs={[
-                      { id: 'table',    label: 'Tabela' },
-                      { id: 'timeline', label: 'Timeline' },
-                    ]}
-                  />
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded-full border border-[#323238] bg-[#1a1a1a] text-white max-w-[160px]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-                    <span className="truncate">{aluno.nome_completo}</span>
+            {/* Vigência: read-only quando há contrato, editável quando não */}
+            <div className="bg-[#29292e] border border-[#323238] rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400">Vigência do Plano</h3>
+                {contratoRelevante ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded">
+                      {contratoRelevante.nome_plano_snapshot || contratoRelevante.plano || 'Contrato'} · do Financeiro
+                    </span>
+                    <button
+                      onClick={() => navigate('/financeiro')}
+                      className="text-[10px] font-bold uppercase tracking-widest text-blue-300 hover:text-blue-200 underline">
+                      Editar no Financeiro
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 italic">
+                    Aluno sem contrato — edição manual
                   </span>
-                </div>
+                )}
               </div>
-              <div className="p-4">
-                {historicoMode === 'table'
-                  ? <HistoricoTabela schedule={schedule} />
-                  : <HistoricoTimeline schedule={schedule} />}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <FormGroup label="Início">
+                  <Input type="date" value={planForm.plan_start}
+                    onChange={(v) => handlePlanFormChange('plan_start', v)}
+                    disabled={!!contratoRelevante} />
+                </FormGroup>
+                <FormGroup label="Duração (meses)">
+                  <Input type="number" value={String(planForm.plan_duration)}
+                    onChange={(v) => handlePlanFormChange('plan_duration', Number(v) || 0)}
+                    disabled={!!contratoRelevante} />
+                </FormGroup>
+                <FormGroup label="Fim (auto)" hint={contratoRelevante ? 'Vem do contrato' : 'Início + duração'}>
+                  <Input type="date" value={planForm.plan_end} onChange={() => {}} disabled />
+                </FormGroup>
               </div>
             </div>
 
@@ -1108,7 +1092,7 @@ export default function CronogramaFeedbacks() {
           onSet={(novoVal) => handleSetMarcoZero(marcoZeroMenu.date, novoVal)}
           onAbrirDetalhes={(item) => setModalNovoDia({
             date: item.date,
-            formulario: item.formulario || planForm.formulario_padrao || '',
+            formulario: item.formulario || formularioSugerido || '',
             dias_aviso: item.dias_aviso || 1,
             is_start: !!item.is_start,
             nota: item.nota || '',
