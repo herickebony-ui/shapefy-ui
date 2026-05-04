@@ -43,7 +43,6 @@ import ModalGerarSerie from './cronograma/ModalGerarSerie'
 import TipoBotao from './cronograma/TipoBotao'
 import { agruparPorCiclo } from './cronograma/serie'
 import { todayISO } from './cronograma/utils'
-import HubAlunosCronograma from './cronograma/HubAlunosCronograma'
 
 // ═════════════════════════════════════════════════════════════════════════════
 export default function CronogramaFeedbacks() {
@@ -205,8 +204,11 @@ export default function CronogramaFeedbacks() {
     if (aluno?.name) localStorage.setItem(LS_ULTIMO_ALUNO, aluno.name)
   }, [aluno?.name])
 
-  // Entrou em /cronograma-feedbacks sem aluno → tenta abrir o último ou o
-  // primeiro com cronograma. Fallback: deixa o hub de busca aparecer.
+  // Entrou em /cronograma-feedbacks sem aluno → SEMPRE redireciona pra um
+  // aluno. Prioridade: último aberto (localStorage) → primeiro com cronograma
+  // → primeiro aluno qualquer. Só fica sem aluno se o profissional não tiver
+  // nenhum cadastrado (estado raríssimo, tratado no render).
+  const [semAlunos, setSemAlunos] = useState(false)
   useEffect(() => {
     if (alunoId) return
     if (carregandoBase) return
@@ -221,14 +223,15 @@ export default function CronogramaFeedbacks() {
         const res = await listarAlunos({ limit: 30 })
         if (cancel) return
         const lista = res.list || []
-        if (!lista.length) return
+        if (!lista.length) {
+          setSemAlunos(true)
+          return
+        }
         const ids = lista.map(a => a.name)
         const stat = await obterStatusCronogramaAlunos(ids).catch(() => ({}))
         if (cancel) return
-        const primeiro = lista.find(a => (stat?.[a.name]?.total || 0) > 0)
-        if (primeiro) {
-          navigate(`/cronograma-feedbacks/aluno/${encodeURIComponent(primeiro.name)}`, { replace: true })
-        }
+        const escolhido = lista.find(a => (stat?.[a.name]?.total || 0) > 0) || lista[0]
+        navigate(`/cronograma-feedbacks/aluno/${encodeURIComponent(escolhido.name)}`, { replace: true })
       } catch (e) { console.error(e) }
     })()
     return () => { cancel = true }
@@ -732,8 +735,19 @@ export default function CronogramaFeedbacks() {
         </div>
       </div>
 
-      {/* Sem aluno selecionado: hub com lista de alunos + status do cronograma */}
-      {!aluno && <HubAlunosCronograma />}
+      {/* Sem aluno: ou redireciona em background (Spinner), ou avisa que
+          é preciso cadastrar um aluno antes (caso raro). */}
+      {!aluno && (
+        semAlunos ? (
+          <div className="bg-[#29292e] border border-[#323238] rounded-xl p-8 max-w-lg mx-auto text-center space-y-4">
+            <p className="text-white text-sm font-bold">Você ainda não tem alunos cadastrados</p>
+            <p className="text-gray-500 text-xs">Cadastre um aluno antes de planejar feedbacks.</p>
+            <Button variant="primary" size="sm" onClick={() => navigate('/')}>Ir para Meus Alunos</Button>
+          </div>
+        ) : (
+          <div className="flex justify-center py-12"><Spinner /></div>
+        )
+      )}
 
       {/* Estado normal */}
       {aluno && (
