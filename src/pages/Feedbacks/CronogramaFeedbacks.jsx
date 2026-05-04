@@ -38,6 +38,7 @@ import ModalTemplates from './cronograma/ModalTemplates'
 import ModalNovoDia from './cronograma/ModalNovoDia'
 import ModalClonar from './cronograma/ModalClonar'
 import ModalGerarSerie from './cronograma/ModalGerarSerie'
+import PadronizarFormulario from './cronograma/PadronizarFormulario'
 import TipoBotao from './cronograma/TipoBotao'
 import { agruparPorCiclo } from './cronograma/serie'
 import { todayISO } from './cronograma/utils'
@@ -671,11 +672,6 @@ export default function CronogramaFeedbacks() {
           </Button>
           {aluno && (
             <>
-              <Button variant="secondary" size="sm" icon={Wand2}
-                onClick={() => setModalGerarSerie(true)}
-                className="whitespace-nowrap shrink-0">
-                Padronizar
-              </Button>
               <Button variant="secondary" size="sm" icon={Users}
                 onClick={() => setModalClonar(true)}
                 className="whitespace-nowrap shrink-0">
@@ -1004,92 +1000,20 @@ export default function CronogramaFeedbacks() {
                       onClickDate={onClickDate}
                       onContextDate={(e, dateStr) => {
                         e.preventDefault()
-                        if (dataJaAgendada(dateStr)) {
-                          setMarcoZeroMenu({ date: dateStr, x: e.clientX, y: e.clientY })
-                        } else {
-                          setModalNovoDia({
-                            date: dateStr,
-                            formulario: formularioSugerido || '',
-                            dias_aviso: 1,
-                            is_start: false,
-                            nota: '',
-                          })
-                        }
+                        setMarcoZeroMenu({ date: dateStr, x: e.clientX, y: e.clientY })
                       }}
                     />
                   ))}
                 </div>
               ) : (
-                /* Modo Lista: timeline compacta agrupada por ciclo */
-                <div className="p-3 max-h-[640px] overflow-y-auto">
-                  {schedule.dates.length === 0 ? (
-                    <p className="text-gray-500 text-xs text-center py-8 italic">
-                      Nenhuma data ainda. Use o calendário ou clique em <span className="text-purple-300 font-bold">Padronizar</span> no header.
-                    </p>
-                  ) : (
-                    <div className="space-y-3">
-                      {grupos.map((grupo, gi) => (
-                        <div key={gi} className="bg-[#1a1a1a] border border-[#323238] rounded-lg overflow-hidden">
-                          <div className="px-3 py-1.5 bg-[#0a0a0a]/60 border-b border-[#323238] flex items-center justify-between">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-purple-300">
-                              {grupo.label}
-                            </span>
-                            <span className="text-[10px] text-gray-500">
-                              {grupo.items.length} data{grupo.items.length === 1 ? '' : 's'}
-                            </span>
-                          </div>
-                          <div className="divide-y divide-[#323238]/50">
-                            {grupo.items.map((d) => {
-                              const isDone = d.status === 'Respondido' || d.status === 'Concluido' || !!d.respondido_em
-                              const isAtrasado = !isDone && d.date < todayISO()
-                              return (
-                                <div key={d.date}
-                                  onContextMenu={(e) => {
-                                    e.preventDefault()
-                                    setMarcoZeroMenu({ date: d.date, x: e.clientX, y: e.clientY })
-                                  }}
-                                  className={`flex items-center gap-2 px-3 py-2 text-xs hover:bg-white/5 ${
-                                    d.is_start ? 'bg-[#2563eb]/10' : ''
-                                  }`}>
-                                  <span className="text-white font-medium w-20">{fmtDateBR(d.date)}</span>
-                                  <span className="shrink-0">
-                                    <TipoBotao item={d}
-                                      onToggle={(_, v) => handleToggleTraining(d.date, v)}
-                                      variant="icon"
-                                      size="sm" />
-                                  </span>
-                                  <span className="flex-1 truncate text-gray-400">
-                                    {formularios.find(f => f.name === (d.formulario || formularioSugerido))?.titulo || '—'}
-                                  </span>
-                                  {isDone && (
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded">
-                                      Concluído
-                                    </span>
-                                  )}
-                                  {isAtrasado && (
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-red-300 bg-red-500/10 border border-red-500/30 px-1.5 py-0.5 rounded">
-                                      Atrasado
-                                    </span>
-                                  )}
-                                  {d.is_start && (
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#2563eb] bg-[#2563eb]/10 border border-[#2563eb]/40 px-1.5 py-0.5 rounded">
-                                      Marco Zero
-                                    </span>
-                                  )}
-                                  <button onClick={() => handleRemoverDataLocal(d.date)}
-                                    title="Remover"
-                                    className="h-6 w-6 inline-flex items-center justify-center text-gray-500 hover:text-red-400 shrink-0">
-                                    <X size={12} />
-                                  </button>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                /* Modo Lista: formulário "Padronizar Datas" inline */
+                <PadronizarFormulario
+                  formularios={formulariosCompativeis.length ? formulariosCompativeis : formularios}
+                  planEnd={planForm.plan_end}
+                  feriasList={feriasList}
+                  onGerar={handleGerarSerie}
+                  showFooter
+                />
               )}
 
               {calendarMode === 'calendar' && (
@@ -1173,6 +1097,29 @@ export default function CronogramaFeedbacks() {
           itemAtual={itemDoDia(marcoZeroMenu.date)}
           onClose={() => setMarcoZeroMenu(null)}
           onSet={(novoVal) => handleSetMarcoZero(marcoZeroMenu.date, novoVal)}
+          onAdicionar={(asMarcoZero) => {
+            const dateStr = marcoZeroMenu.date
+            if (!formularioSugerido) {
+              showToast('Cadastre um Formulário de Feedback antes', 'error')
+              setMarcoZeroMenu(null)
+              return
+            }
+            setSchedule(prev => {
+              const novos = [...prev.dates, {
+                date: dateStr,
+                formulario: formularioSugerido,
+                dias_aviso: 1,
+                status: 'Agendado',
+                is_start: !!asMarcoZero,
+                is_training: false,
+                nota: '',
+                observacao: '',
+              }]
+              novos.sort((a, b) => a.date.localeCompare(b.date))
+              return { dates: novos }
+            })
+            setMarcoZeroMenu(null)
+          }}
           onAbrirDetalhes={(item) => setModalNovoDia({
             date: item.date,
             formulario: item.formulario || formularioSugerido || '',

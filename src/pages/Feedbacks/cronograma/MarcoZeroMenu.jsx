@@ -4,13 +4,11 @@ import { fmtDateBR } from './utils'
 
 /**
  * Menu de contexto (botão direito) sobre uma linha/data do cronograma.
- * Ações:
- *   - Definir/Remover Marco Zero (toggle)
- *   - Abrir detalhes (formulário, dias_aviso, nota)
- *   - Remover linha
+ * - Com itemAtual: Definir/Remover Marco Zero, Abrir detalhes, Remover linha.
+ * - Sem itemAtual (data vazia): Adicionar agendamento, Adicionar como Marco Zero.
  */
 export default function MarcoZeroMenu({
-  menu, itemAtual, onClose, onSet, onAbrirDetalhes, onRemover,
+  menu, itemAtual, onClose, onSet, onAbrirDetalhes, onRemover, onAdicionar,
 }) {
   useEffect(() => {
     const fecharKey = (e) => { if (e.key === 'Escape') onClose() }
@@ -35,7 +33,19 @@ export default function MarcoZeroMenu({
       <div className="px-3 py-2 border-b border-[#323238] text-[10px] uppercase tracking-widest text-gray-500 font-bold">
         {fmtDateBR(menu.date)}
       </div>
-      {!itemAtual?.is_start && (
+      {!itemAtual && onAdicionar && (
+        <>
+          <button onClick={() => { onAdicionar(false); onClose() }}
+            className="w-full text-left px-3 py-2 text-sm font-semibold text-blue-300 hover:bg-[#29292e] transition-colors">
+            Adicionar agendamento
+          </button>
+          <button onClick={() => { onAdicionar(true); onClose() }}
+            className="w-full text-left px-3 py-2 text-sm font-semibold text-yellow-300 hover:bg-[#29292e] transition-colors">
+            Adicionar como Marco Zero
+          </button>
+        </>
+      )}
+      {itemAtual && !itemAtual.is_start && (
         <button onClick={() => onSet(true)}
           className="w-full text-left px-3 py-2 text-sm font-semibold text-blue-300 hover:bg-[#29292e] transition-colors">
           Definir como Marco Zero
