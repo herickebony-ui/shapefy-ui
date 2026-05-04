@@ -40,7 +40,6 @@ import ModalTemplates from './cronograma/ModalTemplates'
 import ModalNovoDia from './cronograma/ModalNovoDia'
 import ModalClonar from './cronograma/ModalClonar'
 import ModalGerarSerie from './cronograma/ModalGerarSerie'
-import WizardCriacao from './cronograma/WizardCriacao'
 import TipoBotao from './cronograma/TipoBotao'
 import { agruparPorCiclo } from './cronograma/serie'
 import { todayISO } from './cronograma/utils'
@@ -84,7 +83,6 @@ export default function CronogramaFeedbacks() {
   const [modalFerias, setModalFerias] = useState(false)
   const [modalTemplatesAberto, setModalTemplatesAberto] = useState(false)
   const [modalGerarSerie, setModalGerarSerie] = useState(false)
-  const [modalWizard, setModalWizard] = useState(false)
   const [marcoZeroMenu, setMarcoZeroMenu] = useState(null)
   const [maisMenuAberto, setMaisMenuAberto] = useState(false)
   const maisMenuRef = useRef(null)
@@ -672,9 +670,6 @@ export default function CronogramaFeedbacks() {
     )
   }
 
-  // Estado vazio: aluno selecionado mas sem cronograma e sem vigência
-  const emEstadoVazio = aluno && schedule.dates.length === 0 && !planForm.plan_start
-
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white p-4 md:p-8">
       {/* Header */}
@@ -692,7 +687,7 @@ export default function CronogramaFeedbacks() {
           </div>
         </div>
         <div className="flex flex-row items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden py-0.5 max-w-full">
-          {aluno && !emEstadoVazio && (
+          {aluno && (
             <Button variant="primary" size="sm" icon={Save}
               onClick={handleSalvar} loading={salvando}
               className="whitespace-nowrap shrink-0">
@@ -709,7 +704,7 @@ export default function CronogramaFeedbacks() {
             className="whitespace-nowrap shrink-0">
             Modelos de mensagem
           </Button>
-          {aluno && !emEstadoVazio && (
+          {aluno && (
             <>
               <Button variant="secondary" size="sm" icon={Wand2}
                 onClick={() => setModalGerarSerie(true)}
@@ -720,11 +715,6 @@ export default function CronogramaFeedbacks() {
                 onClick={() => setModalClonar(true)}
                 className="whitespace-nowrap shrink-0">
                 Clonar de outro aluno
-              </Button>
-              <Button variant="secondary" size="sm" icon={Plus}
-                onClick={() => setModalWizard(true)}
-                className="whitespace-nowrap shrink-0">
-                Refazer série
               </Button>
               <Button variant="secondary" size="sm" icon={Wand2}
                 onClick={handleRenovarCiclo}
@@ -745,33 +735,8 @@ export default function CronogramaFeedbacks() {
       {/* Sem aluno selecionado: hub com lista de alunos + status do cronograma */}
       {!aluno && <HubAlunosCronograma />}
 
-      {/* Estado vazio: aluno sem cronograma → wizard onboarding */}
-      {emEstadoVazio && (
-        <div className="bg-[#29292e] border border-[#323238] rounded-xl p-8 max-w-2xl mx-auto text-center space-y-5">
-          <div className="h-16 w-16 mx-auto rounded-full bg-[#2563eb]/10 border border-[#2563eb]/30 flex items-center justify-center">
-            <CalendarIcon size={28} className="text-[#2563eb]" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold">Aluno ainda não tem cronograma</h2>
-            <p className="text-gray-400 text-sm mt-2">Vamos criar em 3 passos rápidos:</p>
-          </div>
-          <ol className="text-sm text-left max-w-sm mx-auto space-y-2 text-gray-300">
-            <li><span className="text-[#2563eb] font-bold">1.</span> Definir vigência do plano</li>
-            <li><span className="text-[#2563eb] font-bold">2.</span> Gerar série de datas</li>
-            <li><span className="text-[#2563eb] font-bold">3.</span> Marcar trocas de treino</li>
-          </ol>
-          <Button variant="primary" iconRight={ChevronRight}
-            onClick={() => setModalWizard(true)}>
-            Iniciar configuração
-          </Button>
-          <p className="text-[11px] text-gray-500">
-            Ou <button onClick={trocarAluno} className="underline hover:text-white">selecione outro aluno</button>
-          </p>
-        </div>
-      )}
-
       {/* Estado normal */}
-      {aluno && !emEstadoVazio && (
+      {aluno && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* ─── Coluna esquerda ─────────────────────────────────────────── */}
           <div className="lg:col-span-6 space-y-4">
@@ -1054,28 +1019,6 @@ export default function CronogramaFeedbacks() {
       )}
 
       {/* ─── Modais ───────────────────────────────────────────────────── */}
-      {modalWizard && aluno && (
-        <WizardCriacao
-          alunoId={alunoId}
-          alunoNome={aluno.nome_completo}
-          aluno={aluno}
-          contratoRelevante={contratoRelevante}
-          formularios={formularios}
-          feriasList={feriasList}
-          initial={{
-            plan_start: planForm.plan_start,
-            plan_duration: planForm.plan_duration,
-            formulario_padrao: planForm.formulario_padrao,
-          }}
-          showToast={showToast}
-          onClose={() => setModalWizard(false)}
-          onSuccess={async () => {
-            setModalWizard(false)
-            await carregarAluno(alunoId)
-          }}
-        />
-      )}
-
       {modalNovoDia && (
         <ModalNovoDia
           draft={modalNovoDia}
