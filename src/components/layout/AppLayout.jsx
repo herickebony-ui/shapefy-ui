@@ -91,15 +91,11 @@ export default function AppLayout() {
         `}>
           {expanded ? (
             <div className="flex items-center gap-2 text-white font-bold tracking-wider">
-              <div className="p-1.5 bg-[#2563eb] rounded-lg">
-                <Activity className="w-4 h-4 text-white" />
-              </div>
+              <img src="/shapefy-logo.png" alt="Shapefy" className="w-7 h-7 object-contain" />
               <span className="text-sm uppercase tracking-widest">Shapefy</span>
             </div>
           ) : (
-            <div className="p-2 bg-[#2563eb] rounded-xl">
-              <Activity className="w-5 h-5 text-white" />
-            </div>
+            <img src="/shapefy-logo.png" alt="Shapefy" className="w-8 h-8 object-contain" />
           )}
           <button
             onClick={() => setExpanded(v => !v)}
