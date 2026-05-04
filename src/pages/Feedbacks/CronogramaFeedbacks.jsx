@@ -64,6 +64,7 @@ export default function CronogramaFeedbacks() {
   const [salvando, setSalvando] = useState(false)
   const [viewYear, setViewYear] = useState(new Date().getFullYear())
   const [carregandoAluno, setCarregandoAluno] = useState(false)
+  const [calendarMode, setCalendarMode] = useState('calendar') // 'calendar' | 'list'
 
   // ─── Toast ──────────────────────────────────────────────────────────────────
   const [toast, setToast] = useState({ show: false, msg: '', type: 'success' })
@@ -944,31 +945,52 @@ export default function CronogramaFeedbacks() {
               </div>
             </div>
 
-            {/* Calendário Anual */}
+            {/* Calendário ou Lista (mesma área, com toggle) */}
             <div className="bg-[#29292e] border border-[#323238] rounded-xl">
-              <div className="px-4 py-3 border-b border-[#323238] flex items-center justify-between gap-2">
-                <h3 className="text-sm font-bold tracking-tight flex items-center gap-2">
-                  <CalendarIcon size={14} className="text-gray-400" />
-                  Calendário Anual
-                </h3>
-                <div className="flex items-center gap-1">
-                  <button onClick={() => setViewYear(y => y - 1)}
-                    className="h-7 w-7 flex items-center justify-center rounded-lg border border-[#323238] text-gray-400 hover:text-white hover:bg-[#1a1a1a] transition-colors">
-                    <ChevronLeft size={14} />
-                  </button>
-                  <span className="text-sm font-bold tracking-tight px-3">{viewYear}</span>
-                  <button onClick={() => setViewYear(y => y + 1)}
-                    className="h-7 w-7 flex items-center justify-center rounded-lg border border-[#323238] text-gray-400 hover:text-white hover:bg-[#1a1a1a] transition-colors">
-                    <ChevronRight size={14} />
-                  </button>
+              <div className="px-4 py-3 border-b border-[#323238] flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-sm font-bold tracking-tight flex items-center gap-2">
+                    <CalendarIcon size={14} className="text-gray-400" />
+                    {calendarMode === 'calendar' ? 'Calendário Anual' : 'Lista de Datas'}
+                  </h3>
+                  {/* Toggle Calendário | Lista */}
+                  <div className="inline-flex bg-[#1a1a1a] border border-[#323238] rounded-lg p-0.5">
+                    <button
+                      onClick={() => setCalendarMode('calendar')}
+                      className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded transition-colors ${
+                        calendarMode === 'calendar' ? 'bg-[#2563eb] text-white' : 'text-gray-400 hover:text-white'
+                      }`}>
+                      Calendário
+                    </button>
+                    <button
+                      onClick={() => setCalendarMode('list')}
+                      className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded transition-colors ${
+                        calendarMode === 'list' ? 'bg-[#2563eb] text-white' : 'text-gray-400 hover:text-white'
+                      }`}>
+                      Lista
+                    </button>
+                  </div>
                 </div>
+                {calendarMode === 'calendar' && (
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => setViewYear(y => y - 1)}
+                      className="h-7 w-7 flex items-center justify-center rounded-lg border border-[#323238] text-gray-400 hover:text-white hover:bg-[#1a1a1a] transition-colors">
+                      <ChevronLeft size={14} />
+                    </button>
+                    <span className="text-sm font-bold tracking-tight px-3">{viewYear}</span>
+                    <button onClick={() => setViewYear(y => y + 1)}
+                      className="h-7 w-7 flex items-center justify-center rounded-lg border border-[#323238] text-gray-400 hover:text-white hover:bg-[#1a1a1a] transition-colors">
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
+                )}
               </div>
 
               {carregandoAluno ? (
                 <div className="p-12 flex items-center justify-center">
                   <Spinner />
                 </div>
-              ) : (
+              ) : calendarMode === 'calendar' ? (
                 <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {Array.from({ length: 12 }, (_, m) => (
                     <MesGrid
@@ -981,24 +1003,106 @@ export default function CronogramaFeedbacks() {
                       planEnd={planForm.plan_end}
                       onClickDate={onClickDate}
                       onContextDate={(e, dateStr) => {
-                        if (!dataJaAgendada(dateStr)) return
                         e.preventDefault()
-                        setMarcoZeroMenu({ date: dateStr, x: e.clientX, y: e.clientY })
+                        if (dataJaAgendada(dateStr)) {
+                          setMarcoZeroMenu({ date: dateStr, x: e.clientX, y: e.clientY })
+                        } else {
+                          setModalNovoDia({
+                            date: dateStr,
+                            formulario: formularioSugerido || '',
+                            dias_aviso: 1,
+                            is_start: false,
+                            nota: '',
+                          })
+                        }
                       }}
                     />
                   ))}
                 </div>
+              ) : (
+                /* Modo Lista: timeline compacta agrupada por ciclo */
+                <div className="p-3 max-h-[640px] overflow-y-auto">
+                  {schedule.dates.length === 0 ? (
+                    <p className="text-gray-500 text-xs text-center py-8 italic">
+                      Nenhuma data ainda. Use o calendário ou clique em <span className="text-purple-300 font-bold">Padronizar</span> no header.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {grupos.map((grupo, gi) => (
+                        <div key={gi} className="bg-[#1a1a1a] border border-[#323238] rounded-lg overflow-hidden">
+                          <div className="px-3 py-1.5 bg-[#0a0a0a]/60 border-b border-[#323238] flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-purple-300">
+                              {grupo.label}
+                            </span>
+                            <span className="text-[10px] text-gray-500">
+                              {grupo.items.length} data{grupo.items.length === 1 ? '' : 's'}
+                            </span>
+                          </div>
+                          <div className="divide-y divide-[#323238]/50">
+                            {grupo.items.map((d) => {
+                              const isDone = d.status === 'Respondido' || d.status === 'Concluido' || !!d.respondido_em
+                              const isAtrasado = !isDone && d.date < todayISO()
+                              return (
+                                <div key={d.date}
+                                  onContextMenu={(e) => {
+                                    e.preventDefault()
+                                    setMarcoZeroMenu({ date: d.date, x: e.clientX, y: e.clientY })
+                                  }}
+                                  className={`flex items-center gap-2 px-3 py-2 text-xs hover:bg-white/5 ${
+                                    d.is_start ? 'bg-[#2563eb]/10' : ''
+                                  }`}>
+                                  <span className="text-white font-medium w-20">{fmtDateBR(d.date)}</span>
+                                  <span className="shrink-0">
+                                    <TipoBotao item={d}
+                                      onToggle={(_, v) => handleToggleTraining(d.date, v)}
+                                      variant="icon"
+                                      size="sm" />
+                                  </span>
+                                  <span className="flex-1 truncate text-gray-400">
+                                    {formularios.find(f => f.name === (d.formulario || formularioSugerido))?.titulo || '—'}
+                                  </span>
+                                  {isDone && (
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded">
+                                      Concluído
+                                    </span>
+                                  )}
+                                  {isAtrasado && (
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-red-300 bg-red-500/10 border border-red-500/30 px-1.5 py-0.5 rounded">
+                                      Atrasado
+                                    </span>
+                                  )}
+                                  {d.is_start && (
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#2563eb] bg-[#2563eb]/10 border border-[#2563eb]/40 px-1.5 py-0.5 rounded">
+                                      Marco Zero
+                                    </span>
+                                  )}
+                                  <button onClick={() => handleRemoverDataLocal(d.date)}
+                                    title="Remover"
+                                    className="h-6 w-6 inline-flex items-center justify-center text-gray-500 hover:text-red-400 shrink-0">
+                                    <X size={12} />
+                                  </button>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
 
-              <div className="px-4 py-3 border-t border-[#323238] flex flex-wrap gap-3 text-[10px] text-gray-500">
-                <Legenda cor="bg-[#2563eb]" label="Feedback" />
-                <Legenda cor="bg-purple-500" label="Treino/Troca" />
-                <Legenda cor="bg-emerald-700" label="Segunda na vigência" />
-                <Legenda cor="bg-green-900/40 border border-green-700/40" label="Dentro da vigência" />
-                <Legenda cor="bg-[#1a1a1a] border border-blue-500/40" label="Férias" />
-                <Legenda label="Marco Zero (clique direito)" />
-                <Legenda cor="bg-orange-400" label="Feriado" />
-              </div>
+              {calendarMode === 'calendar' && (
+                <div className="px-4 py-3 border-t border-[#323238] flex flex-wrap gap-3 text-[10px] text-gray-500">
+                  <Legenda cor="bg-[#2563eb]" label="Feedback" />
+                  <Legenda cor="bg-purple-500" label="Treino/Troca" />
+                  <Legenda cor="bg-emerald-700" label="Segunda na vigência" />
+                  <Legenda cor="bg-green-900/40 border border-green-700/40" label="Dentro da vigência" />
+                  <Legenda cor="bg-[#1a1a1a] border border-blue-500/40" label="Férias" />
+                  <Legenda label="Marco Zero (clique direito)" />
+                  <Legenda cor="bg-orange-400" label="Feriado" />
+                </div>
+              )}
             </div>
           </div>
         </div>
