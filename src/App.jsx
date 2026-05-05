@@ -74,8 +74,8 @@ function App() {
         >
           <Route index element={<Dashboard />} />
 
-          {/* anamnese */}
-          <Route path="anamneses" element={<ModuleRoute modulo="anamnese"><AnamneseListagem /></ModuleRoute>} />
+          {/* anamnese — feature universal, sem gate de módulo */}
+          <Route path="anamneses" element={<AnamneseListagem />} />
           <Route path="alunos/:id" element={<AlunoDetalhe />} />
           <Route path="alunos" element={<Navigate to="/anamneses" replace />} />
 
