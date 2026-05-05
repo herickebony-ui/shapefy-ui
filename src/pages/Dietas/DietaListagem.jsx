@@ -6,8 +6,8 @@ import {
   RefreshCw, AlertCircle, Copy, ClipboardList,
   Trash2, SlidersHorizontal, Eye, Loader,
 } from 'lucide-react'
-import { listarDietas, excluirDieta, buscarDieta, salvarDieta, criarDieta } from '../../api/dietas'
-import { listarAlunos } from '../../api/alunos'
+import { listarDietas, excluirDieta, buscarDieta, salvarDieta, criarDieta, dadosAntropometricosFromAluno } from '../../api/dietas'
+import { listarAlunos, buscarAluno } from '../../api/alunos'
 import { ModalDuplicarDieta } from './DietaDetalhe'
 import { Button, FormGroup, Input, Autocomplete, Modal, EmptyState, Pagination, DataTable } from '../../components/ui'
 import { buscarSmart } from '../../utils/strings'
@@ -451,13 +451,15 @@ const ModalNovaDieta = ({ onClose, onCriada }) => {
     if (!aluno) return
     setCriando(true)
     try {
-      const nova = await criarDieta({
-        aluno: aluno.name,
-        sexo: aluno.sexo || '',
-        age: aluno.age || 0,
-        height: aluno.height || 0,
-        weight: aluno.weight || 0,
-      })
+      // busca o doc completo (listarAlunos não traz frequencia_atividade)
+      let dadosAluno = {}
+      try {
+        const alunoDoc = await buscarAluno(aluno.name)
+        dadosAluno = dadosAntropometricosFromAluno(alunoDoc)
+      } catch {
+        dadosAluno = dadosAntropometricosFromAluno(aluno)
+      }
+      const nova = await criarDieta({ aluno: aluno.name, ...dadosAluno })
       onCriada(nova.name)
     } catch (err) {
       alert('Erro ao criar dieta: ' + err.message)

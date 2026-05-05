@@ -9,7 +9,8 @@ import {
 import {
   buscarDieta, salvarDieta, listarAlimentos,
   listarRefeicoesProntas, buscarRefeicaoPronta,
-  criarRefeicaoPronta, excluirDieta, duplicarDieta
+  criarRefeicaoPronta, excluirDieta, duplicarDieta,
+  dadosAntropometricosFromAluno,
 } from '../../api/dietas'
 import { listarAlunos, buscarAluno, salvarAluno } from '../../api/alunos'
 import { listarTextos, salvarNoBancoSeNovo, excluirTexto } from '../../api/bancoTextos'
@@ -1384,10 +1385,12 @@ export default function DietaDetalhe() {
                       handleChange('nome_completo', a.nome)
                       try {
                         const data = await buscarAluno(a.id)
-                        handleChange('sexo', data.sexo || '')
-                        handleChange('age', data.age || '')
-                        handleChange('weight', data.weight || '')
-                        handleChange('height', data.height || '')
+                        const d = dadosAntropometricosFromAluno(data)
+                        handleChange('sexo', d.sexo)
+                        handleChange('age', d.age)
+                        handleChange('weight', d.weight)
+                        handleChange('height', d.height)
+                        handleChange('frequencia_atividade', d.frequencia_atividade)
                       } catch (e) { console.error(e) }
                     }}
                     searchFn={buscarAlunosFn}

@@ -1,6 +1,23 @@
 import client from './client'
 import { buscarAluno } from './alunos'
 
+// Normaliza altura: se vier em metros (< 3), converte pra cm.
+// Aluno cadastra em cm no AlunoModal mas dados antigos podem estar em metros.
+export const normalizarAlturaCm = (h) => {
+  const n = Number(h) || 0
+  if (n > 0 && n < 3) return Math.round(n * 100)
+  return n
+}
+
+// Extrai os campos antropométricos + PAL de um doc Aluno pra payload de Dieta.
+export const dadosAntropometricosFromAluno = (alunoDoc = {}) => ({
+  sexo: alunoDoc.sexo || '',
+  age: Number(alunoDoc.age) || 0,
+  weight: Number(alunoDoc.weight) || 0,
+  height: normalizarAlturaCm(alunoDoc.height),
+  frequencia_atividade: alunoDoc.frequencia_atividade || '',
+})
+
 const frappeOwner = () => localStorage.getItem('frappe_user') || ''
 
 // ─── Dietas ───────────────────────────────────────────────────────────────────
@@ -58,13 +75,10 @@ export const duplicarDieta = async (id, novoAluno = null, dataInicial = null, da
 
   if (novoAluno) {
     payload.aluno = novoAluno
-    // Sobrescreve dados antropométricos com os do aluno destino
+    // Sobrescreve dados antropométricos + PAL com os do aluno destino
     try {
       const alunoDoc = await buscarAluno(novoAluno)
-      payload.sexo   = alunoDoc?.sexo   ?? ''
-      payload.age    = alunoDoc?.age    ?? 0
-      payload.height = alunoDoc?.height ?? 0
-      payload.weight = alunoDoc?.weight ?? 0
+      Object.assign(payload, dadosAntropometricosFromAluno(alunoDoc))
     } catch (e) {
       console.warn('Não foi possível buscar dados do aluno destino:', e)
     }
