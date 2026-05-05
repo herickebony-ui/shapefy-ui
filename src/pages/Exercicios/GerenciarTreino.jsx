@@ -10,6 +10,7 @@ import {
 import ListPage from '../../components/templates/ListPage'
 import ExplorarBibliotecaModal from '../../components/ExplorarBibliotecaModal'
 import { extractVideoId } from '../../utils/video'
+import { parseFrappeError } from '../../utils/frappeErrors'
 
 const normalizar = (s = '') =>
   String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
@@ -57,10 +58,13 @@ const buildVideoUrl = (id, platform) => {
 }
 
 const INTENSIDADE_OPCOES = [
-  { value: '0.25', label: '0.25 — Leve' },
-  { value: '0.5', label: '0.5 — Moderado' },
-  { value: '1', label: '1.0 — Principal' },
+  { value: '0,25', label: '0,25 — Leve' },
+  { value: '0,5',  label: '0,5 — Moderado' },
+  { value: '1',    label: '1,0 — Principal' },
 ]
+
+// Normaliza valor de intensidade salvo (pode vir com ponto de versões antigas).
+const normIntensidade = (v) => String(v ?? '').replace('.', ',')
 
 // ─── ModalExercicio ───────────────────────────────────────────────────────────
 
@@ -90,7 +94,10 @@ const ModalExercicio = ({ exercicio, grupos, onSave, onClose }) => {
   const [intensidades, setIntensidades] = useState(() => {
     try {
       const raw = exercicio?.intensidade_json
-      return typeof raw === 'string' ? JSON.parse(raw) : (raw || [])
+      const parsed = typeof raw === 'string' ? JSON.parse(raw) : (raw || [])
+      return Array.isArray(parsed)
+        ? parsed.map(i => ({ ...i, intensidade: normIntensidade(i.intensidade) }))
+        : []
     } catch { return [] }
   })
 
@@ -112,13 +119,14 @@ const ModalExercicio = ({ exercicio, grupos, onSave, onClose }) => {
         intensidade: intens.map(i => ({
           doctype: 'Treino Exercicio Grupo Muscular',
           grupo_muscular: i.grupo_muscular,
-          intensidade: String(i.intensidade),
+          intensidade: normIntensidade(i.intensidade),
         })),
       }
       const resultado = await salvarTreinoExercicio(isEdit ? exercicio.name : null, payload)
       onSave(resultado)
     } catch (e) {
-      console.error(e); setErro(e.message || 'Erro ao salvar.')
+      console.error(e)
+      setErro(parseFrappeError(e) || e.message || 'Erro ao salvar.')
     } finally { setSaving(false) }
   }
 

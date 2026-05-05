@@ -29,11 +29,13 @@ export default function TextareaComSugestoes({
 
   const filtrar = (lista, q) => {
     if (!q?.trim()) return lista
-    const term = q.trim().toLowerCase().replace(/%/g, '.*')
-    const re = new RegExp(term)
+    const trimmed = q.trim().toLowerCase()
+    const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/%/g, '.*')
+    let re
+    try { re = new RegExp(escaped) } catch { return lista }
     return lista.filter(item => {
       const texto = (item[campo] || '').toLowerCase()
-      return re.test(texto) && texto !== q.trim().toLowerCase()
+      return re.test(texto) && texto !== trimmed
     })
   }
 

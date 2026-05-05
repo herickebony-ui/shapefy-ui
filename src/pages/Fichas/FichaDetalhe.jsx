@@ -208,14 +208,17 @@ const TextareaExpansivel = ({ value, onChange, placeholder = '', resetKey, class
     } catch (e) { console.error('sugestões:', e.message); return [] }
   }
 
-  // Filtragem local imediata — suporta % como wildcard
+  // Filtragem local imediata — suporta % como wildcard. Escapa metacaracteres
+  // de regex pra que parênteses, *, +, etc. no texto não quebrem o RegExp.
   const filtrar = (lista, q) => {
     if (!q?.trim()) return lista
-    const term = q.trim().toLowerCase().replace(/%/g, '.*')
-    const re = new RegExp(term)
+    const trimmed = q.trim().toLowerCase()
+    const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/%/g, '.*')
+    let re
+    try { re = new RegExp(escaped) } catch { return lista }
     return lista.filter(item => {
       const texto = (item[campo] || '').toLowerCase()
-      return re.test(texto) && texto !== q.trim().toLowerCase()
+      return re.test(texto) && texto !== trimmed
     })
   }
 
@@ -335,11 +338,13 @@ const InputSug = ({ value, onChange, doctype, campo, className = '' }) => {
 
   const filtrar = (lista, q) => {
     if (!q?.trim()) return lista
-    const term = q.trim().toLowerCase().replace(/%/g, '.*')
-    const re = new RegExp(term)
+    const trimmed = q.trim().toLowerCase()
+    const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/%/g, '.*')
+    let re
+    try { re = new RegExp(escaped) } catch { return lista }
     return lista.filter(item => {
       const texto = (item[campo] || '').toLowerCase()
-      return re.test(texto) && texto !== q.trim().toLowerCase()
+      return re.test(texto) && texto !== trimmed
     })
   }
 

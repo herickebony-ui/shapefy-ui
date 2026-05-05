@@ -26,15 +26,15 @@ export const TIPO_PARA_FRAPPE = {
 }
 
 export const TIPOS_CONFIG = {
-  texto_curto: { label: 'Texto Curto', hasOpcoes: false, hasHtml: false, isLayout: false },
-  texto_longo: { label: 'Texto Longo', hasOpcoes: false, hasHtml: false, isLayout: false },
-  numero:      { label: 'Número',      hasOpcoes: false, hasHtml: false, isLayout: false },
-  avaliacao:   { label: 'Avaliação (estrelas)', hasOpcoes: true, opcoesLabel: 'Máximo de estrelas (padrão: 5)', hasHtml: false, isLayout: false },
-  secao:       { label: 'Quebra de Seção', hasOpcoes: false, hasHtml: false, isLayout: true },
-  selecao:     { label: 'Seleção (lista)', hasOpcoes: true, opcoesLabel: 'Opções — uma por linha', hasHtml: false, isLayout: false },
-  imagem:      { label: 'Anexar Imagem', hasOpcoes: false, hasHtml: false, isLayout: false },
-  multipla:    { label: 'Múltipla Escolha', hasOpcoes: true, opcoesLabel: 'Opções — uma por linha', hasHtml: false, isLayout: false },
-  html:        { label: 'Bloco HTML', hasOpcoes: false, hasHtml: true, isLayout: true, feedbackOnly: true },
+  texto_curto: { label: 'Texto Curto', hasOpcoes: false, hasHtml: false, isLayout: false, descricao: 'Campo de uma única linha. Ideal para nome, idade, e-mail e respostas curtas.' },
+  texto_longo: { label: 'Texto Longo', hasOpcoes: false, hasHtml: false, isLayout: false, descricao: 'Campo de múltiplas linhas. Ideal para relatos, observações e descrições detalhadas.' },
+  numero:      { label: 'Número',      hasOpcoes: false, hasHtml: false, isLayout: false, descricao: 'Aceita apenas números inteiros. Ideal para idade, frequência semanal, quantidades.' },
+  avaliacao:   { label: 'Avaliação (estrelas)', hasOpcoes: true, opcoesLabel: 'Máximo de estrelas (padrão: 5)', hasHtml: false, isLayout: false, descricao: 'O aluno responde clicando em estrelas. Útil para medir percepção (ex: nível de fome, qualidade do sono).' },
+  secao:       { label: 'Quebra de Seção', hasOpcoes: false, hasHtml: false, isLayout: true, descricao: 'Não é uma pergunta — é um divisor visual no formulário. Use para agrupar perguntas relacionadas em blocos, deixando o formulário mais organizado para o aluno (ex: "Histórico de Saúde", "Hábitos Alimentares", "Treino Atual"). O texto digitado vira o título da seção.' },
+  selecao:     { label: 'Seleção (lista)', hasOpcoes: true, opcoesLabel: 'Opções — uma por linha', hasHtml: false, isLayout: false, descricao: 'O aluno escolhe uma única opção em uma lista. Liste as opções abaixo, uma por linha.' },
+  imagem:      { label: 'Anexar Imagem', hasOpcoes: false, hasHtml: false, isLayout: false, descricao: 'Permite o aluno anexar uma foto. Útil para fotos de progresso, prato de comida, postura.' },
+  multipla:    { label: 'Múltipla Escolha', hasOpcoes: true, opcoesLabel: 'Opções — uma por linha', hasHtml: false, isLayout: false, descricao: 'O aluno pode marcar várias opções. Liste as opções abaixo, uma por linha.' },
+  html:        { label: 'Bloco HTML', hasOpcoes: false, hasHtml: true, isLayout: true, feedbackOnly: true, descricao: 'Não é uma pergunta — é um bloco de texto formatado para passar instruções, avisos ou contexto pro aluno. Ele apenas lê, sem responder.' },
 }
 
 export const TIPOS_ANAMNESE = Object.entries(TIPOS_CONFIG)

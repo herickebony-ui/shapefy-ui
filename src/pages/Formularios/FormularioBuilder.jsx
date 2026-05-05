@@ -6,6 +6,7 @@ import {
   criarFormularioFeedback, salvarFormularioFeedback, buscarFormularioFeedback,
 } from '../../api/formularios'
 import { TIPOS_ANAMNESE, TIPOS_FEEDBACK, TIPOS_CONFIG } from '../../utils/formularioUtils'
+import { parseFrappeError } from '../../utils/frappeErrors'
 import { Button, FormGroup, Input, Select, Textarea, Spinner, Tabs, RichTextEditor } from '../../components/ui'
 
 const gerarId = () => `${Date.now()}_${Math.random().toString(36).slice(2)}`
@@ -49,14 +50,13 @@ export default function FormularioBuilder() {
   const [titulo, setTitulo] = useState('')
   const [perguntas, setPerguntas] = useState([perguntaVazia()])
   const [enabled, setEnabled] = useState(true)
-  // automacao/frequencia removidos do DocType — frequência agora vive só no
-  // cronograma do aluno. Mantém só os campos de configuração ativos.
   const [feedbackInicial, setFeedbackInicial] = useState(false)
   const [dieta, setDieta] = useState(false)
   const [treino, setTreino] = useState(false)
   const [loading, setLoading] = useState(!isNovo)
   const [salvando, setSalvando] = useState(false)
   const [abaAtiva, setAbaAtiva] = useState('perguntas')
+  const [errors, setErrors] = useState({ titulo: null, geral: null, perguntas: {} })
 
   const TIPOS = isFeedback ? TIPOS_FEEDBACK : TIPOS_ANAMNESE
 
@@ -78,12 +78,38 @@ export default function FormularioBuilder() {
       .finally(() => setLoading(false))
   }, [id, isNovo, isFeedback])
 
-  const addPergunta = () => setPerguntas(prev => [...prev, perguntaVazia()])
+  const limparErroPergunta = (idx, campo) => {
+    setErrors(prev => {
+      const linha = prev.perguntas?.[idx]
+      if (!linha?.[campo]) return prev
+      const next = { ...linha, [campo]: null }
+      return { ...prev, perguntas: { ...prev.perguntas, [idx]: next } }
+    })
+  }
 
-  const removePergunta = (idx) => setPerguntas(prev => prev.filter((_, i) => i !== idx))
+  const addPergunta = () => {
+    setPerguntas(prev => [...prev, perguntaVazia()])
+    setErrors(prev => ({ ...prev, geral: null }))
+  }
 
-  const updatePergunta = (idx, campo, valor) =>
+  const removePergunta = (idx) => {
+    setPerguntas(prev => prev.filter((_, i) => i !== idx))
+    setErrors(prev => {
+      const next = { ...prev.perguntas }
+      delete next[idx]
+      return { ...prev, perguntas: next }
+    })
+  }
+
+  const updatePergunta = (idx, campo, valor) => {
     setPerguntas(prev => prev.map((p, i) => i === idx ? { ...p, [campo]: valor } : p))
+    limparErroPergunta(idx, campo)
+  }
+
+  const handleTitulo = (v) => {
+    setTitulo(v)
+    if (errors.titulo) setErrors(prev => ({ ...prev, titulo: null }))
+  }
 
   const moverCima = (idx) => {
     if (idx === 0) return
@@ -103,22 +129,42 @@ export default function FormularioBuilder() {
     })
   }
 
-  const salvar = async () => {
-    if (!titulo.trim()) { alert('Informe o título do formulário.'); return }
-
+  const validar = () => {
+    const errs = { titulo: null, geral: null, perguntas: {} }
+    if (!titulo.trim()) errs.titulo = 'Informe o título do formulário.'
     if (perguntas.length === 0) {
-      setAbaAtiva('perguntas')
-      alert('Adicione ao menos uma pergunta antes de salvar.')
+      errs.geral = 'Adicione ao menos uma pergunta antes de salvar.'
+    } else {
+      perguntas.forEach((p, i) => {
+        const config = TIPOS_CONFIG[p.tipo] || {}
+        const linha = {}
+        if (!p.pergunta?.trim()) {
+          linha.pergunta = config.isLayout ? 'Informe o título da seção.' : 'Informe o texto da pergunta.'
+        }
+        if (config.hasOpcoes && p.tipo !== 'avaliacao' && !p.opcoes?.trim()) {
+          linha.opcoes = 'Adicione ao menos uma opção (uma por linha).'
+        }
+        if (config.hasHtml && !p.conteudo_html?.trim()) {
+          linha.conteudo_html = 'Adicione o conteúdo do bloco.'
+        }
+        if (Object.keys(linha).length) errs.perguntas[i] = linha
+      })
+    }
+    return errs
+  }
+
+  const temErros = (errs) =>
+    !!errs.titulo || !!errs.geral || Object.values(errs.perguntas || {}).some(l => Object.values(l).some(Boolean))
+
+  const salvar = async () => {
+    const errs = validar()
+    if (temErros(errs)) {
+      setErrors(errs)
+      const errosEmPerguntas = !!errs.geral || Object.keys(errs.perguntas).length > 0
+      if (errosEmPerguntas) setAbaAtiva('perguntas')
       return
     }
-    const idxVazia = perguntas.findIndex(p => !p.pergunta?.trim())
-    if (idxVazia !== -1) {
-      const config = TIPOS_CONFIG[perguntas[idxVazia].tipo] || {}
-      const campo = config.isLayout ? 'o título da seção' : 'o texto da pergunta'
-      setAbaAtiva('perguntas')
-      alert(`Preencha ${campo} na pergunta #${idxVazia + 1}.`)
-      return
-    }
+    setErrors({ titulo: null, geral: null, perguntas: {} })
 
     setSalvando(true)
     try {
@@ -141,16 +187,23 @@ export default function FormularioBuilder() {
       }
     } catch (e) {
       console.error(e)
-      const msg = e.response?.data?._server_messages
-      let userMsg = 'Erro ao salvar formulário.'
-      if (msg) {
-        try {
-          const arr = JSON.parse(msg)
-          const first = JSON.parse(arr[0])
-          if (first?.message) userMsg = first.message.replace(/<[^>]*>/g, '')
-        } catch {}
+      const userMsg = parseFrappeError(e) || 'Erro ao salvar formulário.'
+      const lineMatch = userMsg.match(/Linha\s*#?\s*(\d+)/i)
+      if (lineMatch) {
+        const idx = parseInt(lineMatch[1], 10) - 1
+        if (perguntas[idx]) {
+          setErrors(prev => ({
+            ...prev,
+            perguntas: {
+              ...prev.perguntas,
+              [idx]: { ...(prev.perguntas?.[idx] || {}), pergunta: userMsg },
+            },
+          }))
+          setAbaAtiva('perguntas')
+          return
+        }
       }
-      alert(userMsg)
+      setErrors(prev => ({ ...prev, geral: userMsg }))
     } finally {
       setSalvando(false)
     }
@@ -178,13 +231,21 @@ export default function FormularioBuilder() {
         </div>
       </div>
 
+      {/* Banner de erro geral */}
+      {errors.geral && (
+        <div className="bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg px-4 py-3 text-sm">
+          {errors.geral}
+        </div>
+      )}
+
       {/* Título */}
       <div className="bg-[#29292e] rounded-lg border border-[#323238] p-4">
-        <FormGroup label="Título do formulário" required>
+        <FormGroup label="Título do formulário" required error={errors.titulo}>
           <Input
             value={titulo}
-            onChange={setTitulo}
+            onChange={handleTitulo}
             placeholder={isFeedback ? 'Ex: Feedback Mensal' : 'Ex: Anamnese Inicial'}
+            error={!!errors.titulo}
           />
         </FormGroup>
       </div>
@@ -220,8 +281,14 @@ export default function FormularioBuilder() {
         <div className="space-y-3">
           {perguntas.map((p, idx) => {
             const config = TIPOS_CONFIG[p.tipo] || {}
+            const erroLinha = errors.perguntas?.[idx] || {}
             return (
-              <div key={p._id} className="bg-[#29292e] rounded-lg border border-[#323238] p-4 space-y-3">
+              <div
+                key={p._id}
+                className={`bg-[#29292e] rounded-lg border p-4 space-y-3 ${
+                  Object.values(erroLinha).some(Boolean) ? 'border-red-500/40' : 'border-[#323238]'
+                }`}
+              >
                 {/* Cabeçalho da pergunta */}
                 <div className="flex items-center gap-2">
                   <span className="text-gray-600 text-xs font-bold min-w-[1.5rem]">#{idx + 1}</span>
@@ -251,11 +318,15 @@ export default function FormularioBuilder() {
 
                 {/* Campos principais */}
                 <div className="grid grid-cols-1 sm:grid-cols-[1fr_180px] gap-3">
-                  <FormGroup label={config.isLayout ? 'Título da seção' : 'Pergunta'}>
+                  <FormGroup
+                    label={config.isLayout ? 'Título da seção' : 'Pergunta'}
+                    error={erroLinha.pergunta}
+                  >
                     <Input
                       value={p.pergunta}
                       onChange={v => updatePergunta(idx, 'pergunta', v)}
                       placeholder={config.isLayout ? 'Ex: Informações de Saúde' : 'Ex: Qual seu principal objetivo?'}
+                      error={!!erroLinha.pergunta}
                     />
                   </FormGroup>
                   <FormGroup label="Tipo">
@@ -266,6 +337,13 @@ export default function FormularioBuilder() {
                     />
                   </FormGroup>
                 </div>
+
+                {/* Descrição do tipo selecionado */}
+                {config.descricao && (
+                  <p className="text-gray-500 text-[11px] leading-relaxed border-l-2 border-[#323238] pl-3">
+                    {config.descricao}
+                  </p>
+                )}
 
                 {/* Obrigatória */}
                 {!config.isLayout && (
@@ -285,19 +363,21 @@ export default function FormularioBuilder() {
                   <FormGroup
                     label={config.opcoesLabel || 'Opções'}
                     hint={p.tipo !== 'avaliacao' ? 'Uma opção por linha' : undefined}
+                    error={erroLinha.opcoes}
                   >
                     <Textarea
                       value={p.opcoes}
                       onChange={v => updatePergunta(idx, 'opcoes', v)}
                       rows={p.tipo === 'avaliacao' ? 1 : 4}
                       placeholder={p.tipo === 'avaliacao' ? '5' : 'Opção 1\nOpção 2\nOpção 3'}
+                      error={!!erroLinha.opcoes}
                     />
                   </FormGroup>
                 )}
 
                 {/* HTML */}
                 {config.hasHtml && (
-                  <FormGroup label="Conteúdo HTML">
+                  <FormGroup label="Conteúdo HTML" error={erroLinha.conteudo_html}>
                     <RichTextEditor
                       value={p.conteudo_html}
                       onChange={v => updatePergunta(idx, 'conteudo_html', v)}
