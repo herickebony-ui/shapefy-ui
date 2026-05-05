@@ -105,6 +105,21 @@ export default function FormularioBuilder() {
 
   const salvar = async () => {
     if (!titulo.trim()) { alert('Informe o título do formulário.'); return }
+
+    if (perguntas.length === 0) {
+      setAbaAtiva('perguntas')
+      alert('Adicione ao menos uma pergunta antes de salvar.')
+      return
+    }
+    const idxVazia = perguntas.findIndex(p => !p.pergunta?.trim())
+    if (idxVazia !== -1) {
+      const config = TIPOS_CONFIG[perguntas[idxVazia].tipo] || {}
+      const campo = config.isLayout ? 'o título da seção' : 'o texto da pergunta'
+      setAbaAtiva('perguntas')
+      alert(`Preencha ${campo} na pergunta #${idxVazia + 1}.`)
+      return
+    }
+
     setSalvando(true)
     try {
       if (isFeedback) {
@@ -126,7 +141,16 @@ export default function FormularioBuilder() {
       }
     } catch (e) {
       console.error(e)
-      alert('Erro ao salvar formulário.')
+      const msg = e.response?.data?._server_messages
+      let userMsg = 'Erro ao salvar formulário.'
+      if (msg) {
+        try {
+          const arr = JSON.parse(msg)
+          const first = JSON.parse(arr[0])
+          if (first?.message) userMsg = first.message.replace(/<[^>]*>/g, '')
+        } catch {}
+      }
+      alert(userMsg)
     } finally {
       setSalvando(false)
     }
