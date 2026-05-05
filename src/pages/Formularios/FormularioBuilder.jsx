@@ -1,13 +1,27 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Plus, Trash2, ChevronUp, ChevronDown, Save, ArrowLeft } from 'lucide-react'
+import { Plus, Trash2, ChevronUp, ChevronDown, Save, ArrowLeft, Type, ListChecks, ArrowUpDown, Layers, FileText, Settings } from 'lucide-react'
 import {
   criarFormularioAnamnese, salvarFormularioAnamnese, buscarFormularioAnamnese,
   criarFormularioFeedback, salvarFormularioFeedback, buscarFormularioFeedback,
 } from '../../api/formularios'
 import { TIPOS_ANAMNESE, TIPOS_FEEDBACK, TIPOS_CONFIG } from '../../utils/formularioUtils'
 import { parseFrappeError } from '../../utils/frappeErrors'
-import { Button, FormGroup, Input, Select, Textarea, Spinner, Tabs, RichTextEditor } from '../../components/ui'
+import { Button, FormGroup, Input, Select, Textarea, Spinner, Tabs, RichTextEditor, BotaoAjuda } from '../../components/ui'
+
+const TOPICOS_AJUDA_ANAMNESE = [
+  { icon: Type, title: 'Título do formulário', description: 'É o nome que você vê na lista de formulários — não aparece para o aluno. Use algo descritivo: "Anamnese Inicial", "Anamnese Hipertrofia Feminino".' },
+  { icon: Plus, title: 'Adicionar pergunta', description: 'Clique em "Adicionar pergunta" pra criar um novo campo. Cada linha vira um campo no formulário enviado ao aluno.' },
+  { icon: ArrowUpDown, title: 'Reordenar e remover', description: 'Use as setinhas ▲ ▼ no canto direito de cada pergunta pra mover ela pra cima ou pra baixo. O ✕ remove a pergunta.' },
+  { icon: ListChecks, title: 'Tipo de pergunta', description: 'Escolha como o aluno vai responder: texto curto (uma linha), texto longo, número, seleção (dropdown), múltipla escolha, anexar imagem ou avaliação por estrelas. A descrição de cada tipo aparece abaixo quando você seleciona.' },
+  { icon: Layers, title: 'Quebra de Seção', description: 'Não é uma pergunta — é um divisor visual pra organizar o formulário em blocos (ex: "Histórico de Saúde", "Hábitos Alimentares"). O texto digitado vira o título da seção.' },
+]
+
+const TOPICOS_AJUDA_FEEDBACK = [
+  ...TOPICOS_AJUDA_ANAMNESE,
+  { icon: FileText, title: 'Bloco HTML', description: 'Bloco de texto formatado pra dar instruções, avisos ou contexto ao aluno entre as perguntas. Não é uma pergunta — o aluno só lê.' },
+  { icon: Settings, title: 'Aba Configurações', description: 'Liga/desliga seções padrão (Feedback inicial, Dieta, Treino) que aparecem no feedback do aluno mesmo sem perguntas customizadas. "Ativo" controla se o formulário fica disponível pra envio.' },
+]
 
 const gerarId = () => `${Date.now()}_${Math.random().toString(36).slice(2)}`
 
@@ -223,12 +237,17 @@ export default function FormularioBuilder() {
         >
           <ArrowLeft size={14} />
         </button>
-        <div>
+        <div className="flex-1 min-w-0">
           <h1 className="text-white text-lg font-bold">
             {isNovo ? `Novo Formulário de ${tipoLabel}` : `Editar Formulário de ${tipoLabel}`}
           </h1>
           <p className="text-gray-500 text-xs">Templates para enviar aos alunos</p>
         </div>
+        <BotaoAjuda
+          title={`Como criar um Formulário de ${tipoLabel}`}
+          subtitle="Guia rápido dos campos desta tela"
+          topicos={isFeedback ? TOPICOS_AJUDA_FEEDBACK : TOPICOS_AJUDA_ANAMNESE}
+        />
       </div>
 
       {/* Banner de erro geral */}
