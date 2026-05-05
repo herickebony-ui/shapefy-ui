@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, RefreshCw, ChevronLeft, ChevronRight,
-  Dumbbell, Activity, Clock, MessageSquare,
+  Dumbbell, Activity, Clock, MessageSquare, LineChart,
   Save, Search, Calendar, TrendingUp, Check, Eye, EyeOff,
 } from 'lucide-react'
 import { buscarSmart } from '../../utils/strings'
@@ -9,8 +10,32 @@ import {
   listarTreinosRealizados, buscarTreinoRealizado,
   salvarFeedbackProfissional, marcarEntregueTreino,
 } from '../../api/treinosRealizados'
+import { buscarFicha } from '../../api/fichas'
 import { Button, Badge, Spinner } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
+
+// ─── Cache em memória (sessão) ────────────────────────────────────────────────
+const TREINO_TTL_MS = 5 * 60 * 1000
+const cacheTreinos = new Map() // name → { data, ts }
+const cacheFichas  = new Map() // name → Promise<doc>
+
+const buscarTreinoCached = async (id) => {
+  const hit = cacheTreinos.get(id)
+  if (hit && Date.now() - hit.ts < TREINO_TTL_MS) return hit.data
+  const data = await buscarTreinoRealizado(id)
+  cacheTreinos.set(id, { data, ts: Date.now() })
+  return data
+}
+
+const buscarFichaCached = (id) => {
+  if (!id) return Promise.resolve(null)
+  if (cacheFichas.has(id)) return cacheFichas.get(id)
+  const p = buscarFicha(id).catch(() => null)
+  cacheFichas.set(id, p)
+  return p
+}
+
+const invalidarTreinoCache = (id) => { if (id) cacheTreinos.delete(id) }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -47,6 +72,113 @@ const parseSeries = (str, fallbackCarga = 0) => {
     const parsed = JSON.parse(str || '[]')
     return Array.isArray(parsed) ? normalizeSeries(parsed, fallbackCarga) : []
   } catch { return [] }
+}
+
+// Calcula a prescrição (series/reps/descanso) de cada exercício considerando periodização.
+// Regras:
+//   - exercício com series E repeticoes preenchidos na ficha → fixo (ignora periodização)
+//   - exercício sem esses campos → cumpre a periodização da semana
+//   - se semana atual passou da última semana cadastrada → mantém a última (clamp)
+function calcularPrescricoes({ ficha, treinoLabel, dataTreinoISO }) {
+  const map = new Map()
+  const empty = (motivo, debug = {}) => ({
+    map,
+    semana: null,
+    semanaUsada: null,
+    totalSemanas: 0,
+    periodo: null,
+    motivoSemPrescricao: motivo,
+    debug,
+  })
+
+  if (!ficha) return empty('ficha-nao-carregada')
+  if (!treinoLabel) return empty('treino-label-vazio')
+
+  // Mapear treino_label do realizado → planilha_de_treino_X da ficha.
+  // Tenta 3 estratégias de match em ordem:
+  //   1. label exato (case-insensitive)
+  //   2. fim do label bate (ex: "Treino A" → "A")
+  //   3. fallback: usar a planilha da letra correspondente quando label do realizado é "Treino X"
+  const letras = ['a', 'b', 'c', 'd', 'e', 'f']
+  const norm = (s) => (s || '').trim().toLowerCase()
+  const tl = norm(treinoLabel)
+
+  let letra = letras.find((l) => norm(ficha[`treino_${l}_label`]) === tl)
+
+  // Estratégia 2: tenta extrair letra do final do label "Treino A" → "a"
+  if (!letra) {
+    const m = tl.match(/\b([a-f])\b\s*$/)
+    if (m) letra = m[1]
+  }
+
+  // Estratégia 3: bate "Treino X" diretamente
+  if (!letra) {
+    letra = letras.find((l) => tl === `treino ${l}`)
+  }
+
+  const labelsFicha = letras.map((l) => ({ letra: l, label: ficha[`treino_${l}_label`] }))
+  const debug = { treinoLabel, letrasTentadas: labelsFicha, letraEncontrada: letra }
+
+  if (!letra) return empty('letra-nao-encontrada', debug)
+  const planilha = ficha[`planilha_de_treino_${letra}`]
+  if (!planilha?.length) return empty('planilha-vazia', { ...debug, planilhaCampo: `planilha_de_treino_${letra}` })
+
+  // Semana relativa
+  const inicio = ficha.data_de_inicio
+  let semana = 1
+  if (inicio && dataTreinoISO) {
+    const [y1, m1, d1] = inicio.split('-').map(Number)
+    const [y2, m2, d2] = dataTreinoISO.split('-').map(Number)
+    const dInicio = new Date(y1, m1 - 1, d1)
+    const dTreino = new Date(y2, m2 - 1, d2)
+    const diffDays = Math.floor((dTreino - dInicio) / (1000 * 60 * 60 * 24))
+    if (diffDays >= 0) semana = Math.floor(diffDays / 7) + 1
+  }
+
+  const periodizacao = ficha.periodizacao || []
+  // Tolerante a string vs int (Frappe às vezes serializa Int como string)
+  const semanaInt = (p) => parseInt(p?.semana, 10) || 0
+  const totalSemanas = periodizacao.length ? Math.max(...periodizacao.map(semanaInt)) : 0
+  const semanaUsada = totalSemanas ? Math.min(semana, totalSemanas) : semana
+  const periodo = periodizacao.find((p) => semanaInt(p) === semanaUsada) || null
+
+  // Decisão de prescrição por exercício:
+  //   - se tem series E repeticoes preenchidos no exercício → fixo (ignora periodização)
+  //   - se algum dos dois faltar → tenta completar com periodização da semana
+  //   - se ainda faltar → mostra parcial com placeholder
+  const isPreenchido = (v) => v != null && v !== '' && v !== 0
+  planilha.forEach((ex) => {
+    const nome = ex.exercicio
+    if (!nome) return
+    const temFixo = isPreenchido(ex.series) && isPreenchido(ex.repeticoes)
+    if (temFixo) {
+      map.set(nome, {
+        series: ex.series,
+        repeticoes: ex.repeticoes,
+        descanso: ex.descanso || periodo?.descanso || null,
+        fonte: 'fixo',
+      })
+    } else {
+      // Combina valores: periodização preenche o que tá em branco
+      const series = isPreenchido(ex.series) ? ex.series : periodo?.series
+      const repeticoes = isPreenchido(ex.repeticoes) ? ex.repeticoes : periodo?.repeticoes
+      const descanso = isPreenchido(ex.descanso) ? ex.descanso : periodo?.descanso
+      if (isPreenchido(series) || isPreenchido(repeticoes)) {
+        map.set(nome, {
+          series,
+          repeticoes,
+          descanso,
+          legenda: periodo?.legenda,
+          fonte: periodo && (!isPreenchido(ex.series) || !isPreenchido(ex.repeticoes)) ? 'periodizacao' : 'fixo',
+        })
+      }
+    }
+  })
+
+  const motivoSemPrescricao = map.size === 0
+    ? (planilha.length === 0 ? 'planilha-vazia' : 'exercicios-sem-series-nem-periodizacao')
+    : null
+  return { map, semana, semanaUsada, totalSemanas, periodo, motivoSemPrescricao, debug }
 }
 
 const STATUS_VARIANT = {
@@ -92,13 +224,100 @@ function SeriesChips({ series: str }) {
 
 // ─── SectionTable ─────────────────────────────────────────────────────────────
 
-function SectionTable({ title, items, tipo, icon }) {
+function PrescricaoInline({ presc }) {
+  if (!presc) return null
+  const isPeriodizacao = presc.fonte === 'periodizacao'
+  const series = presc.series
+  const reps = presc.repeticoes
+  let texto = ''
+  if (series && reps) texto = `${series}× ${reps}`
+  else if (series) texto = `${series} séries`
+  else if (reps) texto = `${reps} reps`
+  if (!texto) return null
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-[11px]"
+      title={presc.legenda || (isPeriodizacao ? 'Vindo da periodização da semana' : 'Prescrição fixa do exercício')}
+    >
+      <span className="text-gray-500">—</span>
+      <span className="text-gray-500 font-medium">Prescrito:</span>
+      <span className={`font-semibold font-mono ${isPeriodizacao ? 'text-blue-300' : 'text-gray-200'}`}>
+        {texto}
+      </span>
+    </span>
+  )
+}
+
+function ChipsRealizados({ series: seriesStr }) {
+  const series = parseSeries(seriesStr)
+  const validas = series.filter((s) => s.carga || s.repeticoes)
+  if (!validas.length) return null
+  return (
+    <div className="flex flex-wrap gap-1 mt-1.5 ml-4">
+      {validas.map((s, i) => (
+        <div
+          key={i}
+          className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] border ${
+            s.concluida
+              ? 'bg-green-500/10 border-green-500/30'
+              : 'bg-[#1a1a1a] border-[#323238]'
+          }`}
+        >
+          {s.carga > 0 ? (
+            <>
+              <span className="text-white font-bold font-mono">{s.carga}kg</span>
+              <span className="text-gray-600 text-[8px]">×</span>
+              <span className="text-gray-300 font-medium">{s.repeticoes}</span>
+            </>
+          ) : (
+            <span className="text-gray-300 font-medium">{s.repeticoes} reps</span>
+          )}
+          {s.concluida && <span className="text-green-400 text-[9px] font-bold">✓</span>}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function SectionTable({ title, items, tipo, icon, prescricoes, semanaInfo }) {
   if (!items?.length) return null
   return (
     <div className="bg-[#29292e] rounded-lg overflow-hidden border border-[#323238]">
       <div className="bg-[#1a1a1a] px-4 py-2.5 border-b border-[#323238] flex items-center gap-2">
         {icon}
         <h2 className="text-xs font-bold text-white uppercase tracking-wider">{title}</h2>
+        {tipo === 'strength' && semanaInfo?.semana && (
+          <span
+            className="text-[10px] font-bold px-2 py-0.5 rounded border bg-blue-500/10 text-blue-300 border-blue-500/30"
+            title={
+              semanaInfo.totalSemanas && semanaInfo.semana > semanaInfo.totalSemanas
+                ? `Aluno está na semana ${semanaInfo.semana}, mas a periodização tem ${semanaInfo.totalSemanas} semanas — mantendo a última (${semanaInfo.semanaUsada}).`
+                : semanaInfo.periodo?.legenda || `Semana ${semanaInfo.semana} do ciclo`
+            }
+          >
+            Sem {semanaInfo.semana}
+            {semanaInfo.totalSemanas && semanaInfo.semana > semanaInfo.totalSemanas && (
+              <span className="ml-1 text-blue-400/70">→ {semanaInfo.semanaUsada}</span>
+            )}
+          </span>
+        )}
+        {tipo === 'strength' && semanaInfo?.motivoSemPrescricao && (
+          <span
+            className="text-[10px] font-bold px-2 py-0.5 rounded border bg-yellow-500/10 text-yellow-300 border-yellow-500/30 cursor-help"
+            title={(() => {
+              const motivos = {
+                'ficha-nao-carregada': 'A ficha vinculada não foi encontrada — verifique se o treino aponta pra uma ficha válida.',
+                'treino-label-vazio': 'Treino realizado sem label — não dá pra mapear a planilha.',
+                'letra-nao-encontrada': `O label "${semanaInfo.debug?.treinoLabel}" não bate com nenhum treino_a..f_label da ficha. Labels da ficha: ${(semanaInfo.debug?.letrasTentadas || []).filter((x) => x.label).map((x) => `${x.letra.toUpperCase()}="${x.label}"`).join(', ') || '(todos vazios)'}`,
+                'planilha-vazia': 'A planilha do treino correspondente está vazia na ficha.',
+                'exercicios-sem-series-nem-periodizacao': 'Os exercícios da ficha estão sem séries/reps preenchidos e a ficha não tem periodização cadastrada.',
+              }
+              return motivos[semanaInfo.motivoSemPrescricao] || semanaInfo.motivoSemPrescricao
+            })()}
+          >
+            ⚠ Sem prescrição
+          </span>
+        )}
         <span className="ml-auto text-[10px] text-white font-bold font-mono bg-[#2563eb]/20 border border-[#2563eb]/30 px-2 py-0.5 rounded">
           {items.length}
         </span>
@@ -106,18 +325,21 @@ function SectionTable({ title, items, tipo, icon }) {
       <div className="divide-y divide-[#323238]/40">
         {items.map((item, idx) => {
           const nome = item.exercicio || item.exercicios || '—'
+          const presc = tipo === 'strength' && prescricoes ? prescricoes.get(nome) : null
           return (
-            <div key={idx} className="px-4 py-2.5 hover:bg-white/[0.02] transition-colors">
-              <div className="flex items-center gap-2.5">
+            <div key={idx} className="px-4 py-3 hover:bg-white/[0.02] transition-colors">
+              <div className="flex items-center gap-2.5 flex-wrap">
                 <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${item.realizado ? 'bg-green-500' : 'bg-red-500'}`} />
                 <span className={`text-sm font-medium ${item.realizado ? 'text-white' : 'text-gray-500 line-through'}`}>
                   {nome}
                 </span>
+                {tipo === 'strength' && <PrescricaoInline presc={presc} />}
               </div>
-              {tipo === 'strength' && item.series && <SeriesChips series={item.series} />}
-              {item.feedback_do_aluno && (
-                <p className="mt-1 ml-4 text-[10px] text-yellow-400/80 italic flex items-center gap-1.5">
-                  <MessageSquare size={9} />"{item.feedback_do_aluno}"
+              {tipo === 'strength' && !!item.realizado && <ChipsRealizados series={item.series} />}
+              {!!item.feedback_do_aluno && (
+                <p className="mt-1.5 ml-4 text-[12px] leading-snug text-yellow-400/90 italic flex items-start gap-1.5">
+                  <MessageSquare size={11} className="mt-0.5 shrink-0" />
+                  <span>"{item.feedback_do_aluno}"</span>
                 </p>
               )}
             </div>
@@ -142,33 +364,77 @@ function DetalheView({ treinoBase, listaFiltrada, onVoltar, onEntregueAtualizado
 
   const idxAtual = listaFiltrada.findIndex(t => t.name === treinoBase.name)
   const [treinoAtual, setTreinoAtual] = useState(treinoBase)
+  const [prescInfo, setPrescInfo] = useState({ map: new Map(), semana: null, semanaUsada: null, totalSemanas: 0, periodo: null })
+  const [navegando, setNavegando] = useState(false)
+  const navigate = useNavigate()
 
-  const carregar = async (treino, manterScroll = false) => {
-    if (!manterScroll) { setLoading(true); setDetalhe(null) }
+  const carregar = async (treino, { manterScroll = false, navegacao = false } = {}) => {
+    // Se vem do cache, mostra na hora — sem flicker
+    const cacheHit = cacheTreinos.get(treino.name)
+    const isCached = cacheHit && Date.now() - cacheHit.ts < TREINO_TTL_MS
+
+    if (!manterScroll && !isCached && !navegacao) {
+      setLoading(true)
+      setDetalhe(null)
+      setPrescInfo({ map: new Map(), semana: null, semanaUsada: null, totalSemanas: 0, periodo: null })
+    } else if (navegacao) {
+      // Mantém o conteúdo atual visível durante navegação; só sinaliza no header
+      setNavegando(true)
+    }
+
     try {
-      const doc = await buscarTreinoRealizado(treino.name)
+      const [doc, ficha] = await Promise.all([
+        buscarTreinoCached(treino.name),
+        buscarFichaCached(treino.ficha),
+      ])
       setDetalhe(doc)
       setFeedback(doc.feedback_do_profissional || '')
+      if (ficha) {
+        const dataTreinoISO = (doc.data_e_hora_do_inicio || '').split(' ')[0] || null
+        const info = calcularPrescricoes({
+          ficha,
+          treinoLabel: doc.treino_label || doc.treino,
+          dataTreinoISO,
+        })
+        setPrescInfo(info)
+      } else {
+        setPrescInfo({ map: new Map(), semana: null, semanaUsada: null, totalSemanas: 0, periodo: null })
+      }
     } catch (e) { console.error(e) }
     finally {
       setLoading(false)
+      setNavegando(false)
       if (manterScroll) {
         setTimeout(() => {
           if (scrollRef.current) scrollRef.current.scrollTop = scrollPosRef.current
         }, 100)
+      } else if (navegacao && scrollRef.current) {
+        scrollRef.current.scrollTop = 0
       }
     }
   }
 
+  // Prefetch silencioso do treino anterior + próximo (warm cache)
+  const prefetchVizinhos = (treino) => {
+    const idx = listaFiltrada.findIndex(t => t.name === treino.name)
+    const vizinhos = [listaFiltrada[idx - 1], listaFiltrada[idx + 1]].filter(Boolean)
+    vizinhos.forEach((v) => {
+      if (!cacheTreinos.has(v.name)) {
+        buscarTreinoCached(v.name).catch(() => {})
+      }
+      if (v.ficha) buscarFichaCached(v.ficha)
+    })
+  }
+
   useEffect(() => { carregar(treinoAtual) }, [])
+  useEffect(() => { if (detalhe) prefetchVizinhos(treinoAtual) }, [detalhe?.name])
 
   const navegar = (dir) => {
     const idx = listaFiltrada.findIndex(t => t.name === treinoAtual.name)
     const novo = listaFiltrada[idx + dir]
     if (!novo) return
-    if (scrollRef.current) scrollPosRef.current = 0
     setTreinoAtual(novo)
-    carregar(novo)
+    carregar(novo, { navegacao: true })
   }
 
   const salvarFeedback = async () => {
@@ -176,6 +442,8 @@ function DetalheView({ treinoBase, listaFiltrada, onVoltar, onEntregueAtualizado
     setSalvando(true)
     try {
       await salvarFeedbackProfissional(detalhe.name, feedback)
+      invalidarTreinoCache(detalhe.name)
+      setDetalhe((d) => d ? { ...d, feedback_do_profissional: feedback } : d)
       setSalvo(true)
       setTimeout(() => setSalvo(false), 2000)
     } catch (e) { console.error(e); alert('Erro ao salvar feedback.') }
@@ -188,6 +456,7 @@ function DetalheView({ treinoBase, listaFiltrada, onVoltar, onEntregueAtualizado
     try {
       const novo = !detalhe.entregue
       await marcarEntregueTreino(detalhe.name, novo)
+      invalidarTreinoCache(detalhe.name)
       setDetalhe(d => ({ ...d, entregue: novo ? 1 : 0 }))
       onEntregueAtualizado?.(detalhe.name, novo ? 1 : 0)
     } catch (e) {
@@ -201,16 +470,30 @@ function DetalheView({ treinoBase, listaFiltrada, onVoltar, onEntregueAtualizado
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="shrink-0 bg-[#1a1a1a]/95 backdrop-blur border-b border-[#323238] px-4 py-3 flex items-center justify-between">
+      <div className="shrink-0 bg-[#1a1a1a]/95 backdrop-blur border-b border-[#323238] px-4 py-3 flex items-center justify-between gap-3">
         <button
           onClick={onVoltar}
           className="flex items-center gap-2 text-gray-500 hover:text-white text-xs font-bold uppercase tracking-wide transition-colors"
         >
           <ArrowLeft size={14} /> Voltar
         </button>
-        <span className="text-gray-600 text-xs">
-          {idxCurrent + 1} / {listaFiltrada.length}
-        </span>
+        <div className="flex items-center gap-3">
+          {detalhe?.aluno && (
+            <button
+              onClick={() => navigate('/progressao-cargas', {
+                state: { aluno: { name: detalhe.aluno, nome_completo: detalhe.nome_completo } },
+              })}
+              className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-gray-400 hover:text-white border border-[#323238] hover:border-[#2563eb]/50 rounded-lg px-2.5 py-1 transition-colors"
+              title="Ver progressão de cargas deste aluno"
+            >
+              <LineChart size={12} /> Progressão
+            </button>
+          )}
+          {navegando && <Spinner size="xs" />}
+          <span className="text-gray-600 text-xs">
+            {idxCurrent + 1} / {listaFiltrada.length}
+          </span>
+        </div>
       </div>
 
       {/* Content */}
@@ -286,10 +569,10 @@ function DetalheView({ treinoBase, listaFiltrada, onVoltar, onEntregueAtualizado
                   <h3 className="text-gray-500 text-[10px] uppercase font-bold tracking-widest mb-2 flex items-center gap-1.5">
                     <MessageSquare size={11} /> Feedback do Aluno
                   </h3>
-                  <p className="text-xs italic text-yellow-400/80 min-h-[2.5rem]">
+                  <p className="text-sm italic text-yellow-400/90 min-h-[2.5rem] leading-relaxed">
                     {detalhe.feedback_do_aluno
                       ? `"${detalhe.feedback_do_aluno}"`
-                      : <span className="text-gray-600 not-italic">Nenhum feedback.</span>}
+                      : <span className="text-gray-600 not-italic text-xs">Nenhum feedback.</span>}
                   </p>
                 </div>
 
@@ -321,6 +604,8 @@ function DetalheView({ treinoBase, listaFiltrada, onVoltar, onEntregueAtualizado
                 items={detalhe.planilha_de_treino || []}
                 tipo="strength"
                 icon={<Dumbbell size={14} className="text-white" />}
+                prescricoes={prescInfo.map}
+                semanaInfo={prescInfo}
               />
               <SectionTable
                 title="Aeróbicos"

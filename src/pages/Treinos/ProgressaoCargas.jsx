@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { Search, TrendingUp, Dumbbell, ArrowLeft } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -92,6 +93,7 @@ function ChartTip({ active, payload, label }) {
 // ─── ProgressaoCargas (standalone page) ──────────────────────────────────────
 
 export default function ProgressaoCargas() {
+  const location = useLocation()
   const [alunoQuery, setAlunoQuery] = useState('')
   const [alunoSelecionado, setAlunoSelecionado] = useState(null)
   const [treinos, setTreinos] = useState([])
@@ -126,6 +128,16 @@ export default function ProgressaoCargas() {
       })
       .catch(console.error)
       .finally(() => setLoadingRecentes(false))
+  }, [])
+
+  // Auto-seleção quando vier via navigate('/progressao-cargas', { state: { aluno } })
+  useEffect(() => {
+    const a = location.state?.aluno
+    if (a?.name) {
+      selecionarAluno({ name: a.name, nome_completo: a.nome_completo })
+      window.history.replaceState({}, '')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const recentesFiltrados = useMemo(() => {
