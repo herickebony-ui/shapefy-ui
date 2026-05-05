@@ -451,7 +451,13 @@ const ModalNovaDieta = ({ onClose, onCriada }) => {
     if (!aluno) return
     setCriando(true)
     try {
-      const nova = await criarDieta({ aluno: aluno.name })
+      const nova = await criarDieta({
+        aluno: aluno.name,
+        sexo: aluno.sexo || '',
+        age: aluno.age || 0,
+        height: aluno.height || 0,
+        weight: aluno.weight || 0,
+      })
       onCriada(nova.name)
     } catch (err) {
       alert('Erro ao criar dieta: ' + err.message)

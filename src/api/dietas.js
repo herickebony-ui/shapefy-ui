@@ -1,4 +1,5 @@
 import client from './client'
+import { buscarAluno } from './alunos'
 
 const frappeOwner = () => localStorage.getItem('frappe_user') || ''
 
@@ -55,7 +56,19 @@ export const duplicarDieta = async (id, novoAluno = null, dataInicial = null, da
   const { name, creation, modified, modified_by, owner, docstatus, idx,
     _user_tags, _comments, _assign, _liked_by, nome_completo, ...payload } = dieta
 
-  if (novoAluno) payload.aluno = novoAluno
+  if (novoAluno) {
+    payload.aluno = novoAluno
+    // Sobrescreve dados antropométricos com os do aluno destino
+    try {
+      const alunoDoc = await buscarAluno(novoAluno)
+      payload.sexo   = alunoDoc?.sexo   ?? ''
+      payload.age    = alunoDoc?.age    ?? 0
+      payload.height = alunoDoc?.height ?? 0
+      payload.weight = alunoDoc?.weight ?? 0
+    } catch (e) {
+      console.warn('Não foi possível buscar dados do aluno destino:', e)
+    }
+  }
   if (dataInicial !== null) payload.date = dataInicial
   if (dataFinal !== null) payload.final_date = dataFinal
 
