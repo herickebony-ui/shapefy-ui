@@ -39,7 +39,7 @@ export default function BotaoAjuda({
         type="button"
         onClick={() => setOpen(true)}
         title={tooltip}
-        className={`h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#323238] border border-[#323238] hover:border-gray-500 rounded-lg transition-colors shrink-0 ${className}`}
+        className={`h-7 w-7 flex items-center justify-center text-amber-400 hover:text-white bg-amber-500/10 hover:bg-amber-500 border border-amber-500/40 hover:border-amber-500 rounded-lg transition-colors shrink-0 ${className}`}
       >
         <HelpCircle size={iconSize} />
       </button>
@@ -50,7 +50,7 @@ export default function BotaoAjuda({
         subtitle={subtitle}
         size={size}
         icon={HelpCircle}
-        iconVariant="info"
+        iconVariant="warning"
         steps={topicos}
         dismissLabel="Fechar"
       />
