@@ -5,9 +5,11 @@ import {
 } from '../../api/fichas'
 import {
   Button, FormGroup, Input, Select, Modal, EmptyState, DataTable, Badge,
+  ImportExcelButton,
 } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 import ExplorarBibliotecaModal from '../../components/ExplorarBibliotecaModal'
+import { extractVideoId } from '../../utils/video'
 
 const normalizar = (s = '') =>
   String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
@@ -269,6 +271,36 @@ export default function GerenciarTreino() {
 
   useEffect(() => { carregar() }, [])
 
+  const handleImportarExcel = async (rows) => {
+    const erros = []
+    let sucesso = 0
+    let ignoradas = 0
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i]
+      const linhaNum = i + 2 // +2 = header (1) + base 1
+      const nome = String(row.nome_do_exercicio || row.nome || '').trim()
+      const grupoMuscular = String(row.grupo_muscular || row.grupo || '').trim()
+      if (!nome) { ignoradas++; erros.push({ linha: linhaNum, mensagem: 'sem nome_do_exercicio' }); continue }
+      if (!grupoMuscular) { ignoradas++; erros.push({ linha: linhaNum, mensagem: `"${nome}": sem grupo_muscular` }); continue }
+      const videoRaw = String(row.video || '').trim()
+      const { id: videoId, plataforma } = videoRaw ? extractVideoId(videoRaw) : { id: '', plataforma: null }
+      try {
+        await salvarTreinoExercicio(null, {
+          nome_do_exercicio: nome,
+          grupo_muscular: grupoMuscular,
+          video: videoId || '',
+          plataforma_do_vídeo: plataforma || row.plataforma_do_video || row.plataforma || '',
+          enabled: 1,
+        })
+        sucesso++
+      } catch (e) {
+        erros.push({ linha: linhaNum, mensagem: `"${nome}": ${e.response?.data?.exception || e.message}` })
+      }
+    }
+    await carregar()
+    return { sucesso, ignoradas, erros }
+  }
+
   const filtrados = useMemo(() => {
     const q = normalizar(busca)
     return exercicios.filter(e => {
@@ -394,6 +426,18 @@ export default function GerenciarTreino() {
             <Button variant="secondary" size="sm" icon={BookOpen} onClick={() => setShowBiblioteca(true)}>
               Explorar Biblioteca
             </Button>
+            <ImportExcelButton
+              label="Importar Exercícios da planilha"
+              titulo="Importar exercícios por planilha"
+              colunas={[
+                { key: 'nome_do_exercicio',   obrigatoria: true, descricao: 'nome completo do exercício', exemplo: 'Supino reto com barra' },
+                { key: 'grupo_muscular',      obrigatoria: true, descricao: 'qual grupo (já cadastrado no sistema)', exemplo: 'Peito' },
+                { key: 'video',               descricao: 'cole a URL inteira do vídeo (extraímos o ID sozinho)', exemplo: 'https://www.youtube.com/watch?v=abc123' },
+                { key: 'plataforma_do_video', descricao: 'opcional — detectamos pela URL', exemplo: 'YouTube' },
+              ]}
+              onImportar={handleImportarExcel}
+              helpText="A coluna video aceita a URL inteira (o sistema extrai o ID automaticamente)."
+            />
             <Button variant="primary" size="sm" icon={Plus} onClick={() => { setEditando(null); setModalOpen(true) }}>
               Novo Exercício
             </Button>

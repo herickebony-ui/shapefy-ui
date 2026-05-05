@@ -6,7 +6,7 @@ import {
 } from '../../api/alimentos'
 import {
   Button, FormGroup, Input, Select, Modal, Spinner, EmptyState,
-  DataTable, Badge,
+  DataTable, Badge, ImportExcelButton,
 } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 import ExplorarBibliotecaModal from '../../components/ExplorarBibliotecaModal'
@@ -261,6 +261,42 @@ export default function AlimentosListagem() {
     finally { setLoading(false) }
   }
 
+  const handleImportarExcel = async (rows) => {
+    const erros = []
+    let sucesso = 0
+    let ignoradas = 0
+    const num = (v) => {
+      if (v == null || v === '') return 0
+      const n = Number(String(v).replace(',', '.'))
+      return Number.isFinite(n) ? n : 0
+    }
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i]
+      const linhaNum = i + 2
+      const food = String(row.food || row.alimento || row.nome || '').trim()
+      if (!food) { ignoradas++; erros.push({ linha: linhaNum, mensagem: 'sem food' }); continue }
+      try {
+        await criarAlimento({
+          food,
+          food_group: String(row.food_group || row.grupo || '').trim(),
+          calories: num(row.calories || row.calorias),
+          protein: num(row.protein || row.proteina),
+          carbohydrate: num(row.carbohydrate || row.carboidrato),
+          lipid: num(row.lipid || row.lipidio || row.gordura),
+          fiber: num(row.fiber || row.fibra),
+          ref_weight: num(row.ref_weight || row.peso_ref || row.peso_referencia),
+          unit: String(row.unit || row.unidade || 'g').trim(),
+          enabled: 1,
+        })
+        sucesso++
+      } catch (e) {
+        erros.push({ linha: linhaNum, mensagem: `"${food}": ${e.response?.data?.exception || e.message}` })
+      }
+    }
+    await carregar()
+    return { sucesso, ignoradas, erros }
+  }
+
   useEffect(() => { listarGruposAlimentares().then(setGrupos).catch(console.error) }, [])
 
   useEffect(() => {
@@ -387,6 +423,23 @@ export default function AlimentosListagem() {
             <Button variant="secondary" size="sm" icon={BookOpen} onClick={() => setShowBiblioteca(true)}>
               Explorar Biblioteca
             </Button>
+            <ImportExcelButton
+              label="Importar Alimentos da planilha"
+              titulo="Importar alimentos por planilha"
+              colunas={[
+                { key: 'food',         obrigatoria: true, descricao: 'nome do alimento', exemplo: 'Arroz branco cozido' },
+                { key: 'food_group',   descricao: 'grupo alimentar', exemplo: 'Cereais' },
+                { key: 'calories',     descricao: 'kcal por porção de referência', exemplo: '128' },
+                { key: 'protein',      descricao: 'proteína em gramas', exemplo: '2.5' },
+                { key: 'carbohydrate', descricao: 'carboidrato em gramas', exemplo: '28.1' },
+                { key: 'lipid',        descricao: 'gordura em gramas', exemplo: '0.2' },
+                { key: 'fiber',        descricao: 'fibra em gramas', exemplo: '1.6' },
+                { key: 'ref_weight',   descricao: 'peso da porção de referência', exemplo: '100' },
+                { key: 'unit',         descricao: 'unidade', exemplo: 'g' },
+              ]}
+              onImportar={handleImportarExcel}
+              helpText="Use ponto ou vírgula como separador decimal. Cabeçalhos aceitos em PT também (ex: calorias, proteina, carboidrato)."
+            />
             <Button variant="primary" size="sm" icon={Plus} onClick={() => setModal('novo')}>
               Novo Alimento
             </Button>

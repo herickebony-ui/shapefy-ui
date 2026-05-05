@@ -5,9 +5,11 @@ import {
 } from '../../api/fichas'
 import {
   Button, FormGroup, Input, Select, Modal, DataTable, Badge,
+  ImportExcelButton,
 } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 import ExplorarBibliotecaModal from '../../components/ExplorarBibliotecaModal'
+import { extractVideoId } from '../../utils/video'
 
 const PLATAFORMAS = ['YouTube', 'Google Drive', 'Vimeo']
 
@@ -170,6 +172,33 @@ export default function GerenciarAerobicos() {
 
   useEffect(() => { carregar() }, [])
 
+  const handleImportarExcel = async (rows) => {
+    const erros = []
+    let sucesso = 0
+    let ignoradas = 0
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i]
+      const linhaNum = i + 2
+      const nome = String(row.exercicio_aerobico || row.nome || row.exercicio || '').trim()
+      if (!nome) { ignoradas++; erros.push({ linha: linhaNum, mensagem: 'sem exercicio_aerobico' }); continue }
+      const videoRaw = String(row.video || '').trim()
+      const { id: videoId, plataforma } = videoRaw ? extractVideoId(videoRaw) : { id: '', plataforma: null }
+      try {
+        await salvarAerobico(null, {
+          exercicio_aerobico: nome,
+          video: videoId || '',
+          'plataforma_do_vídeo': plataforma || row.plataforma_do_video || row.plataforma || '',
+          enabled: 1,
+        })
+        sucesso++
+      } catch (e) {
+        erros.push({ linha: linhaNum, mensagem: `"${nome}": ${e.response?.data?.exception || e.message}` })
+      }
+    }
+    await carregar()
+    return { sucesso, ignoradas, erros }
+  }
+
   const filtrados = useMemo(() => {
     const q = busca.toLowerCase().trim()
     if (!q) return aerobicos
@@ -287,6 +316,17 @@ export default function GerenciarAerobicos() {
             <Button variant="secondary" size="sm" icon={BookOpen} onClick={() => setShowBiblioteca(true)}>
               Explorar Biblioteca
             </Button>
+            <ImportExcelButton
+              label="Importar Aeróbicos da planilha"
+              titulo="Importar aeróbicos por planilha"
+              colunas={[
+                { key: 'exercicio_aerobico',  obrigatoria: true, descricao: 'nome completo do aeróbico', exemplo: 'Caminhada na esteira' },
+                { key: 'video',               descricao: 'cole a URL inteira do vídeo (extraímos o ID sozinho)', exemplo: 'https://www.youtube.com/watch?v=abc123' },
+                { key: 'plataforma_do_video', descricao: 'opcional — detectamos pela URL', exemplo: 'YouTube' },
+              ]}
+              onImportar={handleImportarExcel}
+              helpText="A coluna video aceita a URL inteira (o sistema extrai o ID automaticamente)."
+            />
             <Button variant="primary" size="sm" icon={Plus} onClick={() => { setEditando(null); setModalOpen(true) }}>
               Novo Aeróbico
             </Button>
