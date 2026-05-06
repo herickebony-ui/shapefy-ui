@@ -50,16 +50,36 @@ const contarComOwnerField = async (doctype, ownerField) => {
   }
 }
 
+// Conta sem filtro próprio — o Frappe escopa via permission system. Usar pra
+// doctypes onde a listagem da própria tela também não filtra explicitamente
+// (ex: Formulario de Anamnese, Formulario Feedback, Dieta, Ficha — onde
+// confiar no filtro 'owner' pode dar mismatch quando o doctype usa outra
+// regra de ownership).
+const contarPermissao = async (doctype) => {
+  try {
+    const res = await client.get(`/api/resource/${encodeURIComponent(doctype)}`, {
+      params: {
+        fields: JSON.stringify(['name']),
+        limit_page_length: 0,
+      },
+    })
+    return (res.data?.data || []).length
+  } catch (e) {
+    console.error(`Erro ao contar ${doctype}:`, e)
+    return 0
+  }
+}
+
 // Counts da jornada inicial (passo a passo do profissional).
 // Retorna apenas o que o backend expõe via API nativa do Frappe; quando algum
 // dado não puder ser lido, retorna 0 e o passo aparece como pendente.
 export const buscarContagensJornada = async () => {
   const [alunos, formAnamnese, formFeedback, dietas, fichas] = await Promise.all([
     contarComOwnerField('Aluno', 'profissional'),
-    contar('Formulario de Anamnese'),
-    contar('Formulario Feedback'),
-    contarComOwnerField('Dieta', 'owner'),
-    contarComOwnerField('Ficha', 'owner'),
+    contarPermissao('Formulario de Anamnese'),
+    contarPermissao('Formulario Feedback'),
+    contarPermissao('Dieta'),
+    contarPermissao('Ficha'),
   ])
   return { alunos, formAnamnese, formFeedback, dietas, fichas }
 }
