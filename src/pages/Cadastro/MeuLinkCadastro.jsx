@@ -1,18 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Link2, Copy, Check, ExternalLink, ToggleRight, ToggleLeft, Save, QrCode, Share2, Megaphone, ShieldCheck } from 'lucide-react'
-import { Button, FormGroup, Input, Spinner, BotaoAjuda } from '../../components/ui'
-import { getMeuLinkCadastro, salvarMeuLinkCadastro } from '../../api/meuLinkCadastro'
-
-const SLUG_REGEX = /^[a-z0-9-]{4,32}$/
-
-const sanitizeSlug = (v) => String(v || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 32)
+import { Link2, Copy, Check, ExternalLink, QrCode, Share2, Megaphone, ShieldCheck, Sparkles } from 'lucide-react'
+import { Button, Spinner, BotaoAjuda } from '../../components/ui'
+import { getMeuLinkCadastro } from '../../api/meuLinkCadastro'
 
 export default function MeuLinkCadastro() {
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
   const [slug, setSlug] = useState('')
-  const [slugOriginal, setSlugOriginal] = useState('')
-  const [ativo, setAtivo] = useState(true)
   const [erro, setErro] = useState('')
   const [copiado, setCopiado] = useState(false)
   const [showQr, setShowQr] = useState(false)
@@ -23,66 +16,17 @@ export default function MeuLinkCadastro() {
     getMeuLinkCadastro()
       .then((data) => {
         if (cancel) return
-        const s = data.slug || data.sugestao_slug || ''
-        setSlug(s)
-        setSlugOriginal(data.slug || '')
-        setAtivo(data.ativo === undefined ? true : !!data.ativo)
+        setSlug(data.slug || '')
       })
       .catch((e) => {
         console.error(e)
-        setErro('Não foi possível carregar a configuração do link.')
+        setErro('Não foi possível carregar seu link de cadastro.')
       })
       .finally(() => { if (!cancel) setLoading(false) })
     return () => { cancel = true }
   }, [])
 
   const linkCompleto = slug ? `${window.location.origin}/cadastro/${slug}` : ''
-  const slugMudou = slug !== slugOriginal
-  const slugValido = SLUG_REGEX.test(slug)
-  const podeSalvar = slugValido && (slugMudou || ativo !== (slugOriginal ? true : true))
-
-  const handleSlugChange = (v) => {
-    setSlug(sanitizeSlug(v))
-    setErro('')
-  }
-
-  const handleSalvar = async () => {
-    if (!slugValido) {
-      setErro('Slug inválido. Use 4 a 32 caracteres: a-z, 0-9 e hífen.')
-      return
-    }
-    setSaving(true)
-    setErro('')
-    try {
-      const res = await salvarMeuLinkCadastro({ slug, ativo })
-      setSlug(res.slug || slug)
-      setSlugOriginal(res.slug || slug)
-      setAtivo(res.ativo === undefined ? ativo : !!res.ativo)
-    } catch (e) {
-      const msg = String(e?.response?.data?.message?.erro || e?.message || '')
-      if (msg.includes('slug_duplicado')) {
-        setErro('Esse endereço já está em uso por outro profissional. Escolha outro.')
-      } else if (msg.includes('slug_invalido')) {
-        setErro('Slug inválido. Use 4 a 32 caracteres: a-z, 0-9 e hífen.')
-      } else {
-        setErro('Não foi possível salvar. Tente novamente.')
-      }
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleToggleAtivo = async () => {
-    if (!slugOriginal) return
-    const novoAtivo = !ativo
-    setAtivo(novoAtivo)
-    try {
-      await salvarMeuLinkCadastro({ slug: slugOriginal, ativo: novoAtivo })
-    } catch (e) {
-      setAtivo(ativo)
-      setErro('Não foi possível atualizar o status.')
-    }
-  }
 
   const handleCopiar = async () => {
     try {
@@ -130,9 +74,14 @@ export default function MeuLinkCadastro() {
           subtitle="Ficha de cadastro automática para novos alunos"
           topicos={[
             {
+              icon: Sparkles,
+              title: 'Seu link é único e permanente',
+              description: 'O sistema gerou um código aleatório só seu. Você pode usar o mesmo link sempre — não precisa criar um novo a cada aluno.',
+            },
+            {
               icon: Share2,
-              title: 'Compartilhe seu link',
-              description: 'Cole o link no bio do Instagram, em stories, no WhatsApp ou onde quiser captar novos alunos. Você também pode usar o QR code.',
+              title: 'Compartilhe onde quiser',
+              description: 'Cole no bio do Instagram, em stories, no WhatsApp ou onde quiser captar novos alunos. Você também pode usar o QR code.',
             },
             {
               icon: Megaphone,
@@ -144,11 +93,6 @@ export default function MeuLinkCadastro() {
               title: 'Você é notificado',
               description: 'Assim que enviado, o aluno entra automaticamente na sua lista de "Meus Alunos" e você recebe uma notificação no sininho.',
             },
-            {
-              icon: ToggleLeft,
-              title: 'Pause quando quiser',
-              description: 'Desative o link a qualquer momento. Quem acessar verá a mensagem "Cadastros encerrados" sem conseguir enviar dados.',
-            },
           ]}
         />
       </div>
@@ -156,56 +100,26 @@ export default function MeuLinkCadastro() {
       {/* Card principal */}
       <div className="bg-[#29292e] border border-[#323238] rounded-xl overflow-hidden">
 
-        {/* Status / toggle */}
-        <div className={`px-5 py-4 flex items-center justify-between border-b border-[#323238] ${ativo ? 'bg-green-500/[0.04]' : 'bg-[#1a1a1a]'}`}>
-          <div className="flex items-center gap-3">
-            <div className={`w-2 h-2 rounded-full ${ativo ? 'bg-green-400 animate-pulse' : 'bg-gray-600'}`} />
-            <div>
-              <p className="text-white text-sm font-semibold">
-                {ativo ? 'Aceitando cadastros' : 'Cadastros desativados'}
-              </p>
-              <p className="text-gray-500 text-xs">
-                {ativo ? 'Quem acessar o link pode preencher.' : 'Quem acessar verá uma mensagem de cadastros encerrados.'}
-              </p>
-            </div>
+        {/* Status */}
+        <div className="px-5 py-4 flex items-center gap-3 border-b border-[#323238] bg-green-500/[0.04]">
+          <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+          <div>
+            <p className="text-white text-sm font-semibold">Aceitando cadastros</p>
+            <p className="text-gray-500 text-xs">Quem acessar o link pode preencher.</p>
           </div>
-          <button
-            onClick={handleToggleAtivo}
-            disabled={!slugOriginal}
-            title={ativo ? 'Desativar' : 'Ativar'}
-            className={`h-9 px-3 flex items-center gap-1.5 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-              ativo
-                ? 'text-green-400 border-green-500/30 hover:bg-green-700 hover:border-green-700 hover:text-white'
-                : 'text-gray-500 border-[#323238] hover:border-gray-500 hover:text-white'
-            }`}
-          >
-            {ativo ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
-            <span className="text-xs font-medium">{ativo ? 'Ativo' : 'Inativo'}</span>
-          </button>
         </div>
 
-        {/* Slug + link */}
-        <div className="p-5 space-y-4">
+        {/* Link */}
+        <div className="p-5 space-y-3">
+          <p className="text-gray-400 text-xs font-medium uppercase tracking-wider">Seu link</p>
 
-          <FormGroup
-            label="Endereço do seu link"
-            hint="Use letras minúsculas, números e hífen (4 a 32 caracteres). Ex: herick-ebony"
-            error={erro}
-          >
-            <div className="flex gap-2">
-              <div className="hidden sm:flex h-10 px-3 items-center bg-[#1a1a1a] border border-[#323238] rounded-lg text-gray-500 text-xs whitespace-nowrap">
-                {window.location.origin.replace(/^https?:\/\//, '')}/cadastro/
-              </div>
-              <Input
-                value={slug}
-                onChange={handleSlugChange}
-                placeholder="seu-nome"
-                className="flex-1"
-              />
+          {erro && (
+            <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+              {erro}
             </div>
-          </FormGroup>
+          )}
 
-          {linkCompleto && (
+          {linkCompleto ? (
             <div className="bg-[#1a1a1a] border border-[#323238] rounded-lg p-3 flex items-center gap-2 overflow-hidden">
               <Link2 size={14} className="text-[#2563eb] shrink-0" />
               <a
@@ -217,24 +131,15 @@ export default function MeuLinkCadastro() {
                 {linkCompleto}
               </a>
             </div>
-          )}
-
-          {slugMudou && (
-            <Button
-              variant="primary"
-              size="md"
-              icon={Save}
-              onClick={handleSalvar}
-              loading={saving}
-              fullWidth
-            >
-              Salvar alterações
-            </Button>
+          ) : (
+            <div className="bg-[#1a1a1a] border border-[#323238] rounded-lg p-3 text-gray-500 text-sm">
+              Nenhum link gerado ainda.
+            </div>
           )}
         </div>
 
         {/* Ações */}
-        {slugOriginal && (
+        {linkCompleto && (
           <div className="border-t border-[#323238] p-5 grid grid-cols-2 sm:grid-cols-4 gap-2">
             <Button variant="secondary" size="sm" icon={copiado ? Check : Copy} onClick={handleCopiar}>
               {copiado ? 'Copiado!' : 'Copiar'}
