@@ -9,6 +9,7 @@ import {
 import ListPage from '../components/templates/ListPage'
 import OnboardingBanner from '../components/OnboardingBanner'
 import OnboardingModal from '../components/OnboardingModal'
+import JornadaInicial from '../components/JornadaInicial'
 import useOnboardingStore from '../store/onboardingStore'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
@@ -233,6 +234,7 @@ export default function Dashboard() {
           description: busca ? `Sem resultados para "${busca}"` : 'Clique em "Novo Aluno" para cadastrar',
         } : null}
       >
+        <JornadaInicial />
         <OnboardingBanner />
 
         {/* Stats */}
