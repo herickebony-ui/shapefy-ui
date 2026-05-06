@@ -9,16 +9,12 @@ import {
 } from '../../components/ui'
 
 const TOPICOS_AJUDA_FINANCEIRO = [
-  { icon: Receipt,     title: 'O que é um pagamento (contrato)', description: 'Um "pagamento" é um contrato do aluno com o profissional — registra o plano contratado, valor, data de início, data de fim e parcelas. Cada renovação de plano gera um novo registro.' },
-  { icon: Wallet,      title: 'Aba Pagamentos', description: 'Lista todos os contratos com filtros por mês, plano e status. Use pra acompanhar quem pagou, quem está pendente e fazer projeções financeiras. KPIs mostram total recebido, em aberto e atrasado do período.' },
-  { icon: Users,       title: 'Aba Gestão de Alunos', description: 'Visão por aluno em vez de por contrato. Mostra o histórico financeiro de cada aluno, status do plano atual (ativo, expirado, próximo do fim) e quanto cada um já pagou no total.' },
-  { icon: Plus,        title: 'Novo pagamento', description: 'Cria um contrato novo associando aluno + plano + valor + datas. Use pra clientes novos. As parcelas são geradas automaticamente conforme as datas.' },
-  { icon: RefreshCcw,  title: 'Renovar pagamento', description: 'Renova um contrato existente — clona os dados do contrato anterior (plano, valor) e ajusta as datas pra o próximo período. Use pra renovações periódicas, não pra contratos novos.' },
-  { icon: Package,     title: 'Planos', description: 'Cadastre os planos que você vende (ex: Mensal R$ 200, Trimestral R$ 540). Acessível pelo menu lateral em "Planos". Os planos cadastrados ficam disponíveis no formulário de novo pagamento.' },
-  { icon: CalendarIcon, title: 'Filtro por mês', description: 'Por padrão mostra o mês atual. Mude com o seletor pra ver pagamentos de outros meses ou use "Personalizado" pra um intervalo específico. Os KPIs e a lista filtram pelo período selecionado.' },
-  { icon: DollarSign,  title: 'Status de parcela', description: 'Pago = parcela quitada. Pendente = ainda não venceu. Atrasado = venceu e não foi pago. Use a coluna de status pra cobrar quem está em atraso.' },
-  { icon: FileDown,    title: 'Exportar PDF', description: 'Gera um relatório financeiro em PDF do período selecionado — ideal pra contabilidade ou backup mensal.' },
-  { icon: History,     title: 'Auditoria', description: 'Mostra todas as alterações em contratos (criação, edição, exclusão) com data/hora — útil pra rastrear mudanças quando algum valor não bate.' },
+  { icon: DollarSign,   title: 'Parcelamento manual', description: 'Em pagamentos parcelados, cada parcela é lançada individualmente — você define data de vencimento e valor de cada uma. O sistema NÃO divide valor / N automaticamente, justamente pra suportar parcelas com valores e datas diferentes (ex: entrada de R$ 200 hoje + 2x R$ 100 nos próximos meses).' },
+  { icon: CalendarIcon, title: 'Data de pagamento, início e fim são independentes', description: 'A aluna pode pagar hoje e só começar o plano semana que vem. Por isso os 3 campos são separados e você preenche cada um conforme a realidade. Contrato pago mas com início em branco fica como "Pago e não iniciado" até você ativar.' },
+  { icon: RefreshCcw,   title: 'Renovar pagamento', description: 'Use só pra renovações: clona o contrato anterior do mesmo aluno (plano, valor) e abre pra você ajustar datas e parcelas do novo ciclo. Pra clientes novos, use "Novo pagamento" — não tente renovar um contrato de outro aluno.' },
+  { icon: Filter,       title: 'Filtro por mês (default = atual)', description: 'Por padrão a tela só mostra contratos do mês corrente — KPIs e lista filtram pelo período. Se um pagamento parece "sumido", troque o seletor de mês ou use "Personalizado" pra um intervalo customizado antes de procurar em outro lugar.' },
+  { icon: Package,      title: 'Planos vs. Pagamento', description: 'Plano é o produto que você vende (ex: "Mensal R$ 200"). Pagamento é o contrato de uma venda específica desse plano pra um aluno. Cadastre os planos uma vez em "Planos" no menu lateral; eles ficam disponíveis no form de novo pagamento.' },
+  { icon: BookCheck,    title: 'Auditoria', description: 'Rastreia toda mudança em contrato (criação, edição, exclusão) com timestamp e usuário. Use quando algum valor não bate ou pra confirmar quem fez uma alteração.' },
 ]
 import ListPage from '../../components/templates/ListPage'
 import PlanoBadge from '../../components/financeiro/PlanoBadge'
