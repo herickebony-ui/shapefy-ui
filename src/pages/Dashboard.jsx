@@ -7,7 +7,6 @@ import {
   Modal, FormGroup, Input, Select,
 } from '../components/ui'
 import ListPage from '../components/templates/ListPage'
-import OnboardingBanner from '../components/OnboardingBanner'
 import OnboardingModal from '../components/OnboardingModal'
 import JornadaInicial from '../components/JornadaInicial'
 import useOnboardingStore from '../store/onboardingStore'
@@ -235,7 +234,6 @@ export default function Dashboard() {
         } : null}
       >
         <JornadaInicial />
-        <OnboardingBanner />
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">

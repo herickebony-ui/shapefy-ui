@@ -7,14 +7,16 @@ import {
   listarAnamneses, excluirAnamnese, buscarAnamnese, marcarEntregueAnamnese,
 } from '../../api/anamneses'
 import { listarAlunos } from '../../api/alunos'
+import { criarNotificacaoAluno } from '../../api/notificacoes'
 import {
   Button, Badge, Input, Spinner, EmptyState, DataTable, BotaoAjuda,
 } from '../../components/ui'
-import { buscarSmart } from '../../utils/strings'
+// JornadaInicial e OnboardingBanner removidos daqui — vivem só no Dashboard
+// (rota /), que é a tela inicial pós-login. Aqui o foco é gerenciar as
+// anamneses em si.
+import { buscarSmart, primeiroNome } from '../../utils/strings'
 import VincularAnamneseModal from '../../components/anamnese/VincularAnamneseModal'
 import AnamneseViewerModal from '../../components/anamnese/AnamneseViewerModal'
-import JornadaInicial from '../../components/JornadaInicial'
-import OnboardingBanner from '../../components/OnboardingBanner'
 
 const fmtData = (d) => {
   if (!d) return '—'
@@ -34,7 +36,7 @@ const TOPICOS_AJUDA_ANAMNESES = [
   { icon: UserPlus, title: 'Alunos sem anamnese', description: 'Alunos recém-cadastrados que ainda não receberam nenhum questionário aparecem no topo com status "Sem anamnese". Clique em "Vincular" pra escolher um template e enviar.' },
   { icon: Link2,    title: 'Vincular anamnese', description: 'O botão "Vincular Anamnese" no canto superior direito abre um modal pra escolher o aluno + o template e enviar de uma vez. Use também pra anamneses de retorno do mesmo aluno.' },
   { icon: Send,     title: 'Enviar e acompanhar', description: 'Após vincular, o status muda pra "Enviada". Quando o aluno responder, vira "Respondida". Use os filtros pra ver só pendentes ou já entregues.' },
-  { icon: Check,    title: 'Marcar entregue', description: 'Use o botão "Marcar entregue" depois de imprimir/entregar a anamnese ao aluno em mãos — fica só pra controle interno; não envia nada pro aluno.' },
+  { icon: Check,    title: 'Marcar entregue', description: 'Sinaliza que você já entregou o plano (dieta/treino) baseado nessa anamnese pro aluno — e dispara automaticamente uma notificação no app dele avisando que o plano está disponível. Serve também como controle interno pra ver quais alunos já receberam.' },
   { icon: Eye,      title: 'Visualizar', description: 'Clique no item da lista ou no ícone de olho pra ver as respostas do aluno. Da tela de visualização você pode também imprimir ou exportar.' },
 ]
 
@@ -161,11 +163,28 @@ export default function AnamneseListagem() {
     setLista(prev => prev.map(x => x.name === a.name
       ? { ...x, entregue: novoEntregue, data_entrega: novoEntregue ? new Date().toISOString() : null }
       : x))
-    marcarEntregueAnamnese(a.name, !!novoEntregue).catch(e => {
-      console.error(e)
-      setLista(prev => prev.map(x => x.name === a.name ? { ...x, ...anterior } : x))
-      alert('Erro ao atualizar entrega. Verifique se o campo "entregue" existe no DocType Anamnese.')
-    })
+    marcarEntregueAnamnese(a.name, !!novoEntregue)
+      .then(() => {
+        // Quando o profissional marca como entregue (não desmarca), notifica
+        // o aluno no app que o plano está disponível. Falha silenciosa: não
+        // bloqueia a marcação se a notificação não criar.
+        if (novoEntregue && a.aluno) {
+          const primeiro = primeiroNome(a.nome_completo)
+          const titulo = primeiro
+            ? `Seu plano está disponível! ${primeiro}!`
+            : 'Seu plano está disponível!'
+          criarNotificacaoAluno({
+            aluno: a.aluno,
+            titulo,
+            descricao: 'Acesse o app para conferir seu planejamento.',
+          }).catch(err => console.error('Erro ao criar notificação:', err))
+        }
+      })
+      .catch(e => {
+        console.error(e)
+        setLista(prev => prev.map(x => x.name === a.name ? { ...x, ...anterior } : x))
+        alert('Erro ao atualizar entrega. Verifique se o campo "entregue" existe no DocType Anamnese.')
+      })
   }
 
   const handleExcluir = async (a) => {
@@ -345,8 +364,6 @@ export default function AnamneseListagem() {
           </div>
         </div>
 
-        <JornadaInicial />
-        <OnboardingBanner />
 
         {/* Filtros */}
         <div className="flex flex-wrap gap-2 mb-6">

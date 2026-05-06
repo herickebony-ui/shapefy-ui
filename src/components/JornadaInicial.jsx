@@ -1,22 +1,27 @@
-// Passo a passo de início pra novos profissionais. Mostra na tela principal
-// (/anamneses). Detecta automaticamente o que já foi feito consultando o
-// backend, e marca cada passo como completo / pendente. Pode ser ocultado
-// quando todos os passos terminam (e reaparece se o profissional dismisse e
-// resetar via botão "?").
+// Passo a passo de início pra novos profissionais. Mostra no Dashboard (rota /),
+// que é a tela principal pós-login. Detecta automaticamente o que já foi feito
+// consultando o backend, e marca cada passo como completo / pendente. Pode ser
+// ocultado pelo profissional via X.
+//
+// Cobre a jornada inteira "do zero ao primeiro envio":
+//   1. Configurar catálogo (alimentos / exercícios / alongamentos / aeróbicos)
+//   2. Criar templates (formulário de anamnese / feedback)
+//   3. Cadastrar primeiro aluno
+//   4. Montar primeiro conteúdo (dieta / ficha)
 //
 // Os passos respeitam os módulos do plano (modulos.dieta / modulos.treino /
-// modulos.feedback). Catálogo (alimentos/exercicios/alongamentos/aerobicos)
-// continua sendo coberto pelo OnboardingBanner — esse componente foca na
-// jornada de "do zero ao primeiro envio".
+// modulos.feedback) — catálogo de treino só aparece se o plano tem treino, etc.
 
 import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   CheckCircle2, Circle, ArrowRight, X, Users, ClipboardList,
   MessageSquare, Apple, Dumbbell, ChevronDown, ChevronUp,
+  StretchHorizontal, Bike,
 } from 'lucide-react'
 import useAuthStore from '../store/authStore'
-import { buscarContagensJornada } from '../api/onboarding'
+import { buscarContagensJornada, buscarContagensOnboarding } from '../api/onboarding'
+import { THRESHOLDS } from '../store/onboardingStore'
 import { Button } from './ui'
 
 const STORAGE_KEY = 'shapefy-jornada-dismissed'
@@ -25,6 +30,7 @@ export default function JornadaInicial() {
   const navigate = useNavigate()
   const modulos = useAuthStore(s => s.modulos)
   const [counts, setCounts] = useState(null)
+  const [catalogo, setCatalogo] = useState(null)
   const [loading, setLoading] = useState(true)
   const [collapsed, setCollapsed] = useState(false)
   const [dismissed, setDismissed] = useState(() => {
@@ -33,31 +39,71 @@ export default function JornadaInicial() {
 
   useEffect(() => {
     let cancelled = false
-    buscarContagensJornada()
-      .then(c => { if (!cancelled) setCounts(c) })
-      .catch(e => {
-        console.error('Erro ao carregar jornada:', e)
-        // fallback: assume tudo zerado pra ainda mostrar a jornada pro
-        // profissional, mesmo se algum doctype falhou na contagem.
-        if (!cancelled) setCounts({ alunos: 0, formAnamnese: 0, formFeedback: 0, dietas: 0, fichas: 0 })
+    Promise.allSettled([
+      buscarContagensJornada(),
+      buscarContagensOnboarding(),
+    ])
+      .then(([j, c]) => {
+        if (cancelled) return
+        setCounts(j.status === 'fulfilled'
+          ? j.value
+          : { alunos: 0, formAnamnese: 0, formFeedback: 0, dietas: 0, fichas: 0 })
+        setCatalogo(c.status === 'fulfilled'
+          ? c.value
+          : { alimentos: 0, exercicios: 0, alongamentos: 0, aerobicos: 0 })
       })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [])
 
   const passos = useMemo(() => {
-    if (!counts) return []
+    if (!counts || !catalogo) return []
     const arr = []
 
-    arr.push({
-      id: 'aluno',
-      icon: Users,
-      titulo: 'Cadastre seu primeiro aluno',
-      descricao: 'Tudo gira em torno dos alunos. Vincule uma anamnese ou crie um aluno direto pra começar a montar dieta e treino.',
-      done: counts.alunos > 0,
-      acao: { label: 'Vincular anamnese', onClick: () => navigate('/anamneses') },
-    })
+    // 1. Configurar catálogo (varia por plano)
+    if (modulos?.dieta) {
+      arr.push({
+        id: 'alimentos',
+        icon: Apple,
+        titulo: 'Cadastre seus alimentos',
+        descricao: `Importe da biblioteca Shapefy ou cadastre os alimentos que você usa nas dietas. Recomendado começar com pelo menos ${THRESHOLDS.alimentos}.`,
+        done: catalogo.alimentos >= THRESHOLDS.alimentos,
+        progresso: { atual: catalogo.alimentos, alvo: THRESHOLDS.alimentos },
+        acao: { label: 'Importar alimentos', onClick: () => navigate('/alimentos') },
+      })
+    }
 
+    if (modulos?.treino) {
+      arr.push({
+        id: 'exercicios',
+        icon: Dumbbell,
+        titulo: 'Cadastre seus exercícios de treino',
+        descricao: `Importe da biblioteca Shapefy ou cadastre os exercícios que você usa nas fichas. Recomendado começar com pelo menos ${THRESHOLDS.exercicios}.`,
+        done: catalogo.exercicios >= THRESHOLDS.exercicios,
+        progresso: { atual: catalogo.exercicios, alvo: THRESHOLDS.exercicios },
+        acao: { label: 'Importar exercícios', onClick: () => navigate('/exercicios') },
+      })
+      arr.push({
+        id: 'alongamentos',
+        icon: StretchHorizontal,
+        titulo: 'Cadastre seus alongamentos',
+        descricao: `Usados na planilha de alongamentos das fichas. Recomendado começar com pelo menos ${THRESHOLDS.alongamentos}.`,
+        done: catalogo.alongamentos >= THRESHOLDS.alongamentos,
+        progresso: { atual: catalogo.alongamentos, alvo: THRESHOLDS.alongamentos },
+        acao: { label: 'Importar alongamentos', onClick: () => navigate('/alongamentos') },
+      })
+      arr.push({
+        id: 'aerobicos',
+        icon: Bike,
+        titulo: 'Cadastre seus aeróbicos',
+        descricao: 'Usados na periodização aeróbica das fichas.',
+        done: catalogo.aerobicos >= THRESHOLDS.aerobicos,
+        progresso: { atual: catalogo.aerobicos, alvo: THRESHOLDS.aerobicos },
+        acao: { label: 'Importar aeróbicos', onClick: () => navigate('/aerobicos') },
+      })
+    }
+
+    // 2. Templates de formulário
     arr.push({
       id: 'form_anamnese',
       icon: ClipboardList,
@@ -78,6 +124,17 @@ export default function JornadaInicial() {
       })
     }
 
+    // 3. Cadastrar primeiro aluno
+    arr.push({
+      id: 'aluno',
+      icon: Users,
+      titulo: 'Cadastre seu primeiro aluno',
+      descricao: 'Adicione o primeiro aluno pra começar a montar dieta e treino. Use "Novo Aluno" no canto superior direito.',
+      done: counts.alunos > 0,
+      acao: { label: 'Cadastrar aluno', onClick: () => navigate('/') },
+    })
+
+    // 4. Montar conteúdo pro primeiro aluno
     if (modulos?.dieta) {
       arr.push({
         id: 'dieta',
@@ -101,7 +158,7 @@ export default function JornadaInicial() {
     }
 
     return arr
-  }, [counts, modulos, navigate])
+  }, [counts, catalogo, modulos, navigate])
 
   if (loading) return null
   if (passos.length === 0) return null
@@ -190,6 +247,11 @@ export default function JornadaInicial() {
                   }`}>
                     <span className="text-gray-600 mr-1.5 tabular-nums">{i + 1}.</span>
                     {p.titulo}
+                    {p.progresso && !p.done && (
+                      <span className="ml-2 text-amber-400 text-[11px] font-bold tabular-nums">
+                        {p.progresso.atual}/{p.progresso.alvo}
+                      </span>
+                    )}
                   </p>
                   {!p.done && (
                     <p className="text-gray-400 text-xs mt-1 leading-relaxed">{p.descricao}</p>

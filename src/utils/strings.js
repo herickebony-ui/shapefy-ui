@@ -46,6 +46,13 @@ export const buscarSmart = (textos, query, { coringa = true } = {}) => {
 }
 
 /**
+ * Extrai o primeiro nome de uma string "Nome Sobrenome ...".
+ * Devolve string vazia se vier nada.
+ */
+export const primeiroNome = (nomeCompleto = '') =>
+  String(nomeCompleto).trim().split(/\s+/)[0] || ''
+
+/**
  * Mantido pra compat — versão antiga que removia espaços.
  * Novo código deve usar `buscarSmart`.
  */
