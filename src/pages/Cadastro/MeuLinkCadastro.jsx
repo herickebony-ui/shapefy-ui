@@ -66,32 +66,32 @@ export default function MeuLinkCadastro() {
             Meu link de cadastro
           </h1>
           <p className="text-gray-400 text-sm mt-1">
-            Compartilhe este link e novos alunos cadastram seus dados sozinhos.
+            Envie este link pros seus novos alunos preencherem os dados de cadastro.
           </p>
         </div>
         <BotaoAjuda
           title="Como funciona o link de cadastro"
-          subtitle="Ficha de cadastro automática para novos alunos"
+          subtitle="Para coletar os dados dos seus novos alunos sem digitar nada"
           topicos={[
             {
               icon: Sparkles,
               title: 'Seu link é único e permanente',
-              description: 'O sistema gerou um código aleatório só seu. Você pode usar o mesmo link sempre — não precisa criar um novo a cada aluno.',
+              description: 'O sistema gerou um código aleatório só seu. Use o mesmo link com todos os alunos novos — não precisa criar um novo a cada cadastro.',
             },
             {
               icon: Share2,
-              title: 'Compartilhe onde quiser',
-              description: 'Cole no bio do Instagram, em stories, no WhatsApp ou onde quiser captar novos alunos. Você também pode usar o QR code.',
+              title: 'Envie pro aluno após fechar a consultoria',
+              description: 'Manda pelo WhatsApp ou e-mail. Pode usar o QR code também — útil pra atendimento presencial ou print pra enviar no chat.',
             },
             {
               icon: Megaphone,
-              title: 'O aluno preenche os dados',
-              description: 'Ao acessar, ele vê uma ficha bonitinha com seu nome e foto. Preenche nome, contato, CPF, endereço (com CEP automático) e e-mail.',
+              title: 'O aluno preenche o próprio cadastro',
+              description: 'Ele acessa o link, vê uma ficha com seu nome e foto, e preenche nome, contato, CPF, endereço (com CEP automático) e e-mail. Você não digita nada.',
             },
             {
               icon: ShieldCheck,
-              title: 'Você é notificado',
-              description: 'Assim que enviado, o aluno entra automaticamente na sua lista de "Meus Alunos" e você recebe uma notificação no sininho.',
+              title: 'Cai direto em "Meus Alunos"',
+              description: 'Assim que o aluno envia, ele entra automaticamente na sua lista vinculado a você, e você recebe uma notificação no sininho.',
             },
           ]}
         />
