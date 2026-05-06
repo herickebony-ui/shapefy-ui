@@ -23,6 +23,7 @@ const useAuthStore = create(
       clearAuth: () => {
         localStorage.removeItem('frappe_token')
         localStorage.removeItem('frappe_user')
+        localStorage.removeItem('shapefy-jornada-dismissed')
         useOnboardingStore.getState().resetOnboarding()
         set({ user: null, token: null, isAuthenticated: false, modulos: { ...MODULOS_DEFAULT } })
       },

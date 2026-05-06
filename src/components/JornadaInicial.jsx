@@ -103,7 +103,7 @@ export default function JornadaInicial() {
     return arr
   }, [counts, modulos, navigate])
 
-  if (dismissed || loading) return null
+  if (loading) return null
   if (passos.length === 0) return null
 
   const completos = passos.filter(p => p.done).length
@@ -111,6 +111,12 @@ export default function JornadaInicial() {
   const tudoFeito = completos === total
 
   if (tudoFeito) return null
+
+  // Se o profissional está com tudo zerado (novo usuário de verdade),
+  // ignora a flag de dismiss persistida — pode ter ficado de um teste
+  // anterior na mesma máquina.
+  const usuarioNovo = completos === 0
+  if (dismissed && !usuarioNovo) return null
 
   const handleDismiss = () => {
     try { localStorage.setItem(STORAGE_KEY, '1') } catch { /* ignore */ }

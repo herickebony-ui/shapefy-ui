@@ -23,6 +23,7 @@ client.interceptors.response.use(
       localStorage.removeItem('frappe_user_name')
       localStorage.removeItem('shapefy-auth')
       localStorage.removeItem('shapefy-onboarding')
+      localStorage.removeItem('shapefy-jornada-dismissed')
       if (window.location.pathname !== '/login') {
         window.location.href = '/login'
       }
