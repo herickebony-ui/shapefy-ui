@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Users, UserCheck, UserX, CalendarPlus, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { Users, UserCheck, UserX, CalendarPlus, Plus, RefreshCw, Trash2, Link2 } from 'lucide-react'
 import { listarAlunos, criarAluno, buscarStatsAlunos, excluirAluno } from '../api/alunos'
+import { getMeuLinkCadastro } from '../api/meuLinkCadastro'
 import {
   Button, Badge, DataTable,
   Modal, FormGroup, Input, Select,
@@ -62,6 +63,14 @@ export default function Dashboard() {
   const [showModal, setShowModal] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [novoAluno, setNovoAluno] = useState({ nome_completo: '', email: '', telefone: '', sexo: '' })
+
+  // Status do link de cadastro (badge OFF se inativo)
+  const [linkAtivo, setLinkAtivo] = useState(true)
+  useEffect(() => {
+    getMeuLinkCadastro()
+      .then((data) => setLinkAtivo(data.ativo === undefined ? true : !!data.ativo))
+      .catch(() => {})
+  }, [])
 
   // Debounce busca
   useEffect(() => {
@@ -217,6 +226,14 @@ export default function Dashboard() {
         actions={
           <>
             <Button variant="secondary" size="sm" icon={RefreshCw} onClick={carregar} loading={loading} />
+            <div className="relative">
+              <Button variant="secondary" size="sm" icon={Link2} onClick={() => navigate('/meu-link-cadastro')}>
+                <span className="hidden sm:inline">Link de cadastro</span>
+              </Button>
+              {!linkAtivo && (
+                <span className="absolute -top-1 -right-1 text-[9px] font-bold px-1 rounded bg-gray-600 text-white">OFF</span>
+              )}
+            </div>
             <Button variant="primary" size="sm" icon={Plus} onClick={() => setShowModal(true)}>
               Novo Aluno
             </Button>

@@ -35,6 +35,8 @@ import PrescricaoListagem from './pages/Prescricoes/PrescricaoListagem'
 import PrescricaoDetalhe from './pages/Prescricoes/PrescricaoDetalhe'
 import FinanceiroListagem from './pages/Financeiro/FinanceiroListagem'
 import PlanosListagem from './pages/Financeiro/PlanosListagem'
+import CadastroPublico from './pages/Cadastro/CadastroPublico'
+import MeuLinkCadastro from './pages/Cadastro/MeuLinkCadastro'
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -64,6 +66,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/update-password" element={<UpdatePassword />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/cadastro/:slug" element={<CadastroPublico />} />
         <Route
           path="/"
           element={
@@ -117,6 +120,7 @@ function App() {
           <Route path="prescricoes/:id" element={<PrescricaoDetalhe />} />
           <Route path="financeiro" element={<FinanceiroListagem />} />
           <Route path="planos" element={<PlanosListagem />} />
+          <Route path="meu-link-cadastro" element={<MeuLinkCadastro />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
