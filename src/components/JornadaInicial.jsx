@@ -26,7 +26,7 @@ export default function JornadaInicial() {
   const modulos = useAuthStore(s => s.modulos)
   const [counts, setCounts] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [collapsed, setCollapsed] = useState(true)
+  const [collapsed, setCollapsed] = useState(false)
   const [dismissed, setDismissed] = useState(() => {
     try { return localStorage.getItem(STORAGE_KEY) === '1' } catch { return false }
   })
