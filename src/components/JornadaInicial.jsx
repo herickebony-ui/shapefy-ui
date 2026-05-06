@@ -26,7 +26,7 @@ export default function JornadaInicial() {
   const modulos = useAuthStore(s => s.modulos)
   const [counts, setCounts] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(true)
   const [dismissed, setDismissed] = useState(() => {
     try { return localStorage.getItem(STORAGE_KEY) === '1' } catch { return false }
   })
@@ -35,7 +35,12 @@ export default function JornadaInicial() {
     let cancelled = false
     buscarContagensJornada()
       .then(c => { if (!cancelled) setCounts(c) })
-      .catch(e => console.error('Erro ao carregar jornada:', e))
+      .catch(e => {
+        console.error('Erro ao carregar jornada:', e)
+        // fallback: assume tudo zerado pra ainda mostrar a jornada pro
+        // profissional, mesmo se algum doctype falhou na contagem.
+        if (!cancelled) setCounts({ alunos: 0, formAnamnese: 0, formFeedback: 0, dietas: 0, fichas: 0 })
+      })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [])

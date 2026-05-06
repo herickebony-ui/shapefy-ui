@@ -98,6 +98,7 @@ export default function AnamneseListagem() {
         nome_completo: al.nome_completo,
         titulo: null,
         date: al.creation,
+        creation: al.creation,
         status: 'sem_anamnese',
         entregue: false,
         _semAnamnese: true,
@@ -105,7 +106,16 @@ export default function AnamneseListagem() {
       }))
   }, [lista, alunos])
 
-  const listaCompleta = useMemo(() => [...linhasSemAnamnese, ...lista], [linhasSemAnamnese, lista])
+  // Ordenação por criação (mais recentes primeiro), misturando anamneses e
+  // alunos sem anamnese conforme a data de cadastro/vinculação.
+  const listaCompleta = useMemo(() => {
+    const todos = [...linhasSemAnamnese, ...lista]
+    return todos.sort((a, b) => {
+      const cA = a.creation || a.date || ''
+      const cB = b.creation || b.date || ''
+      return String(cB).localeCompare(String(cA))
+    })
+  }, [linhasSemAnamnese, lista])
 
   const listaFiltrada = useMemo(() => {
     return listaCompleta.filter(a => {

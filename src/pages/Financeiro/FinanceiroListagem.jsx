@@ -2,10 +2,24 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Plus, RefreshCw, Search, CalendarDays, SlidersHorizontal,
   TrendingUp, History, Wallet, Users, FileDown, RefreshCcw, Eye, Edit2,
+  Receipt, Calendar as CalendarIcon, Filter, DollarSign, Package, BookCheck,
 } from 'lucide-react'
 import {
-  Button, Spinner, EmptyState, DataTable, Tabs, StatCard, Badge,
+  Button, Spinner, EmptyState, DataTable, Tabs, StatCard, Badge, BotaoAjuda,
 } from '../../components/ui'
+
+const TOPICOS_AJUDA_FINANCEIRO = [
+  { icon: Receipt,     title: 'O que é um pagamento (contrato)', description: 'Um "pagamento" é um contrato do aluno com o profissional — registra o plano contratado, valor, data de início, data de fim e parcelas. Cada renovação de plano gera um novo registro.' },
+  { icon: Wallet,      title: 'Aba Pagamentos', description: 'Lista todos os contratos com filtros por mês, plano e status. Use pra acompanhar quem pagou, quem está pendente e fazer projeções financeiras. KPIs mostram total recebido, em aberto e atrasado do período.' },
+  { icon: Users,       title: 'Aba Gestão de Alunos', description: 'Visão por aluno em vez de por contrato. Mostra o histórico financeiro de cada aluno, status do plano atual (ativo, expirado, próximo do fim) e quanto cada um já pagou no total.' },
+  { icon: Plus,        title: 'Novo pagamento', description: 'Cria um contrato novo associando aluno + plano + valor + datas. Use pra clientes novos. As parcelas são geradas automaticamente conforme as datas.' },
+  { icon: RefreshCcw,  title: 'Renovar pagamento', description: 'Renova um contrato existente — clona os dados do contrato anterior (plano, valor) e ajusta as datas pra o próximo período. Use pra renovações periódicas, não pra contratos novos.' },
+  { icon: Package,     title: 'Planos', description: 'Cadastre os planos que você vende (ex: Mensal R$ 200, Trimestral R$ 540). Acessível pelo menu lateral em "Planos". Os planos cadastrados ficam disponíveis no formulário de novo pagamento.' },
+  { icon: CalendarIcon, title: 'Filtro por mês', description: 'Por padrão mostra o mês atual. Mude com o seletor pra ver pagamentos de outros meses ou use "Personalizado" pra um intervalo específico. Os KPIs e a lista filtram pelo período selecionado.' },
+  { icon: DollarSign,  title: 'Status de parcela', description: 'Pago = parcela quitada. Pendente = ainda não venceu. Atrasado = venceu e não foi pago. Use a coluna de status pra cobrar quem está em atraso.' },
+  { icon: FileDown,    title: 'Exportar PDF', description: 'Gera um relatório financeiro em PDF do período selecionado — ideal pra contabilidade ou backup mensal.' },
+  { icon: History,     title: 'Auditoria', description: 'Mostra todas as alterações em contratos (criação, edição, exclusão) com data/hora — útil pra rastrear mudanças quando algum valor não bate.' },
+]
 import ListPage from '../../components/templates/ListPage'
 import PlanoBadge from '../../components/financeiro/PlanoBadge'
 import MesBadge from '../../components/financeiro/MesBadge'
@@ -501,6 +515,11 @@ export default function FinanceiroListagem() {
       subtitle="Contratos, planos e faturamento"
       actions={
         <>
+          <BotaoAjuda
+            title="Como funciona o Financeiro"
+            subtitle="Guia rápido desta tela"
+            topicos={TOPICOS_AJUDA_FINANCEIRO}
+          />
           <Button variant="secondary" size="sm" icon={RefreshCw} onClick={carregar} loading={loading} />
           <Button
             variant="secondary"

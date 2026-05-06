@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, RefreshCw, Trash2, Edit, FileText, Send, ToggleRight, Users } from 'lucide-react'
+import { Plus, RefreshCw, Trash2, Edit, FileText, Send, ToggleRight, Users, ClipboardList, MessageSquare } from 'lucide-react'
 import {
   listarFormulariosAnamnese, excluirFormularioAnamnese,
   listarFormulariosFeedback, excluirFormularioFeedback,
@@ -110,14 +110,32 @@ export default function FormularioListagem({ tipoFixo }) {
         </>
       }
       loading={loading}
-      empty={lista.length === 0 && !loading ? {
-        title: `Sem formulários de ${aba}`,
-        description: 'Crie um template para enviar aos alunos',
-      } : null}
     >
       {!tipoFixo && (
         <div className="px-4 pb-2 pt-1">
           <Tabs tabs={TABS} active={aba} onChange={setAba} variant="pills" />
+        </div>
+      )}
+      {!loading && lista.length === 0 && (
+        <div className="mx-4">
+          <EmptyState
+            icon={aba === 'anamnese' ? ClipboardList : MessageSquare}
+            title={aba === 'anamnese' ? 'Crie seu primeiro formulário de anamnese' : 'Crie seu primeiro formulário de feedback'}
+            description={
+              aba === 'anamnese'
+                ? 'Templates de anamnese são questionários iniciais que você envia ao aluno pra coletar informações de saúde, hábitos e objetivos. Você cria uma vez e reutiliza pra todos os alunos.'
+                : 'Templates de feedback são questionários recorrentes (semanais, quinzenais, mensais) pra acompanhar a evolução do aluno ao longo do plano. Crie diferentes templates pra grupos diferentes.'
+            }
+            action={
+              <Button
+                variant="primary"
+                icon={Plus}
+                onClick={() => navigate(`/criar-formularios/${aba}/novo`)}
+              >
+                Criar agora
+              </Button>
+            }
+          />
         </div>
       )}
       {!loading && lista.length > 0 && (

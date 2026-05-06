@@ -4,12 +4,25 @@ import {
   Search, Plane, MessageSquare,
   Save, Copy, Trash2, X, ChevronLeft, ChevronRight, ArrowLeft,
   Users, Calendar as CalendarIcon, Wand2, Plus, Loader2,
+  Target, Repeat,
 } from 'lucide-react'
 
 import {
   Button, Modal, Tabs, FormGroup, Input,
-  Spinner, Avatar, Autocomplete,
+  Spinner, Avatar, Autocomplete, BotaoAjuda,
 } from '../../components/ui'
+
+const TOPICOS_AJUDA_CRONOGRAMA = [
+  { icon: Target,         title: 'Pra que serve esta tela', description: 'É onde você define quando o aluno recebe cada feedback. Você escolhe o aluno, define o ponto de partida da vigência e a frequência (semanal/quinzenal/mensal). O sistema agenda os envios automaticamente até o fim do plano.' },
+  { icon: CalendarIcon,   title: 'Ponto de partida e vigência', description: 'O "Ponto de partida" é o primeiro feedback. A "Vigência" é o período em que o aluno vai receber feedbacks (geralmente coincide com o plano). Datas fora da vigência ficam ocultas.' },
+  { icon: Repeat,         title: 'Frequência', description: 'Define o intervalo entre os envios — semanal, quinzenal, mensal, etc. É a periodicidade com que o aluno vai receber feedbacks dentro do plano contratado.' },
+  { icon: Wand2,          title: 'Renovar ciclo', description: 'Use quando o aluno renova o plano dele. O sistema zera a vigência atual (mantém o histórico antigo intacto) pra você definir um novo "Ponto de partida" e continuar enviando feedbacks no novo ciclo.' },
+  { icon: Plane,          title: 'Cadastre suas férias', description: 'Datas em que você está fora — o sistema pula automaticamente os feedbacks programados nesses dias e empurra os próximos pra depois das férias.' },
+  { icon: MessageSquare,  title: 'Modelos de mensagem', description: 'Banco de mensagens padrão prontas pra copiar — útil quando você precisa enviar uma mensagem rápida pro aluno (ex: lembrete de feedback, instruções pré-anamnese, mensagem de boas-vindas). Salve uma vez e reutilize copiando e colando.' },
+  { icon: Users,          title: 'Clonar', description: 'Copia o cronograma de outro aluno pra este — útil quando você tem um padrão fixo pra cada perfil de cliente. Datas são recalculadas a partir do plano deste aluno.' },
+  { icon: Trash2,         title: 'Limpar cronograma', description: 'Remove todos os agendamentos deste aluno. O histórico de feedbacks já enviados/respondidos não é apagado — só o que está programado pra futuro.' },
+  { icon: Save,           title: 'Salvar', description: 'Confirma todas as mudanças no cronograma deste aluno. Sem salvar, as alterações ficam apenas locais e somem ao trocar de tela.' },
+]
 
 import {
   listarAgendamentosDoAluno, sincronizarCronogramaDoAluno,
@@ -654,6 +667,11 @@ export default function CronogramaFeedbacks() {
             <h1 className="text-lg md:text-2xl font-bold tracking-tight">Planejar Feedbacks do Aluno</h1>
             {aluno && <p className="text-gray-500 text-xs mt-1">{aluno.nome_completo}</p>}
           </div>
+          <BotaoAjuda
+            title="Como funciona o Cronograma de Feedbacks"
+            subtitle="Guia rápido desta tela"
+            topicos={TOPICOS_AJUDA_CRONOGRAMA}
+          />
         </div>
         <div className="flex flex-row items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden py-0.5 max-w-full">
           {/* Chip: Férias */}
