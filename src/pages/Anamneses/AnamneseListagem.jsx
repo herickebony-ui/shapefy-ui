@@ -122,11 +122,17 @@ export default function AnamneseListagem() {
   const listaFiltrada = useMemo(() => {
     return listaCompleta.filter(a => {
       if (query && !buscarSmart([a.nome_completo, a.titulo, a.aluno], query)) return false
+      const respondida = a.aluno_preencheu || a.status === 'Respondido'
       if (filtroStatus) {
         if (filtroStatus === 'pendente') {
-          if (a.status === 'Respondido' || a.status === 'Enviado' || a._semAnamnese) return false
+          if (respondida || a.status === 'Enviado' || a._semAnamnese) return false
         } else if (filtroStatus === 'sem_anamnese') {
           if (!a._semAnamnese) return false
+        } else if (filtroStatus === 'Respondido') {
+          if (!respondida) return false
+        } else if (filtroStatus === 'Enviado') {
+          // Enviada de fato (não respondeu ainda)
+          if (respondida || a.status !== 'Enviado') return false
         } else if (a.status !== filtroStatus) return false
       }
       if (a._semAnamnese && filtroStatus !== 'sem_anamnese' && filtroStatus !== '') return false
@@ -227,7 +233,7 @@ export default function AnamneseListagem() {
         if (a._semAnamnese) {
           return (
             <div className="min-w-0">
-              <p className="text-amber-400 text-xs font-medium italic">— sem anamnese vinculada —</p>
+              <p className="text-gray-500 text-xs font-medium italic">— sem anamnese vinculada —</p>
               <p className="text-gray-600 text-[10px]">cadastrado em {fmtData(a.date)}</p>
             </div>
           )
@@ -242,11 +248,13 @@ export default function AnamneseListagem() {
     },
     {
       label: 'Status',
-      headerClass: 'w-36 text-center',
+      headerClass: 'w-40 text-center',
       cellClass: 'text-center',
       render: (a) => {
-        if (a._semAnamnese) return <Badge variant="warning" size="sm">Sem anamnese</Badge>
-        if (a.status === 'Respondido') return <Badge variant="success" size="sm">Respondida</Badge>
+        if (a._semAnamnese) return <Badge variant="default" size="sm" className="whitespace-nowrap">Sem anamnese</Badge>
+        // aluno_preencheu é a fonte real de "respondida" — o campo `status`
+        // nem sempre é atualizado pelo backend quando a aluna responde.
+        if (a.aluno_preencheu || a.status === 'Respondido') return <Badge variant="success" size="sm">Respondida</Badge>
         if (a.status === 'Enviado') return <Badge variant="warning" size="sm">Enviada</Badge>
         return <Badge variant="default" size="sm">Pendente</Badge>
       },
@@ -291,7 +299,7 @@ export default function AnamneseListagem() {
               <button
                 onClick={() => abrirVincularPraAluno(a._alunoData)}
                 title="Vincular anamnese a este aluno"
-                className="h-7 px-3 flex items-center gap-1.5 text-amber-300 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500 hover:text-white rounded-lg text-[11px] font-bold transition-colors"
+                className="h-7 px-3 flex items-center gap-1.5 text-gray-300 hover:text-white border border-[#323238] hover:bg-blue-600 hover:border-blue-600 rounded-lg text-[11px] font-medium transition-colors whitespace-nowrap"
               >
                 <Link2 size={11} /> Vincular
               </button>

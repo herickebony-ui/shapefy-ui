@@ -1,4 +1,4 @@
-export default function Badge({ children, variant = 'default', size = 'md' }) {
+export default function Badge({ children, variant = 'default', size = 'md', className = '' }) {
   const variants = {
     default: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
     primary: 'bg-[#2563eb]/10 text-red-400 border-[#2563eb]/20',
@@ -17,7 +17,7 @@ export default function Badge({ children, variant = 'default', size = 'md' }) {
   }
 
   return (
-    <span className={`inline-flex items-center font-bold rounded border uppercase tracking-wider ${variants[variant]} ${sizes[size]}`}>
+    <span className={`inline-flex items-center font-bold rounded border uppercase tracking-wider ${variants[variant]} ${sizes[size]} ${className}`}>
       {children}
     </span>
   )
