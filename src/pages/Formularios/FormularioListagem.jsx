@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, RefreshCw, Trash2, Edit } from 'lucide-react'
+import { Plus, RefreshCw, Trash2, Edit, FileText, Send, ToggleRight, Users } from 'lucide-react'
 import {
   listarFormulariosAnamnese, excluirFormularioAnamnese,
   listarFormulariosFeedback, excluirFormularioFeedback,
 } from '../../api/formularios'
-import { Button, Badge, Tabs, EmptyState } from '../../components/ui'
+import { Button, Badge, Tabs, EmptyState, BotaoAjuda } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 
 const TABS = [
@@ -17,6 +17,21 @@ const TITULOS = {
   anamnese: { title: 'Formulários de Anamnese', subtitle: 'Templates de anamnese para enviar aos alunos' },
   feedback: { title: 'Formulários de Feedback', subtitle: 'Templates de feedback recorrente para enviar aos alunos' },
 }
+
+const TOPICOS_AJUDA_ANAMNESE_LISTA = [
+  { icon: FileText, title: 'O que é um template de anamnese', description: 'É um modelo reutilizável de questionário inicial. Você cria uma vez e pode enviar pra cada aluno novo, sem precisar montar tudo de novo.' },
+  { icon: Plus,     title: 'Criar um novo template', description: 'Clique em "Novo Formulário" no canto superior direito. Você define o título, adiciona as perguntas e salva.' },
+  { icon: Edit,     title: 'Editar', description: 'Clique no item da lista ou no ícone azul (lápis) pra abrir o editor. Mudanças afetam só os próximos envios — anamneses já preenchidas não mudam.' },
+  { icon: Send,     title: 'Como o aluno recebe', description: 'Depois de criado, o template fica disponível pra ser enviado ao aluno na tela do aluno (botão "Enviar Anamnese"). Cada envio gera uma resposta única do aluno.' },
+  { icon: Trash2,   title: 'Excluir', description: 'O ícone vermelho (lixeira) remove o template — confirme antes, pois é permanente. Anamneses já preenchidas pelo aluno não são afetadas.' },
+]
+
+const TOPICOS_AJUDA_FEEDBACK_LISTA = [
+  { icon: FileText,    title: 'O que é um template de feedback', description: 'É um modelo de questionário recorrente (semanal, quinzenal, mensal) que você usa pra acompanhar o aluno. Você cria o template uma vez e ele é enviado automaticamente conforme o cronograma.' },
+  { icon: Users,       title: 'Múltiplos templates', description: 'Você pode ter vários templates ativos pra grupos diferentes (ex: hipertrofia, emagrecimento, manutenção). Na hora de enviar, escolhe qual usar.' },
+  { icon: ToggleRight, title: 'Status Ativo / Inativo', description: 'Só templates ativos aparecem como opção pra envio. Os inativos ficam guardados sem aparecer nas listas de envio — útil pra arquivar templates antigos sem perder o histórico.' },
+  { icon: Plus,        title: 'Criar / Editar / Excluir', description: 'Mesmos botões da anamnese: "Novo Feedback" cria, lápis edita, lixeira exclui. As mudanças no template não afetam feedbacks já respondidos pelo aluno.' },
+]
 
 export default function FormularioListagem({ tipoFixo }) {
   const navigate = useNavigate()
@@ -78,6 +93,11 @@ export default function FormularioListagem({ tipoFixo }) {
       subtitle={subtitle}
       actions={
         <>
+          <BotaoAjuda
+            title={aba === 'anamnese' ? 'Formulários de Anamnese' : 'Formulários de Feedback'}
+            subtitle="Guia rápido desta tela"
+            topicos={aba === 'anamnese' ? TOPICOS_AJUDA_ANAMNESE_LISTA : TOPICOS_AJUDA_FEEDBACK_LISTA}
+          />
           <Button variant="secondary" size="sm" icon={RefreshCw} onClick={carregar} loading={loading} />
           <Button
             variant="primary"

@@ -34,7 +34,7 @@ export const TIPOS_CONFIG = {
   selecao:     { label: 'Seleção (lista)', hasOpcoes: true, opcoesLabel: 'Opções — uma por linha', hasHtml: false, isLayout: false, descricao: 'O aluno escolhe uma única opção em uma lista. Liste as opções abaixo, uma por linha.' },
   imagem:      { label: 'Anexar Imagem', hasOpcoes: false, hasHtml: false, isLayout: false, descricao: 'Permite o aluno anexar uma foto. Útil para fotos de progresso, prato de comida, postura.' },
   multipla:    { label: 'Múltipla Escolha', hasOpcoes: true, opcoesLabel: 'Opções — uma por linha', hasHtml: false, isLayout: false, descricao: 'O aluno pode marcar várias opções. Liste as opções abaixo, uma por linha.' },
-  html:        { label: 'Bloco HTML', hasOpcoes: false, hasHtml: true, isLayout: true, feedbackOnly: true, descricao: 'Não é uma pergunta — é um bloco de texto formatado para passar instruções, avisos ou contexto pro aluno. Ele apenas lê, sem responder.' },
+  html:        { label: 'Bloco HTML', hasOpcoes: false, hasHtml: true, isLayout: true, feedbackOnly: true, descricao: 'Não é uma pergunta — é um pequeno editor onde você escreve um texto formatado (negrito, itálico, listas, links) para o aluno ler. Use para dar instruções antes das perguntas, explicar algo, fixar um aviso ou contextualizar uma seção. O aluno apenas lê — não responde.' },
 }
 
 export const TIPOS_ANAMNESE = Object.entries(TIPOS_CONFIG)

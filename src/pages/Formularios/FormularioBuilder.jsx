@@ -19,7 +19,7 @@ const TOPICOS_AJUDA_ANAMNESE = [
 
 const TOPICOS_AJUDA_FEEDBACK = [
   ...TOPICOS_AJUDA_ANAMNESE,
-  { icon: FileText, title: 'Bloco HTML', description: 'Bloco de texto formatado pra dar instruções, avisos ou contexto ao aluno entre as perguntas. Não é uma pergunta — o aluno só lê.' },
+  { icon: FileText, title: 'Bloco HTML', description: 'Não é uma pergunta — é um mini editor onde você escreve um texto formatado (negrito, itálico, listas, links) pro aluno ler. Útil pra instruções, avisos ou contexto entre as perguntas. O aluno só lê, não responde.' },
   { icon: Settings, title: 'Aba Configurações', description: 'Liga/desliga seções padrão (Feedback inicial, Dieta, Treino) que aparecem no feedback do aluno mesmo sem perguntas customizadas. "Ativo" controla se o formulário fica disponível pra envio.' },
 ]
 
@@ -232,8 +232,8 @@ export default function FormularioBuilder() {
       {/* Header */}
       <div className="flex items-center gap-4">
         <button
-          onClick={() => navigate('/criar-formularios')}
-          className="h-8 w-8 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors shrink-0"
+          onClick={() => navigate(`/formularios/${tipo}`)}
+          className="h-9 w-9 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors shrink-0"
         >
           <ArrowLeft size={14} />
         </button>
@@ -421,7 +421,7 @@ export default function FormularioBuilder() {
 
       {/* Footer */}
       <div className="flex items-center justify-end gap-3 pb-8">
-        <Button variant="ghost" onClick={() => navigate('/formularios')}>Cancelar</Button>
+        <Button variant="ghost" onClick={() => navigate(`/formularios/${tipo}`)}>Cancelar</Button>
         <Button variant="primary" icon={Save} loading={salvando} onClick={salvar}>
           {isNovo ? 'Criar Formulário' : 'Salvar Alterações'}
         </Button>

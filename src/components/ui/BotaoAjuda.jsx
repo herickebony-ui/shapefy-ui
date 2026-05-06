@@ -28,7 +28,7 @@ export default function BotaoAjuda({
   topicos = [],
   size = 'lg',
   className = '',
-  iconSize = 14,
+  iconSize = 16,
   tooltip = 'Ajuda desta tela',
 }) {
   const [open, setOpen] = useState(false)
@@ -39,7 +39,7 @@ export default function BotaoAjuda({
         type="button"
         onClick={() => setOpen(true)}
         title={tooltip}
-        className={`h-7 w-7 flex items-center justify-center text-amber-400 hover:text-white bg-amber-500/10 hover:bg-amber-500 border border-amber-500/40 hover:border-amber-500 rounded-lg transition-colors shrink-0 ${className}`}
+        className={`h-9 w-9 flex items-center justify-center text-amber-400 hover:text-white bg-amber-500/10 hover:bg-amber-500 border border-amber-500/40 hover:border-amber-500 rounded-lg transition-colors shrink-0 ${className}`}
       >
         <HelpCircle size={iconSize} />
       </button>
