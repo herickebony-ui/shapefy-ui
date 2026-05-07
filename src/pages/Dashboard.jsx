@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Users, UserCheck, UserX, CalendarPlus, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { Users, UserCheck, UserX, CalendarPlus, Plus, RefreshCw, Trash2, Link2 } from 'lucide-react'
 import { listarAlunos, criarAluno, buscarStatsAlunos, excluirAluno } from '../api/alunos'
 import {
   Button, Badge, DataTable,
@@ -217,6 +217,9 @@ export default function Dashboard() {
         actions={
           <>
             <Button variant="secondary" size="sm" icon={RefreshCw} onClick={carregar} loading={loading} />
+            <Button variant="secondary" size="sm" icon={Link2} onClick={() => navigate('/meu-link-cadastro')}>
+              <span className="hidden sm:inline">Link de cadastro</span>
+            </Button>
             <Button variant="primary" size="sm" icon={Plus} onClick={() => setShowModal(true)}>
               Novo Aluno
             </Button>
