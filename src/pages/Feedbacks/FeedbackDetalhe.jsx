@@ -211,7 +211,7 @@ export default function FeedbackDetalhe() {
           <div className="bg-[#29292e] px-4 py-3 rounded-lg border border-[#323238] mb-6 flex flex-wrap items-center gap-4 text-xs text-gray-500">
             <span className="flex items-center gap-1.5"><User size={12} /> {feedback.nome_completo}</span>
             <span className="flex items-center gap-1.5"><Calendar size={12} /> {fmtData(feedback.date)}</span>
-            <span className="flex items-center gap-1.5"><Clock size={12} /> {fmtHora(feedback.modified)}</span>
+            <span className="flex items-center gap-1.5"><Clock size={12} /> {fmtHora(feedback.data_resposta || feedback.modified)}</span>
             <span className="flex items-center gap-1.5 text-blue-400"><FileText size={12} /> {feedback.titulo}</span>
             {feedback.email && <span>{feedback.email}</span>}
           </div>

@@ -17,7 +17,7 @@ export const listarFeedbacks = async ({ busca = '', status = '', dataInicio = ''
   }
 
   const params = {
-    fields: JSON.stringify(['name', 'formulario', 'titulo', 'aluno', 'nome_completo', 'profissional', 'date', 'status', 'email', 'modified', 'creation']),
+    fields: JSON.stringify(['name', 'formulario', 'titulo', 'aluno', 'nome_completo', 'profissional', 'date', 'status', 'email', 'modified', 'creation', 'data_resposta']),
     filters: JSON.stringify(filtros),
     limit,
     limit_start: (page - 1) * limit,

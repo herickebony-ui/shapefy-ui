@@ -440,12 +440,15 @@ export default function FeedbackListagem() {
       label: 'Data',
       headerClass: 'hidden sm:table-cell',
       cellClass: 'hidden sm:table-cell',
-      render: (row) => (
-        <div className="flex flex-col">
-          <span className="text-gray-400 text-xs">{fmtData((row.modified || '').split(' ')[0])}</span>
-          <span className="text-gray-600 text-[10px]">{fmtHora(row.modified)}</span>
-        </div>
-      ),
+      render: (row) => {
+        const dataExibida = row.data_resposta || row.modified
+        return (
+          <div className="flex flex-col">
+            <span className="text-gray-400 text-xs">{fmtData((dataExibida || '').split(' ')[0])}</span>
+            <span className="text-gray-600 text-[10px]">{fmtHora(dataExibida)}</span>
+          </div>
+        )
+      },
     },
     {
       label: 'Status',
