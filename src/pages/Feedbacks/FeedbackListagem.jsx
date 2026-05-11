@@ -88,11 +88,11 @@ function ViewComparacao({ dados, imgSrcs, onVoltar, onRotate, modoTrocarFoto, se
             <table className="w-full text-left border-collapse table-fixed">
               <thead>
                 <tr className="bg-[#0a0a0a] border-b border-[#323238]">
-                  <th className="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider sticky left-0 bg-[#0a0a0a] z-10 min-w-[200px] w-48">
+                  <th className="p-2 md:p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider sticky left-0 bg-[#0a0a0a] z-10 min-w-[140px] md:min-w-[200px] md:w-48">
                     Pergunta
                   </th>
                   {dados.map((fb, i) => (
-                    <th key={i} className="p-3 text-[10px] font-bold text-white uppercase tracking-wider text-center min-w-[220px]">
+                    <th key={i} className="p-2 md:p-3 text-[10px] font-bold text-white uppercase tracking-wider text-center min-w-[160px] md:min-w-[220px]">
                       {fmtData(fb.date || (fb.modified || '').split(' ')[0])}
                     </th>
                   ))}
@@ -118,7 +118,7 @@ function ViewComparacao({ dados, imgSrcs, onVoltar, onRotate, modoTrocarFoto, se
 
                   return (
                     <tr key={idx} className="hover:bg-white/5">
-                      <td className="p-3 text-xs text-white font-bold sticky left-0 bg-[#1a1a1a] z-10 border-r border-[#323238]/30">
+                      <td className="p-2 md:p-3 text-[11px] md:text-xs text-white font-bold sticky left-0 bg-[#1a1a1a] z-10 border-r border-[#323238]/30">
                         {item.pergunta}
                       </td>
                       {dados.map((fb, fi) => {
@@ -209,7 +209,7 @@ export default function FeedbackListagem() {
   const [formularios, setFormularios] = useState([])
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
-  const [filtroStatus, setFiltroStatus] = useState('')
+  const [filtroStatus, setFiltroStatus] = useState('Respondido')
   const [filtroFormulario, setFiltroFormulario] = useState('')
   const [filtroDataInicio, setFiltroDataInicio] = useState('')
   const [filtroDataFim, setFiltroDataFim] = useState('')

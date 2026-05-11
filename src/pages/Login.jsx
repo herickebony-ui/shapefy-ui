@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
 import useAuthStore from '../store/authStore'
 import { login } from '../api/auth'
 import { buscarAssinatura, buscarPlano } from '../api/assinatura'
@@ -13,6 +14,7 @@ export default function Login() {
   const [form, setForm] = useState({ usr: '', pwd: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showPwd, setShowPwd] = useState(false)
 
   async function handleLogin(e) {
     e.preventDefault()
@@ -81,14 +83,26 @@ export default function Login() {
             />
 
             <div className="space-y-1">
-              <Input
-                label="Senha"
-                type="password"
-                value={form.pwd}
-                onChange={(val) => setForm({ ...form, pwd: val })}
-                placeholder="••••••••"
-                required
-              />
+              <div className="relative">
+                <Input
+                  label="Senha"
+                  type={showPwd ? 'text' : 'password'}
+                  value={form.pwd}
+                  onChange={(val) => setForm({ ...form, pwd: val })}
+                  placeholder="••••••••"
+                  className="pr-10"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd(v => !v)}
+                  aria-label={showPwd ? 'Ocultar senha' : 'Mostrar senha'}
+                  title={showPwd ? 'Ocultar senha' : 'Mostrar senha'}
+                  className="absolute right-3 top-[34px] text-gray-500 hover:text-gray-300 transition-colors"
+                >
+                  {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
               <div className="flex justify-end">
                 <Link to="/forgot-password" className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
                   Esqueci minha senha
@@ -111,6 +125,13 @@ export default function Login() {
             >
               Entrar
             </Button>
+
+            <a
+              href="https://shapefy.online"
+              className="w-full h-10 mt-2 rounded-lg border border-[#323238] hover:border-[#2563eb] bg-transparent hover:bg-[#2563eb]/10 text-gray-300 hover:text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+            >
+              <ArrowLeft size={14} /> Voltar à página inicial
+            </a>
           </form>
         </div>
 

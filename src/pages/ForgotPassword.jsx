@@ -58,6 +58,12 @@ export default function ForgotPassword() {
               <Button variant="ghost" size="md" className="w-full mt-2" onClick={() => navigate('/login')}>
                 Voltar ao login
               </Button>
+              <a
+                href="https://shapefy.online"
+                className="w-full h-10 rounded-lg border border-[#323238] hover:border-[#2563eb] bg-transparent hover:bg-[#2563eb]/10 text-gray-300 hover:text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+              >
+                <ArrowLeft size={14} /> Voltar à página inicial
+              </a>
             </div>
           ) : (
             <>
@@ -100,6 +106,13 @@ export default function ForgotPassword() {
                 <ArrowLeft size={14} />
                 Voltar ao login
               </button>
+
+              <a
+                href="https://shapefy.online"
+                className="w-full h-10 mt-3 rounded-lg border border-[#323238] hover:border-[#2563eb] bg-transparent hover:bg-[#2563eb]/10 text-gray-300 hover:text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+              >
+                <ArrowLeft size={14} /> Voltar à página inicial
+              </a>
             </>
           )}
         </div>
