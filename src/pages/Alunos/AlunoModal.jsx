@@ -235,7 +235,7 @@ export function TabPerfil({ aluno: inicial, alunoId, onSaved }) {
       </div>
 
       <SecaoPerfil titulo="Dados Pessoais" />
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
         <FormGroup label="Data de Nascimento">
           <Input value={form.data_nascimento} onChange={set('data_nascimento')} type="date" />
         </FormGroup>

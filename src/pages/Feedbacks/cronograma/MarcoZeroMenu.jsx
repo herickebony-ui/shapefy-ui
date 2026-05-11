@@ -22,14 +22,15 @@ export default function MarcoZeroMenu({
   }, [onClose])
 
   if (typeof document === 'undefined') return null
-  const left = Math.min(menu.x, window.innerWidth - 220)
-  const top = Math.min(menu.y, window.innerHeight - 220)
+  const MENU_W = Math.min(224, window.innerWidth - 16)
+  const left = Math.max(8, Math.min(menu.x, window.innerWidth - MENU_W - 8))
+  const top = Math.max(8, Math.min(menu.y, window.innerHeight - 240))
 
   return createPortal(
     <div
-      style={{ left, top }}
+      style={{ left, top, width: MENU_W }}
       onClick={(e) => e.stopPropagation()}
-      className="fixed z-[200] w-56 bg-[#1a1a1a] border border-[#323238] rounded-lg shadow-2xl overflow-hidden">
+      className="fixed z-[200] bg-[#1a1a1a] border border-[#323238] rounded-lg shadow-2xl overflow-hidden">
       <div className="px-3 py-2 border-b border-[#323238] text-[10px] uppercase tracking-widest text-gray-500 font-bold">
         {fmtDateBR(menu.date)}
       </div>

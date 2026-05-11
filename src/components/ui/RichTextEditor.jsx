@@ -24,7 +24,7 @@ const ToolbarButton = ({ onClick, active, disabled, title, children }) => (
     onClick={onClick}
     disabled={disabled}
     title={title}
-    className={`h-7 w-7 flex items-center justify-center rounded transition-colors shrink-0
+    className={`h-9 w-9 sm:h-7 sm:w-7 flex items-center justify-center rounded transition-colors shrink-0
       ${active
         ? 'bg-[#2563eb] text-white'
         : 'text-gray-400 hover:text-white hover:bg-[#323238]'
@@ -105,7 +105,7 @@ export default function RichTextEditor({
 
   return (
     <div className="border border-[#323238] rounded-lg bg-[#1a1a1a] overflow-hidden focus-within:border-[#2563eb]/60 transition-colors">
-      <div className="flex items-center flex-wrap gap-0.5 px-2 py-1.5 border-b border-[#323238] bg-[#222226]">
+      <div className="flex items-center flex-wrap gap-0.5 px-2 py-1.5 border-b border-[#323238] bg-[#222226] overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
           active={editor.isActive('heading', { level: 1 })}
@@ -170,7 +170,7 @@ export default function RichTextEditor({
             type="button"
             onClick={() => setColorOpen(v => !v)}
             title="Cor do texto"
-            className={`h-7 w-7 flex flex-col items-center justify-center rounded transition-colors shrink-0
+            className={`h-9 w-9 sm:h-7 sm:w-7 flex flex-col items-center justify-center rounded transition-colors shrink-0
               ${colorOpen ? 'bg-[#323238]' : 'text-gray-400 hover:text-white hover:bg-[#323238]'}
             `}
           >

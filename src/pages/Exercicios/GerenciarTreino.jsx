@@ -206,40 +206,69 @@ const ModalExercicio = ({ exercicio, grupos, onSave, onClose }) => {
           {intensidades.length === 0 ? (
             <p className="text-gray-600 text-xs text-center py-4">Nenhuma intensidade cadastrada.</p>
           ) : (
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-gray-500 text-[10px] uppercase border-b border-[#323238]">
-                  <th className="text-left px-3 py-2">Grupo Muscular</th>
-                  <th className="text-left px-3 py-2 w-40">Intensidade</th>
-                  <th className="w-8" />
-                </tr>
-              </thead>
-              <tbody>
+            <>
+              {/* Desktop: tabela */}
+              <table className="hidden md:table w-full text-xs">
+                <thead>
+                  <tr className="text-gray-500 text-[10px] uppercase border-b border-[#323238]">
+                    <th className="text-left px-3 py-2">Grupo Muscular</th>
+                    <th className="text-left px-3 py-2 w-40">Intensidade</th>
+                    <th className="w-8" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {intensidades.map((it, i) => (
+                    <tr key={i} className="border-b border-[#323238]/50 last:border-0">
+                      <td className="px-2 py-1">
+                        <select value={it.grupo_muscular} onChange={e => updIntens(i, 'grupo_muscular', e.target.value)}
+                          className="w-full h-9 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 appearance-none">
+                          <option value="">Selecionar...</option>
+                          {grupos.map(g => <option key={g} value={g}>{g}</option>)}
+                        </select>
+                      </td>
+                      <td className="px-2 py-1">
+                        <select value={String(it.intensidade)} onChange={e => updIntens(i, 'intensidade', e.target.value)}
+                          className="w-full h-9 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 appearance-none">
+                          {INTENSIDADE_OPCOES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                      </td>
+                      <td className="px-2 py-1 text-center">
+                        <button onClick={() => removeIntens(i)}
+                          className="h-8 w-8 flex items-center justify-center text-red-400 hover:bg-red-600 hover:text-white rounded transition-colors mx-auto">
+                          <X size={12} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Mobile: linhas empilhadas com selects largos */}
+              <div className="md:hidden divide-y divide-[#323238]/50">
                 {intensidades.map((it, i) => (
-                  <tr key={i} className="border-b border-[#323238]/50 last:border-0">
-                    <td className="px-2 py-1">
+                  <div key={i} className="px-3 py-2.5 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-gray-500">Linha {i + 1}</span>
+                      <button onClick={() => removeIntens(i)}
+                        className="h-7 w-7 flex items-center justify-center text-red-400 hover:bg-red-600 hover:text-white rounded transition-colors">
+                        <X size={12} />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
                       <select value={it.grupo_muscular} onChange={e => updIntens(i, 'grupo_muscular', e.target.value)}
-                        className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 appearance-none">
-                        <option value="">Selecionar...</option>
+                        className="w-full h-10 px-2 bg-[#29292e] border border-[#323238] text-white rounded-lg text-xs outline-none focus:border-[#2563eb]/60 appearance-none">
+                        <option value="">Grupo…</option>
                         {grupos.map(g => <option key={g} value={g}>{g}</option>)}
                       </select>
-                    </td>
-                    <td className="px-2 py-1">
                       <select value={String(it.intensidade)} onChange={e => updIntens(i, 'intensidade', e.target.value)}
-                        className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 appearance-none">
+                        className="w-full h-10 px-2 bg-[#29292e] border border-[#323238] text-white rounded-lg text-xs outline-none focus:border-[#2563eb]/60 appearance-none">
                         {INTENSIDADE_OPCOES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                       </select>
-                    </td>
-                    <td className="px-2 py-1 text-center">
-                      <button onClick={() => removeIntens(i)}
-                        className="h-6 w-6 flex items-center justify-center text-red-400 hover:bg-red-600 hover:text-white rounded transition-colors mx-auto">
-                        <X size={10} />
-                      </button>
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </>
           )}
         </div>
       </div>

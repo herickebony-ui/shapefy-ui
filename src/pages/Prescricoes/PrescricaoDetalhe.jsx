@@ -35,7 +35,7 @@ const ItemRow = ({ item, idx, total, onChange, onRemove, onSaveToBank, onMoveUp,
         </button>
       </div>
     </td>
-    <td className="px-1 py-1.5">
+    <td className="px-1 py-1.5 min-w-[140px]">
       <Autocomplete
         compact
         value={item.manipulated || ''}
@@ -55,7 +55,7 @@ const ItemRow = ({ item, idx, total, onChange, onRemove, onSaveToBank, onMoveUp,
         emptyState="Nenhum encontrado"
       />
     </td>
-    <td className="px-1 py-1.5">
+    <td className="px-1 py-1.5 min-w-[180px]">
       <input
         value={item.description || ''}
         onChange={(e) => onChange('description', e.target.value)}
@@ -82,6 +82,65 @@ const ItemRow = ({ item, idx, total, onChange, onRemove, onSaveToBank, onMoveUp,
       </div>
     </td>
   </tr>
+)
+
+// ─── Item card mobile ─────────────────────────────────────────────────────────
+
+const ItemCard = ({ item, idx, total, onChange, onRemove, onSaveToBank, onMoveUp, onMoveDown, savingToBank }) => (
+  <div className="px-3 py-3 border-b border-[#323238] last:border-0">
+    <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center gap-1.5">
+        <span className="text-gray-500 text-[10px] font-bold tracking-wider uppercase">Item {idx + 1}</span>
+        <div className="flex items-center gap-0.5 ml-1">
+          <button onClick={onMoveUp} disabled={idx === 0}
+            className="h-6 w-6 flex items-center justify-center text-gray-500 hover:text-white border border-[#323238] rounded transition-colors disabled:opacity-30">
+            <ChevronUp size={12} />
+          </button>
+          <button onClick={onMoveDown} disabled={idx === total - 1}
+            className="h-6 w-6 flex items-center justify-center text-gray-500 hover:text-white border border-[#323238] rounded transition-colors disabled:opacity-30">
+            <ChevronDown size={12} />
+          </button>
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <button onClick={onSaveToBank} disabled={!item.manipulated || savingToBank}
+          className="h-9 w-9 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors disabled:opacity-30">
+          {savingToBank ? <span className="w-3 h-3 border border-blue-400 border-t-transparent rounded-full animate-spin" /> : <BookmarkPlus size={14} />}
+        </button>
+        <button onClick={onRemove}
+          className="h-9 w-9 flex items-center justify-center text-[#850000] hover:text-white hover:bg-[#850000] border border-[#850000]/30 rounded-lg transition-colors">
+          <Trash2 size={14} />
+        </button>
+      </div>
+    </div>
+    <div className="space-y-2">
+      <Autocomplete
+        compact
+        value={item.manipulated || ''}
+        onChange={(v) => onChange('manipulated', v)}
+        onSelect={(m) => {
+          onChange('manipulated', m.full_name || m.name)
+          if (m.description) onChange('description', m.description)
+        }}
+        searchFn={async (q) => buscarManipulados(q)}
+        renderItem={(m) => (
+          <div>
+            <p className="text-sm text-white">{m.full_name || m.name}</p>
+            {m.description && <p className="text-xs text-gray-500">{m.description}</p>}
+          </div>
+        )}
+        placeholder="Manipulado..."
+        emptyState="Nenhum encontrado"
+      />
+      <textarea
+        value={item.description || ''}
+        onChange={(e) => onChange('description', e.target.value)}
+        placeholder="Posologia / descrição..."
+        rows={2}
+        className="w-full px-2 py-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-brand/60 placeholder-gray-600 transition-colors resize-none"
+      />
+    </div>
+  </div>
 )
 
 // ─── Modal banco ──────────────────────────────────────────────────────────────
@@ -355,18 +414,40 @@ export default function PrescricaoDetalhe() {
             </div>
 
             {prescriptions.length > 0 && (
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-[#323238] bg-[#111113]">
-                    <th className="pl-3 pr-1 py-2 w-7 text-left text-[10px] text-gray-600">#</th>
-                    <th className="px-1 py-2 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Manipulado</th>
-                    <th className="px-1 py-2 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Posologia / Descrição</th>
-                    <th className="px-2 py-2 w-16"></th>
-                  </tr>
-                </thead>
-                <tbody>
+              <>
+                {/* Desktop: tabela */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-[#323238] bg-[#111113]">
+                        <th className="pl-3 pr-1 py-2 w-7 text-left text-[10px] text-gray-600">#</th>
+                        <th className="px-1 py-2 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Manipulado</th>
+                        <th className="px-1 py-2 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Posologia / Descrição</th>
+                        <th className="px-2 py-2 w-16"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {prescriptions.map((item, idx) => (
+                        <ItemRow
+                          key={idx}
+                          item={item}
+                          idx={idx}
+                          total={prescriptions.length}
+                          onChange={(field, value) => updateItem(idx, field, value)}
+                          onRemove={() => removeItem(idx)}
+                          onSaveToBank={() => handleSaveToBank(idx)}
+                          onMoveUp={() => moveItem(idx, -1)}
+                          onMoveDown={() => moveItem(idx, 1)}
+                          savingToBank={savingToBank === idx}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {/* Mobile: cards */}
+                <div className="md:hidden">
                   {prescriptions.map((item, idx) => (
-                    <ItemRow
+                    <ItemCard
                       key={idx}
                       item={item}
                       idx={idx}
@@ -379,8 +460,8 @@ export default function PrescricaoDetalhe() {
                       savingToBank={savingToBank === idx}
                     />
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </>
             )}
 
             {/* Botão adicionar como linha */}

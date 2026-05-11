@@ -87,8 +87,8 @@ export default function ImagemInterativa({ src, feedbackId, idx, onRotate, reado
             )}
           </div>
 
-          <div className="flex items-center gap-4 w-full">
-            <div className="flex flex-col gap-1.5 flex-1">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 w-full">
+            <div className="flex flex-col gap-1.5 flex-1 min-w-0">
               <span className="text-[9px] text-gray-500 uppercase font-bold flex justify-between">
                 Zoom <span>{scale.toFixed(2)}x</span>
               </span>
@@ -98,7 +98,7 @@ export default function ImagemInterativa({ src, feedbackId, idx, onRotate, reado
                 className="w-full accent-[#2563eb] h-1 bg-[#323238] rounded-lg appearance-none cursor-pointer"
               />
             </div>
-            <div className="flex flex-col gap-1.5 flex-1">
+            <div className="flex flex-col gap-1.5 flex-1 min-w-0">
               <span className="text-[9px] text-gray-500 uppercase font-bold flex justify-between">
                 Alinhar <span>{align}°</span>
               </span>

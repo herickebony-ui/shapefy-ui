@@ -1,10 +1,18 @@
 // Props: tabs [{id, label, icon (ReactNode)?, badge?, disabled?}],
 //        active, onChange(id), variant (underline/pills)
-// Mobile: scroll horizontal, no line break
+// Mobile: scroll horizontal com fade nas bordas indicando overflow.
+const FADE_MASK = {
+  WebkitMaskImage: 'linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%)',
+  maskImage: 'linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%)',
+}
+
 export default function Tabs({ tabs = [], active, onChange, variant = 'underline' }) {
   if (variant === 'pills') {
     return (
-      <div className="flex gap-2 overflow-x-auto whitespace-nowrap pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div
+        className="flex gap-2 overflow-x-auto whitespace-nowrap pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        style={FADE_MASK}
+      >
         {tabs.map(tab => (
           <button
             key={tab.id}
@@ -34,7 +42,10 @@ export default function Tabs({ tabs = [], active, onChange, variant = 'underline
   }
 
   return (
-    <div className="border-b border-[#323238] overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div
+      className="border-b border-[#323238] overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      style={FADE_MASK}
+    >
       <div className="flex gap-0.5">
         {tabs.map(tab => (
           <button

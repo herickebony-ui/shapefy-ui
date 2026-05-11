@@ -148,7 +148,7 @@ export default function AvaliacaoForm() {
 
         {/* Circunferências */}
         <SecaoForm icon={Ruler} title="Circunferências (cm)">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 md:gap-3">
             {[
               { label: 'Pescoço', campo: 'neck_circumference' },
               { label: 'Ombros', campo: 'shoulder_circumference' },
@@ -181,7 +181,7 @@ export default function AvaliacaoForm() {
           <p className="text-xs text-gray-500 mb-4">
             Ordem de coleta. Deixe em branco se não coletado — o Frappe calcula os percentuais automaticamente.
           </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 md:gap-3">
             {[
               { label: 'Subescapular', campo: 'skinfold_subscapular' },
               { label: 'Tríceps', campo: 'skinfold_triceps' },

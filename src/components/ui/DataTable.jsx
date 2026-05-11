@@ -8,6 +8,9 @@ import Pagination from './Pagination'
  * rows: array completo (filtrado) — o componente faz o slice internamente
  * onRowClick(row): handler de clique na linha (opcional)
  * page, pageSize, onPage, onPageSize: paginação controlada pelo pai
+ * mobileCard(row, onRowClick): função opcional que renderiza um card mobile.
+ *   Se passada, em <768px usa cards empilhados; em ≥768px usa tabela.
+ *   Se omitida, em mobile a tabela rola horizontalmente (overflow-x-auto).
  */
 export default function DataTable({
   columns,
@@ -18,6 +21,7 @@ export default function DataTable({
   onPage,
   onPageSize,
   rowKey = 'name',
+  mobileCard,
 }) {
   const paged = useMemo(() => {
     const start = (page - 1) * pageSize
@@ -26,7 +30,21 @@ export default function DataTable({
 
   return (
     <div className="border border-[#323238] rounded-lg overflow-hidden">
-      <div className="overflow-x-auto">
+      {mobileCard && (
+        <div className="md:hidden divide-y divide-[#323238]">
+          {paged.map((row, i) => (
+            <div
+              key={row[rowKey] ?? i}
+              onClick={onRowClick ? () => onRowClick(row) : undefined}
+              className={`${i % 2 === 0 ? 'bg-[#1a1a1a]' : 'bg-[#1e1e22]'} ${onRowClick ? 'cursor-pointer active:bg-[#202024]' : ''}`}
+            >
+              {mobileCard(row, onRowClick)}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className={`${mobileCard ? 'hidden md:block' : ''} overflow-x-auto`}>
         <table className="w-full">
           <thead>
             <tr className="border-b border-[#323238] bg-[#111113]">

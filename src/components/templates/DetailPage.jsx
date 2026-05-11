@@ -82,7 +82,10 @@ export default function DetailPage({
 
       {/* Footer sticky */}
       {footer && (
-        <div className="fixed bottom-0 left-0 right-0 px-4 md:px-8 pb-4 z-30">
+        <div
+          className="fixed bottom-0 left-0 right-0 md:left-[var(--sidebar-w,5rem)] px-4 md:px-8 z-30"
+          style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+        >
           {footer}
         </div>
       )}

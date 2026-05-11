@@ -79,42 +79,44 @@ export default function AuditoriaModal({ isOpen, onClose, alunosMap = {} }) {
       }
     >
       <div className="p-4 space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
           <select
             value={filtroAcao}
             onChange={(e) => setFiltroAcao(e.target.value)}
-            className="h-10 px-3 bg-[#1a1a1a] border border-[#323238] text-white rounded-lg text-sm outline-none focus:border-[#2563eb]/60"
+            className="h-10 px-3 bg-[#1a1a1a] border border-[#323238] text-white rounded-lg text-sm outline-none focus:border-[#2563eb]/60 w-full sm:w-auto"
           >
             <option value="">Todas as ações</option>
             {ACOES_AUDITORIA.map((a) => (
               <option key={a} value={a}>{ACAO_LABEL[a] || a}</option>
             ))}
           </select>
-          <input
-            type="date"
-            value={dataInicio}
-            onChange={(e) => setDataInicio(e.target.value)}
-            title="Data inicial"
-            className="h-10 px-3 bg-[#1a1a1a] border border-[#323238] text-white rounded-lg text-sm outline-none focus:border-[#2563eb]/60"
-          />
-          <span className="text-gray-500 text-xs">até</span>
-          <input
-            type="date"
-            value={dataFim}
-            onChange={(e) => setDataFim(e.target.value)}
-            title="Data final"
-            className="h-10 px-3 bg-[#1a1a1a] border border-[#323238] text-white rounded-lg text-sm outline-none focus:border-[#2563eb]/60"
-          />
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <input
+              type="date"
+              value={dataInicio}
+              onChange={(e) => setDataInicio(e.target.value)}
+              title="Data inicial"
+              className="h-10 px-2 flex-1 sm:flex-none bg-[#1a1a1a] border border-[#323238] text-white rounded-lg text-sm outline-none focus:border-[#2563eb]/60"
+            />
+            <span className="text-gray-500 text-xs">até</span>
+            <input
+              type="date"
+              value={dataFim}
+              onChange={(e) => setDataFim(e.target.value)}
+              title="Data final"
+              className="h-10 px-2 flex-1 sm:flex-none bg-[#1a1a1a] border border-[#323238] text-white rounded-lg text-sm outline-none focus:border-[#2563eb]/60"
+            />
+          </div>
           {(dataInicio || dataFim) && (
             <button
               onClick={() => { setDataInicio(''); setDataFim('') }}
-              className="text-[10px] text-gray-400 hover:text-white underline"
+              className="text-[10px] text-gray-400 hover:text-white underline self-start"
               title="Limpar datas"
             >
               limpar
             </button>
           )}
-          <div className="text-[11px] text-gray-500 ml-auto">
+          <div className="text-[11px] text-gray-500 sm:ml-auto">
             {logs.length} registro{logs.length !== 1 ? 's' : ''}
           </div>
         </div>
@@ -130,46 +132,81 @@ export default function AuditoriaModal({ isOpen, onClose, alunosMap = {} }) {
             />
           </div>
         ) : (
-          <div className="max-h-[60vh] overflow-y-auto border border-[#323238] rounded-xl bg-[#1a1a1a]">
-            <table className="w-full">
-              <thead className="sticky top-0 bg-[#111113] border-b border-[#323238]">
-                <tr>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-gray-500">Data/Hora</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-gray-500">Ação</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-gray-500">Aluno</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-gray-500">Plano</th>
-                  <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider text-gray-500">Valor</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-gray-500">Detalhe</th>
-                </tr>
-              </thead>
-              <tbody>
-                {logs.map((l, i) => {
-                  const acaoCls = ACAO_COLOR[l.acao] || 'text-gray-400 bg-gray-500/10 border-gray-500/20'
-                  const aluno = alunosMap[l.aluno]?.nome_completo || l.nome_aluno_snapshot || l.aluno || '—'
-                  return (
-                    <tr key={l.name || i} className={`border-b border-[#323238] last:border-0 ${i % 2 === 0 ? 'bg-[#1a1a1a]' : 'bg-[#1e1e22]'}`}>
-                      <td className="px-3 py-2 text-[11px] text-gray-400 font-mono whitespace-nowrap">
+          <>
+            {/* Desktop: tabela */}
+            <div className="hidden md:block max-h-[60vh] overflow-y-auto border border-[#323238] rounded-xl bg-[#1a1a1a]">
+              <table className="w-full">
+                <thead className="sticky top-0 bg-[#111113] border-b border-[#323238]">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-gray-500">Data/Hora</th>
+                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-gray-500">Ação</th>
+                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-gray-500">Aluno</th>
+                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-gray-500">Plano</th>
+                    <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider text-gray-500">Valor</th>
+                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-gray-500">Detalhe</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {logs.map((l, i) => {
+                    const acaoCls = ACAO_COLOR[l.acao] || 'text-gray-400 bg-gray-500/10 border-gray-500/20'
+                    const aluno = alunosMap[l.aluno]?.nome_completo || l.nome_aluno_snapshot || l.aluno || '—'
+                    return (
+                      <tr key={l.name || i} className={`border-b border-[#323238] last:border-0 ${i % 2 === 0 ? 'bg-[#1a1a1a]' : 'bg-[#1e1e22]'}`}>
+                        <td className="px-3 py-2 text-[11px] text-gray-400 font-mono whitespace-nowrap">
+                          {formatDateTime(l.data_hora)}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className={`inline-flex items-center text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${acaoCls}`}>
+                            {ACAO_LABEL[l.acao] || l.acao}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 text-[12px] text-white font-medium truncate max-w-[180px]">{aluno}</td>
+                        <td className="px-3 py-2 text-[12px] text-gray-300 truncate max-w-[160px]">{l.nome_plano_snapshot || '—'}</td>
+                        <td className="px-3 py-2 text-right text-[12px] font-mono text-white">
+                          {l.valor ? formatCurrency(l.valor) : '—'}
+                        </td>
+                        <td className="px-3 py-2 text-[11px] text-gray-400 italic max-w-[260px] truncate">
+                          {l.nota || (l.quem ? `por ${l.quem}` : '—')}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile: cards empilhados */}
+            <div className="md:hidden max-h-[60vh] overflow-y-auto border border-[#323238] rounded-xl bg-[#1a1a1a] divide-y divide-[#323238]">
+              {logs.map((l, i) => {
+                const acaoCls = ACAO_COLOR[l.acao] || 'text-gray-400 bg-gray-500/10 border-gray-500/20'
+                const aluno = alunosMap[l.aluno]?.nome_completo || l.nome_aluno_snapshot || l.aluno || '—'
+                return (
+                  <div key={l.name || i} className={`px-3 py-2.5 ${i % 2 === 0 ? 'bg-[#1a1a1a]' : 'bg-[#1e1e22]'}`}>
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <span className={`inline-flex items-center text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${acaoCls}`}>
+                        {ACAO_LABEL[l.acao] || l.acao}
+                      </span>
+                      <span className="text-[10px] text-gray-500 font-mono whitespace-nowrap">
                         {formatDateTime(l.data_hora)}
-                      </td>
-                      <td className="px-3 py-2">
-                        <span className={`inline-flex items-center text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${acaoCls}`}>
-                          {ACAO_LABEL[l.acao] || l.acao}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 text-[12px] text-white font-medium truncate max-w-[180px]">{aluno}</td>
-                      <td className="px-3 py-2 text-[12px] text-gray-300 truncate max-w-[160px]">{l.nome_plano_snapshot || '—'}</td>
-                      <td className="px-3 py-2 text-right text-[12px] font-mono text-white">
-                        {l.valor ? formatCurrency(l.valor) : '—'}
-                      </td>
-                      <td className="px-3 py-2 text-[11px] text-gray-400 italic max-w-[260px] truncate">
-                        {l.nota || (l.quem ? `por ${l.quem}` : '—')}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </span>
+                    </div>
+                    <div className="text-[12px] text-white font-medium truncate">{aluno}</div>
+                    {l.nome_plano_snapshot && (
+                      <div className="text-[11px] text-gray-400 truncate">{l.nome_plano_snapshot}</div>
+                    )}
+                    {l.valor && (
+                      <div className="text-[11px] font-mono text-white mt-0.5">{formatCurrency(l.valor)}</div>
+                    )}
+                    {(l.nota || l.quem) && (
+                      <div className="text-[10px] text-gray-400 italic mt-1 line-clamp-2">
+                        {l.nota || `por ${l.quem}`}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </>
         )}
       </div>
     </Modal>

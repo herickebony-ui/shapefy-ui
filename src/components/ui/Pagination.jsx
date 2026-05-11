@@ -10,17 +10,17 @@ export default function Pagination({ page, pageSize, total, onPage, onPageSize }
   const pages = buildPages(page, totalPages)
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-1 py-3 border-t border-[#323238]">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-2 py-3 border-t border-[#323238]">
 
       {/* Info + page size */}
       <div className="flex items-center gap-3 text-xs text-gray-500">
         <span>{total === 0 ? '0 registros' : `${from}–${to} de ${total}`}</span>
         <div className="flex items-center gap-1.5">
-          <span>por página</span>
+          <span className="hidden sm:inline">por página</span>
           <select
             value={pageSize}
             onChange={e => { onPageSize(Number(e.target.value)); onPage(1) }}
-            className="h-7 px-2 bg-[#1a1a1a] border border-[#323238] text-gray-200 rounded text-xs outline-none focus:border-[#2563eb]/60 appearance-none"
+            className="h-10 sm:h-7 px-2 bg-[#1a1a1a] border border-[#323238] text-gray-200 rounded text-xs outline-none focus:border-[#2563eb]/60 appearance-none"
           >
             {PAGE_SIZE_OPTIONS.map(n => (
               <option key={n} value={n}>{n}</option>
@@ -30,9 +30,9 @@ export default function Pagination({ page, pageSize, total, onPage, onPageSize }
       </div>
 
       {/* Nav */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 overflow-x-auto max-w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <NavBtn onClick={() => onPage(page - 1)} disabled={page <= 1} title="Anterior">
-          <ChevronLeft size={13} />
+          <ChevronLeft size={14} />
         </NavBtn>
 
         {pages.map((p, i) =>
@@ -42,7 +42,7 @@ export default function Pagination({ page, pageSize, total, onPage, onPageSize }
             <button
               key={p}
               onClick={() => onPage(p)}
-              className={`min-w-[28px] h-7 px-2 rounded text-xs font-medium transition-colors border ${
+              className={`min-w-[40px] sm:min-w-[28px] h-10 sm:h-7 px-2 rounded text-xs font-medium transition-colors border shrink-0 ${
                 p === page
                   ? 'bg-[#2563eb] border-[#2563eb] text-white'
                   : 'bg-[#1a1a1a] border-[#323238] text-gray-400 hover:text-white hover:border-[#444]'
@@ -54,7 +54,7 @@ export default function Pagination({ page, pageSize, total, onPage, onPageSize }
         )}
 
         <NavBtn onClick={() => onPage(page + 1)} disabled={page >= totalPages} title="Próximo">
-          <ChevronRight size={13} />
+          <ChevronRight size={14} />
         </NavBtn>
       </div>
     </div>
@@ -67,7 +67,7 @@ function NavBtn({ onClick, disabled, title, children }) {
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className="h-7 w-7 flex items-center justify-center rounded border border-[#323238] bg-[#1a1a1a] text-gray-400 hover:text-white hover:border-[#444] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+      className="h-10 w-10 sm:h-7 sm:w-7 flex items-center justify-center rounded border border-[#323238] bg-[#1a1a1a] text-gray-400 hover:text-white hover:border-[#444] disabled:opacity-30 disabled:cursor-not-allowed transition-colors shrink-0"
     >
       {children}
     </button>

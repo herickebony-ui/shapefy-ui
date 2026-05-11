@@ -771,6 +771,75 @@ export default function FinanceiroListagem() {
             pageSize={PAGE_SIZE}
             onPage={setPage}
             onRowClick={(row) => setContratoDetalhe({ contratoId: row.name, alunoNome: alunosMap[row.aluno]?.nome_completo || row.aluno })}
+            mobileCard={(row) => {
+              const aluno = alunosMap[row.aluno]
+              const alunoNome = aluno?.nome_completo || row.aluno || '—'
+              const plano = planosByName[row.plano]
+              const total = parseFloat(row.valor_liquido_total) || 0
+              const qtd = row.qtd_parcelas || 1
+              const valorParcela = qtd > 1 ? total / qtd : total
+              const parcelasContrato = parcelasDoPeriodo.filter((p) => p.contrato === row.name)
+              const pago = parcelasContrato.reduce((acc, p) =>
+                dataPagamentoEfetivaParcela(p) ? acc + (parseFloat(p.valor_parcela) || 0) : acc, 0)
+              return (
+                <div className="px-3 py-3 flex flex-col gap-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-white text-sm truncate">{alunoNome}</div>
+                      <div className="text-[10px] text-gray-500 mt-0.5 truncate">
+                        {row.name} {row.renovacao_de && <span className="text-blue-400">· Renovação</span>}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      {row.status_manual === 'Pausado' && <Badge variant="default" size="sm">Pausado</Badge>}
+                      <StudentBadge aluno={aluno} />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <PlanoBadge nome={row.nome_plano_snapshot || row.plano} cor={plano?.cor || 'slate'} />
+                      <div className="text-[10px] text-gray-500 mt-1 uppercase tracking-wider truncate">
+                        {row.modalidade} · {row.metodo_pagamento}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="font-mono font-bold text-white text-sm">
+                        {formatCurrency(valorParcela)}
+                      </div>
+                      {qtd > 1 && (
+                        <div className="text-[10px] text-gray-500">{qtd}× · {formatCurrency(total)}</div>
+                      )}
+                      {pago > 0 && (
+                        <div className="text-[10px] text-green-400">pago {formatCurrency(pago)}</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-1.5 pt-1 border-t border-[#323238]/60" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => setHistoricoAluno({ id: row.aluno, nome: alunoNome })}
+                      title="Histórico"
+                      className="h-9 w-9 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] rounded-lg"
+                    >
+                      <History size={14} />
+                    </button>
+                    <button
+                      onClick={() => setContratoForm({ contrato: row, alunoNome })}
+                      title="Editar"
+                      className="h-9 w-9 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                    <button
+                      onClick={() => setContratoDetalhe({ contratoId: row.name, alunoNome })}
+                      title="Detalhes"
+                      className="h-9 w-9 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] rounded-lg"
+                    >
+                      <Eye size={14} />
+                    </button>
+                  </div>
+                </div>
+              )
+            }}
           />
         )
       ) : (

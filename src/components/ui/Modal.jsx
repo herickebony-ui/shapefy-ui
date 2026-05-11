@@ -64,7 +64,7 @@ export default function Modal({
         </div>
 
         {footer && (
-          <div className="px-4 md:px-[22px] py-4 border-t border-[#323238] shrink-0 flex flex-col-reverse md:flex-row md:justify-end gap-2 md:gap-[10px] [&>*]:w-full md:[&>*]:w-auto">
+          <div className="px-4 md:px-[22px] py-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:pb-4 border-t border-[#323238] shrink-0 flex flex-col-reverse md:flex-row md:justify-end gap-2 md:gap-[10px] [&>*]:w-full md:[&>*]:w-auto">
             {footer}
           </div>
         )}

@@ -580,47 +580,51 @@ export default function ProgressaoCargas() {
                           </div>
                         </div>
 
-                        <ResponsiveContainer width="100%" height={200}>
-                          <LineChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#323238" />
-                            <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 10 }} />
-                            <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} unit="kg" />
-                            <Tooltip content={<ChartTip />} />
-                            <Line type="monotone" dataKey="carga" stroke="#2563eb" strokeWidth={2}
-                              dot={{ fill: '#2563eb', r: 4 }} activeDot={{ r: 6 }} name="Carga" />
-                          </LineChart>
-                        </ResponsiveContainer>
+                        <div className="h-[160px] md:h-[200px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#323238" />
+                              <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 10 }} interval="preserveStartEnd" minTickGap={20} />
+                              <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} unit="kg" width={36} />
+                              <Tooltip content={<ChartTip />} />
+                              <Line type="monotone" dataKey="carga" stroke="#2563eb" strokeWidth={2}
+                                dot={{ fill: '#2563eb', r: 4 }} activeDot={{ r: 6 }} name="Carga" />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
 
                         <div className="border border-[#323238] rounded-lg overflow-hidden">
-                          <table className="w-full text-left text-xs">
-                            <thead className="bg-[#1a1a1a] border-b border-[#323238] sticky top-0 z-10">
-                              <tr>
-                                <th className="px-3 py-2 text-gray-500 font-bold uppercase tracking-wide text-[10px]">
-                                  {modoChart === 'sessoes' ? 'Data' : 'Semana'}
-                                </th>
-                                <th className="px-3 py-2 text-gray-500 font-bold uppercase tracking-wide text-[10px]">Treino</th>
-                                <th className="px-3 py-2 text-gray-500 font-bold uppercase tracking-wide text-[10px]">Séries</th>
-                                <th className="px-3 py-2 text-gray-500 font-bold uppercase tracking-wide text-[10px] text-right">Carga máx.</th>
-                              </tr>
-                            </thead>
-                          </table>
-                          <div className="max-h-[240px] overflow-y-auto">
-                            <table className="w-full text-left text-xs">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs min-w-[480px]">
+                              <thead className="bg-[#1a1a1a] border-b border-[#323238] sticky top-0 z-10">
+                                <tr>
+                                  <th className="px-2 md:px-3 py-2 text-gray-500 font-bold uppercase tracking-wide text-[10px] whitespace-nowrap">
+                                    {modoChart === 'sessoes' ? 'Data' : 'Semana'}
+                                  </th>
+                                  <th className="px-2 md:px-3 py-2 text-gray-500 font-bold uppercase tracking-wide text-[10px] whitespace-nowrap">Treino</th>
+                                  <th className="px-2 md:px-3 py-2 text-gray-500 font-bold uppercase tracking-wide text-[10px]">Séries</th>
+                                  <th className="px-2 md:px-3 py-2 text-gray-500 font-bold uppercase tracking-wide text-[10px] text-right whitespace-nowrap">Carga máx.</th>
+                                </tr>
+                              </thead>
+                            </table>
+                          </div>
+                          <div className="max-h-[240px] overflow-auto">
+                            <table className="w-full text-left text-xs min-w-[480px]">
                               <tbody className="divide-y divide-[#323238]/50">
                                 {tabelaData.map((d, i) => (
                                   <tr key={i} className="hover:bg-white/5 transition-colors">
-                                    <td className="px-3 py-2 text-gray-300 font-mono text-[11px]">{d.label}</td>
-                                    <td className="px-3 py-2 text-gray-400 text-[11px]">{d.treino}</td>
-                                    <td className="px-3 py-2">
+                                    <td className="px-2 md:px-3 py-2 text-gray-300 font-mono text-[11px] whitespace-nowrap">{d.label}</td>
+                                    <td className="px-2 md:px-3 py-2 text-gray-400 text-[11px] whitespace-nowrap">{d.treino}</td>
+                                    <td className="px-2 md:px-3 py-2">
                                       <div className="flex flex-wrap gap-1">
                                         {(d.series || []).filter(s => s.carga || s.repeticoes).map((s, j) => (
-                                          <span key={j} className="text-[10px] bg-[#1a1a1a] border border-[#323238] rounded px-1.5 py-0.5 text-gray-400">
+                                          <span key={j} className="text-[10px] bg-[#1a1a1a] border border-[#323238] rounded px-1.5 py-0.5 text-gray-400 whitespace-nowrap">
                                             {s.carga > 0 ? `${s.carga}kg×${s.repeticoes}` : `${s.repeticoes}reps`}
                                           </span>
                                         ))}
                                       </div>
                                     </td>
-                                    <td className="px-3 py-2 text-right font-bold text-[#2563eb] text-[11px]">{d.carga} kg</td>
+                                    <td className="px-2 md:px-3 py-2 text-right font-bold text-[#2563eb] text-[11px] whitespace-nowrap">{d.carga} kg</td>
                                   </tr>
                                 ))}
                               </tbody>

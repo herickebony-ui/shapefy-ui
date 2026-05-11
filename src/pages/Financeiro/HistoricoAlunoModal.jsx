@@ -85,7 +85,7 @@ export default function HistoricoAlunoModal({
       ) : (
         <div className="p-4 space-y-4">
           {/* totais */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Box label="Total contratado">
               <span className="font-mono text-sm font-bold text-white">{formatCurrency(totais.totalContratos)}</span>
             </Box>
@@ -97,8 +97,8 @@ export default function HistoricoAlunoModal({
             </Box>
           </div>
 
-          {/* lista de contratos */}
-          <div className="border border-[#323238] rounded-xl overflow-hidden">
+          {/* Desktop: tabela */}
+          <div className="hidden md:block border border-[#323238] rounded-xl overflow-hidden">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[#323238] bg-[#111113]">
@@ -143,6 +143,38 @@ export default function HistoricoAlunoModal({
                 })}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile: cards */}
+          <div className="md:hidden border border-[#323238] rounded-xl overflow-hidden divide-y divide-[#323238]">
+            {contratos.map((c, i) => {
+              const cor = planosByName[c.plano]?.cor || 'slate'
+              const parcelas = parcelasPorContrato[c.name]
+              const pagoLocal = (parcelas || []).reduce((acc, p) => p.data_pagamento ? acc + (parseFloat(p.valor_parcela) || 0) : acc, 0)
+              return (
+                <div key={c.name} className={`px-3 py-3 ${i % 2 === 0 ? 'bg-[#1a1a1a]' : 'bg-[#1e1e22]'}`}>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="min-w-0">
+                      <div className="text-[12px] text-white font-bold truncate">{c.name}</div>
+                      {c.renovacao_de && <div className="text-[10px] text-blue-400">renov. de {c.renovacao_de}</div>}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="font-mono text-[13px] font-semibold text-white">{formatCurrency(c.valor_liquido_total)}</div>
+                      {parcelas && pagoLocal > 0 && (
+                        <div className="text-[10px] text-green-400 font-bold">pago {formatCurrency(pagoLocal)}</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <PlanoBadge nome={c.nome_plano_snapshot || c.plano} cor={cor} />
+                    <span className="text-[10px] text-gray-500">{c.modalidade} · {c.rotulo_variacao}</span>
+                  </div>
+                  <div className="text-[10px] text-gray-400">
+                    {formatDateBr(c.data_inicio)} <span className="text-gray-600">até</span> {formatDateBr(c.data_fim)}
+                  </div>
+                </div>
+              )
+            })}
           </div>
 
         </div>

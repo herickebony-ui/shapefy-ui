@@ -86,7 +86,10 @@ export default function AppLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-[#202024] flex">
+    <div
+      className="min-h-screen bg-[#202024] flex"
+      style={{ '--sidebar-w': expanded ? '16rem' : '5rem' }}
+    >
 
       {/* Overlay mobile */}
       {expanded && (

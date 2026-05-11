@@ -166,7 +166,7 @@ function ModalAlimento({ alimento, grupos, onSave, onClose }) {
           <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">
             Macronutrientes (por {form.ref_weight || 100}{form.unit || 'g'})
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
             <FormGroup label="Kcal" required>
               <Input type="number" value={String(form.calories)} onChange={v => set('calories', v)} placeholder="0" />
             </FormGroup>
@@ -180,7 +180,7 @@ function ModalAlimento({ alimento, grupos, onSave, onClose }) {
         {/* Minerais */}
         <div>
           <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Minerais</p>
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
             <NumField label="Cálcio" field="calcium" unit="mg" />
             <NumField label="Cobre" field="copper" unit="mg" />
             <NumField label="Ferro" field="iron" unit="mg" />
@@ -196,7 +196,7 @@ function ModalAlimento({ alimento, grupos, onSave, onClose }) {
         {/* Vitaminas */}
         <div>
           <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Vitaminas</p>
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
             <NumField label="Vit. A" field="vitamin_a" unit="µg" />
             <NumField label="Vit. B1" field="vitamin_b1" unit="mg" />
             <NumField label="Vit. B2" field="vitamin_b2" unit="mg" />

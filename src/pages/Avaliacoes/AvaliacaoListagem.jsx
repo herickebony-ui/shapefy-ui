@@ -549,9 +549,12 @@ export default function AvaliacaoListagem() {
         </ListPage>
 
         {selectedRows.size >= 2 && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-            <div className="flex items-center gap-3 bg-[#222226] border border-[#2563eb]/50 shadow-2xl rounded-lg px-5 py-3">
-              <span className="text-white font-bold text-sm">{selectedRows.size} avaliações selecionadas</span>
+          <div
+            className="fixed left-0 right-0 md:left-[var(--sidebar-w,5rem)] px-4 z-50 flex justify-center pointer-events-none"
+            style={{ bottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
+          >
+            <div className="pointer-events-auto flex items-center gap-3 bg-[#222226] border border-[#2563eb]/50 shadow-2xl rounded-lg px-4 sm:px-5 py-3 max-w-full">
+              <span className="text-white font-bold text-xs sm:text-sm whitespace-nowrap">{selectedRows.size} selecionada{selectedRows.size === 1 ? '' : 's'}</span>
               <button
                 onClick={() => {
                   if (!firstSelected) return
@@ -559,11 +562,11 @@ export default function AvaliacaoListagem() {
                   if (alunoIds.size > 1) { alert('Selecione avaliações do mesmo aluno para comparar.'); return }
                   abrirCompare(firstSelected, new Set(selectedRows))
                 }}
-                className="flex items-center gap-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+                className="flex items-center gap-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white px-3 sm:px-4 py-2 rounded-lg font-bold text-xs sm:text-sm transition-colors whitespace-nowrap"
               >
                 <GitCompare size={15} /> Comparar ({selectedRows.size})
               </button>
-              <button onClick={() => setSelectedRows(new Set())} className="text-gray-400 hover:text-white">
+              <button onClick={() => setSelectedRows(new Set())} className="text-gray-400 hover:text-white shrink-0">
                 <XIcon size={16} />
               </button>
             </div>
@@ -626,7 +629,7 @@ export default function AvaliacaoListagem() {
     const isLast = av.name === historico[historico.length - 1]?.name
     return (
       <th
-        className={`text-center text-[10px] font-bold uppercase px-4 py-3 min-w-[110px] cursor-pointer select-none transition-colors ${isVisible ? 'text-gray-400' : 'text-gray-700'}`}
+        className={`text-center text-[10px] font-bold uppercase px-2 md:px-4 py-3 min-w-[90px] md:min-w-[110px] cursor-pointer select-none transition-colors ${isVisible ? 'text-gray-400' : 'text-gray-700'}`}
         onClick={() => toggleAvColumn(av.name)}
         title={isVisible ? 'Clique para ocultar' : 'Clique para mostrar'}
       >
@@ -653,7 +656,7 @@ export default function AvaliacaoListagem() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[#323238]/60">
-                <th className="text-left text-[10px] font-bold text-gray-500 uppercase px-4 py-3 min-w-[160px]">Indicador</th>
+                <th className="text-left text-[10px] font-bold text-gray-500 uppercase px-3 md:px-4 py-3 min-w-[120px] md:min-w-[160px] sticky left-0 bg-[#222226] z-10">Indicador</th>
                 {historico.map(av => <ColHeader key={av.name} av={av} />)}
               </tr>
             </thead>
@@ -696,72 +699,76 @@ export default function AvaliacaoListagem() {
     <div className="p-6 space-y-5 pb-12">
       {/* PDF Preview Modal — inline para não perder o ref entre renders */}
       {showPdfPreview && (
-        <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <div>
-                <h2 className="text-lg font-bold text-gray-900">Pré-visualização do PDF</h2>
-                <p className="text-xs text-gray-500">{alunoAtivo?.nome_completo}</p>
+        <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center md:p-4">
+          <div className="bg-white shadow-2xl w-full h-[100dvh] md:h-auto md:rounded-lg md:max-w-3xl md:max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between gap-2 px-4 md:px-6 py-3 md:py-4 border-b border-gray-200 shrink-0">
+              <div className="min-w-0">
+                <h2 className="text-base md:text-lg font-bold text-gray-900 truncate">Pré-visualização do PDF</h2>
+                <p className="text-[11px] md:text-xs text-gray-500 truncate">{alunoAtivo?.nome_completo}</p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 md:gap-3 shrink-0">
                 <button
                   onClick={gerarPDF}
                   disabled={pdfGenerating}
-                  className="flex items-center gap-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white px-5 py-2 rounded-lg font-bold text-sm transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1.5 md:gap-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white px-3 md:px-5 py-2 rounded-lg font-bold text-xs md:text-sm transition-colors disabled:opacity-50"
                 >
-                  {pdfGenerating ? <><RefreshCw size={14} className="animate-spin" /> Gerando...</> : <><FileDown size={14} /> Baixar PDF</>}
+                  {pdfGenerating ? <><RefreshCw size={14} className="animate-spin" /> <span className="hidden sm:inline">Gerando...</span></> : <><FileDown size={14} /> <span className="hidden sm:inline">Baixar PDF</span><span className="sm:hidden">PDF</span></>}
                 </button>
-                <button onClick={() => setShowPdfPreview(false)} className="text-gray-400 hover:text-gray-700">
+                <button onClick={() => setShowPdfPreview(false)} className="text-gray-400 hover:text-gray-700 h-10 w-10 flex items-center justify-center">
                   <XIcon size={20} />
                 </button>
               </div>
             </div>
-            <div className="p-6 bg-gray-50 space-y-5" ref={chartRef}>
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { label: 'Peso Atual', key: 'weight', unit: 'kg', dec: 1 },
-                  { label: `%Gordura (${curFormula?.short})`, key: formulaKey, unit: '%', dec: 1 },
-                  { label: 'Massa Gorda', key: 'fat_mass', unit: 'kg', dec: 2 },
-                ].map(card => {
-                  const dv = getDelta(card.key)
-                  const isPos = dv > 0
-                  return (
-                    <div key={card.label} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">{card.label}</div>
-                      <div className="text-2xl font-bold text-gray-900">
-                        {fmtNum(latest?.[card.key], card.dec)}
-                        <span className="text-sm font-medium text-gray-400 ml-1">{latest?.[card.key] ? card.unit : ''}</span>
-                      </div>
-                      {dv != null && dv !== 0 && visibleAvs.length > 1 && (
-                        <div className={`text-xs font-bold mt-1 ${!isPos ? 'text-green-600' : 'text-red-600'}`}>
-                          {isPos ? '+' : ''}{dv.toFixed(2)} {card.unit}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-              {visibleAvs.length > 1 && (
-                <div className="grid grid-cols-2 gap-4">
+            <div className="flex-1 overflow-y-auto bg-gray-50">
+              <div className="p-4 md:p-6 space-y-5" ref={chartRef}>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {[
-                    { title: 'Peso Corporal (kg)', dataKey: 'Peso', color: '#2563eb' },
-                    { title: `%Gordura (${curFormula?.short})`, dataKey: 'Gordura', color: '#1d4ed8' },
-                  ].map(chart => (
-                    <div key={chart.title} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-                      <h4 className="text-[10px] font-bold text-gray-400 uppercase mb-3">{chart.title}</h4>
-                      {/* largura fixa obrigatória para html2canvas capturar SVG corretamente */}
-                      <LineChart width={380} height={150} data={chartData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                        <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#9ca3af' }} />
-                        <YAxis tick={{ fontSize: 9, fill: '#9ca3af' }} domain={['auto', 'auto']} />
-                        <Tooltip content={<ChartTip />} />
-                        <Line type="monotone" dataKey={chart.dataKey} stroke={chart.color} strokeWidth={2} dot={{ fill: chart.color, r: 3 }} connectNulls />
-                      </LineChart>
-                    </div>
-                  ))}
+                    { label: 'Peso Atual', key: 'weight', unit: 'kg', dec: 1 },
+                    { label: `%Gordura (${curFormula?.short})`, key: formulaKey, unit: '%', dec: 1 },
+                    { label: 'Massa Gorda', key: 'fat_mass', unit: 'kg', dec: 2 },
+                  ].map(card => {
+                    const dv = getDelta(card.key)
+                    const isPos = dv > 0
+                    return (
+                      <div key={card.label} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">{card.label}</div>
+                        <div className="text-2xl font-bold text-gray-900">
+                          {fmtNum(latest?.[card.key], card.dec)}
+                          <span className="text-sm font-medium text-gray-400 ml-1">{latest?.[card.key] ? card.unit : ''}</span>
+                        </div>
+                        {dv != null && dv !== 0 && visibleAvs.length > 1 && (
+                          <div className={`text-xs font-bold mt-1 ${!isPos ? 'text-green-600' : 'text-red-600'}`}>
+                            {isPos ? '+' : ''}{dv.toFixed(2)} {card.unit}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
-              )}
-              <p className="text-[10px] text-gray-400 text-center">O PDF inclui também circunferências e dobras cutâneas completas.</p>
+                {visibleAvs.length > 1 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[
+                      { title: 'Peso Corporal (kg)', dataKey: 'Peso', color: '#2563eb' },
+                      { title: `%Gordura (${curFormula?.short})`, dataKey: 'Gordura', color: '#1d4ed8' },
+                    ].map(chart => (
+                      <div key={chart.title} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                        <h4 className="text-[10px] font-bold text-gray-400 uppercase mb-3">{chart.title}</h4>
+                        <div className="overflow-x-auto">
+                          {/* largura fixa obrigatória para html2canvas capturar SVG corretamente */}
+                          <LineChart width={380} height={150} data={chartData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                            <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#9ca3af' }} />
+                            <YAxis tick={{ fontSize: 9, fill: '#9ca3af' }} domain={['auto', 'auto']} />
+                            <Tooltip content={<ChartTip />} />
+                            <Line type="monotone" dataKey={chart.dataKey} stroke={chart.color} strokeWidth={2} dot={{ fill: chart.color, r: 3 }} connectNulls />
+                          </LineChart>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="text-[10px] text-gray-400 text-center">O PDF inclui também circunferências e dobras cutâneas completas.</p>
+              </div>
             </div>
           </div>
         </div>
@@ -870,7 +877,7 @@ export default function AvaliacaoListagem() {
 
       {/* Hero cards */}
       {latest && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
           {[
             { label: 'Peso Atual', key: 'weight', unit: 'kg', dec: 1, invert: false },
             { label: `%Gordura (${curFormula?.short})`, key: formulaKey, unit: '%', dec: 1, invert: false },
@@ -881,15 +888,15 @@ export default function AvaliacaoListagem() {
             const isPos = d > 0
             const isGood = card.invert ? isPos : !isPos
             return (
-              <div key={card.label} className="bg-[#222226] border border-[#323238] rounded-lg p-4">
-                <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5">{card.label}</div>
-                <div className="text-2xl font-bold text-white leading-none">
+              <div key={card.label} className="bg-[#222226] border border-[#323238] rounded-lg p-3 md:p-4">
+                <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5 truncate">{card.label}</div>
+                <div className="text-lg md:text-2xl font-bold text-white leading-none">
                   {fmtNum(latest[card.key], card.dec)}
-                  <span className="text-sm font-medium text-gray-500 ml-1">{latest[card.key] ? card.unit : ''}</span>
+                  <span className="text-xs md:text-sm font-medium text-gray-500 ml-1">{latest[card.key] ? card.unit : ''}</span>
                 </div>
                 {d != null && d !== 0 && visibleAvs.length > 1 && (
-                  <div className={`text-[11px] font-bold mt-1.5 ${isGood ? 'text-green-400' : 'text-red-400'}`}>
-                    {isPos ? '+' : ''}{d.toFixed(2)} {card.unit} período
+                  <div className={`text-[10px] md:text-[11px] font-bold mt-1.5 ${isGood ? 'text-green-400' : 'text-red-400'}`}>
+                    {isPos ? '+' : ''}{d.toFixed(2)} {card.unit}
                   </div>
                 )}
               </div>
@@ -937,7 +944,7 @@ export default function AvaliacaoListagem() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[#323238]/60">
-                  <th className="text-left text-[10px] font-bold text-gray-500 uppercase px-4 py-3 min-w-[160px]">Dobra / Fórmula</th>
+                  <th className="text-left text-[10px] font-bold text-gray-500 uppercase px-3 md:px-4 py-3 min-w-[120px] md:min-w-[160px] sticky left-0 bg-[#222226] z-10">Dobra / Fórmula</th>
                   {historico.map(av => <ColHeader key={av.name} av={av} />)}
                 </tr>
               </thead>

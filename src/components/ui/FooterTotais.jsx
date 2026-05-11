@@ -28,21 +28,28 @@ export default function FooterTotais({
       )
 
     return (
-      <div className={`bg-[#0a0a0a] border border-[#323238] rounded-lg w-fit mx-auto ${sticky ? 'sticky bottom-4 z-30' : ''}`}>
+      <div
+        className={`bg-[#0a0a0a] border border-[#323238] rounded-lg w-fit max-w-full mx-auto ${sticky ? 'sticky z-30' : ''}`}
+        style={sticky ? { bottom: 'max(1rem, env(safe-area-inset-bottom))' } : undefined}
+      >
         {/* Mobile: 2 linhas */}
-        <div className="md:hidden px-4 py-2 space-y-1.5">
-          <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="md:hidden px-3 py-2 space-y-1.5">
+          <div className="flex items-center gap-2 whitespace-nowrap overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {leftGroup?.label && (
-              <span className="text-gray-500 font-bold tracking-wider uppercase text-[9px]">{leftGroup.label}:</span>
+              <span className="text-gray-500 font-bold tracking-wider uppercase text-[9px] shrink-0">{leftGroup.label}:</span>
             )}
-            {leftGroup?.items?.map((item, i) => renderItem(item, i))}
+            {leftGroup?.items?.map((item, i) => (
+              <span key={i} className="shrink-0">{renderItem(item, i)}</span>
+            ))}
           </div>
           {rightGroup && (
-            <div className="flex items-center gap-2.5 flex-wrap">
+            <div className="flex items-center gap-2 whitespace-nowrap overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {rightGroup?.label && (
-                <span className="text-gray-500 font-bold tracking-wider uppercase text-[9px]">{rightGroup.label}:</span>
+                <span className="text-gray-500 font-bold tracking-wider uppercase text-[9px] shrink-0">{rightGroup.label}:</span>
               )}
-              {rightGroup?.items?.map((item, i) => renderItem(item, i, true))}
+              {rightGroup?.items?.map((item, i) => (
+                <span key={i} className="shrink-0">{renderItem(item, i, true)}</span>
+              ))}
             </div>
           )}
         </div>

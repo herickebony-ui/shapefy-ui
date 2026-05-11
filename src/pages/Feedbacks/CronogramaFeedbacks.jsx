@@ -1020,19 +1020,19 @@ export default function CronogramaFeedbacks() {
               ) : calendarMode === 'calendar' ? (
                 <>
                   {/* Sub-barra: formulário padrão das próximas datas marcadas */}
-                  <div className="px-4 py-2.5 border-b border-[#323238]/60 bg-[#1a1a1a]/40 flex items-center gap-2.5 flex-wrap">
+                  <div className="px-3 md:px-4 py-2.5 border-b border-[#323238]/60 bg-[#1a1a1a]/40 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2.5">
                     <span className="text-[10px] uppercase tracking-widest text-gray-500 font-bold shrink-0">
                       Formulário padrão
                     </span>
                     <select
                       value={formularioSugerido || ''}
                       onChange={(e) => setPlanForm(p => ({ ...p, formulario_padrao: e.target.value }))}
-                      className="flex-1 min-w-[180px] h-8 px-2 bg-[#1a1a1a] border border-[#323238] hover:border-gray-500 focus:border-[#2563eb]/60 text-white rounded-lg text-xs outline-none transition-colors">
+                      className="w-full sm:flex-1 sm:min-w-[180px] h-10 sm:h-8 px-2 bg-[#1a1a1a] border border-[#323238] hover:border-gray-500 focus:border-[#2563eb]/60 text-white rounded-lg text-xs outline-none transition-colors">
                       {formularios.map(f => (
                         <option key={f.name} value={f.name}>{f.titulo}</option>
                       ))}
                     </select>
-                    <span className="text-[10px] text-gray-500 italic shrink-0">
+                    <span className="text-[10px] text-gray-500 italic">
                       Aplicado às próximas datas marcadas
                     </span>
                   </div>

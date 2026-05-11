@@ -459,6 +459,81 @@ export default function AnamneseListagem() {
             pageSize={pageSize}
             onPage={setPage}
             onPageSize={(s) => { setPageSize(s); setPage(1) }}
+            mobileCard={(a) => {
+              if (a._semAnamnese) {
+                return (
+                  <div className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <div className="min-w-0">
+                        <p className="text-white text-sm font-medium truncate">
+                          {a.nome_completo || <span className="text-gray-600 italic">sem aluno</span>}
+                        </p>
+                        {a.aluno && (
+                          <p className="text-gray-500 text-[11px] truncate">{a.aluno}</p>
+                        )}
+                      </div>
+                      <Badge variant="default" size="sm" className="whitespace-nowrap shrink-0">Sem anamnese</Badge>
+                    </div>
+                    <button
+                      onClick={() => abrirVincularPraAluno(a._alunoData)}
+                      className="w-full h-10 flex items-center justify-center gap-2 text-gray-300 hover:text-white border border-[#323238] hover:bg-blue-600 hover:border-blue-600 rounded-lg text-xs font-medium transition-colors"
+                    >
+                      <Link2 size={13} /> Vincular anamnese
+                    </button>
+                  </div>
+                )
+              }
+              const statusBadge = a.status === 'Finalizado' ? <Badge variant="info" size="sm">Finalizada</Badge>
+                : respondidaAnamnese(a) ? <Badge variant="success" size="sm">Respondida</Badge>
+                : a.status === 'Enviado' ? <Badge variant="warning" size="sm">Enviada</Badge>
+                : <Badge variant="default" size="sm">Pendente</Badge>
+              return (
+                <div className="px-3 py-3">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="min-w-0">
+                      <p className="text-white text-sm font-medium truncate">
+                        {a.nome_completo || <span className="text-gray-600 italic">sem aluno</span>}
+                      </p>
+                      <p className="text-gray-400 text-[11px] truncate">{a.titulo || a.name}</p>
+                      <p className="text-gray-600 text-[10px]">{fmtData(a.date)}</p>
+                    </div>
+                    <div className="shrink-0">{statusBadge}</div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#323238]/60" onClick={(e) => e.stopPropagation()}>
+                    {a.entregue ? (
+                      <button
+                        onClick={() => handleMarcarEntregue(a)}
+                        className="h-9 px-3 flex items-center gap-1.5 text-green-300 bg-green-500/10 border border-green-500/30 rounded-lg text-[11px] font-bold uppercase tracking-wider"
+                      >
+                        <Check size={12} /> Entregue
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleMarcarEntregue(a)}
+                        className="h-9 px-3 flex items-center gap-1.5 text-gray-400 hover:text-white border border-[#323238] rounded-lg text-[11px] font-medium"
+                      >
+                        <Check size={12} /> Marcar entregue
+                      </button>
+                    )}
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => abrirAnamnese(a)}
+                        className="h-9 w-9 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] rounded-lg"
+                      >
+                        <Eye size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleExcluir(a)}
+                        disabled={excluindoId === a.name}
+                        className="h-9 w-9 flex items-center justify-center text-[#2563eb] hover:text-white border border-[#2563eb]/30 hover:bg-[#2563eb] rounded-lg disabled:opacity-40"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )
+            }}
           />
         )}
       </div>
