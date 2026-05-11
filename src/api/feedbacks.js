@@ -7,7 +7,10 @@ const primeiroNome = (nome) => String(nome || '').trim().split(/\s+/)[0] || ''
 
 // Vincula um feedback manualmente: cria o Feedback a partir do template
 // (Formulario Feedback) com aluno selecionado e dispara notificação ao aluno.
-// Não usa método Python custom — cria direto via REST nativo do Frappe.
+// IMPORTANTE: NÃO mandar `perguntas_e_respostas` no POST — o backend tem hook
+// que copia as perguntas do template a partir do campo `formulario`. Mandar a
+// child table preenchida + hook = bug (na anamnese duplicava 57+57; no feedback
+// faz o status virar 'Respondido' indevidamente). Mesma lição da anamnese.
 export const vincularFeedback = async (alunoId, formularioId) => {
   const [formRes, alunoRes] = await Promise.all([
     client.get(`/api/resource/Formulario%20Feedback/${encodeURIComponent(formularioId)}`),
@@ -15,14 +18,6 @@ export const vincularFeedback = async (alunoId, formularioId) => {
   ])
   const template = formRes.data.data || {}
   const aluno = alunoRes.data.data || {}
-  const perguntas = (template.perguntas || []).map(p => ({
-    pergunta: p.pergunta,
-    tipo: p.tipo,
-    reqd: p.reqd || 0,
-    opcoes: p.opcoes || '',
-    conteudo_html: p.conteudo_html || '',
-    resposta: '',
-  }))
   const today = new Date().toISOString().slice(0, 10)
   const res = await client.post('/api/resource/Feedback', {
     aluno: alunoId,
@@ -33,7 +28,6 @@ export const vincularFeedback = async (alunoId, formularioId) => {
     profissional: profissionalLogado(),
     date: today,
     status: 'Enviado',
-    perguntas_e_respostas: perguntas,
   })
   const feedback = res.data?.data
   // Notifica o aluno no app — falha silenciosa pra não bloquear o vínculo.
