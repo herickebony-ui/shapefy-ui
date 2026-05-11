@@ -3,6 +3,7 @@ import { Plus, X, FileText, Send } from 'lucide-react'
 import { Modal, Button, FormGroup, Autocomplete, Spinner, EmptyState } from '../ui'
 import { listarAlunos } from '../../api/alunos'
 import { listarFormularios, vincularAnamnese, listarAnamneses } from '../../api/anamneses'
+import { parseFrappeError } from '../../utils/frappeErrors'
 
 const buscarAlunosFn = async (q) => {
   if (q.length < 1) return []
@@ -59,7 +60,7 @@ export default function VincularAnamneseModal({
       onClose()
     } catch (e) {
       console.error(e)
-      alert('Erro ao vincular anamnese.')
+      alert(parseFrappeError(e) || 'Erro ao vincular anamnese.')
     } finally { setVinculando(false) }
   }
 

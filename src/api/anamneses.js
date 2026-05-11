@@ -37,10 +37,27 @@ export const buscarAnamnese = async (id) => {
   return res.data.data
 }
 
-export const salvarAnamnese = async (id, perguntas) => {
-  const res = await client.put(`/api/resource/Anamnese/${id}`, {
-    perguntas_e_respostas: perguntas
+// Considera "respondida" se pelo menos uma pergunta tem resposta preenchida.
+// Aceita string, número, array (multiseleção) e objeto (anexo de arquivo).
+const temAlgumaResposta = (perguntas) =>
+  (perguntas || []).some(p => {
+    const r = p?.resposta
+    if (r === null || r === undefined) return false
+    if (typeof r === 'string') return r.trim().length > 0
+    if (typeof r === 'number') return true
+    if (Array.isArray(r)) return r.length > 0
+    if (typeof r === 'object') return Object.keys(r).length > 0
+    return false
   })
+
+export const salvarAnamnese = async (id, perguntas) => {
+  // Se há respostas (independente de quem preencheu — aluno ou profissional),
+  // forçar status='Respondido'. Cobre o caso em que o profissional preenche
+  // manualmente, onde aluno_preencheu permanece 0 e o backend não atualiza
+  // o status sozinho.
+  const payload = { perguntas_e_respostas: perguntas }
+  if (temAlgumaResposta(perguntas)) payload.status = 'Respondido'
+  const res = await client.put(`/api/resource/Anamnese/${id}`, payload)
   return res.data.data
 }
 
@@ -55,15 +72,56 @@ export const listarFormularios = async () => {
 }
 
 export const vincularAnamnese = async (alunoId, formulario, enviarAluno = true) => {
-  const data = new URLSearchParams({
+  // Quando "Enviar pro aluno" está marcado, usamos o método Python custom
+  // que cria a anamnese + dispara notificação ao aluno.
+  if (enviarAluno) {
+    const data = new URLSearchParams({
+      aluno: alunoId,
+      formulario,
+      enviar_aluno: 1,
+    })
+    const res = await client.post('/api/method/shapefy.api_shapefy.vincular_anamnese', data, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    })
+    return res.data.message
+  }
+  // Sem envio: cria direto via REST. O método Python tenta setar
+  // status='Pendente' nesse fluxo, mas o DocType só aceita "", 'Enviado',
+  // 'Respondido', 'Finalizado' — daí o ValidationError. Aqui montamos o doc
+  // com status vazio e copiamos as perguntas do template.
+  const [formRes, alunoRes] = await Promise.all([
+    client.get(`/api/resource/Formulario%20de%20Anamnese/${encodeURIComponent(formulario)}`),
+    client.get(`/api/resource/Aluno/${encodeURIComponent(alunoId)}`),
+  ])
+  const template = formRes.data.data || {}
+  const aluno = alunoRes.data.data || {}
+  const perguntas = (template.perguntas || []).map(p => ({
+    pergunta: p.pergunta,
+    tipo: p.tipo,
+    reqd: p.reqd || 0,
+    opcoes: p.opcoes || '',
+    conteudo_html: p.conteudo_html || '',
+    resposta: '',
+  }))
+  const profissional = localStorage.getItem('frappe_user') || ''
+  const today = new Date().toISOString().slice(0, 10)
+  // status é mandatório no DocType — usa 'Enviado' como default mesmo sem
+  // envio real (mesmo valor que o vincular_anamnese usa). Quando o profissional
+  // preencher e salvar, salvarAnamnese promove pra 'Respondido'.
+  const res = await client.post('/api/resource/Anamnese', {
     aluno: alunoId,
     formulario,
-    enviar_aluno: enviarAluno ? 1 : 0,
+    titulo: template.titulo || '',
+    nome_completo: aluno.nome_completo || '',
+    profissional,
+    date: today,
+    status: 'Enviado',
+    enviar_aluno: 0,
+    aluno_preencheu: 0,
+    entregue: 0,
+    perguntas_e_respostas: perguntas,
   })
-  const res = await client.post('/api/method/shapefy.api_shapefy.vincular_anamnese', data, {
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-  })
-  return res.data.message
+  return res.data.data
 }
 
 const nowFrappeDatetime = () => {

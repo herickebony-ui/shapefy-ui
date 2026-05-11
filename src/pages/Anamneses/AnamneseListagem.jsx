@@ -24,12 +24,26 @@ const fmtData = (d) => {
   return `${day}/${m}/${y}`
 }
 
+// Status válidos do DocType Anamnese (Select no Frappe):
+//   "" (vazio = pendente), "Enviado", "Respondido", "Finalizado"
+//
+// Anamnese é considerada "respondida" se qualquer um destes sinais bater:
+// - aluno_preencheu: flag seteado pelo backend quando o aluno envia o form
+// - status === 'Respondido': workflow direto
+// - status === 'Finalizado': finalizada IS-A respondida (passou pelo estado
+//   antes de ser encerrada)
+// - entregue: se o profissional marcou entregue, ele só fez isso após ler
+//   as respostas — então é necessariamente respondida.
+const respondidaAnamnese = (a) =>
+  !!a && (a.aluno_preencheu || a.status === 'Respondido' || a.status === 'Finalizado' || a.entregue)
+
 const STATUS_OPTS = [
   { value: '', label: 'Todos' },
   { value: 'sem_anamnese', label: 'Sem anamnese' },
-  { value: 'Respondido', label: 'Respondidas' },
-  { value: 'Enviado', label: 'Enviadas' },
   { value: 'pendente', label: 'Pendentes' },
+  { value: 'Enviado', label: 'Enviadas' },
+  { value: 'Respondido', label: 'Respondidas' },
+  { value: 'Finalizado', label: 'Finalizadas' },
 ]
 
 const TOPICOS_AJUDA_ANAMNESES = [
@@ -122,7 +136,7 @@ export default function AnamneseListagem() {
   const listaFiltrada = useMemo(() => {
     return listaCompleta.filter(a => {
       if (query && !buscarSmart([a.nome_completo, a.titulo, a.aluno], query)) return false
-      const respondida = a.aluno_preencheu || a.status === 'Respondido'
+      const respondida = respondidaAnamnese(a)
       if (filtroStatus) {
         if (filtroStatus === 'pendente') {
           if (respondida || a.status === 'Enviado' || a._semAnamnese) return false
@@ -194,7 +208,7 @@ export default function AnamneseListagem() {
   }
 
   const handleExcluir = async (a) => {
-    const msg = a.status === 'Respondido'
+    const msg = respondidaAnamnese(a)
       ? `Esta anamnese já foi respondida pelo aluno. Tem certeza que deseja excluir "${a.titulo || a.name}"?`
       : `Excluir "${a.titulo || a.name}"?`
     if (!window.confirm(msg)) return
@@ -252,9 +266,8 @@ export default function AnamneseListagem() {
       cellClass: 'text-center',
       render: (a) => {
         if (a._semAnamnese) return <Badge variant="default" size="sm" className="whitespace-nowrap">Sem anamnese</Badge>
-        // aluno_preencheu é a fonte real de "respondida" — o campo `status`
-        // nem sempre é atualizado pelo backend quando a aluna responde.
-        if (a.aluno_preencheu || a.status === 'Respondido') return <Badge variant="success" size="sm">Respondida</Badge>
+        if (a.status === 'Finalizado') return <Badge variant="info" size="sm">Finalizada</Badge>
+        if (respondidaAnamnese(a)) return <Badge variant="success" size="sm">Respondida</Badge>
         if (a.status === 'Enviado') return <Badge variant="warning" size="sm">Enviada</Badge>
         return <Badge variant="default" size="sm">Pendente</Badge>
       },
