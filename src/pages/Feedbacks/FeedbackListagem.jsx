@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { RefreshCw, Search, Columns, CheckCircle, Star, X, ArrowLeft } from 'lucide-react'
+import { RefreshCw, Search, Columns, CheckCircle, Star, X, ArrowLeft, Link2 } from 'lucide-react'
 import {
   listarFeedbacks, listarFormularios, buscarFeedback,
   salvarStatusFeedback, rotarImagemFeedback, trocarFotosFeedback,
@@ -8,6 +8,7 @@ import {
 import { Button, Badge, Spinner, EmptyState, DataTable } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 import ImagemInterativa from './ImagemInterativa'
+import VincularFeedbackModal from '../../components/feedback/VincularFeedbackModal'
 import { buscarSmart } from '../../utils/strings'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
@@ -214,6 +215,7 @@ export default function FeedbackListagem() {
   const [page, setPage] = useState(1)
 
   const [view, setView] = useState('list')
+  const [modalVincular, setModalVincular] = useState(false)
   const [modoComparar, setModoComparar] = useState(false)
   const [selecionados, setSelecionados] = useState([])
   const [dadosComparacao, setDadosComparacao] = useState([])
@@ -481,6 +483,11 @@ export default function FeedbackListagem() {
         actions={
           <>
             <Button variant="secondary" size="sm" icon={RefreshCw} onClick={() => carregar()} loading={loading} />
+            {!modoComparar && (
+              <Button variant="primary" size="sm" icon={Link2} onClick={() => setModalVincular(true)}>
+                Vincular Feedback
+              </Button>
+            )}
             {!modoComparar ? (
               <Button variant="secondary" size="sm" icon={Columns} onClick={() => setModoComparar(true)}>
                 Comparar
@@ -554,6 +561,12 @@ export default function FeedbackListagem() {
           />
         )}
       </ListPage>
+      {modalVincular && (
+        <VincularFeedbackModal
+          onClose={() => setModalVincular(false)}
+          onVinculado={() => { setModalVincular(false); carregar() }}
+        />
+      )}
     </>
   )
 }

@@ -1,6 +1,54 @@
 import client from './client'
+import { criarNotificacaoAluno } from './notificacoes'
 
 const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
+
+const primeiroNome = (nome) => String(nome || '').trim().split(/\s+/)[0] || ''
+
+// Vincula um feedback manualmente: cria o Feedback a partir do template
+// (Formulario Feedback) com aluno selecionado e dispara notificação ao aluno.
+// Não usa método Python custom — cria direto via REST nativo do Frappe.
+export const vincularFeedback = async (alunoId, formularioId) => {
+  const [formRes, alunoRes] = await Promise.all([
+    client.get(`/api/resource/Formulario%20Feedback/${encodeURIComponent(formularioId)}`),
+    client.get(`/api/resource/Aluno/${encodeURIComponent(alunoId)}`),
+  ])
+  const template = formRes.data.data || {}
+  const aluno = alunoRes.data.data || {}
+  const perguntas = (template.perguntas || []).map(p => ({
+    pergunta: p.pergunta,
+    tipo: p.tipo,
+    reqd: p.reqd || 0,
+    opcoes: p.opcoes || '',
+    conteudo_html: p.conteudo_html || '',
+    resposta: '',
+  }))
+  const today = new Date().toISOString().slice(0, 10)
+  const res = await client.post('/api/resource/Feedback', {
+    aluno: alunoId,
+    formulario: formularioId,
+    titulo: template.titulo || '',
+    nome_completo: aluno.nome_completo || '',
+    email: aluno.email || '',
+    profissional: profissionalLogado(),
+    date: today,
+    status: 'Enviado',
+    perguntas_e_respostas: perguntas,
+  })
+  const feedback = res.data?.data
+  // Notifica o aluno no app — falha silenciosa pra não bloquear o vínculo.
+  try {
+    const nome = primeiroNome(aluno.nome_completo)
+    await criarNotificacaoAluno({
+      aluno: alunoId,
+      titulo: nome ? `Novo feedback disponível, ${nome}!` : 'Novo feedback disponível!',
+      descricao: `Preencha o feedback "${template.titulo || ''}" no app.`,
+    })
+  } catch (err) {
+    console.warn('Não foi possível criar notificação do feedback:', err)
+  }
+  return feedback
+}
 
 export const listarFeedbacks = async ({ busca = '', status = '', dataInicio = '', dataFim = '', page = 1, limit = 500 } = {}) => {
   const profissional = profissionalLogado()
