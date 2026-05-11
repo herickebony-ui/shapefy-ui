@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Modal, Button } from '../ui'
-import { salvarAnamnese } from '../../api/anamneses'
+import { salvarAnamnese, rotarImagemAnamnese } from '../../api/anamneses'
 import ImagemInterativa from '../../pages/Feedbacks/ImagemInterativa'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
@@ -11,6 +11,11 @@ const fmtData = (d) => {
   return `${day}/${m}/${y}`
 }
 
+// Detecta duplicação em sequência (idx 1..N + idx N+1..2N com mesmas perguntas)
+// e escolhe a metade com mais informação preenchida — backend às vezes cria a
+// child table 2x: a primeira leva fica sem `opcoes`/`conteudo_html`, a segunda
+// fica completa. Cortar no primeiro repetido (versão anterior) ficava com a
+// metade pobre e escondia opções de Select/Múltipla Escolha.
 function dedupePerguntas(perguntas) {
   if (!Array.isArray(perguntas) || perguntas.length < 2) return perguntas || []
   const primeira = perguntas[0]
@@ -20,7 +25,11 @@ function dedupePerguntas(perguntas) {
     && p?.tipo === primeira?.tipo,
   )
   if (idxRep === -1) return perguntas
-  return perguntas.slice(0, idxRep)
+  const a = perguntas.slice(0, idxRep)
+  const b = perguntas.slice(idxRep)
+  const score = (arr) =>
+    arr.reduce((acc, p) => acc + (p?.opcoes ? 1 : 0) + (p?.conteudo_html ? 1 : 0) + (p?.resposta ? 1 : 0), 0)
+  return score(b) > score(a) ? b : a
 }
 
 export default function AnamneseViewerModal({ anamnese, onClose, onAtualizada }) {
@@ -35,7 +44,14 @@ export default function AnamneseViewerModal({ anamnese, onClose, onAtualizada })
   const setResposta = (idx, valor) =>
     setRespostas(prev => prev.map((p, i) => i === idx ? { ...p, resposta: valor } : p))
 
-  const handleRotate = (fileUrl, idx) => {
+  const handleRotate = async (fileUrl, idx) => {
+    // Persiste a rotação no servidor (mesmo padrão do feedback). Falha
+    // silenciosa preserva ao menos a rotação visual via CSS transform.
+    try {
+      await rotarImagemAnamnese(anamnese.name, fileUrl, 'right')
+    } catch (err) {
+      console.warn('Rotação no servidor falhou:', err)
+    }
     setImgSrcs(prev => ({
       ...prev,
       [`${anamnese.name}_${idx}`]: `${FRAPPE_URL}${fileUrl}?v=${Date.now()}`,
@@ -106,7 +122,7 @@ export default function AnamneseViewerModal({ anamnese, onClose, onAtualizada })
                 />
               </div>
             )
-            if (item.tipo === 'Anexar Imagem') return (
+            if (item.tipo === 'Anexar Imagem' || item.tipo === 'Attach Image') return (
               <div key={idx} className="hover:bg-white/5 transition-colors">
                 <div className="px-4 pt-3 pb-1">
                   <p className="text-white text-xs font-bold">{item.pergunta}</p>
@@ -123,22 +139,86 @@ export default function AnamneseViewerModal({ anamnese, onClose, onAtualizada })
                 </div>
               </div>
             )
+            const opcoes = String(item.opcoes || '').split('\n').map(s => s.trim()).filter(Boolean)
+            const isSelect = item.tipo === 'Select' || item.tipo === 'Seleção'
+            const isChecks = item.tipo === 'Checks' || item.tipo === 'Múltipla Escolha'
+            const isRating = item.tipo === 'Rating' || item.tipo === 'Avaliação'
+            const isInt = item.tipo === 'Int' || item.tipo === 'Número'
+            // Múltipla escolha persiste como string com valores separados por ", " ou "\n".
+            const marcadasMultipla = String(item.resposta || '')
+              .split(/\n|,/).map(s => s.trim()).filter(Boolean)
+
             return (
               <div key={idx} className="px-4 py-3">
                 <p className="text-white text-xs font-semibold leading-relaxed mb-1.5">
                   {item.pergunta}
                 </p>
-                {editando
-                  ? <textarea
+                {editando ? (
+                  isSelect ? (
+                    <select
+                      value={item.resposta || ''}
+                      onChange={e => setResposta(idx, e.target.value)}
+                      className="w-full h-9 bg-[#29292e] border border-[#323238] focus:border-[#2563eb]/60 text-white text-xs rounded-lg px-3 outline-none"
+                    >
+                      <option value="">Selecione...</option>
+                      {opcoes.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                    </select>
+                  ) : isChecks ? (
+                    <div className="flex flex-col gap-1.5">
+                      {opcoes.map(opt => {
+                        const marcada = marcadasMultipla.includes(opt)
+                        return (
+                          <label key={opt} className="flex items-center gap-2 cursor-pointer text-xs text-gray-300 hover:text-white">
+                            <input
+                              type="checkbox"
+                              checked={marcada}
+                              onChange={() => {
+                                const nova = marcada
+                                  ? marcadasMultipla.filter(v => v !== opt)
+                                  : [...marcadasMultipla, opt]
+                                setResposta(idx, nova.join('\n'))
+                              }}
+                              className="accent-[#2563eb] w-4 h-4"
+                            />
+                            <span>{opt}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  ) : isRating ? (
+                    <input
+                      type="number" min="0" max="5"
+                      value={item.resposta || ''}
+                      onChange={e => setResposta(idx, e.target.value)}
+                      className="w-20 h-9 bg-[#29292e] border border-[#323238] focus:border-[#2563eb]/60 text-white text-xs rounded-lg px-3 outline-none"
+                    />
+                  ) : isInt ? (
+                    <input
+                      type="number"
+                      value={item.resposta || ''}
+                      onChange={e => setResposta(idx, e.target.value)}
+                      className="w-32 h-9 bg-[#29292e] border border-[#323238] focus:border-[#2563eb]/60 text-white text-xs rounded-lg px-3 outline-none"
+                    />
+                  ) : (
+                    <textarea
                       value={item.resposta || ''}
                       onChange={e => setResposta(idx, e.target.value)}
                       onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
                       style={{ minHeight: '2.5rem', overflow: 'hidden' }}
                       className="w-full bg-[#29292e] border border-[#323238] focus:border-[#2563eb]/60 text-white text-xs rounded-lg px-3 py-2 outline-none resize-none leading-relaxed transition-colors"
                     />
-                  : <p className="text-gray-400 text-xs italic leading-relaxed">
-                      {item.resposta || <span className="text-gray-600 not-italic opacity-50">Não respondida</span>}
-                    </p>}
+                  )
+                ) : isChecks && marcadasMultipla.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {marcadasMultipla.map(v => (
+                      <span key={v} className="px-2 py-0.5 rounded bg-[#2563eb]/15 border border-[#2563eb]/40 text-blue-200 text-[11px]">{v}</span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-400 text-xs italic leading-relaxed">
+                    {item.resposta || <span className="text-gray-600 not-italic opacity-50">Não respondida</span>}
+                  </p>
+                )}
               </div>
             )
           })}

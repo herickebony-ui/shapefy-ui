@@ -1,4 +1,7 @@
 import client from './client'
+import { criarNotificacaoAluno } from './notificacoes'
+
+const primeiroNome = (nome) => String(nome || '').trim().split(/\s+/)[0] || ''
 
 export const listarAnamneses = async ({ alunoId, page = 1, limit = 50 } = {}) => {
   const params = {
@@ -71,43 +74,21 @@ export const listarFormularios = async () => {
   return { list: res.data.data || [] }
 }
 
+// Cria a Anamnese via REST direto, igual ao admin do Frappe.
+// IMPORTANTE: NÃO mandar `perguntas_e_respostas` no payload — o DocType
+// Anamnese tem um hook backend que copia automaticamente as perguntas do
+// template (campo `formulario`). Se mandarmos a child table preenchida +
+// hook copiando, resulta em 114 perguntas (57 nossas + 57 do hook).
+// Comprovado: admin cria sem `perguntas_e_respostas` → 57 perguntas únicas.
 export const vincularAnamnese = async (alunoId, formulario, enviarAluno = true) => {
-  // Quando "Enviar pro aluno" está marcado, usamos o método Python custom
-  // que cria a anamnese + dispara notificação ao aluno.
-  if (enviarAluno) {
-    const data = new URLSearchParams({
-      aluno: alunoId,
-      formulario,
-      enviar_aluno: 1,
-    })
-    const res = await client.post('/api/method/shapefy.api_shapefy.vincular_anamnese', data, {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    })
-    return res.data.message
-  }
-  // Sem envio: cria direto via REST. O método Python tenta setar
-  // status='Pendente' nesse fluxo, mas o DocType só aceita "", 'Enviado',
-  // 'Respondido', 'Finalizado' — daí o ValidationError. Aqui montamos o doc
-  // com status vazio e copiamos as perguntas do template.
   const [formRes, alunoRes] = await Promise.all([
     client.get(`/api/resource/Formulario%20de%20Anamnese/${encodeURIComponent(formulario)}`),
     client.get(`/api/resource/Aluno/${encodeURIComponent(alunoId)}`),
   ])
   const template = formRes.data.data || {}
   const aluno = alunoRes.data.data || {}
-  const perguntas = (template.perguntas || []).map(p => ({
-    pergunta: p.pergunta,
-    tipo: p.tipo,
-    reqd: p.reqd || 0,
-    opcoes: p.opcoes || '',
-    conteudo_html: p.conteudo_html || '',
-    resposta: '',
-  }))
   const profissional = localStorage.getItem('frappe_user') || ''
   const today = new Date().toISOString().slice(0, 10)
-  // status é mandatório no DocType — usa 'Enviado' como default mesmo sem
-  // envio real (mesmo valor que o vincular_anamnese usa). Quando o profissional
-  // preencher e salvar, salvarAnamnese promove pra 'Respondido'.
   const res = await client.post('/api/resource/Anamnese', {
     aluno: alunoId,
     formulario,
@@ -116,12 +97,37 @@ export const vincularAnamnese = async (alunoId, formulario, enviarAluno = true) 
     profissional,
     date: today,
     status: 'Enviado',
-    enviar_aluno: 0,
+    enviar_aluno: enviarAluno ? 1 : 0,
     aluno_preencheu: 0,
     entregue: 0,
-    perguntas_e_respostas: perguntas,
   })
-  return res.data.data
+  const anamnese = res.data?.data
+  if (enviarAluno) {
+    try {
+      const primeiro = primeiroNome(aluno.nome_completo)
+      await criarNotificacaoAluno({
+        aluno: alunoId,
+        titulo: primeiro ? `Nova anamnese, ${primeiro}!` : 'Nova anamnese disponível',
+        descricao: `Acesse o app para preencher: ${template.titulo || ''}`.trim(),
+      })
+    } catch (err) {
+      console.warn('Não foi possível criar notificação da anamnese:', err)
+    }
+  }
+  return anamnese
+}
+
+// Rotaciona o arquivo físico no servidor — mesmo endpoint usado pelo feedback,
+// que recebe um array de IDs como contexto de validação e o file_url.
+export const rotarImagemAnamnese = async (anamneseId, fileUrl, direction = 'right') => {
+  const data = new URLSearchParams({
+    names: JSON.stringify([anamneseId]),
+    file_url: fileUrl,
+    direction,
+  })
+  await client.post('/api/method/shapefy.www.compare_feedback.rotate_image', data, {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  })
 }
 
 const nowFrappeDatetime = () => {
