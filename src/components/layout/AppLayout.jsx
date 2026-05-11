@@ -64,7 +64,14 @@ export default function AppLayout() {
   async function handleLogout() {
     await logout()
     clearAuth()
-    navigate('/login')
+    // Em mobile (PWA/browser), volta pra landing "Sou Aluno / Sou Profissional"
+    // em shapefy.online. Em desktop continua indo pra tela de login interna.
+    const isMobile = window.matchMedia('(max-width: 767px)').matches
+    if (isMobile) {
+      window.location.href = 'https://shapefy.online'
+    } else {
+      navigate('/login')
+    }
   }
 
   return (
