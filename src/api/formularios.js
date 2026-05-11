@@ -121,6 +121,11 @@ export const excluirFormularioFeedback = async (id) => {
   await client.delete(`/api/resource/${ENC_FEEDBACK}/${encodeURIComponent(id)}`)
 }
 
+export const desativarFormularioFeedback = async (id) => {
+  const res = await client.put(`/api/resource/${ENC_FEEDBACK}/${encodeURIComponent(id)}`, { enabled: 0 })
+  return res.data.data
+}
+
 export const duplicarFormularioFeedback = async (id) => {
   const original = await buscarFormularioFeedback(id)
   return criarFormularioFeedback({

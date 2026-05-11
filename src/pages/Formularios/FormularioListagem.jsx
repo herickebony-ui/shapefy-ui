@@ -4,7 +4,9 @@ import { Plus, RefreshCw, Trash2, Edit, FileText, Send, ToggleRight, Users, Clip
 import {
   listarFormulariosAnamnese, excluirFormularioAnamnese, duplicarFormularioAnamnese,
   listarFormulariosFeedback, excluirFormularioFeedback, duplicarFormularioFeedback,
+  desativarFormularioFeedback,
 } from '../../api/formularios'
+import { parseFrappeError } from '../../utils/frappeErrors'
 import { Button, Badge, Tabs, EmptyState, BotaoAjuda } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 
@@ -77,7 +79,26 @@ export default function FormularioListagem({ tipoFixo }) {
       await carregar()
     } catch (e) {
       console.error(e)
-      alert('Erro ao excluir formulário.')
+      const isLinkExists = e?.response?.data?.exc_type === 'LinkExistsError'
+      const msg = parseFrappeError(e) || 'Erro ao excluir formulário.'
+      // Frappe sugere desativar quando o template está vinculado a um agendamento.
+      // Só feedback tem flag `enabled` — anamnese não tem desativação.
+      if (isLinkExists && tipo === 'feedback' && item.enabled) {
+        const ok = window.confirm(
+          `${msg}\n\nDeseja desativar este formulário em vez de excluir? Ele deixa de aparecer pra envio, mas o histórico fica preservado.`,
+        )
+        if (ok) {
+          try {
+            await desativarFormularioFeedback(item.name)
+            await carregar()
+          } catch (err) {
+            console.error(err)
+            alert(parseFrappeError(err) || 'Erro ao desativar formulário.')
+          }
+        }
+      } else {
+        alert(msg)
+      }
     } finally {
       setExcluindo(null) }
   }
