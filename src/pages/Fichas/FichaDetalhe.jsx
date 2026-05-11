@@ -535,9 +535,12 @@ const RodapeVolume = ({ ficha, intensidadeMap, volumeAnterior }) => {
 
   const metade = Math.ceil(GRUPOS_CONFIG.length / 2)
   return (
-    <div className="shrink-0 bg-[#1a1a1a] border-t border-[#323238] px-6 py-1.5 flex flex-col gap-0.5">
+    <div className="shrink-0 bg-[#1a1a1a] border-t border-[#323238] px-3 md:px-6 py-1.5 flex flex-col gap-0.5">
       {[GRUPOS_CONFIG.slice(0, metade), GRUPOS_CONFIG.slice(metade)].map((linha, li) => (
-        <div key={li} className="flex items-center justify-center gap-3 flex-wrap">
+        <div
+          key={li}
+          className="flex items-center md:justify-center gap-2 md:gap-3 whitespace-nowrap overflow-x-auto md:flex-wrap md:overflow-visible [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
           <span className="text-gray-500 text-[10px] font-bold tracking-widest uppercase shrink-0">
             {li === 0 ? 'VOLUME:' : <span className="opacity-0">VOLUME:</span>}
           </span>
@@ -972,7 +975,15 @@ const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, inten
   }
 
   const addRow = () => onChange([...exercicios, { _id: uid(), grupo_muscular: '', exercicio: '', series: '3', repeticoes: '', descanso: '', observacao: '' }])
-  const dupe = (i) => { const arr = [...exercicios]; arr.splice(i + 1, 0, { ...arr[i], _id: uid() }); onChange(arr) }
+  const dupe = (i) => {
+    const arr = [...exercicios]
+    // Remove o `name` (chave primária da child row no Frappe) ao duplicar —
+    // se sair com o mesmo `name` da row original, o Frappe colapsa as duas
+    // ao salvar (PUT trata `name` como upsert) e o exercício duplicado some.
+    const { name, ...sem } = arr[i]
+    arr.splice(i + 1, 0, { ...sem, _id: uid() })
+    onChange(arr)
+  }
   const remove = (i) => onChange(exercicios.filter((_, idx) => idx !== i))
   const move = (i, dir) => onChange(arrayMove(exercicios, i, i + dir))
 
@@ -1627,7 +1638,12 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
                         <div className="flex items-center justify-end gap-0.5">
                           <button onClick={() => setDetalheAerobicoIdx(i)} title="Detalhes"
                             className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-gray-200 hover:bg-[#29292e] rounded transition"><Info size={12} /></button>
-                          <button onClick={() => { const arr = [...ficha.periodizacao_dos_aerobicos]; arr.splice(i+1, 0, { ...a, _id: uid() }); upd('periodizacao_dos_aerobicos', arr) }} title="Duplicar"
+                          <button onClick={() => {
+                              const arr = [...ficha.periodizacao_dos_aerobicos]
+                              const { name, ...sem } = a
+                              arr.splice(i+1, 0, { ...sem, _id: uid() })
+                              upd('periodizacao_dos_aerobicos', arr)
+                            }} title="Duplicar"
                             className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-gray-200 hover:bg-[#29292e] rounded transition"><Copy size={12} /></button>
                           <button onClick={() => upd('periodizacao_dos_aerobicos', ficha.periodizacao_dos_aerobicos.filter((_, idx) => idx !== i))} title="Excluir"
                             className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded transition"><Trash2 size={12} /></button>
@@ -1694,7 +1710,12 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
                         <div className="flex items-center justify-end gap-0.5">
                           <button onClick={() => setDetalheAlongamentoIdx(i)} title="Detalhes"
                             className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-gray-200 hover:bg-[#29292e] rounded transition"><Info size={12} /></button>
-                          <button onClick={() => { const arr = [...ficha.planilha_de_alongamentos_e_mobilidade]; arr.splice(i+1, 0, { ...a, _id: uid() }); upd('planilha_de_alongamentos_e_mobilidade', arr) }} title="Duplicar"
+                          <button onClick={() => {
+                              const arr = [...ficha.planilha_de_alongamentos_e_mobilidade]
+                              const { name, ...sem } = a
+                              arr.splice(i+1, 0, { ...sem, _id: uid() })
+                              upd('planilha_de_alongamentos_e_mobilidade', arr)
+                            }} title="Duplicar"
                             className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-gray-200 hover:bg-[#29292e] rounded transition"><Copy size={12} /></button>
                           <button onClick={() => upd('planilha_de_alongamentos_e_mobilidade', ficha.planilha_de_alongamentos_e_mobilidade.filter((_, idx) => idx !== i))} title="Excluir"
                             className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded transition"><Trash2 size={12} /></button>

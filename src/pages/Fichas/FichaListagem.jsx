@@ -637,7 +637,12 @@ const ModalDuplicarFicha = ({ ficha, onClose, onDuplicada }) => {
       const dadosCompletos = await buscarFicha(ficha.name)
       const { name, modified, creation, modified_by, owner, docstatus, ...resto } = dadosCompletos
 
-      const renovarIds = (lista) => (lista || []).map(item => ({ ...item, _id: uid() }))
+      // Remove o `name` das child rows ao clonar — se mantiver, o Frappe pode
+      // fundir/migrar a row original em vez de criar uma nova na ficha nova.
+      const renovarIds = (lista) => (lista || []).map(item => {
+        const { name, ...sem } = item
+        return { ...sem, _id: uid() }
+      })
 
       const novaFicha = {
         ...resto,
