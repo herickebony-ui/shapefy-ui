@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'react-router-dom'
-import { CheckCircle2, AlertCircle, MapPin, User } from 'lucide-react'
-import { Button, FormGroup, Input, Spinner } from '../../components/ui'
-import { getProfissionalPorSlug, enviarCadastroPublico, buscarCep } from '../../api/cadastroPublico'
+import { CheckCircle2, AlertCircle, MapPin, User, KeyRound, Mail } from 'lucide-react'
+import { Button, FormGroup, Input, Modal, Spinner } from '../../components/ui'
+import { getProfissionalPorSlug, enviarCadastroPublico, buscarCep, verificarAlunoExistente, recuperarAcessoAluno } from '../../api/cadastroPublico'
 import { tw } from '../../styles/tokens'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
@@ -75,6 +75,9 @@ export default function CadastroPublico() {
   const [enviado, setEnviado] = useState(false)
   const [erroEnvio, setErroEnvio] = useState('')
   const cepDebounce = useRef(null)
+  const [modalDuplicata, setModalDuplicata] = useState({ aberto: false, emailMasked: '' })
+  const [recuperando, setRecuperando] = useState(false)
+  const [toastRecuperacao, setToastRecuperacao] = useState('')
 
   useEffect(() => {
     let cancel = false
@@ -100,6 +103,12 @@ export default function CadastroPublico() {
       .finally(() => { if (!cancel) setLoading(false) })
     return () => { cancel = true }
   }, [slug])
+
+  useEffect(() => {
+    if (!toastRecuperacao) return
+    const t = setTimeout(() => setToastRecuperacao(''), 6000)
+    return () => clearTimeout(t)
+  }, [toastRecuperacao])
 
   const setCampo = (campo) => (val) => {
     setForm(prev => ({ ...prev, [campo]: val }))
@@ -129,6 +138,35 @@ export default function CadastroPublico() {
           uf: res.uf || prev.uf,
         }))
       }, 300)
+    }
+  }
+
+  const handleEmailBlur = async () => {
+    const email = form.email.trim().toLowerCase()
+    if (!validarEmail(email)) return
+    try {
+      const res = await verificarAlunoExistente(slug, { email })
+      if (res?.existe) {
+        setModalDuplicata({ aberto: true, emailMasked: res.email_masked || '' })
+      }
+    } catch (err) {
+      // Silencia: o submit do form atua como segunda barreira.
+      console.warn('verificar_aluno_existente falhou', err)
+    }
+  }
+
+  const handleRecuperarSenha = async () => {
+    if (recuperando) return
+    setRecuperando(true)
+    try {
+      await recuperarAcessoAluno(slug, form.email.trim().toLowerCase())
+      setToastRecuperacao('Enviamos um e-mail com seu acesso. Verifique sua caixa de entrada e o spam.')
+      setModalDuplicata({ aberto: false, emailMasked: '' })
+    } catch {
+      setToastRecuperacao('Não foi possível enviar agora. Tente novamente em alguns instantes.')
+    } finally {
+      // Bloqueio de 5s no botão pra respeitar throttle do backend (3/min/IP).
+      setTimeout(() => setRecuperando(false), 5000)
     }
   }
 
@@ -174,11 +212,19 @@ export default function CadastroPublico() {
       setEnviado(true)
     } catch (err) {
       const msg = String(err?.message || '')
-      if (msg.includes('cpf_duplicado')) {
-        setErroEnvio('Você já está cadastrado com este CPF. Entre em contato com o profissional.')
+      if (msg.includes('ja_cadastrado') || msg.includes('cpf_duplicado')) {
+        setModalDuplicata({ aberto: true, emailMasked: err.emailMasked || '' })
       } else if (msg.includes('link_inativo')) {
         setErroEnvio('Os cadastros foram encerrados pelo profissional.')
         setErroLink('inativo')
+      } else if (msg.includes('email_invalido')) {
+        setErroEnvio('E-mail inválido.')
+      } else if (msg.includes('cpf_invalido')) {
+        setErroEnvio('CPF inválido.')
+      } else if (msg.includes('dados_invalidos')) {
+        setErroEnvio('Preencha todos os campos obrigatórios.')
+      } else if (msg.includes('slug_invalido')) {
+        setErroEnvio('Link inválido.')
       } else {
         setErroEnvio('Não foi possível enviar o cadastro. Tente novamente em instantes.')
       }
@@ -397,6 +443,7 @@ export default function CadastroPublico() {
             <Input
               value={form.email}
               onChange={setCampo('email')}
+              onBlur={handleEmailBlur}
               placeholder="seu@email.com"
               type="email"
               inputMode="email"
@@ -424,6 +471,61 @@ export default function CadastroPublico() {
           Plataforma Shapefy · Seus dados são protegidos
         </p>
       </div>
+
+      {modalDuplicata.aberto && (
+        <Modal
+          isOpen
+          onClose={() => setModalDuplicata({ aberto: false, emailMasked: '' })}
+          title="Você já tem cadastro!"
+          size="sm"
+          footer={
+            <>
+              <Button
+                variant="ghost"
+                onClick={() => setModalDuplicata({ aberto: false, emailMasked: '' })}
+              >
+                Voltar
+              </Button>
+              <Button
+                variant="primary"
+                icon={KeyRound}
+                onClick={handleRecuperarSenha}
+                loading={recuperando}
+                disabled={recuperando}
+              >
+                Recuperar minha senha
+              </Button>
+            </>
+          }
+        >
+          <div className="p-4 space-y-3 text-sm text-gray-300">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-green-500/15 border border-green-500/40 text-green-400 flex items-center justify-center shrink-0">
+                <CheckCircle2 size={18} />
+              </div>
+              <div>
+                <p>Encontramos seu cadastro vinculado ao e-mail:</p>
+                {modalDuplicata.emailMasked && (
+                  <p className="mt-1 font-semibold text-white tracking-wide">{modalDuplicata.emailMasked}</p>
+                )}
+              </div>
+            </div>
+            <p className="text-xs text-gray-500">
+              Não precisa preencher de novo. Clique em <strong className="text-gray-300">Recuperar minha senha</strong> para receber as instruções por e-mail.
+            </p>
+          </div>
+        </Modal>
+      )}
+
+      {toastRecuperacao && (
+        <div
+          role="status"
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:right-4 max-w-sm w-[calc(100%-2rem)] bg-[#1a1a1a] border border-[#323238] rounded-xl shadow-xl px-4 py-3 flex items-start gap-3 text-sm text-gray-200 z-50"
+        >
+          <Mail size={16} className="text-[#60a5fa] mt-0.5 shrink-0" />
+          <span>{toastRecuperacao}</span>
+        </div>
+      )}
     </div>
   )
 }
