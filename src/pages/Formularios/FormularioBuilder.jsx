@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Plus, Trash2, ChevronUp, ChevronDown, Save, ArrowLeft, Type, ListChecks, ArrowUpDown, Layers, FileText, Settings } from 'lucide-react'
+import { Plus, Trash2, ChevronUp, ChevronDown, Save, ArrowLeft, Type, ListChecks, ArrowUpDown, Layers, FileText, Settings, Copy } from 'lucide-react'
 import {
   criarFormularioAnamnese, salvarFormularioAnamnese, buscarFormularioAnamnese,
   criarFormularioFeedback, salvarFormularioFeedback, buscarFormularioFeedback,
@@ -112,6 +112,16 @@ export default function FormularioBuilder() {
       const next = { ...prev.perguntas }
       delete next[idx]
       return { ...prev, perguntas: next }
+    })
+  }
+
+  const duplicarPergunta = (idx) => {
+    setPerguntas(prev => {
+      const arr = [...prev]
+      const original = arr[idx]
+      if (!original) return prev
+      arr.splice(idx + 1, 0, { ...original, _id: gerarId() })
+      return arr
     })
   }
 
@@ -325,6 +335,13 @@ export default function FormularioBuilder() {
                       className="h-6 w-6 flex items-center justify-center text-gray-500 hover:text-white border border-[#323238] rounded transition-colors disabled:opacity-30"
                     >
                       <ChevronDown size={11} />
+                    </button>
+                    <button
+                      onClick={() => duplicarPergunta(idx)}
+                      title="Duplicar pergunta abaixo"
+                      className="h-6 w-6 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded transition-colors"
+                    >
+                      <Copy size={11} />
                     </button>
                     <button
                       onClick={() => removePergunta(idx)}
