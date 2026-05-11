@@ -61,6 +61,14 @@ export const excluirFormularioAnamnese = async (id) => {
   await client.delete(`/api/resource/${ENC_ANAMNESE}/${encodeURIComponent(id)}`)
 }
 
+export const duplicarFormularioAnamnese = async (id) => {
+  const original = await buscarFormularioAnamnese(id)
+  return criarFormularioAnamnese({
+    titulo: `${original.titulo || 'Formulário'} (Cópia)`,
+    perguntas: original.perguntas || [],
+  })
+}
+
 // ─── Formulario Feedback ──────────────────────────────────────────────────────
 
 export const listarFormulariosFeedback = async () => {
@@ -111,4 +119,16 @@ export const salvarFormularioFeedback = async (id, payload) => {
 
 export const excluirFormularioFeedback = async (id) => {
   await client.delete(`/api/resource/${ENC_FEEDBACK}/${encodeURIComponent(id)}`)
+}
+
+export const duplicarFormularioFeedback = async (id) => {
+  const original = await buscarFormularioFeedback(id)
+  return criarFormularioFeedback({
+    titulo: `${original.titulo || 'Formulário'} (Cópia)`,
+    enabled: original.enabled,
+    feedback_inicial: original.feedback_inicial,
+    dieta: original.dieta,
+    treino: original.treino,
+    perguntas: original.perguntas || [],
+  })
 }

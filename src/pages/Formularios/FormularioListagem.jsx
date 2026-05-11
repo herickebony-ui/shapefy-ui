@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, RefreshCw, Trash2, Edit, FileText, Send, ToggleRight, Users, ClipboardList, MessageSquare } from 'lucide-react'
+import { Plus, RefreshCw, Trash2, Edit, FileText, Send, ToggleRight, Users, ClipboardList, MessageSquare, Copy } from 'lucide-react'
 import {
-  listarFormulariosAnamnese, excluirFormularioAnamnese,
-  listarFormulariosFeedback, excluirFormularioFeedback,
+  listarFormulariosAnamnese, excluirFormularioAnamnese, duplicarFormularioAnamnese,
+  listarFormulariosFeedback, excluirFormularioFeedback, duplicarFormularioFeedback,
 } from '../../api/formularios'
 import { Button, Badge, Tabs, EmptyState, BotaoAjuda } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
@@ -40,6 +40,7 @@ export default function FormularioListagem({ tipoFixo }) {
   const [listaFeedback, setListaFeedback] = useState([])
   const [loading, setLoading] = useState(false)
   const [excluindo, setExcluindo] = useState(null)
+  const [duplicando, setDuplicando] = useState(null)
 
   useEffect(() => { if (tipoFixo) setAba(tipoFixo) }, [tipoFixo])
 
@@ -79,6 +80,20 @@ export default function FormularioListagem({ tipoFixo }) {
       alert('Erro ao excluir formulário.')
     } finally {
       setExcluindo(null) }
+  }
+
+  const handleDuplicar = async (tipo, item) => {
+    setDuplicando(item.name)
+    try {
+      if (tipo === 'anamnese') await duplicarFormularioAnamnese(item.name)
+      else await duplicarFormularioFeedback(item.name)
+      await carregar()
+    } catch (e) {
+      console.error(e)
+      alert('Erro ao duplicar formulário.')
+    } finally {
+      setDuplicando(null)
+    }
   }
 
   const lista = aba === 'anamnese' ? listaAnamnese : listaFeedback
@@ -163,6 +178,14 @@ export default function FormularioListagem({ tipoFixo }) {
                   className="h-7 w-7 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors"
                 >
                   <Edit size={12} />
+                </button>
+                <button
+                  onClick={() => handleDuplicar(aba, item)}
+                  disabled={duplicando === item.name}
+                  title="Duplicar"
+                  className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors disabled:opacity-40"
+                >
+                  <Copy size={12} />
                 </button>
                 <button
                   onClick={() => handleExcluir(aba, item)}
