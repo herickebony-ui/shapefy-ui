@@ -82,6 +82,10 @@ export const listarFormularios = async () => {
   return res.data.data || []
 }
 
+export const excluirFeedback = async (id) => {
+  await client.delete(`/api/resource/Feedback/${encodeURIComponent(id)}`)
+}
+
 export const buscarFeedback = async (id) => {
   const res = await client.get(`/api/resource/Feedback/${encodeURIComponent(id)}`)
   return res.data.data

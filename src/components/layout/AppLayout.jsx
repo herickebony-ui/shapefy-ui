@@ -7,7 +7,7 @@ import {
   TrendingUp, Calendar, LayoutDashboard, Wallet, Layers,
   Inbox, CalendarClock, FileEdit, FileQuestion,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import useAuthStore from '../../store/authStore'
 import { logout } from '../../api/auth'
 
@@ -60,6 +60,17 @@ export default function AppLayout() {
   const { user, clearAuth, modulos } = useAuthStore()
   const [expanded, setExpanded] = useState(false)
   const userName = localStorage.getItem('frappe_user_name') || 'Admin'
+
+  // Bloqueia scroll do body quando a sidebar mobile está aberta
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const isMobile = window.matchMedia('(max-width: 767px)').matches
+    if (expanded && isMobile) {
+      const prev = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => { document.body.style.overflow = prev }
+    }
+  }, [expanded])
 
   async function handleLogout() {
     await logout()

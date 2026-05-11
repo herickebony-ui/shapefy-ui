@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { RefreshCw, Search, Columns, CheckCircle, Star, X, ArrowLeft, Link2 } from 'lucide-react'
+import { RefreshCw, Search, Columns, CheckCircle, Star, X, ArrowLeft, Link2, Trash2, AlertTriangle } from 'lucide-react'
 import {
   listarFeedbacks, listarFormularios, buscarFeedback,
-  salvarStatusFeedback, rotarImagemFeedback, trocarFotosFeedback,
+  salvarStatusFeedback, rotarImagemFeedback, trocarFotosFeedback, excluirFeedback,
 } from '../../api/feedbacks'
-import { Button, Badge, Spinner, EmptyState, DataTable } from '../../components/ui'
+import { parseFrappeError } from '../../utils/frappeErrors'
+import { Button, Badge, Spinner, EmptyState, DataTable, Modal } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 import ImagemInterativa from './ImagemInterativa'
 import VincularFeedbackModal from '../../components/feedback/VincularFeedbackModal'
@@ -216,6 +217,8 @@ export default function FeedbackListagem() {
 
   const [view, setView] = useState('list')
   const [modalVincular, setModalVincular] = useState(false)
+  const [modalExcluir, setModalExcluir] = useState(null)
+  const [excluindo, setExcluindo] = useState(false)
   const [modoComparar, setModoComparar] = useState(false)
   const [selecionados, setSelecionados] = useState([])
   const [dadosComparacao, setDadosComparacao] = useState([])
@@ -356,6 +359,22 @@ export default function FeedbackListagem() {
     }
   }
 
+  const handleConfirmarExcluir = async () => {
+    if (!modalExcluir || excluindo) return
+    setExcluindo(true)
+    try {
+      await excluirFeedback(modalExcluir.name)
+      setFeedbacks(prev => prev.filter(f => f.name !== modalExcluir.name))
+      setSelecionados(prev => prev.filter(f => f.name !== modalExcluir.name))
+      setModalExcluir(null)
+    } catch (e) {
+      console.error(e)
+      alert(parseFrappeError(e) || 'Erro ao excluir feedback.')
+    } finally {
+      setExcluindo(false)
+    }
+  }
+
   if (view === 'compare') {
     if (loadingComparacao) {
       return (
@@ -421,6 +440,13 @@ export default function FeedbackListagem() {
           >
             <CheckCircle size={12} />
           </button>
+          <button
+            onClick={() => setModalExcluir(row)}
+            title="Excluir feedback"
+            className="h-7 w-7 flex items-center justify-center text-[#2563eb] hover:text-white border border-[#2563eb]/30 hover:bg-[#2563eb] rounded-lg transition-colors"
+          >
+            <Trash2 size={12} />
+          </button>
         </div>
       ),
     },
@@ -456,22 +482,27 @@ export default function FeedbackListagem() {
       label: 'Status',
       headerClass: 'text-center',
       cellClass: 'text-center',
-      render: (row) => (
-        <div onClick={e => e.stopPropagation()}>
-          <select
-            value={row.status || 'Respondido'}
-            onChange={e => handleStatusChange(row, e.target.value)}
-            className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide border outline-none cursor-pointer appearance-none text-center ${
-              row.status === 'Finalizado'
-                ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                : 'bg-purple-500/10 text-purple-400 border-purple-500/20'
-            }`}
-          >
-            <option value="Respondido">Respondido</option>
-            <option value="Finalizado">Finalizado</option>
-          </select>
-        </div>
-      ),
+      render: (row) => {
+        const status = row.status || 'Enviado'
+        const cor = status === 'Finalizado'
+          ? 'bg-green-500/10 text-green-400 border-green-500/20'
+          : status === 'Enviado'
+            ? 'bg-yellow-500/10 text-yellow-300 border-yellow-500/20'
+            : 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+        return (
+          <div onClick={e => e.stopPropagation()}>
+            <select
+              value={status}
+              onChange={e => handleStatusChange(row, e.target.value)}
+              className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide border outline-none cursor-pointer appearance-none text-center ${cor}`}
+            >
+              <option value="Enviado">Enviado</option>
+              <option value="Respondido">Respondido</option>
+              <option value="Finalizado">Finalizado</option>
+            </select>
+          </div>
+        )
+      },
     },
   ]
 
@@ -566,6 +597,53 @@ export default function FeedbackListagem() {
           onClose={() => setModalVincular(false)}
           onVinculado={() => { setModalVincular(false); carregar() }}
         />
+      )}
+
+      {modalExcluir && (
+        <Modal
+          isOpen
+          onClose={() => !excluindo && setModalExcluir(null)}
+          title="Excluir feedback?"
+          size="sm"
+          footer={
+            <>
+              <Button
+                variant="ghost"
+                onClick={() => setModalExcluir(null)}
+                disabled={excluindo}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="danger"
+                icon={Trash2}
+                onClick={handleConfirmarExcluir}
+                loading={excluindo}
+              >
+                Excluir
+              </Button>
+            </>
+          }
+        >
+          <div className="p-4 space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-500/15 border border-red-500/40 text-red-400 flex items-center justify-center shrink-0">
+                <AlertTriangle size={18} />
+              </div>
+              <div className="text-sm text-gray-300 space-y-1.5">
+                <p>
+                  Esta ação é <strong className="text-white">permanente</strong> e não pode ser desfeita.
+                </p>
+                <p className="text-gray-400 text-xs">
+                  Aluno: <span className="text-gray-200">{modalExcluir.nome_completo || '—'}</span>
+                </p>
+                <p className="text-gray-400 text-xs">
+                  Formulário: <span className="text-gray-200">{modalExcluir.titulo || modalExcluir.formulario || '—'}</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </Modal>
       )}
     </>
   )
