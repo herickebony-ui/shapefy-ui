@@ -571,7 +571,7 @@ const ModalAdicionarRefeicaoPronta = ({ onClose, onSelectMeal }) => {
 }
 
 // ─── TabelaAlimentos ──────────────────────────────────────────────────────────
-const TabelaAlimentos = ({ items, onUpdateItem, onAddItem, onDeleteItem, onDuplicateItem, onMoveItem, onAddRefeicaoPronta, onAddSubstituteBelow, macrosReferencia }) => {
+const TabelaAlimentos = ({ items, onUpdateItem, onAddItem, onDeleteItem, onDuplicateItem, onMoveItem, onMoveGroup, onAddRefeicaoPronta, onAddSubstituteBelow, macrosReferencia }) => {
   const [exibirSubs, setExibirSubs] = useState(false)
   const [editingIdx, setEditingIdx] = useState(null)
   const visiveis = exibirSubs ? items : items.filter(i => !i.substitute)
@@ -626,17 +626,24 @@ const TabelaAlimentos = ({ items, onUpdateItem, onAddItem, onDeleteItem, onDupli
                 {visiveis.map((item, itemIdx) => {
                   const realIdx = item.__uid ? items.findIndex(i => i.__uid === item.__uid) : items.indexOf(item)
                   const temSubstitutoOculto = !exibirSubs && !item.substitute && items[realIdx + 1]?.substitute === 1
+                  // Subs ocultos + item principal: mover em bloco (imanta substitutos abaixo).
+                  const moveAsGroup = !exibirSubs && !item.substitute
+                  const handleMove = (dir) => (moveAsGroup ? onMoveGroup(realIdx, dir) : onMoveItem(realIdx, dir))
+                  let groupSize = 1
+                  if (moveAsGroup) while (items[realIdx + groupSize]?.substitute === 1) groupSize++
+                  const upDisabled = realIdx === 0
+                  const downDisabled = moveAsGroup ? realIdx + groupSize >= items.length : realIdx === items.length - 1
                   return (
                     <tr key={item.__uid || itemIdx}
                       className={`transition-colors ${item.substitute ? 'bg-red-500/10' : temSubstitutoOculto ? 'bg-[#2c2c31]' : 'bg-[#222226]'} hover:bg-[#2f2f35]`}>
                       <td className="px-2 py-2 rounded-l-lg">
                         <div className="flex items-center gap-1 justify-center">
                           <div className="flex flex-col items-center">
-                            <button onClick={() => onMoveItem(realIdx, -1)} disabled={realIdx === 0}
+                            <button onClick={() => handleMove(-1)} disabled={upDisabled}
                               className="h-4 w-5 flex items-center justify-center text-gray-500 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
                               <ChevronUp size={11} />
                             </button>
-                            <button onClick={() => onMoveItem(realIdx, +1)} disabled={realIdx === items.length - 1}
+                            <button onClick={() => handleMove(+1)} disabled={downDisabled}
                               className="h-4 w-5 flex items-center justify-center text-gray-500 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
                               <ChevronDown size={11} />
                             </button>
@@ -988,6 +995,37 @@ const RefeicaoBlock = ({ n, draft, setDraft }) => {
         ;[arr[idx], arr[target]] = [arr[target], arr[idx]]
         return { ...prev, [field]: arr }
       }),
+      // Move "grupo" (principal + substitutos contíguos abaixo) em bloco.
+      // Usado quando substitutos estão ocultos, pra não bagunçar a hierarquia
+      // visual ao reordenar principais.
+      onMoveGroup: (idx, dir) => setDraft(prev => {
+        const arr = [...(prev[field] || [])]
+        if (idx < 0 || idx >= arr.length) return prev
+        let groupSize = 1
+        if (arr[idx]?.substitute !== 1) {
+          while (arr[idx + groupSize]?.substitute === 1) groupSize++
+        }
+        if (dir === -1) {
+          if (idx === 0) return prev
+          let prevEnd = idx - 1
+          let prevStart = prevEnd
+          while (prevStart > 0 && arr[prevStart]?.substitute === 1) prevStart--
+          const before = arr.slice(0, prevStart)
+          const prevGroup = arr.slice(prevStart, prevEnd + 1)
+          const myGroup = arr.slice(idx, idx + groupSize)
+          const after = arr.slice(idx + groupSize)
+          return { ...prev, [field]: [...before, ...myGroup, ...prevGroup, ...after] }
+        }
+        const nextStart = idx + groupSize
+        if (nextStart >= arr.length) return prev
+        let nextSize = 1
+        while (arr[nextStart + nextSize]?.substitute === 1) nextSize++
+        const before = arr.slice(0, idx)
+        const myGroup = arr.slice(idx, idx + groupSize)
+        const nextGroup = arr.slice(nextStart, nextStart + nextSize)
+        const afterNext = arr.slice(nextStart + nextSize)
+        return { ...prev, [field]: [...before, ...nextGroup, ...myGroup, ...afterNext] }
+      }),
       onUpdateItem: (idx, key, value) => setDraft(prev => {
         let arr = [...(prev[field] || [])]
         if (key === '__selecionarAlimento') {
@@ -1277,7 +1315,9 @@ export default function DietaDetalhe() {
         for (let j = 1; j <= 10; j++) {
           const field = `meal_${i}_option_${j}_items`
           if (payload[field]) {
-            payload[field] = payload[field].map(({ __uid, _base, ...rest }) => rest)
+            // idx explícito por posição garante que Frappe preserve a ordem
+            // do array (itens novos sem `name` não são jogados pro fim).
+            payload[field] = payload[field].map(({ __uid, _base, ...rest }, pos) => ({ ...rest, idx: pos + 1 }))
           }
         }
       }

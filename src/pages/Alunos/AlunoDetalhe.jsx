@@ -265,7 +265,11 @@ export default function AlunoDetalhe() {
       {/* Conteúdo */}
       <div className="max-w-screen-xl mx-auto px-4 md:px-8 py-6">
         {abaAtiva === 'perfil' && (
-          <TabPerfil aluno={aluno} alunoId={id} />
+          <TabPerfil
+            aluno={aluno}
+            alunoId={id}
+            onSaved={(atualizado) => setAluno(prev => ({ ...prev, ...atualizado }))}
+          />
         )}
 
         {abaAtiva === 'dietas' && (

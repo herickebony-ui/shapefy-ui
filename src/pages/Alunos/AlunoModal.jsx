@@ -138,7 +138,7 @@ function formatarEndereco(address) {
   return partes.join(', ')
 }
 
-export function TabPerfil({ aluno: inicial, alunoId }) {
+export function TabPerfil({ aluno: inicial, alunoId, onSaved }) {
   const [form, setForm] = useState({
     nome_completo: inicial.nome_completo || '',
     email: inicial.email || '',
@@ -201,13 +201,14 @@ export function TabPerfil({ aluno: inicial, alunoId }) {
     setSalvando(true)
     try {
       const { ja_usou_o_aplicativo: _a, link_de_cadastro: _b, ...payload } = form
-      await salvarAluno(alunoId, {
+      const atualizado = await salvarAluno(alunoId, {
         ...payload,
         'endereço': formatarEndereco(address),
         enabled: form.enabled ? 1 : 0,
         dieta: form.dieta ? 1 : 0,
         treino: form.treino ? 1 : 0,
       })
+      onSaved?.(atualizado)
       setSalvo(true)
       setTimeout(() => setSalvo(false), 2000)
     } catch (e) {
@@ -666,7 +667,7 @@ export default function AlunoModal({ aluno: alunoBase, onClose }) {
         <div className="p-4 min-h-[360px]">
           {abaAtiva === 'perfil' && (
             loadingPerfil ? <div className="flex justify-center py-12"><Spinner /></div>
-              : perfilData ? <TabPerfil aluno={perfilData} alunoId={alunoBase.name} /> : null
+              : perfilData ? <TabPerfil aluno={perfilData} alunoId={alunoBase.name} onSaved={(a) => setPerfilData(prev => ({ ...prev, ...a }))} /> : null
           )}
           {abaAtiva === 'dietas' && (
             loadingDietas ? <div className="flex justify-center py-12"><Spinner /></div>

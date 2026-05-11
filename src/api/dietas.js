@@ -90,7 +90,7 @@ export const duplicarDieta = async (id, novoAluno = null, dataInicial = null, da
     for (let j = 1; j <= 10; j++) {
       const field = `meal_${i}_option_${j}_items`
       if (payload[field]) {
-        payload[field] = payload[field].map(({ name: _n, ...item }) => item)
+        payload[field] = payload[field].map(({ name: _n, ...item }, pos) => ({ ...item, idx: pos + 1 }))
       }
     }
   }

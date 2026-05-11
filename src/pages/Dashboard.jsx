@@ -1,9 +1,12 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Users, UserCheck, UserX, CalendarPlus, Plus, RefreshCw, Trash2, Link2 } from 'lucide-react'
+import { Users, UserCheck, UserX, CalendarPlus, Plus, RefreshCw, Trash2, Link2, AlertTriangle, ClipboardList, Activity } from 'lucide-react'
 import { listarAlunos, criarAluno, buscarStatsAlunos, excluirAluno } from '../api/alunos'
+import { listarDietas } from '../api/dietas'
+import { listarFichas } from '../api/fichas'
+import { parseFrappeError } from '../utils/frappeErrors'
 import {
-  Button, Badge, DataTable,
+  Button, Badge, DataTable, Spinner,
   Modal, FormGroup, Input, Select,
 } from '../components/ui'
 import ListPage from '../components/templates/ListPage'
@@ -13,6 +16,7 @@ import useOnboardingStore from '../store/onboardingStore'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 const PAGE_SIZE = 30
+const FETCH_LIMIT = 500
 
 const SEXO_OPTS = [
   { value: '', label: 'Selecionar...' },
@@ -48,7 +52,7 @@ export default function Dashboard() {
   const [filtroStatus, setFiltroStatus] = useState('')
   const [filtroSexo, setFiltroSexo] = useState('')
   const [page, setPage] = useState(1)
-  const [hasMore, setHasMore] = useState(false)
+  const [pageSize, setPageSize] = useState(PAGE_SIZE)
   const debounceRef = useRef(null)
 
   // Stats
@@ -57,6 +61,8 @@ export default function Dashboard() {
   // Modal excluir
   const [alunoExcluir, setAlunoExcluir] = useState(null)
   const [excluindo, setExcluindo] = useState(false)
+  const [bloqueio, setBloqueio] = useState(null) // { checking, dietas, fichas }
+  const [erroExcluir, setErroExcluir] = useState(null)
 
   // Modal novo aluno
   const [showModal, setShowModal] = useState(false)
@@ -76,6 +82,25 @@ export default function Dashboard() {
   // Reset page on filter change
   useEffect(() => { setPage(1) }, [filtroStatus, filtroSexo])
 
+  // Pré-checa dietas e fichas vinculadas ao abrir o modal de exclusão
+  useEffect(() => {
+    if (!alunoExcluir) {
+      setBloqueio(null)
+      setErroExcluir(null)
+      return
+    }
+    setBloqueio({ checking: true, dietas: 0, fichas: 0 })
+    setErroExcluir(null)
+    let cancelado = false
+    Promise.all([
+      listarDietas({ alunoId: alunoExcluir.name, limit: 50 }).then(r => r.list?.length || 0).catch(() => 0),
+      listarFichas({ aluno: alunoExcluir.name, limit: 50 }).then(r => r.list?.length || 0).catch(() => 0),
+    ]).then(([dietas, fichas]) => {
+      if (!cancelado) setBloqueio({ checking: false, dietas, fichas })
+    })
+    return () => { cancelado = true }
+  }, [alunoExcluir])
+
   const carregar = useCallback(async () => {
     setLoading(true)
     try {
@@ -83,17 +108,15 @@ export default function Dashboard() {
         search: queryBusca,
         enabled: filtroStatus,
         sexo: filtroSexo,
-        page,
-        limit: PAGE_SIZE,
+        limit: FETCH_LIMIT,
       })
       setAlunos(res.list)
-      setHasMore(res.hasMore)
     } catch (e) {
       console.error(e)
     } finally {
       setLoading(false)
     }
-  }, [queryBusca, filtroStatus, filtroSexo, page])
+  }, [queryBusca, filtroStatus, filtroSexo])
 
   useEffect(() => { carregar() }, [carregar])
 
@@ -107,6 +130,7 @@ export default function Dashboard() {
   const handleExcluir = async () => {
     if (!alunoExcluir) return
     setExcluindo(true)
+    setErroExcluir(null)
     try {
       await excluirAluno(alunoExcluir.name)
       setAlunoExcluir(null)
@@ -114,7 +138,7 @@ export default function Dashboard() {
       buscarStatsAlunos().then(setStats).catch(() => {})
     } catch (e) {
       console.error(e)
-      alert('Erro ao excluir aluno.')
+      setErroExcluir(parseFrappeError(e) || 'Não foi possível excluir o aluno.')
     } finally { setExcluindo(false) }
   }
 
@@ -260,33 +284,97 @@ export default function Dashboard() {
             rowKey="name"
             onRowClick={(row) => navigate(`/alunos/${encodeURIComponent(row.name)}`)}
             page={page}
-            pageSize={PAGE_SIZE}
+            pageSize={pageSize}
             onPage={setPage}
-            hasMore={hasMore}
+            onPageSize={(s) => { setPageSize(s); setPage(1) }}
           />
         )}
       </ListPage>
 
       <OnboardingModal />
 
-      {alunoExcluir && (
-        <Modal
-          isOpen
-          onClose={() => setAlunoExcluir(null)}
-          title="Excluir Aluno"
-          size="sm"
-          footer={
-            <>
-              <Button variant="ghost" onClick={() => setAlunoExcluir(null)}>Cancelar</Button>
-              <Button variant="danger" loading={excluindo} onClick={handleExcluir}>Excluir</Button>
-            </>
-          }
-        >
-          <div className="p-4 text-sm text-gray-300">
-            Tem certeza que deseja excluir <span className="text-white font-semibold">{alunoExcluir.nome_completo}</span>? Esta ação não pode ser desfeita.
-          </div>
-        </Modal>
-      )}
+      {alunoExcluir && (() => {
+        const checando = bloqueio?.checking
+        const temBloqueio = bloqueio && !bloqueio.checking && (bloqueio.dietas > 0 || bloqueio.fichas > 0)
+        return (
+          <Modal
+            isOpen
+            onClose={() => setAlunoExcluir(null)}
+            title={temBloqueio ? 'Não é possível excluir' : 'Excluir Aluno'}
+            size="sm"
+            footer={
+              temBloqueio ? (
+                <>
+                  <Button variant="ghost" onClick={() => setAlunoExcluir(null)}>Fechar</Button>
+                  <Button variant="primary" onClick={() => { const id = alunoExcluir.name; setAlunoExcluir(null); navigate(`/alunos/${encodeURIComponent(id)}`) }}>
+                    Abrir perfil
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="ghost" onClick={() => setAlunoExcluir(null)}>Cancelar</Button>
+                  <Button variant="danger" loading={excluindo} disabled={checando} onClick={handleExcluir}>Excluir</Button>
+                </>
+              )
+            }
+          >
+            {checando ? (
+              <div className="p-6 flex items-center justify-center gap-3 text-sm text-gray-400">
+                <Spinner size="sm" />
+                <span>Verificando vínculos…</span>
+              </div>
+            ) : temBloqueio ? (
+              <div className="p-4 space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                    <AlertTriangle size={16} className="text-yellow-500" />
+                  </div>
+                  <div className="text-sm text-gray-300 leading-relaxed">
+                    <span className="text-white font-semibold">{alunoExcluir.nome_completo}</span> tem registros vinculados que precisam ser removidos antes da exclusão.
+                  </div>
+                </div>
+
+                <div className="bg-[#1a1a1a] rounded-lg border border-[#323238] divide-y divide-[#323238]/60">
+                  {bloqueio.dietas > 0 && (
+                    <div className="flex items-center justify-between px-3 py-2.5">
+                      <div className="flex items-center gap-2.5">
+                        <ClipboardList size={14} className="text-blue-400" />
+                        <span className="text-white text-xs font-medium">Dietas vinculadas</span>
+                      </div>
+                      <Badge variant="info" size="sm">{bloqueio.dietas}</Badge>
+                    </div>
+                  )}
+                  {bloqueio.fichas > 0 && (
+                    <div className="flex items-center justify-between px-3 py-2.5">
+                      <div className="flex items-center gap-2.5">
+                        <Activity size={14} className="text-purple-400" />
+                        <span className="text-white text-xs font-medium">Fichas de treino vinculadas</span>
+                      </div>
+                      <Badge variant="purple" size="sm">{bloqueio.fichas}</Badge>
+                    </div>
+                  )}
+                </div>
+
+                <p className="text-gray-500 text-xs">
+                  Abra o perfil do aluno e exclua {bloqueio.dietas > 0 && bloqueio.fichas > 0 ? 'as dietas e fichas' : bloqueio.dietas > 0 ? 'as dietas' : 'as fichas'} antes de tentar novamente.
+                </p>
+              </div>
+            ) : (
+              <div className="p-4 space-y-3">
+                <p className="text-sm text-gray-300">
+                  Tem certeza que deseja excluir <span className="text-white font-semibold">{alunoExcluir.nome_completo}</span>? Esta ação não pode ser desfeita.
+                </p>
+                {erroExcluir && (
+                  <div className="flex items-start gap-2.5 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                    <AlertTriangle size={14} className="text-red-400 shrink-0 mt-0.5" />
+                    <p className="text-xs text-red-300 leading-relaxed">{erroExcluir}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </Modal>
+        )
+      })()}
 
       {showModal && (
         <Modal
