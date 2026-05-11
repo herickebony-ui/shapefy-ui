@@ -5,6 +5,12 @@
     <link rel="icon" href="/shapefy-logo.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
     <meta name="google" content="notranslate" />
+    <!-- Anti-cache do shell HTML: iOS/PWA é agressivo cacheando o index.html
+         no home-screen e segura versões antigas mesmo após deploy. Assets
+         versionados (com hash no nome) podem ser cacheados normalmente. -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <title>Shapefy</title>
   </head>
   <body>
