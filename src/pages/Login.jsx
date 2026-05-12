@@ -46,7 +46,7 @@ export default function Login() {
       navigate('/')
     } catch (err) {
       console.log('ERRO:', err.response?.data)
-      setError('E-mail ou senha incorretos. Tente novamente.')
+      setError('Usuário ou senha incorretos. Tente novamente.')
     } finally {
       setLoading(false)
     }
@@ -74,11 +74,14 @@ export default function Login() {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <Input
-              label="E-mail"
-              type="email"
+              label="E-mail ou usuário"
+              type="text"
               value={form.usr}
               onChange={(val) => setForm({ ...form, usr: val })}
               placeholder="seu@email.com"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               required
             />
 
