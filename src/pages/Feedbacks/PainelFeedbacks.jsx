@@ -12,7 +12,7 @@ import {
 import ListPage from '../../components/templates/ListPage'
 
 import { listarAgendamentos } from '../../api/cronogramaFeedbacks'
-import { listarAlunos } from '../../api/alunos'
+import { listarAlunos, listarAlunosByIds } from '../../api/alunos'
 
 import Toast from './cronograma/Toast'
 import { fmtDateBR, todayISO } from './cronograma/utils'
@@ -127,9 +127,24 @@ export default function PainelFeedbacks() {
         listarAgendamentos({ limit: 1000 }),
         listarAlunos({ limit: 500 }),
       ])
-      setAgendamentos(agsRes.list || [])
+      const ags = agsRes.list || []
       const mapAlunos = {}
       ;(alsRes.list || []).forEach(a => { mapAlunos[a.name] = a })
+
+      // Alunos referenciados em agendamentos que não vieram na paginação inicial
+      const faltantes = [...new Set(
+        ags.map(a => a.aluno).filter(id => id && !mapAlunos[id]),
+      )]
+      if (faltantes.length) {
+        try {
+          const extras = await listarAlunosByIds(faltantes)
+          extras.forEach(a => { mapAlunos[a.name] = a })
+        } catch (err) {
+          console.error('Falha ao hidratar alunos faltantes', err)
+        }
+      }
+
+      setAgendamentos(ags)
       setAlunosPorId(mapAlunos)
     } catch (e) {
       console.error(e)
@@ -175,7 +190,7 @@ export default function PainelFeedbacks() {
       const aluno = alunosPorId[a.aluno]
       return {
         ...a,
-        _alunoNome: aluno?.nome_completo || a.aluno,
+        _alunoNome: aluno?.nome_completo || 'Aluno sem nome',
         _alunoEmail: aluno?.email || '',
         _alunoTelefone: aluno?.telefone || '',
         _alunoSenha: aluno?.senha_de_acesso || '',

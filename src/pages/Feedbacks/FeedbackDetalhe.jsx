@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Star, X, RefreshCw, User, Calendar, FileText, Clock } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Star, X, RefreshCw, User, Calendar, FileText, Clock, Copy, Check } from 'lucide-react'
 import {
   buscarFeedback,
   salvarStatusFeedback,
@@ -11,6 +11,7 @@ import {
 import { Button, Spinner, Textarea, FormGroup } from '../../components/ui'
 import DetailPage from '../../components/templates/DetailPage'
 import ImagemInterativa from './ImagemInterativa'
+import { formatFeedbackParaCopia, copiarTexto } from '../../utils/copiarRespostas'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 
@@ -50,6 +51,8 @@ export default function FeedbackDetalhe() {
   const [modoTrocarFoto, setModoTrocarFoto] = useState(false)
   const [fotosSelecionadas, setFotosSelecionadas] = useState([])
   const [salvandoTroca, setSalvandoTroca] = useState(false)
+
+  const [copiado, setCopiado] = useState(false)
 
   useEffect(() => {
     const carregar = async () => {
@@ -167,13 +170,37 @@ export default function FeedbackDetalhe() {
     </div>
   )
 
+  const handleCopiarRespostas = async () => {
+    if (!feedback) return
+    const ok = await copiarTexto(formatFeedbackParaCopia(feedback, { tipo: 'Feedback' }))
+    if (ok) {
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    }
+  }
+
   const actionsNode = !modoTrocarFoto ? (
-    <button
-      onClick={() => { setModoTrocarFoto(true); setFotosSelecionadas([]) }}
-      className="px-3 py-1.5 bg-[#29292e] border border-[#323238] hover:border-orange-500/50 text-orange-300 rounded-lg text-xs font-bold transition-all"
-    >
-      Trocar Fotos
-    </button>
+    <div className="flex items-center gap-2">
+      <button
+        onClick={handleCopiarRespostas}
+        disabled={!feedback}
+        title="Copiar respostas em texto"
+        className={`px-3 py-1.5 bg-[#29292e] border rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 disabled:opacity-40 ${
+          copiado
+            ? 'border-green-500/50 text-green-400'
+            : 'border-[#323238] hover:border-blue-500/50 text-blue-300'
+        }`}
+      >
+        {copiado ? <Check size={12} /> : <Copy size={12} />}
+        {copiado ? 'Copiado' : 'Copiar Respostas'}
+      </button>
+      <button
+        onClick={() => { setModoTrocarFoto(true); setFotosSelecionadas([]) }}
+        className="px-3 py-1.5 bg-[#29292e] border border-[#323238] hover:border-orange-500/50 text-orange-300 rounded-lg text-xs font-bold transition-all"
+      >
+        Trocar Fotos
+      </button>
+    </div>
   ) : (
     <div className="flex items-center gap-2">
       <span className="text-xs text-orange-300 font-bold">{fotosSelecionadas.length}/2</span>

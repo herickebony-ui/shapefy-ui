@@ -113,6 +113,7 @@ function App() {
           {/* sem restrição */}
           <Route path="avaliacoes" element={<AvaliacaoListagem />} />
           <Route path="avaliacoes/nova" element={<AvaliacaoForm />} />
+          <Route path="avaliacoes/:id/editar" element={<AvaliacaoForm />} />
           <Route path="banco-textos" element={<BancoTextos />} />
           <Route path="formularios/feedback" element={<FormularioListagem tipoFixo="feedback" />} />
           <Route path="formularios/anamnese" element={<FormularioListagem tipoFixo="anamnese" />} />

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   ArrowLeft, Plus, RefreshCw, Trash2, FileDown, Check,
-  Filter, GitCompare, X as XIcon, BarChart2, CheckSquare, Square,
+  Filter, GitCompare, X as XIcon, BarChart2, CheckSquare, Square, Edit,
 } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -33,14 +33,14 @@ const FORMULA_OPTS = [
 ]
 
 const PHOTOS = [
-  { key: 'front_photo',             label: 'Frente'               },
-  { key: 'back_photo',              label: 'Costas'               },
-  { key: 'relaxed_left_side_photo', label: 'Lateral Esq. Relaxado'},
-  { key: 'flexed_left_side_photo',  label: 'Lateral Esq. Contraído'},
-  { key: 'relaxed_right_side_photo',label: 'Lateral Dir. Relaxado' },
-  { key: 'flexed_right_side_photo', label: 'Lateral Dir. Contraído'},
-  { key: 'others_1',                label: 'Outros 1'              },
-  { key: 'others_2',                label: 'Outros 2'              },
+  { key: 'front_photo',              label: 'Frente'                          },
+  { key: 'flexed_right_side_photo',  label: 'Lado direito braço flexionado'   },
+  { key: 'relaxed_right_side_photo', label: 'Lado direito braço relaxado'     },
+  { key: 'back_photo',               label: 'Costas'                          },
+  { key: 'flexed_left_side_photo',   label: 'Lado esquerdo braço flexionado'  },
+  { key: 'relaxed_left_side_photo',  label: 'Lado esquerdo braço relaxado'    },
+  { key: 'others_1',                 label: 'Outros 1'                        },
+  { key: 'others_2',                 label: 'Outros 2'                        },
 ]
 
 const fmtDate = (d) => {
@@ -296,11 +296,9 @@ export default function AvaliacaoListagem() {
         head: [['Indicador', ...tableAvs.map(a => fmtDate(a.date))]],
         body: mainRows.map(r => [
           r.label,
-          ...tableAvs.map((a, ci) => {
+          ...tableAvs.map(a => {
             const val = a[r.key]
-            const prev = ci > 0 ? tableAvs[ci - 1][r.key] : null
-            const d = prev && val ? val - prev : null
-            return val ? `${fmtNum(val, 2)}${d && d !== 0 ? (d < 0 ? ' ↓' : ' ↑') : ''}` : '—'
+            return val ? fmtNum(val, 2) : '—'
           }),
         ]),
         theme: 'grid',
@@ -355,11 +353,9 @@ export default function AvaliacaoListagem() {
           head: [['Medida', ...tableAvs.map(a => fmtDate(a.date))]],
           body: circRows.map(r => [
             r.label,
-            ...tableAvs.map((a, ci) => {
+            ...tableAvs.map(a => {
               const val = a[r.key]
-              const d = ci > 0 ? val - (tableAvs[ci - 1][r.key] || 0) : null
-              const arrow = d != null && d !== 0 ? (d < 0 ? ' ↓' : ' ↑') : ''
-              return val ? `${fmtNum(val, 2)}${arrow}` : '—'
+              return val ? fmtNum(val, 2) : '—'
             }),
           ]),
           theme: 'grid',
@@ -483,11 +479,18 @@ export default function AvaliacaoListagem() {
           : <span className="text-gray-700 text-xs">—</span>,
       },
       {
-        label: '',
-        headerClass: 'w-10',
-        cellClass: 'text-right',
+        label: 'Ações',
+        headerClass: 'w-24 text-center',
+        cellClass: 'text-center',
         render: (row) => (
-          <div onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-center gap-1.5" onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => navigate(`/avaliacoes/${row.name}/editar`)}
+              title="Editar"
+              className="h-7 w-7 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors"
+            >
+              <Edit size={12} />
+            </button>
             <button
               onClick={(e) => handleExcluir(e, row)}
               title="Excluir"
@@ -629,16 +632,27 @@ export default function AvaliacaoListagem() {
     const isLast = av.name === historico[historico.length - 1]?.name
     return (
       <th
-        className={`text-center text-[10px] font-bold uppercase px-2 md:px-4 py-3 min-w-[90px] md:min-w-[110px] cursor-pointer select-none transition-colors ${isVisible ? 'text-gray-400' : 'text-gray-700'}`}
-        onClick={() => toggleAvColumn(av.name)}
-        title={isVisible ? 'Clique para ocultar' : 'Clique para mostrar'}
+        className={`text-center text-[10px] font-bold uppercase px-2 md:px-4 py-3 min-w-[90px] md:min-w-[110px] select-none transition-colors ${isVisible ? 'text-gray-400' : 'text-gray-700'}`}
       >
         <div className="flex flex-col items-center gap-1">
-          <span className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isVisible ? 'border-[#2563eb] bg-[#2563eb]/20' : 'border-[#323238]'}`}>
-            {isVisible && <Check size={10} className="text-[#2563eb]" />}
-          </span>
-          {fmtDate(av.date)}
-          {isLast && <span className="text-[8px] text-[#2563eb] font-bold uppercase tracking-widest">ÚLTIMO</span>}
+          <button
+            onClick={() => toggleAvColumn(av.name)}
+            title={isVisible ? 'Clique para ocultar' : 'Clique para mostrar'}
+            className="flex flex-col items-center gap-1 cursor-pointer hover:opacity-80"
+          >
+            <span className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isVisible ? 'border-[#2563eb] bg-[#2563eb]/20' : 'border-[#323238]'}`}>
+              {isVisible && <Check size={10} className="text-[#2563eb]" />}
+            </span>
+            <span>{fmtDate(av.date)}</span>
+            {isLast && <span className="text-[8px] text-[#2563eb] font-bold uppercase tracking-widest">ÚLTIMO</span>}
+          </button>
+          <button
+            onClick={() => navigate(`/avaliacoes/${av.name}/editar`)}
+            title="Editar avaliação"
+            className="h-5 w-5 flex items-center justify-center text-gray-500 hover:text-white border border-[#323238] hover:border-blue-500 rounded transition-colors"
+          >
+            <Edit size={9} />
+          </button>
         </div>
       </th>
     )
@@ -997,37 +1011,61 @@ export default function AvaliacaoListagem() {
         </div>
       )}
 
-      {/* Fotos */}
+      {/* Fotos — uma linha por pose, colunas por data (comparação lado a lado) */}
       {hasAnyPhotos && (
         <div className="bg-[#222226] border border-[#323238] rounded-lg overflow-hidden">
-          <div className="px-4 py-3 border-b border-[#323238] bg-[#1a1a1a]/40">
-            <h3 className="font-bold text-white text-sm">Fotos ({historico.length} avaliações)</h3>
+          <div className="px-4 py-3 border-b border-[#323238] bg-[#1a1a1a]/40 flex items-center justify-between flex-wrap gap-2">
+            <h3 className="font-bold text-white text-sm">Fotos comparativas</h3>
+            <p className="text-[11px] text-gray-500">
+              Cada linha é uma pose · {visibleAvs.length} avaliações selecionadas
+            </p>
           </div>
           <div className="p-4 space-y-6">
-            {historico.map(av => {
-              const fotosAv = PHOTOS.filter(p => av[p.key])
-              if (!fotosAv.length) return null
+            {/* Cabeçalho de datas */}
+            <div
+              className="grid gap-3"
+              style={{ gridTemplateColumns: `120px repeat(${visibleAvs.length}, minmax(0, 1fr))` }}
+            >
+              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest self-end pb-1">
+                Pose
+              </span>
+              {visibleAvs.map(av => (
+                <div key={av.name} className="text-center">
+                  <span className="block text-[11px] font-bold text-white">{fmtDate(av.date)}</span>
+                  {av.name === historico[historico.length - 1]?.name && (
+                    <span className="text-[9px] text-[#2563eb] font-bold uppercase tracking-widest">Último</span>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Uma linha por pose com fotos lado a lado */}
+            {PHOTOS.map(pose => {
+              const temAlguma = visibleAvs.some(av => av[pose.key])
+              if (!temAlguma) return null
               return (
-                <div key={av.name}>
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
-                    {fmtDate(av.date)}
-                    {av.name === historico[historico.length - 1]?.name && (
-                      <span className="ml-2 text-[#2563eb]">ÚLTIMO</span>
-                    )}
-                  </p>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {fotosAv.map(p => (
-                      <div key={p.key}>
-                        <p className="text-[10px] text-gray-600 mb-1">{p.label}</p>
-                        <ImagemInterativa
-                          src={`${FRAPPE_URL}${av[p.key]}`}
-                          feedbackId={av.name}
-                          idx={p.key}
-                          onRotate={() => {}}
-                        />
-                      </div>
-                    ))}
+                <div
+                  key={pose.key}
+                  className="grid gap-3 items-start pt-3 border-t border-[#323238]/30"
+                  style={{ gridTemplateColumns: `120px repeat(${visibleAvs.length}, minmax(0, 1fr))` }}
+                >
+                  <div className="text-[11px] font-semibold text-gray-300 pt-2 leading-tight">
+                    {pose.label}
                   </div>
+                  {visibleAvs.map(av => av[pose.key] ? (
+                    <div key={av.name}>
+                      <ImagemInterativa
+                        src={`${FRAPPE_URL}${av[pose.key]}`}
+                        feedbackId={av.name}
+                        idx={pose.key}
+                        onRotate={() => {}}
+                      />
+                    </div>
+                  ) : (
+                    <div key={av.name} className="aspect-[3/4] flex items-center justify-center text-gray-700 text-xs italic border border-dashed border-[#323238] rounded-lg">
+                      —
+                    </div>
+                  ))}
                 </div>
               )
             })}

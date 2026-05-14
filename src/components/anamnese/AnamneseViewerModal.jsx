@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { Copy, Check } from 'lucide-react'
 import { Modal, Button } from '../ui'
 import { salvarAnamnese, rotarImagemAnamnese } from '../../api/anamneses'
 import ImagemInterativa from '../../pages/Feedbacks/ImagemInterativa'
+import { formatFeedbackParaCopia, copiarTexto } from '../../utils/copiarRespostas'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 
@@ -39,7 +41,18 @@ export default function AnamneseViewerModal({ anamnese, onClose, onAtualizada })
   const [editando, setEditando] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [salvo, setSalvo] = useState(false)
+  const [copiado, setCopiado] = useState(false)
   const [imgSrcs, setImgSrcs] = useState({})
+
+  const handleCopiarRespostas = async () => {
+    const limpas = dedupePerguntas(respostas)
+    const dados = { ...anamnese, perguntas_e_respostas: limpas }
+    const ok = await copiarTexto(formatFeedbackParaCopia(dados, { tipo: 'Anamnese' }))
+    if (ok) {
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    }
+  }
 
   const setResposta = (idx, valor) =>
     setRespostas(prev => prev.map((p, i) => i === idx ? { ...p, resposta: valor } : p))
@@ -95,6 +108,13 @@ export default function AnamneseViewerModal({ anamnese, onClose, onAtualizada })
           ) : (
             <>
               <Button variant="ghost" onClick={onClose}>Fechar</Button>
+              <Button
+                variant="secondary"
+                icon={copiado ? Check : Copy}
+                onClick={handleCopiarRespostas}
+              >
+                {copiado ? 'Copiado' : 'Copiar respostas'}
+              </Button>
               <Button variant="secondary" onClick={() => setEditando(true)}>Editar respostas</Button>
             </>
           )}

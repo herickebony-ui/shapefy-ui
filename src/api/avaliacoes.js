@@ -37,11 +37,24 @@ export const listarAvaliacoesPorAluno = async (alunoId) => {
   return res.data.data || []
 }
 
+export const buscarAvaliacao = async (id) => {
+  const res = await client.get(`/api/resource/${DOCTYPE}/${encodeURIComponent(id)}`)
+  return res.data.data
+}
+
 export const criarAvaliacao = async (payload) => {
   const res = await client.post(`/api/resource/${DOCTYPE}`, {
     profissional: profissionalLogado(),
     ...payload,
   })
+  return res.data.data
+}
+
+export const salvarAvaliacao = async (id, payload) => {
+  const res = await client.put(
+    `/api/resource/${DOCTYPE}/${encodeURIComponent(id)}`,
+    payload,
+  )
   return res.data.data
 }
 

@@ -66,7 +66,11 @@ export const listarFeedbacks = async ({ busca = '', status = '', dataInicio = ''
     order_by: 'modified desc',
   }
   const res = await client.get('/api/resource/Feedback', { params })
-  const list = res.data.data || []
+  const list = (res.data.data || []).slice().sort((a, b) => {
+    const da = a.data_resposta || a.modified || ''
+    const db = b.data_resposta || b.modified || ''
+    return db.localeCompare(da)
+  })
   return { list, hasMore: list.length === limit }
 }
 

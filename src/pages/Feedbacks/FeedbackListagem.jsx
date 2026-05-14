@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { RefreshCw, Search, Columns, CheckCircle, Star, X, ArrowLeft, Link2, Trash2, AlertTriangle } from 'lucide-react'
+import { RefreshCw, Search, Columns, CheckCircle, Star, X, ArrowLeft, Link2, Trash2, AlertTriangle, Copy, Check } from 'lucide-react'
 import {
   listarFeedbacks, listarFormularios, buscarFeedback,
   salvarStatusFeedback, rotarImagemFeedback, trocarFotosFeedback, excluirFeedback,
@@ -11,6 +11,7 @@ import ListPage from '../../components/templates/ListPage'
 import ImagemInterativa from './ImagemInterativa'
 import VincularFeedbackModal from '../../components/feedback/VincularFeedbackModal'
 import { buscarSmart } from '../../utils/strings'
+import { formatComparacaoParaCopia, copiarTexto } from '../../utils/copiarRespostas'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 const PAGE_SIZE = 30
@@ -35,6 +36,15 @@ const normalizar = (t) =>
 
 function ViewComparacao({ dados, imgSrcs, onVoltar, onRotate, modoTrocarFoto, setModoTrocarFoto, fotosSelecionadas, setFotosSelecionadas, salvandoTroca, onConfirmarTroca }) {
   const base = dados[0]?.perguntas_e_respostas || []
+  const [copiado, setCopiado] = useState(false)
+
+  const handleCopiarRespostas = async () => {
+    const ok = await copiarTexto(formatComparacaoParaCopia(dados, { tipo: 'Feedback' }))
+    if (ok) {
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    }
+  }
 
   return (
     <div className="w-full h-full flex flex-col bg-[#0a0a0a] text-white animate-in fade-in duration-300">
@@ -50,12 +60,26 @@ function ViewComparacao({ dados, imgSrcs, onVoltar, onRotate, modoTrocarFoto, se
             Comparando {dados.length} feedbacks
           </span>
           {!modoTrocarFoto ? (
-            <button
-              onClick={() => { setModoTrocarFoto(true); setFotosSelecionadas([]) }}
-              className="px-3 py-1.5 bg-[#29292e] border border-[#323238] hover:border-orange-500/50 text-orange-300 rounded-lg text-xs font-bold transition-all"
-            >
-              Trocar Fotos
-            </button>
+            <>
+              <button
+                onClick={handleCopiarRespostas}
+                title="Copiar respostas em texto"
+                className={`px-3 py-1.5 bg-[#29292e] border rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                  copiado
+                    ? 'border-green-500/50 text-green-400'
+                    : 'border-[#323238] hover:border-blue-500/50 text-blue-300'
+                }`}
+              >
+                {copiado ? <Check size={12} /> : <Copy size={12} />}
+                {copiado ? 'Copiado' : 'Copiar Respostas'}
+              </button>
+              <button
+                onClick={() => { setModoTrocarFoto(true); setFotosSelecionadas([]) }}
+                className="px-3 py-1.5 bg-[#29292e] border border-[#323238] hover:border-orange-500/50 text-orange-300 rounded-lg text-xs font-bold transition-all"
+              >
+                Trocar Fotos
+              </button>
+            </>
           ) : (
             <div className="flex items-center gap-2">
               <span className="text-xs text-orange-300 font-bold">{fotosSelecionadas.length}/2 selecionadas</span>
@@ -401,6 +425,7 @@ export default function FeedbackListagem() {
 
   const statusOpts = [
     { value: '', label: 'Todos' },
+    { value: 'Enviado', label: 'Enviado' },
     { value: 'Respondido', label: 'Respondido' },
     { value: 'Finalizado', label: 'Finalizado' },
   ]

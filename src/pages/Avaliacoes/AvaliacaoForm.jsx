@@ -1,12 +1,27 @@
-import { useState, useCallback } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
-import { User, Ruler, Dumbbell, Check, RefreshCw } from 'lucide-react'
-import { criarAvaliacao } from '../../api/avaliacoes'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useNavigate, useLocation, useParams } from 'react-router-dom'
+import { User, Ruler, Dumbbell, Check, RefreshCw, Image as ImageIcon, Upload, Trash2, Camera } from 'lucide-react'
+import client from '../../api/client'
+import { criarAvaliacao, salvarAvaliacao, buscarAvaliacao } from '../../api/avaliacoes'
 import { listarAlunos, buscarAluno } from '../../api/alunos'
 import {
-  Button, FormGroup, Input, Select, Autocomplete,
+  Button, FormGroup, Input, Select, Autocomplete, Spinner,
 } from '../../components/ui'
 import DetailPage from '../../components/templates/DetailPage'
+
+const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
+
+const PHOTOS = [
+  { key: 'front_photo',              label: 'Frente'                          },
+  { key: 'flexed_right_side_photo',  label: 'Lado direito braço flexionado'   },
+  { key: 'relaxed_right_side_photo', label: 'Lado direito braço relaxado'     },
+  { key: 'back_photo',               label: 'Costas'                          },
+  { key: 'flexed_left_side_photo',   label: 'Lado esquerdo braço flexionado'  },
+  { key: 'relaxed_left_side_photo',  label: 'Lado esquerdo braço relaxado'    },
+  { key: 'others_1',                 label: 'Outros 1'                        },
+  { key: 'others_2',                 label: 'Outros 2'                        },
+]
+const PHOTO_KEYS = PHOTOS.map(p => p.key)
 
 const SEXO_OPTS = [
   { value: 'Feminino', label: 'Feminino' },
@@ -25,6 +40,7 @@ const emptyForm = () => ({
   wrist_circumference: '', ankle_circumference: '',
   skinfold_triceps: '', skinfold_subscapular: '', skinfold_suprailiac: '',
   skinfold_abdominal: '', skinfold_chest: '', skinfold_midaxillary: '', skinfold_thigh: '',
+  ...Object.fromEntries(PHOTO_KEYS.map(k => [k, ''])),
 })
 
 function SecaoForm({ icon: Icon, title, children }) {
@@ -38,9 +54,121 @@ function SecaoForm({ icon: Icon, title, children }) {
   )
 }
 
+function FotoUpload({ label, value, onChange }) {
+  const [uploading, setUploading] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
+  const inputRef = useRef(null)
+
+  const enviarArquivo = async (file) => {
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      alert('Envie apenas arquivos de imagem (PNG, JPG, WEBP).')
+      return
+    }
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      // is_private=0 e optimize=0: arquivo público (URL acessível direto) e SEM compressão
+      // do Frappe — preserva qualidade original que o profissional vai usar nas comparações.
+      fd.append('is_private', '0')
+      fd.append('optimize', '0')
+      const res = await client.post('/api/method/upload_file', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      const url = res.data?.message?.file_url
+      if (url) onChange(url)
+      else alert('Upload concluiu mas não retornou URL.')
+    } catch (err) {
+      console.error(err)
+      alert('Erro ao enviar a foto.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleInput = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    await enviarArquivo(file)
+  }
+
+  const handleDrop = async (e) => {
+    e.preventDefault()
+    setDragOver(false)
+    if (uploading) return
+    const file = e.dataTransfer.files?.[0]
+    await enviarArquivo(file)
+  }
+
+  const preview = value ? `${FRAPPE_URL}${value}` : null
+
+  return (
+    <div className="bg-[#1a1a1a] border border-[#323238] rounded-lg p-2 space-y-2">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">{label}</p>
+      <div
+        onClick={() => !uploading && inputRef.current?.click()}
+        onDragOver={(e) => { e.preventDefault(); if (!uploading) setDragOver(true) }}
+        onDragEnter={(e) => { e.preventDefault(); if (!uploading) setDragOver(true) }}
+        onDragLeave={(e) => { e.preventDefault(); setDragOver(false) }}
+        onDrop={handleDrop}
+        className={`relative aspect-square w-full rounded-lg border border-dashed overflow-hidden cursor-pointer transition-colors flex items-center justify-center
+          ${dragOver
+            ? 'border-[#2563eb] bg-[#2563eb]/10'
+            : 'border-[#323238] bg-[#0a0a0a] hover:border-[#2563eb]/50'
+          }`}
+      >
+        {uploading ? (
+          <span className="w-6 h-6 border-2 border-[#2563eb] border-t-transparent rounded-full animate-spin" />
+        ) : preview ? (
+          <>
+            <img src={preview} alt={label} className="w-full h-full object-cover" />
+            {dragOver && (
+              <div className="absolute inset-0 bg-[#2563eb]/40 flex items-center justify-center text-white text-[11px] font-bold uppercase tracking-widest">
+                Solte para substituir
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="flex flex-col items-center gap-1.5 text-gray-600 px-2 text-center">
+            <Camera size={20} />
+            <span className="text-[10px] leading-tight">
+              {dragOver ? 'Solte aqui' : 'Clique ou arraste a foto'}
+            </span>
+          </div>
+        )}
+      </div>
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          disabled={uploading}
+          onClick={() => inputRef.current?.click()}
+          className="flex-1 h-7 flex items-center justify-center gap-1 text-[10px] text-gray-400 hover:text-white border border-[#323238] hover:border-blue-500 rounded transition-colors disabled:opacity-40"
+        >
+          <Upload size={10} /> {value ? 'Trocar' : 'Enviar'}
+        </button>
+        {value && (
+          <button
+            type="button"
+            disabled={uploading}
+            onClick={() => onChange('')}
+            title="Remover foto"
+            className="h-7 w-7 flex items-center justify-center text-[#2563eb] hover:text-white border border-[#2563eb]/30 hover:bg-[#2563eb] rounded transition-colors disabled:opacity-40"
+          >
+            <Trash2 size={11} />
+          </button>
+        )}
+      </div>
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleInput} />
+    </div>
+  )
+}
+
 export default function AvaliacaoForm() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { id } = useParams()
+  const editando = !!id
   const preAluno = location.state?.aluno || null
 
   const [form, setForm] = useState(() => {
@@ -49,6 +177,34 @@ export default function AvaliacaoForm() {
     return f
   })
   const [salvando, setSalvando] = useState(false)
+  const [carregando, setCarregando] = useState(editando)
+
+  useEffect(() => {
+    if (!editando) return
+    let cancelado = false
+    setCarregando(true)
+    buscarAvaliacao(id)
+      .then(d => {
+        if (cancelado || !d) return
+        // Frappe devolve número 0 quando não preenchido — converte pra string vazia
+        // pra não poluir o input. Mantém só valores significativos.
+        const limpo = {}
+        Object.keys(emptyForm()).forEach(k => {
+          const v = d[k]
+          if (v == null) { limpo[k] = ''; return }
+          if (typeof v === 'number' && v === 0) { limpo[k] = ''; return }
+          limpo[k] = String(v).split(' ')[0]
+        })
+        setForm(prev => ({ ...prev, ...limpo }))
+      })
+      .catch(e => {
+        console.error(e)
+        alert('Erro ao carregar avaliação.')
+        navigate('/avaliacoes')
+      })
+      .finally(() => { if (!cancelado) setCarregando(false) })
+    return () => { cancelado = true }
+  }, [id, editando, navigate])
 
   const set = (campo) => (val) => setForm(prev => ({ ...prev, [campo]: val }))
 
@@ -75,30 +231,49 @@ export default function AvaliacaoForm() {
     try {
       const payload = { ...form }
       Object.keys(payload).forEach(k => {
+        // Fotos guardam URL — não converter pra número, e vazio fica null pra Frappe limpar o campo.
+        if (PHOTO_KEYS.includes(k)) {
+          if (payload[k] === '') payload[k] = null
+          return
+        }
         if (payload[k] === '') payload[k] = 0
         else if (!isNaN(Number(payload[k])) && k !== 'aluno' && k !== 'nome_completo' && k !== 'date' && k !== 'sex')
           payload[k] = Number(payload[k])
       })
-      await criarAvaliacao(payload)
+      if (editando) {
+        // Frappe não aceita alterar `aluno` em update direto sem cuidados — mantém os campos editáveis.
+        const { aluno: _aluno, nome_completo: _nome, ...editavel } = payload
+        await salvarAvaliacao(id, editavel)
+      } else {
+        await criarAvaliacao(payload)
+      }
       navigate('/avaliacoes')
     } catch (e) {
       console.error(e)
-      alert('Erro ao salvar avaliação.')
+      alert(`Erro ao ${editando ? 'salvar alterações' : 'criar avaliação'}.`)
     } finally {
       setSalvando(false)
     }
   }
 
+  if (carregando) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Spinner size="lg" />
+      </div>
+    )
+  }
+
   return (
     <DetailPage
-      title="Nova Avaliação"
+      title={editando ? 'Editar Avaliação' : 'Nova Avaliação'}
       subtitle="Composição Corporal"
       backHref="/avaliacoes"
       footer={
         <>
           <Button variant="ghost" onClick={() => navigate('/avaliacoes')}>Cancelar</Button>
           <Button variant="primary" icon={salvando ? RefreshCw : Check} loading={salvando} onClick={handleSalvar}>
-            Salvar Avaliação
+            {editando ? 'Salvar Alterações' : 'Salvar Avaliação'}
           </Button>
         </>
       }
@@ -109,23 +284,31 @@ export default function AvaliacaoForm() {
         <SecaoForm icon={User} title="Dados do Aluno">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
-              <FormGroup label="Aluno" required>
-                <Autocomplete
-                  value={form.nome_completo}
-                  onChange={set('nome_completo')}
-                  onSelect={handleSelectAluno}
-                  searchFn={async (q) => {
-                    const res = await listarAlunos({ search: q, limit: 20 })
-                    return res.list
-                  }}
-                  renderItem={(item) => (
-                    <div>
-                      <p className="text-white text-sm font-medium">{item.nome_completo}</p>
-                      <p className="text-gray-500 text-xs">{item.email}</p>
-                    </div>
-                  )}
-                  placeholder="Buscar aluno pelo nome..."
-                />
+              <FormGroup
+                label="Aluno"
+                required
+                hint={editando ? 'O aluno não pode ser alterado depois de criada a avaliação.' : undefined}
+              >
+                {editando ? (
+                  <Input value={form.nome_completo} onChange={() => {}} disabled />
+                ) : (
+                  <Autocomplete
+                    value={form.nome_completo}
+                    onChange={set('nome_completo')}
+                    onSelect={handleSelectAluno}
+                    searchFn={async (q) => {
+                      const res = await listarAlunos({ search: q, limit: 20 })
+                      return res.list
+                    }}
+                    renderItem={(item) => (
+                      <div>
+                        <p className="text-white text-sm font-medium">{item.nome_completo}</p>
+                        <p className="text-gray-500 text-xs">{item.email}</p>
+                      </div>
+                    )}
+                    placeholder="Buscar aluno pelo nome..."
+                  />
+                )}
               </FormGroup>
             </div>
             <FormGroup label="Data da Avaliação" required>
@@ -156,16 +339,16 @@ export default function AvaliacaoForm() {
               { label: 'Cintura', campo: 'waist_circumference' },
               { label: 'Abdômen', campo: 'abdomen_circumference' },
               { label: 'Quadril', campo: 'hip_circumference' },
-              { label: 'Braço Esq. Rel.', campo: 'left_arm_relaxed' },
-              { label: 'Braço Esq. Cont.', campo: 'left_arm_flexed' },
-              { label: 'Braço Dir. Rel.', campo: 'right_arm_relaxed' },
-              { label: 'Braço Dir. Cont.', campo: 'right_arm_flexed' },
-              { label: 'Antebraço Esq.', campo: 'left_forearm' },
-              { label: 'Antebraço Dir.', campo: 'right_forearm' },
-              { label: 'Coxa Esq.', campo: 'left_thigh' },
-              { label: 'Coxa Dir.', campo: 'right_thigh' },
-              { label: 'Panturrilha Esq.', campo: 'left_calf' },
-              { label: 'Panturrilha Dir.', campo: 'right_calf' },
+              { label: 'Braço Direito Relaxado', campo: 'right_arm_relaxed' },
+              { label: 'Antebraço Direito', campo: 'right_forearm' },
+              { label: 'Braço Direito Contraído', campo: 'right_arm_flexed' },
+              { label: 'Coxa Direita', campo: 'right_thigh' },
+              { label: 'Panturrilha Direita', campo: 'right_calf' },
+              { label: 'Braço Esquerdo Relaxado', campo: 'left_arm_relaxed' },
+              { label: 'Antebraço Esquerdo', campo: 'left_forearm' },
+              { label: 'Braço Esquerdo Contraído', campo: 'left_arm_flexed' },                            
+              { label: 'Coxa Esquerda', campo: 'left_thigh' },              
+              { label: 'Panturrilha Esquerda', campo: 'left_calf' },              
               { label: 'Punho', campo: 'wrist_circumference' },
               { label: 'Tornozelo', campo: 'ankle_circumference' },
             ].map(({ label, campo }) => (
@@ -198,11 +381,22 @@ export default function AvaliacaoForm() {
           </div>
         </SecaoForm>
 
-        {/* Fotos — placeholder */}
-        <div className="bg-[#1a1a1a] border border-[#323238] rounded-lg p-4 text-center">
-          <p className="text-gray-500 text-sm">📷 Upload de fotos em breve</p>
-          <p className="text-gray-600 text-xs mt-1">Após salvar a avaliação, adicione as fotos diretamente no Frappe.</p>
-        </div>
+        {/* Fotos */}
+        <SecaoForm icon={ImageIcon} title="Fotos">
+          <p className="text-xs text-gray-500 mb-4">
+            Até 8 fotos: frente, costas, laterais (relaxado e contraído) e 2 extras. Clique no quadro ou arraste a imagem direto do computador. As fotos sobem em qualidade original (sem compressão) e ficam públicas — disponíveis pras comparações e PDFs.
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {PHOTOS.map(({ key, label }) => (
+              <FotoUpload
+                key={key}
+                label={label}
+                value={form[key]}
+                onChange={set(key)}
+              />
+            ))}
+          </div>
+        </SecaoForm>
 
       </div>
     </DetailPage>

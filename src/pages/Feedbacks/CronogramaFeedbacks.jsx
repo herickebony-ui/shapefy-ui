@@ -366,7 +366,7 @@ export default function CronogramaFeedbacks() {
   }
 
   const handleAdicionarNovoDia = () => {
-    if (!modalNovoDia.formulario) {
+    if (!modalNovoDia.is_start && !modalNovoDia.formulario) {
       showToast('Selecione um formulário', 'error'); return
     }
     if (modalNovoDia._editando) {
@@ -404,7 +404,11 @@ export default function CronogramaFeedbacks() {
 
   const handleSetMarcoZero = (dateStr, novoValor) => {
     setSchedule(prev => ({
-      dates: prev.dates.map(d => d.date === dateStr ? { ...d, is_start: novoValor } : d),
+      // Ponto de partida não dispara feedback — quando marca, limpa o formulário pra não persistir vínculo enganoso.
+      dates: prev.dates.map(d => d.date === dateStr
+        ? { ...d, is_start: novoValor, formulario: novoValor ? '' : d.formulario }
+        : d,
+      ),
     }))
     setMarcoZeroMenu(null)
   }
@@ -859,15 +863,24 @@ export default function CronogramaFeedbacks() {
                               variant="icon"
                               size="sm" />
                           </span>
-                          <select
-                            value={d.formulario || formularioSugerido || ''}
-                            onChange={(e) => handleSetFormulario(d.date, e.target.value)}
-                            className="h-7 px-1 bg-[#1a1a1a] border border-[#323238] text-white rounded text-[11px] outline-none focus:border-[#2563eb]/60 truncate"
-                          >
-                            {formularios.map((f) => (
-                              <option key={f.name} value={f.name}>{f.titulo}</option>
-                            ))}
-                          </select>
+                          {d.is_start ? (
+                            <span
+                              title="Ponto de partida não dispara feedback — só serve de âncora pra contar o intervalo."
+                              className="h-7 px-2 inline-flex items-center bg-[#1a1a1a]/40 border border-dashed border-[#323238] text-gray-500 italic rounded text-[11px] truncate"
+                            >
+                              Sem formulário (ponto de partida)
+                            </span>
+                          ) : (
+                            <select
+                              value={d.formulario || formularioSugerido || ''}
+                              onChange={(e) => handleSetFormulario(d.date, e.target.value)}
+                              className="h-7 px-1 bg-[#1a1a1a] border border-[#323238] text-white rounded text-[11px] outline-none focus:border-[#2563eb]/60 truncate"
+                            >
+                              {formularios.map((f) => (
+                                <option key={f.name} value={f.name}>{f.titulo}</option>
+                              ))}
+                            </select>
+                          )}
                           <span className="text-[10px] text-gray-500 text-center">
                             {intervalo > 0 ? `${intervalo}s` : '—'}
                           </span>
