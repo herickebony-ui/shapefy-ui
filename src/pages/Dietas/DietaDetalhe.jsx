@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import {
   ArrowLeft, Save, AlertCircle, Loader, ChevronUp, ChevronDown, Plus,
   FileText, UtensilsCrossed, Edit, Copy, Trash2, ArrowLeftRight, X,
-  BookmarkPlus, BookmarkCheck,
+  BookmarkPlus, BookmarkCheck, Bookmark,
 } from 'lucide-react'
 import {
   buscarDieta, salvarDieta, listarAlimentos,
@@ -13,11 +13,15 @@ import {
   dadosAntropometricosFromAluno,
 } from '../../api/dietas'
 import { listarAlunos, buscarAluno, salvarAluno } from '../../api/alunos'
+import {
+  buscarModeloDieta, salvarModeloDieta, excluirModeloDieta, dietaParaSnapshot,
+} from '../../api/modelos'
 import { listarTextos, salvarNoBancoSeNovo, excluirTexto } from '../../api/bancoTextos'
 import {
   Button, FormGroup, Input, Select, Textarea, Autocomplete,
   Modal, CollapsibleBanner, Tabs, FooterTotais,
 } from '../../components/ui'
+import ModalSalvarComoModelo from '../Modelos/ModalSalvarComoModelo'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (v, dec = 1) => v != null ? Number(v).toFixed(dec) : '0.0'
@@ -1267,6 +1271,10 @@ const TABS_CONFIG = [
 export default function DietaDetalhe() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const isTemplate = location.pathname.startsWith('/modelos/dietas/')
+  const backHref = isTemplate ? '/modelos/dietas' : '/dietas'
+
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -1274,26 +1282,40 @@ export default function DietaDetalhe() {
   const [toastSubstitutos, setToastSubstitutos] = useState(null)
   const [pendingPayload, setPendingPayload] = useState(null)
   const [draft, setDraft] = useState(null)
+  const [modeloMeta, setModeloMeta] = useState(null) // { titulo, categoria, descricao } quando isTemplate
   const [modalDuplicar, setModalDuplicar] = useState(false)
+  const [modalSalvarModelo, setModalSalvarModelo] = useState(false)
+
+  const addUids = (d) => {
+    const result = { ...d }
+    for (let i = 1; i <= 8; i++) {
+      for (let j = 1; j <= 10; j++) {
+        const field = `meal_${i}_option_${j}_items`
+        if (result[field]) {
+          result[field] = result[field].map(item => item.__uid ? item : { ...item, __uid: uid() })
+        }
+      }
+    }
+    return result
+  }
 
   useEffect(() => {
     const load = async () => {
       setLoading(true)
       try {
-        const data = await buscarDieta(id)
-        const addUids = (d) => {
-          const result = { ...d }
-          for (let i = 1; i <= 8; i++) {
-            for (let j = 1; j <= 10; j++) {
-              const field = `meal_${i}_option_${j}_items`
-              if (result[field]) {
-                result[field] = result[field].map(item => item.__uid ? item : { ...item, __uid: uid() })
-              }
-            }
-          }
-          return result
+        if (isTemplate) {
+          const modelo = await buscarModeloDieta(id)
+          const snapshot = JSON.parse(modelo.snapshot_json || '{}')
+          setDraft(addUids({ ...snapshot, aluno: null, nome_completo: '' }))
+          setModeloMeta({
+            titulo: modelo.titulo || '',
+            categoria: modelo.categoria || '',
+            descricao: modelo.descricao || '',
+          })
+        } else {
+          const data = await buscarDieta(id)
+          setDraft(addUids(data))
         }
-        setDraft(addUids(data))
       } catch (err) {
         setError(err.message ?? 'Erro ao carregar dieta')
       } finally {
@@ -1301,10 +1323,20 @@ export default function DietaDetalhe() {
       }
     }
     load()
-  }, [id])
+  }, [id, isTemplate])
+
+  // Persiste payload no modelo: gera snapshot e atualiza refs denormalizadas.
+  const persistirComoModelo = async (payload) => {
+    const snapshot = dietaParaSnapshot(payload)
+    await salvarModeloDieta(id, {
+      snapshot_json: JSON.stringify(snapshot),
+      total_calories_ref: payload.total_calories || 0,
+      strategy_ref: payload.strategy || '',
+    })
+  }
 
   const handleSave = async () => {
-    if (!draft?.aluno) { alert('Selecione um aluno antes de salvar.'); return }
+    if (!isTemplate && !draft?.aluno) { alert('Selecione um aluno antes de salvar.'); return }
     setSaving(true)
     try {
       const totaisCalc = calcularTotais(draft)
@@ -1329,9 +1361,15 @@ export default function DietaDetalhe() {
         setSaving(false)
         return
       }
-      await salvarDieta(id, payload)
-      alert('Dieta salva com sucesso!')
-      navigate('/dietas')
+      if (isTemplate) {
+        await persistirComoModelo(payload)
+        alert('Modelo salvo com sucesso!')
+        navigate(backHref)
+      } else {
+        await salvarDieta(id, payload)
+        alert('Dieta salva com sucesso!')
+        navigate(backHref)
+      }
     } catch (err) {
       alert('Erro ao salvar: ' + err.message)
     } finally {
@@ -1375,32 +1413,57 @@ export default function DietaDetalhe() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6 gap-4">
         <div className="flex items-center gap-3 min-w-0">
-          <button onClick={() => navigate('/dietas')}
+          <button onClick={() => navigate(backHref)}
             className="p-2 rounded-lg bg-[#29292e] border border-[#323238] text-gray-400 hover:text-white transition-colors shrink-0">
             <ArrowLeft size={16} />
           </button>
           <h1 className="text-base md:text-xl font-bold text-white truncate">
-            Editar Dieta: <span className="text-gray-300 font-medium">{draft.nome_completo || draft.aluno}</span>
+            {isTemplate ? 'Editar Modelo' : 'Editar Dieta'}: <span className="text-gray-300 font-medium">
+              {isTemplate ? (modeloMeta?.titulo || 'Modelo') : (draft.nome_completo || draft.aluno)}
+            </span>
           </h1>
+          {isTemplate && modeloMeta?.categoria && (
+            <span className="hidden md:inline-flex items-center text-[10px] font-bold px-2 py-1 rounded border uppercase tracking-wider bg-[#2563eb]/10 text-blue-300 border-[#2563eb]/30 shrink-0">
+              {modeloMeta.categoria}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Button variant="ghost" size="sm" onClick={() => setModalDuplicar(true)} icon={Copy}>
-            <span className="hidden sm:inline">Duplicar</span>
-          </Button>
+          {!isTemplate && (
+            <Button variant="ghost" size="sm" onClick={() => setModalSalvarModelo(true)} icon={Bookmark}>
+              <span className="hidden sm:inline">Salvar como modelo</span>
+            </Button>
+          )}
+          {!isTemplate && (
+            <Button variant="ghost" size="sm" onClick={() => setModalDuplicar(true)} icon={Copy}>
+              <span className="hidden sm:inline">Duplicar</span>
+            </Button>
+          )}
           <Button
             variant="danger"
             size="sm"
             icon={Trash2}
             onClick={async () => {
-              if (!window.confirm('Tem certeza que deseja excluir esta dieta?')) return
-              try { await excluirDieta(id); alert('Dieta excluída!'); navigate('/dietas') }
-              catch (e) { alert('Erro ao excluir: ' + e.message) }
+              const labelEntidade = isTemplate ? 'este modelo' : 'esta dieta'
+              if (!window.confirm(`Tem certeza que deseja excluir ${labelEntidade}?`)) return
+              try {
+                if (isTemplate) {
+                  await excluirModeloDieta(id)
+                  alert('Modelo excluído!')
+                } else {
+                  await excluirDieta(id)
+                  alert('Dieta excluída!')
+                }
+                navigate(backHref)
+              } catch (e) { alert('Erro ao excluir: ' + e.message) }
             }}
           >
             <span className="hidden sm:inline">Excluir</span>
           </Button>
           <Button variant="primary" size="md" icon={Save} onClick={handleSave} loading={saving}>
-            <span className="hidden sm:inline">{saving ? 'Salvando...' : 'Salvar Dieta'}</span>
+            <span className="hidden sm:inline">
+              {saving ? 'Salvando...' : (isTemplate ? 'Salvar Modelo' : 'Salvar Dieta')}
+            </span>
           </Button>
         </div>
       </div>
@@ -1417,70 +1480,78 @@ export default function DietaDetalhe() {
         <div className="space-y-6 animate-in fade-in duration-300">
           <div className="bg-[#29292e] border border-[#323238] rounded-lg p-4 md:p-6 space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="md:col-span-2">
-                <FormGroup label="Aluno" required>
-                  <Autocomplete
-                    value={draft.nome_completo || ''}
-                    onChange={(v) => handleChange('nome_completo', v)}
-                    onSelect={async (a) => {
-                      handleChange('aluno', a.id)
-                      handleChange('nome_completo', a.nome)
-                      try {
-                        const data = await buscarAluno(a.id)
-                        const d = dadosAntropometricosFromAluno(data)
-                        handleChange('sexo', d.sexo)
-                        handleChange('age', d.age)
-                        handleChange('weight', d.weight)
-                        handleChange('height', d.height)
-                        handleChange('frequencia_atividade', d.frequencia_atividade)
-                      } catch (e) { console.error(e) }
-                    }}
-                    searchFn={buscarAlunosFn}
-                    renderItem={(a) => <span className="text-gray-200 text-sm">{a.nome}</span>}
-                    placeholder="Digite o nome do aluno..."
-                  />
-                </FormGroup>
-              </div>
+              {!isTemplate && (
+                <div className="md:col-span-2">
+                  <FormGroup label="Aluno" required>
+                    <Autocomplete
+                      value={draft.nome_completo || ''}
+                      onChange={(v) => handleChange('nome_completo', v)}
+                      onSelect={async (a) => {
+                        handleChange('aluno', a.id)
+                        handleChange('nome_completo', a.nome)
+                        try {
+                          const data = await buscarAluno(a.id)
+                          const d = dadosAntropometricosFromAluno(data)
+                          handleChange('sexo', d.sexo)
+                          handleChange('age', d.age)
+                          handleChange('weight', d.weight)
+                          handleChange('height', d.height)
+                          handleChange('frequencia_atividade', d.frequencia_atividade)
+                        } catch (e) { console.error(e) }
+                      }}
+                      searchFn={buscarAlunosFn}
+                      renderItem={(a) => <span className="text-gray-200 text-sm">{a.nome}</span>}
+                      placeholder="Digite o nome do aluno..."
+                    />
+                  </FormGroup>
+                </div>
+              )}
               <FormGroup label="Estratégia">
                 <Input value={draft.strategy} onChange={(v) => handleChange('strategy', v)} placeholder="Ex: 01 — Dieta Linear" />
               </FormGroup>
               <FormGroup label="Dias da Semana">
                 <Input value={draft.week_days} onChange={(v) => handleChange('week_days', v)} placeholder="Ex: Todos os dias" />
               </FormGroup>
-              <FormGroup label="Data Inicial">
-                <Input type="date" value={draft.date} onChange={(v) => handleChange('date', v)} />
-              </FormGroup>
-              <FormGroup label="Data Final">
-                <Input type="date" value={draft.final_date} onChange={(v) => handleChange('final_date', v)} />
-              </FormGroup>
+              {!isTemplate && (
+                <FormGroup label="Data Inicial">
+                  <Input type="date" value={draft.date} onChange={(v) => handleChange('date', v)} />
+                </FormGroup>
+              )}
+              {!isTemplate && (
+                <FormGroup label="Data Final">
+                  <Input type="date" value={draft.final_date} onChange={(v) => handleChange('final_date', v)} />
+                </FormGroup>
+              )}
               <FormGroup label="Meta de Calorias">
                 <Input type="number" value={draft.calorie_goal} onChange={(v) => handleChange('calorie_goal', v)} />
               </FormGroup>
             </div>
           </div>
 
-          <div className="bg-[#29292e] border border-[#323238] rounded-lg p-4 md:p-6 space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <FormGroup label="Sexo">
-                <Select value={draft.sexo} onChange={(v) => handleChange('sexo', v)} options={['Feminino', 'Masculino']} />
-              </FormGroup>
-              <FormGroup label="Idade">
-                <Input type="number" value={draft.age} onChange={(v) => handleChange('age', v)} />
-              </FormGroup>
-              <FormGroup label="Peso (kg)">
-                <Input type="number" value={draft.weight} onChange={(v) => handleChange('weight', v)} />
-              </FormGroup>
-              <FormGroup label="Altura (cm)">
-                <Input type="number" value={draft.height} onChange={(v) => handleChange('height', v)} />
-              </FormGroup>
-              <div className="md:col-span-2">
-                <FormGroup label="Nível de Atividade Física (PAL)">
-                  <Select value={draft.frequencia_atividade} onChange={(v) => handleChange('frequencia_atividade', v)}
-                    options={['Sedentário', 'Levemente Ativo', 'Moderadamente Ativo', 'Muito Ativo', 'Extremamente Ativo']} />
+          {!isTemplate && (
+            <div className="bg-[#29292e] border border-[#323238] rounded-lg p-4 md:p-6 space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <FormGroup label="Sexo">
+                  <Select value={draft.sexo} onChange={(v) => handleChange('sexo', v)} options={['Feminino', 'Masculino']} />
                 </FormGroup>
+                <FormGroup label="Idade">
+                  <Input type="number" value={draft.age} onChange={(v) => handleChange('age', v)} />
+                </FormGroup>
+                <FormGroup label="Peso (kg)">
+                  <Input type="number" value={draft.weight} onChange={(v) => handleChange('weight', v)} />
+                </FormGroup>
+                <FormGroup label="Altura (cm)">
+                  <Input type="number" value={draft.height} onChange={(v) => handleChange('height', v)} />
+                </FormGroup>
+                <div className="md:col-span-2">
+                  <FormGroup label="Nível de Atividade Física (PAL)">
+                    <Select value={draft.frequencia_atividade} onChange={(v) => handleChange('frequencia_atividade', v)}
+                      options={['Sedentário', 'Levemente Ativo', 'Moderadamente Ativo', 'Muito Ativo', 'Extremamente Ativo']} />
+                  </FormGroup>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           <div className="bg-[#29292e] border border-[#323238] rounded-lg p-4 md:p-6 space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -1543,6 +1614,15 @@ export default function DietaDetalhe() {
         />
       )}
 
+      {/* Modal salvar como modelo */}
+      <ModalSalvarComoModelo
+        tipo="dieta"
+        entidade={draft}
+        isOpen={modalSalvarModelo}
+        onClose={() => setModalSalvarModelo(false)}
+      />
+
+
       {/* Toast substitutos */}
       {toastSubstitutos && (
         <ToastSubstitutos
@@ -1552,11 +1632,15 @@ export default function DietaDetalhe() {
             if (!pendingPayload) return
             setSaving(true)
             try {
-              await salvarDieta(id, pendingPayload.payload)
+              if (isTemplate) {
+                await persistirComoModelo(pendingPayload.payload)
+              } else {
+                await salvarDieta(id, pendingPayload.payload)
+              }
               setToastSubstitutos(null)
               setPendingPayload(null)
-              alert('Dieta salva com sucesso!')
-              navigate('/dietas')
+              alert(isTemplate ? 'Modelo salvo com sucesso!' : 'Dieta salva com sucesso!')
+              navigate(backHref)
             } catch (err) { alert('Erro ao salvar: ' + err.message) }
             finally { setSaving(false) }
           }}

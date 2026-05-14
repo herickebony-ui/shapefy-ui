@@ -4,11 +4,12 @@ import {
   Plus, ChevronRight, Calendar, X,
   Flame, User, LayoutGrid, List,
   RefreshCw, AlertCircle, Copy, ClipboardList,
-  Trash2, SlidersHorizontal, Eye, Loader,
+  Trash2, SlidersHorizontal, Eye, Loader, FileText,
 } from 'lucide-react'
 import { listarDietas, excluirDieta, buscarDieta, salvarDieta, criarDieta, dadosAntropometricosFromAluno } from '../../api/dietas'
 import { listarAlunos, buscarAluno } from '../../api/alunos'
 import { ModalDuplicarDieta } from './DietaDetalhe'
+import ModalEscolherModelo from '../Modelos/ModalEscolherModelo'
 import { Button, FormGroup, Input, Autocomplete, Modal, EmptyState, Pagination, DataTable } from '../../components/ui'
 import { buscarSmart } from '../../utils/strings'
 
@@ -520,6 +521,7 @@ export default function DietaListagem() {
   const [vizId, setVizId] = useState(null)
   const [modalDuplicar, setModalDuplicar] = useState(null)
   const [modalNovaDieta, setModalNovaDieta] = useState(false)
+  const [modalEscolherModelo, setModalEscolherModelo] = useState(false)
   const [dietas, setDietas] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -599,6 +601,12 @@ export default function DietaListagem() {
           onCriada={(id) => { setModalNovaDieta(false); navigate(`/dietas/${id}`) }}
         />
       )}
+      <ModalEscolherModelo
+        tipo="dieta"
+        isOpen={modalEscolherModelo}
+        onClose={() => setModalEscolherModelo(false)}
+        onCriada={(novaId) => { setModalEscolherModelo(false); navigate(`/dietas/${novaId}`) }}
+      />
       {modalDuplicar && (
         <ModalDuplicarDieta
           dietaId={modalDuplicar.id}
@@ -641,6 +649,9 @@ export default function DietaListagem() {
                 </button>
               ))}
             </div>
+            <Button variant="secondary" size="sm" icon={FileText} onClick={() => setModalEscolherModelo(true)} title="A partir de modelo">
+              <span className="hidden sm:inline">A partir de modelo</span>
+            </Button>
             <Button variant="primary" size="sm" icon={Plus} onClick={() => setModalNovaDieta(true)}>
               Nova Dieta
             </Button>

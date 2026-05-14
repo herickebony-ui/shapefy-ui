@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import {
   ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Save,
   Plus, X, Trash2, Copy, Info, Loader,
-  Zap, BookmarkPlus, BookmarkCheck,
+  Zap, BookmarkPlus, BookmarkCheck, Bookmark,
   Link2, ListOrdered,
 } from 'lucide-react'
 import {
@@ -12,11 +12,13 @@ import {
   listarExercicios, listarAlongamentos, listarAerobicos, listarGruposMusculares,
 } from '../../api/fichas'
 import { listarAlunos, buscarAluno, salvarAluno } from '../../api/alunos'
+import { buscarModeloFicha, salvarModeloFicha, fichaParaSnapshot } from '../../api/modelos'
 import { listarTextos, salvarNoBancoSeNovo, excluirTexto } from '../../api/bancoTextos'
 import {
   Button, FormGroup, Input, Select, Textarea,
   Autocomplete, Modal, Spinner, TextareaComSugestoes,
 } from '../../components/ui'
+import ModalSalvarComoModelo from '../Modelos/ModalSalvarComoModelo'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1284,8 +1286,8 @@ const buscarAlunosFn = async (q) => {
   } catch { return [] }
 }
 
-const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
-  const isEdit = !!fichaInicial?.name
+const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, modeloMeta = null, modeloId = null }) => {
+  const isEdit = !!fichaInicial?.name || isTemplate
   const [step, setStep] = useState(() => parseInt(localStorage.getItem('fichaStep') || '0'))
   const [saving, setSaving] = useState(false)
   const [erro, setErro] = useState('')
@@ -1298,6 +1300,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
   const [detalheAerobicoIdx, setDetalheAerobicoIdx] = useState(null)
   const [detalheAlongamentoIdx, setDetalheAlongamentoIdx] = useState(null)
   const [gerenciadorAberto, setGerenciadorAberto] = useState(false)
+  const [modalSalvarModelo, setModalSalvarModelo] = useState(false)
 
   const [gruposDisponiveis, setGruposDisponiveis] = useState(GRUPOS_BASE)
   const [porGrupo, setPorGrupo] = useState({})
@@ -1422,7 +1425,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
   }
 
   const handleSave = async () => {
-    if (!ficha.aluno) { setErro('Selecione um aluno antes de salvar.'); return }
+    if (!isTemplate && !ficha.aluno) { setErro('Selecione um aluno antes de salvar.'); return }
     setSaving(true); setErro('')
     try {
       const comIdx = (arr) => (arr || []).map((item, i) => {
@@ -1446,9 +1449,21 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
         planilha_de_treino_e: comIdx(ficha.planilha_de_treino_e),
         planilha_de_treino_f: comIdx(ficha.planilha_de_treino_f),
       }
-      const resultado = ficha.name ? await salvarFicha(ficha.name, dados) : await criarFicha(dados)
-      if (!ficha.name && resultado?.name) setFicha(f => ({ ...f, name: resultado.name }))
-      onSave(resultado)
+
+      if (isTemplate && modeloId) {
+        const snapshot = fichaParaSnapshot(dados)
+        const resultado = await salvarModeloFicha(modeloId, {
+          snapshot_json: JSON.stringify(snapshot),
+          objetivo_ref: dados.objetivo || '',
+          nivel_ref: dados.nivel || '',
+          tipo_de_ciclo_ref: dados.tipo_de_ciclo || '',
+        })
+        onSave(resultado)
+      } else {
+        const resultado = ficha.name ? await salvarFicha(ficha.name, dados) : await criarFicha(dados)
+        if (!ficha.name && resultado?.name) setFicha(f => ({ ...f, name: resultado.name }))
+        onSave(resultado)
+      }
     } catch (e) {
       console.error(e); setErro(e.message || 'Erro ao salvar a ficha.')
     } finally { setSaving(false) }
@@ -1471,22 +1486,24 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
       <div className="flex flex-col gap-6 max-w-6xl mx-auto w-full">
         <div className="space-y-4">
           <h3 className="text-white font-semibold text-sm border-b border-[#323238] pb-2">Informações da Ficha</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormGroup label="Aluno" required>
-              {ficha.nome_completo ? (
-                <div className="flex items-center justify-between h-10 px-3 rounded-lg bg-[#29292e] border border-[#2563eb]/40">
-                  <span className="text-white text-sm">{ficha.nome_completo}</span>
-                  <button onClick={() => { upd('aluno', ''); upd('nome_completo', '') }} className="text-gray-500 hover:text-red-400 ml-2">×</button>
-                </div>
-              ) : (
-                <Autocomplete
-                  searchFn={buscarAlunosFn}
-                  onSelect={a => { upd('aluno', a.name); upd('nome_completo', a.nome_completo) }}
-                  renderItem={a => <div><p className="font-medium text-sm text-white">{a.nome_completo}</p>{a.email && <p className="text-xs text-gray-500">{a.email}</p>}</div>}
-                  placeholder="Buscar aluno pelo nome..."
-                />
-              )}
-            </FormGroup>
+          <div className={`grid grid-cols-1 ${isTemplate ? '' : 'md:grid-cols-2'} gap-4`}>
+            {!isTemplate && (
+              <FormGroup label="Aluno" required>
+                {ficha.nome_completo ? (
+                  <div className="flex items-center justify-between h-10 px-3 rounded-lg bg-[#29292e] border border-[#2563eb]/40">
+                    <span className="text-white text-sm">{ficha.nome_completo}</span>
+                    <button onClick={() => { upd('aluno', ''); upd('nome_completo', '') }} className="text-gray-500 hover:text-red-400 ml-2">×</button>
+                  </div>
+                ) : (
+                  <Autocomplete
+                    searchFn={buscarAlunosFn}
+                    onSelect={a => { upd('aluno', a.name); upd('nome_completo', a.nome_completo) }}
+                    renderItem={a => <div><p className="font-medium text-sm text-white">{a.nome_completo}</p>{a.email && <p className="text-xs text-gray-500">{a.email}</p>}</div>}
+                    placeholder="Buscar aluno pelo nome..."
+                  />
+                )}
+              </FormGroup>
+            )}
             <FormGroup label="Objetivo">
               <Select value={ficha.objetivo || ''} onChange={v => upd('objetivo', v)}
                 options={['Recomposição corporal', 'Hipertrofia', 'Emagrecimento', 'Condicionamento', 'Saúde geral']}
@@ -1494,26 +1511,28 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
             </FormGroup>
           </div>
 
-          <div className="bg-[#1a1a1a] p-4 rounded-lg border border-[#323238] space-y-3">
-            <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">Planejamento Temporal</span>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-              <FormGroup label="Data de Início">
-                <Input type="date" value={ficha.data_de_inicio || ''} onChange={v => upd('data_de_inicio', v)} />
-              </FormGroup>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-gray-400 font-medium">Duração (Semanas)</label>
-                <div className="flex gap-2">
-                  {/* input de célula — exceção documentada */}
-                  <input type="number" value={numSemanas} onChange={e => setNumSemanas(e.target.value)}
-                    className="bg-[#29292e] border border-[#323238] text-gray-200 text-sm rounded-lg pl-3 w-full outline-none focus:border-[#2563eb]/60 h-10" />
-                  <Button variant="primary" onClick={gerarPeriodizacao} icon={Zap} title="Gerar datas e tabela" />
+          {!isTemplate && (
+            <div className="bg-[#1a1a1a] p-4 rounded-lg border border-[#323238] space-y-3">
+              <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">Planejamento Temporal</span>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <FormGroup label="Data de Início">
+                  <Input type="date" value={ficha.data_de_inicio || ''} onChange={v => upd('data_de_inicio', v)} />
+                </FormGroup>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-400 font-medium">Duração (Semanas)</label>
+                  <div className="flex gap-2">
+                    {/* input de célula — exceção documentada */}
+                    <input type="number" value={numSemanas} onChange={e => setNumSemanas(e.target.value)}
+                      className="bg-[#29292e] border border-[#323238] text-gray-200 text-sm rounded-lg pl-3 w-full outline-none focus:border-[#2563eb]/60 h-10" />
+                    <Button variant="primary" onClick={gerarPeriodizacao} icon={Zap} title="Gerar datas e tabela" />
+                  </div>
                 </div>
+                <FormGroup label="Data Fim">
+                  <Input type="date" value={ficha.data_de_fim || ''} onChange={v => upd('data_de_fim', v)} />
+                </FormGroup>
               </div>
-              <FormGroup label="Data Fim">
-                <Input type="date" value={ficha.data_de_fim || ''} onChange={v => upd('data_de_fim', v)} />
-              </FormGroup>
             </div>
-          </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <FormGroup label="Nível">
@@ -1768,18 +1787,35 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
           <button onClick={onClose} className="text-gray-400 hover:text-white transition">
             <ChevronLeft size={20} />
           </button>
-          <div>
-            <h1 className="text-white font-bold">{isEdit ? 'Editar Ficha' : 'Nova Ficha'}</h1>
-            {ficha.nome_completo && <p className="text-gray-400 text-sm">{ficha.nome_completo}</p>}
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="min-w-0">
+              <h1 className="text-white font-bold truncate">
+                {isTemplate ? 'Editar Modelo' : (isEdit ? 'Editar Ficha' : 'Nova Ficha')}
+              </h1>
+              {isTemplate
+                ? modeloMeta?.titulo && <p className="text-gray-400 text-sm truncate">{modeloMeta.titulo}</p>
+                : ficha.nome_completo && <p className="text-gray-400 text-sm">{ficha.nome_completo}</p>
+              }
+            </div>
+            {isTemplate && modeloMeta?.categoria && (
+              <span className="hidden md:inline-flex items-center text-[10px] font-bold px-2 py-1 rounded border uppercase tracking-wider bg-[#2563eb]/10 text-blue-300 border-[#2563eb]/30 shrink-0">
+                {modeloMeta.categoria}
+              </span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-3">
           {erro && <p className="text-red-400 text-sm max-w-xs truncate">{erro}</p>}
+          {isEdit && !isTemplate && (
+            <Button variant="ghost" size="sm" icon={Bookmark} onClick={() => setModalSalvarModelo(true)}>
+              <span className="hidden sm:inline">Salvar como modelo</span>
+            </Button>
+          )}
           <Button variant="secondary" icon={Copy} onClick={() => setGerenciadorAberto(true)}>
             Gerenciar Treinos
           </Button>
           <Button variant="primary" icon={Save} onClick={handleSave} loading={saving}>
-            Salvar Ficha
+            {isTemplate ? 'Salvar Modelo' : 'Salvar Ficha'}
           </Button>
         </div>
       </div>
@@ -1819,6 +1855,13 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
           onClose={() => setGerenciadorAberto(false)}
         />
       )}
+
+      <ModalSalvarComoModelo
+        tipo="ficha"
+        entidade={ficha}
+        isOpen={modalSalvarModelo}
+        onClose={() => setModalSalvarModelo(false)}
+      />
     </div>
   )
 }
@@ -1828,17 +1871,41 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave }) => {
 export default function FichaDetalhe() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const isTemplate = location.pathname.startsWith('/modelos/fichas/')
+  const backHref = isTemplate ? '/modelos/fichas' : '/fichas'
+
   const [fichaInicial, setFichaInicial] = useState(null)
+  const [modeloMeta, setModeloMeta] = useState(null) // { titulo, categoria, descricao }
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   useEffect(() => {
     if (id === 'nova') { setFichaInicial(null); setLoading(false); return }
-    buscarFicha(id)
-      .then(setFichaInicial)
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false))
-  }, [id])
+    const load = async () => {
+      setLoading(true)
+      try {
+        if (isTemplate) {
+          const modelo = await buscarModeloFicha(id)
+          const snapshot = JSON.parse(modelo.snapshot_json || '{}')
+          setFichaInicial({ ...snapshot, aluno: null, nome_completo: '' })
+          setModeloMeta({
+            titulo: modelo.titulo || '',
+            categoria: modelo.categoria || '',
+            descricao: modelo.descricao || '',
+          })
+        } else {
+          const data = await buscarFicha(id)
+          setFichaInicial(data)
+        }
+      } catch (e) {
+        setError(e.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [id, isTemplate])
 
   if (loading) return (
     <div className="flex items-center justify-center h-full">
@@ -1855,9 +1922,12 @@ export default function FichaDetalhe() {
   return (
     <FormularioFicha
       fichaInicial={fichaInicial}
-      onClose={() => navigate('/fichas')}
+      isTemplate={isTemplate}
+      modeloMeta={modeloMeta}
+      modeloId={isTemplate ? id : null}
+      onClose={() => navigate(backHref)}
       onSave={(saved) => {
-        if (id === 'nova' && saved?.name) navigate(`/fichas/${saved.name}`, { replace: true })
+        if (!isTemplate && id === 'nova' && saved?.name) navigate(`/fichas/${saved.name}`, { replace: true })
       }}
     />
   )

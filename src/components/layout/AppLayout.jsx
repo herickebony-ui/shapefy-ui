@@ -5,7 +5,7 @@ import {
   PanelLeftClose, PanelLeftOpen, UtensilsCrossed, BookOpen,
   Wind, Waves, Pill, CreditCard, UserCircle, HelpCircle, Briefcase,
   TrendingUp, Calendar, LayoutDashboard, Wallet, Layers,
-  Inbox, CalendarClock, FileEdit, FileQuestion,
+  Inbox, CalendarClock, FileEdit, FileQuestion, Bookmark,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import useAuthStore from '../../store/authStore'
@@ -19,6 +19,10 @@ const NAV_ITEMS = [
   { id: 'fichas',       label: 'Fichas de Treino',    icon: Dumbbell,        path: '/fichas',       modulo: 'treino' },
   { id: 'dietas',       label: 'Dietas',              icon: ClipboardList,   path: '/dietas',       modulo: 'dieta' },
   { id: 'prescricoes',  label: 'Prescrição Paciente', icon: Pill,            path: '/prescricoes' },
+
+  { type: 'divider', label: 'Modelos' },
+  { id: 'modelos-fichas', label: 'Modelos de Ficha',  icon: Bookmark,        path: '/modelos/fichas', modulo: 'treino' },
+  { id: 'modelos-dietas', label: 'Modelos de Dieta',  icon: Bookmark,        path: '/modelos/dietas', modulo: 'dieta' },
 
   { type: 'divider', label: 'Avaliação' },
   { id: 'avaliacoes',   label: 'Avaliações Corporais', icon: BarChart2,      path: '/avaliacoes' },

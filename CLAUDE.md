@@ -419,6 +419,19 @@ Filtro obrigatório: `[["Alongamento","enabled","=",1]]`
 Campos: `name`, `exercicio_aerobico`, `video`, `plataforma_do_vídeo`, `enabled`
 Filtro obrigatório: `[["Exercicio Aerobico","enabled","=",1]]`
 
+### Modelo Dieta
+Wrapper leve com snapshot JSON da Dieta congelada (templates).
+Campos: `name`, `titulo`, `descricao`, `categoria` (Emagrecimento / Hipertrofia / Manutenção / Off Season / Cutting / Outros), `tags`, `aluno_origem`, `dieta_origem`, `total_calories_ref`, `strategy_ref`, `enabled`, `snapshot_json` (Long Text)
+API: `src/api/modelos.js` — `listarModelosDieta`, `buscarModeloDieta`, `criarModeloDieta`, `salvarModeloDieta`, `excluirModeloDieta`
+Helpers: `dietaParaSnapshot(dieta)` (limpa metadados + campos do aluno) e `aplicarModeloDieta(snapshot, { aluno, nome_completo, date, final_date, dadosAntropometricos })`.
+**Importante**: ao aplicar, NÃO mandar `profissional` no payload — Frappe auto-preenche (mesmo padrão de `criarDieta`).
+
+### Modelo Ficha
+Wrapper leve com snapshot JSON da Ficha congelada (templates).
+Campos: `name`, `titulo`, `descricao`, `categoria` (Hipertrofia / Força / Resistência / Iniciante / Intermediário / Avançado / Reabilitação / Outros), `tags`, `objetivo_ref`, `nivel_ref`, `tipo_de_ciclo_ref`, `aluno_origem`, `ficha_origem`, `enabled`, `snapshot_json` (Long Text)
+API: `src/api/modelos.js` — `listarModelosFicha`, `buscarModeloFicha`, `criarModeloFicha`, `salvarModeloFicha`, `excluirModeloFicha`
+Helpers: `fichaParaSnapshot(ficha)` e `aplicarModeloFicha(snapshot, { aluno, nome_completo, data_de_inicio, data_de_fim })`.
+
 ---
 
 ## Problemas Conhecidos / Pendências

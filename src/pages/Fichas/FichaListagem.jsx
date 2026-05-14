@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import {
   Plus, ChevronRight, Calendar, User, LayoutGrid, List,
   RefreshCw, AlertCircle, Copy, ClipboardList, X,
-  Trash2, SlidersHorizontal, Eye, Loader, BarChart2,
+  Trash2, SlidersHorizontal, Eye, Loader, BarChart2, FileText,
 } from 'lucide-react'
 import { listarFichas, buscarFicha, excluirFicha, criarFicha, salvarFicha, listarExercicios } from '../../api/fichas'
 import { listarAlunos } from '../../api/alunos'
+import ModalEscolherModelo from '../Modelos/ModalEscolherModelo'
 import { Button, FormGroup, Input, Autocomplete, Modal, EmptyState, Pagination, DataTable } from '../../components/ui'
 import { buscarSmart } from '../../utils/strings'
 
@@ -935,6 +936,7 @@ export default function FichaListagem() {
   const [filtros, setFiltros] = useState(FILTROS_INICIAL)
   const [modalFiltros, setModalFiltros] = useState(false)
   const [modalNova, setModalNova] = useState(false)
+  const [modalEscolherModelo, setModalEscolherModelo] = useState(false)
   const [modalDuplicar, setModalDuplicar] = useState(null)
   const [modalExcluir, setModalExcluir] = useState(null)
   const [modalViz, setModalViz] = useState(null)
@@ -1024,6 +1026,12 @@ export default function FichaListagem() {
           onCriada={(id) => { setModalNova(false); navigate(`/fichas/${id}`) }}
         />
       )}
+      <ModalEscolherModelo
+        tipo="ficha"
+        isOpen={modalEscolherModelo}
+        onClose={() => setModalEscolherModelo(false)}
+        onCriada={(novaId) => { setModalEscolherModelo(false); navigate(`/fichas/${novaId}`) }}
+      />
       {modalDuplicar && (
         <ModalDuplicarFicha
           ficha={modalDuplicar}
@@ -1084,6 +1092,9 @@ export default function FichaListagem() {
                 </button>
               ))}
             </div>
+            <Button variant="secondary" size="sm" icon={FileText} onClick={() => setModalEscolherModelo(true)} title="A partir de modelo">
+              <span className="hidden sm:inline">A partir de modelo</span>
+            </Button>
             <Button variant="primary" size="sm" icon={Plus} onClick={() => setModalNova(true)}>
               Nova Ficha
             </Button>

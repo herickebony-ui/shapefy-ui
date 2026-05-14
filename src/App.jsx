@@ -37,6 +37,8 @@ import FinanceiroListagem from './pages/Financeiro/FinanceiroListagem'
 import PlanosListagem from './pages/Financeiro/PlanosListagem'
 import CadastroPublico from './pages/Cadastro/CadastroPublico'
 import MeuLinkCadastro from './pages/Cadastro/MeuLinkCadastro'
+import ModeloDietaListagem from './pages/Modelos/ModeloDietaListagem'
+import ModeloFichaListagem from './pages/Modelos/ModeloFichaListagem'
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -87,10 +89,14 @@ function App() {
           <Route path="dietas/:id" element={<ModuleRoute modulo="dieta"><DietaDetalhe /></ModuleRoute>} />
           <Route path="alimentos" element={<ModuleRoute modulo="dieta"><AlimentosListagem /></ModuleRoute>} />
           <Route path="refeicoes-prontas" element={<ModuleRoute modulo="dieta"><RefeicoesProntasListagem /></ModuleRoute>} />
+          <Route path="modelos/dietas" element={<ModuleRoute modulo="dieta"><ModeloDietaListagem /></ModuleRoute>} />
+          <Route path="modelos/dietas/:id" element={<ModuleRoute modulo="dieta"><DietaDetalhe /></ModuleRoute>} />
 
           {/* treino */}
           <Route path="fichas" element={<ModuleRoute modulo="treino"><FichaListagem /></ModuleRoute>} />
           <Route path="fichas/:id" element={<ModuleRoute modulo="treino"><FichaDetalhe /></ModuleRoute>} />
+          <Route path="modelos/fichas" element={<ModuleRoute modulo="treino"><ModeloFichaListagem /></ModuleRoute>} />
+          <Route path="modelos/fichas/:id" element={<ModuleRoute modulo="treino"><FichaDetalhe /></ModuleRoute>} />
           <Route path="exercicios" element={<ModuleRoute modulo="treino"><GerenciarTreino /></ModuleRoute>} />
           <Route path="alongamentos" element={<ModuleRoute modulo="treino"><GerenciarAlongamentos /></ModuleRoute>} />
           <Route path="aerobicos" element={<ModuleRoute modulo="treino"><GerenciarAerobicos /></ModuleRoute>} />
