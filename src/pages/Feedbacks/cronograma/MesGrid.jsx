@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { dataEhFerias } from '../../../api/ferias'
 import { MONTHS, WEEKDAYS, ehFeriado, isoFromYMD, todayISO, fmtDateBR } from './utils'
+import useLongPress from '../../../hooks/useLongPress'
 
 export default function MesGrid({
   year, month, schedule, feriasList, planStart, planEnd,
@@ -86,22 +87,40 @@ export default function MesGrid({
           if (isHoje) extra += ' shadow-[inset_0_0_0_2px_rgba(252,211,77,0.9)]'
 
           return (
-            <button
+            <DiaCelula
               key={c.key}
-              onClick={() => onClickDate(iso)}
-              onContextMenu={(e) => onContextDate(e, iso)}
+              iso={iso}
+              day={c.day}
               title={isHoliday || (item ? `${fmtDateBR(iso)} · ${item.is_start ? 'Ponto de partida' : ''}` : fmtDateBR(iso))}
-              className={`aspect-square flex items-center justify-center text-xs font-semibold rounded relative transition-transform hover:scale-105 ${bg} ${ring} ${extra}`}
-            >
-              {c.day}
-              {isHoliday && (
-                <span className="absolute top-0 right-0 w-1.5 h-1.5 rounded-full bg-orange-400" />
-              )}
-            </button>
+              className={`aspect-square flex items-center justify-center text-xs font-semibold rounded relative transition-transform hover:scale-105 select-none ${bg} ${ring} ${extra}`}
+              isHoliday={isHoliday}
+              onClickDate={onClickDate}
+              onContextDate={onContextDate}
+            />
           )
         })}
       </div>
     </div>
+  )
+}
+
+function DiaCelula({ iso, day, title, className, isHoliday, onClickDate, onContextDate }) {
+  const handlers = useLongPress(
+    (e) => onContextDate(e, iso),
+    { onClick: () => onClickDate(iso) },
+  )
+  return (
+    <button
+      {...handlers}
+      title={title}
+      className={className}
+      style={{ WebkitTouchCallout: 'none' }}
+    >
+      {day}
+      {isHoliday && (
+        <span className="absolute top-0 right-0 w-1.5 h-1.5 rounded-full bg-orange-400" />
+      )}
+    </button>
   )
 }
 

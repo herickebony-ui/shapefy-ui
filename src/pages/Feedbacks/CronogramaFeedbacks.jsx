@@ -55,6 +55,18 @@ import PadronizarFormulario from './cronograma/PadronizarFormulario'
 import TipoBotao from './cronograma/TipoBotao'
 import { agruparPorCiclo } from './cronograma/serie'
 import { todayISO } from './cronograma/utils'
+import useLongPress from '../../hooks/useLongPress'
+
+function LongPressRow({ onLongPress, className, children, ...rest }) {
+  const handlers = useLongPress(onLongPress, {
+    shouldHandle: (e) => !e.target.closest('select, input, textarea, button, a'),
+  })
+  return (
+    <div {...rest} {...handlers} className={className} style={{ WebkitTouchCallout: 'none' }}>
+      {children}
+    </div>
+  )
+}
 
 // ═════════════════════════════════════════════════════════════════════════════
 export default function CronogramaFeedbacks() {
@@ -487,19 +499,19 @@ export default function CronogramaFeedbacks() {
   }
 
   // Renovação preservando histórico: zera vigência mas mantém todas as datas.
-  // Profissional define o novo Marco Zero via botão direito numa data futura.
+  // Profissional define o novo Marco Zero via long-press (mobile) ou botão direito (desktop) numa data futura.
   const handleRenovarCiclo = () => {
     if (!window.confirm(
       'Renovar ciclo?\n\n• Histórico de datas preservado (nada apagado)\n'
       + '• Vigência será zerada\n'
-      + '• Defina o novo Ponto de partida clicando com botão direito numa data\n'
+      + '• Defina o novo Ponto de partida segurando uma data (ou clique direito no desktop)\n'
       + '• Stats passam a contar a partir do novo Ponto de partida',
     )) return
     setPlanForm(prev => ({ ...prev, plan_start: '', plan_end: '', plan_duration: 3 }))
     // Tira o is_start de todos pra forçar redefinição manual
     setSchedule(prev => ({ dates: prev.dates.map(d => ({ ...d, is_start: false })) }))
     setMaisMenuAberto(false)
-    showToast('Defina novo Ponto de partida (botão direito numa data)', 'info')
+    showToast('Defina novo Ponto de partida (segure ou clique direito numa data)', 'info')
   }
 
   const handleGerarSerie = (datas) => {
@@ -848,12 +860,11 @@ export default function CronogramaFeedbacks() {
                         ? Math.round((new Date(d.date) - new Date(prev.date)) / (7 * 86400000))
                         : 0
                       return (
-                        <div key={d.date}
-                          onContextMenu={(e) => {
-                            e.preventDefault()
+                        <LongPressRow key={d.date}
+                          onLongPress={(e) => {
                             setMarcoZeroMenu({ date: d.date, x: e.clientX, y: e.clientY })
                           }}
-                          className={`grid grid-cols-[78px_44px_1fr_44px_92px_24px] gap-1.5 px-3 py-2 border-b border-[#323238]/40 items-center transition-colors ${
+                          className={`grid grid-cols-[78px_44px_1fr_44px_92px_24px] gap-1.5 px-3 py-2 border-b border-[#323238]/40 items-center transition-colors select-none ${
                             d.is_start ? 'bg-[#2563eb]/15' : 'hover:bg-[#1e1e22]'
                           }`}>
                           <span className="text-white font-medium text-xs">{fmtDateBR(d.date)}</span>
@@ -900,7 +911,7 @@ export default function CronogramaFeedbacks() {
                             className="h-6 w-6 inline-flex items-center justify-center text-gray-500 hover:text-red-400">
                             <X size={12} />
                           </button>
-                        </div>
+                        </LongPressRow>
                       )
                     }))}
 
@@ -1086,7 +1097,7 @@ export default function CronogramaFeedbacks() {
                   <Legenda cor="bg-emerald-700" label="Segunda na vigência" />
                   <Legenda cor="bg-green-900/40 border border-green-700/40" label="Dentro da vigência" />
                   <Legenda cor="bg-[#1a1a1a] border border-blue-500/40" label="Férias" />
-                  <Legenda label="Ponto de partida (clique direito)" />
+                  <Legenda label="Ponto de partida (segure no celular / clique direito)" />
                   <Legenda cor="bg-orange-400" label="Feriado" />
                 </div>
               )}
