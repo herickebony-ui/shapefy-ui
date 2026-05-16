@@ -19,6 +19,7 @@ import {
   Autocomplete, Modal, Spinner, TextareaComSugestoes,
 } from '../../components/ui'
 import ModalSalvarComoModelo from '../Modelos/ModalSalvarComoModelo'
+import DownloadPdfButton from '../../components/DownloadPdfButton'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1811,6 +1812,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
               <span className="hidden sm:inline">Salvar como modelo</span>
             </Button>
           )}
+          {isEdit && !isTemplate && <DownloadPdfButton entity="ficha" name={ficha.name} />}
           <Button variant="secondary" icon={Copy} onClick={() => setGerenciadorAberto(true)}>
             Gerenciar Treinos
           </Button>

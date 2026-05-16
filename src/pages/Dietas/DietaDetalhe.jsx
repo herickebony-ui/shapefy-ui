@@ -22,6 +22,7 @@ import {
   Modal, CollapsibleBanner, Tabs, FooterTotais,
 } from '../../components/ui'
 import ModalSalvarComoModelo from '../Modelos/ModalSalvarComoModelo'
+import DownloadPdfButton from '../../components/DownloadPdfButton'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (v, dec = 1) => v != null ? Number(v).toFixed(dec) : '0.0'
@@ -1439,6 +1440,7 @@ export default function DietaDetalhe() {
               <span className="hidden sm:inline">Duplicar</span>
             </Button>
           )}
+          {!isTemplate && <DownloadPdfButton entity="dieta" name={draft?.name} />}
           <Button
             variant="danger"
             size="sm"
