@@ -9,6 +9,7 @@ import {
 import { listarAlunos } from '../../api/alunos'
 import { Button, FormGroup, Input, Textarea, Autocomplete, Badge, Spinner, Modal } from '../../components/ui'
 import DetailPage from '../../components/templates/DetailPage'
+import DownloadPdfButton from '../../components/DownloadPdfButton'
 
 const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
 
@@ -358,6 +359,7 @@ export default function PrescricaoDetalhe() {
             {published ? 'Ativa' : 'Inativa'}
           </Badge>
         )}
+        actions={!isNova && <DownloadPdfButton entity="prescricao" name={id} />}
         footer={
           <div className="flex justify-end gap-2 px-4 md:px-8 py-4 border-t border-[#323238] bg-[#0a0a0a]">
             <Button variant="ghost" onClick={() => navigate('/prescricoes')}>Cancelar</Button>
