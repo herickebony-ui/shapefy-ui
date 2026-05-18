@@ -5,6 +5,7 @@ import {
 import {
   FormModalSimples, FormGroup, Input, Select, Spinner, Button,
 } from '../../components/ui'
+import useErrorModal from '../../hooks/useErrorModal'
 import {
   criarContrato, salvarContrato, sincronizarVinculos, sugerirParcelas, buscarContrato,
   excluirContrato,
@@ -42,6 +43,7 @@ export default function ContratoFormModal({
   onUsarRenovacao,
 }) {
   const editar = mode === 'editar' && !!contrato
+  const errorModal = useErrorModal()
   const [form, setForm] = useState(FORM_VAZIO)
   const [planoDetalhe, setPlanoDetalhe] = useState(null)
   const [salvando, setSalvando] = useState(false)
@@ -351,7 +353,7 @@ export default function ContratoFormModal({
       }))
       setForm((f) => ({ ...f, parcelas }))
     } catch (e) {
-      alert('Erro ao sugerir parcelas: ' + (e.response?.data?.exception || e.message))
+      errorModal.show(e, 'Sugerir parcelas')
     }
   }
 
@@ -476,15 +478,14 @@ export default function ContratoFormModal({
         try {
           await sincronizarVinculos(form.aluno, idsAtuais)
         } catch (e) {
-          console.error('Erro ao sincronizar vínculos:', e)
-          alert('Contrato salvo, mas houve erro ao sincronizar vínculos: ' + (e.response?.data?.exception || e.message))
+          errorModal.show(e, 'Sincronizar vínculos')
         }
       }
 
       onSuccess?.(contratoId)
       onClose()
     } catch (e) {
-      setErroValidacao('Erro ao salvar contrato: ' + (e.response?.data?.exception || e.message))
+      errorModal.show(e, 'Salvar contrato')
     } finally {
       setSalvando(false)
     }
@@ -500,7 +501,7 @@ export default function ContratoFormModal({
       onSuccess?.()
       onClose()
     } catch (e) {
-      alert('Erro ao excluir: ' + (e.response?.data?.exception || e.message))
+      errorModal.show(e, 'Excluir contrato')
     } finally {
       setExcluindo(false)
     }
@@ -543,6 +544,7 @@ export default function ContratoFormModal({
   if (!isOpen) return null
 
   return (
+    <>
     <FormModalSimples
       isOpen={isOpen}
       onClose={onClose}
@@ -813,6 +815,8 @@ export default function ContratoFormModal({
         </>
       )}
     </FormModalSimples>
+    {errorModal.element}
+    </>
   )
 }
 

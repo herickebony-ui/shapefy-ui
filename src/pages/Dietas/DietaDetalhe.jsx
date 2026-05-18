@@ -22,11 +22,18 @@ import {
   Modal, CollapsibleBanner, Tabs, FooterTotais,
 } from '../../components/ui'
 import ModalSalvarComoModelo from '../Modelos/ModalSalvarComoModelo'
+import NotificarAlunoModal from '../../components/NotificarAlunoModal'
+import { criarNotificacaoAluno } from '../../api/notificacoes'
 import DownloadPdfButton from '../../components/DownloadPdfButton'
+import useErrorModal from '../../hooks/useErrorModal'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (v, dec = 1) => v != null ? Number(v).toFixed(dec) : '0.0'
 const uid = () => `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+
+// Valores aceitos pelo Select `unit` no DocType Dieta Refeicao do Frappe.
+// Manter exatamente alinhado — qualquer valor fora dessa lista quebra o save.
+export const UNIT_OPTIONS = ['g', 'ml', 'l', 'unidade pequena', 'unidade média', 'unidade grande']
 
 const STEP_PESO = 5
 const roundStep = (n) => Math.max(STEP_PESO, Math.round(n / STEP_PESO) * STEP_PESO)
@@ -348,6 +355,7 @@ const BannerOrientacoes = ({ alunoId }) => {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [textoTemp, setTextoTemp] = useState('')
+  const errorModal = useErrorModal()
 
   useEffect(() => {
     if (!alunoId) return
@@ -366,7 +374,7 @@ const BannerOrientacoes = ({ alunoId }) => {
       setEditMode(false)
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
-    } catch (e) { alert('Erro ao salvar: ' + e.message) }
+    } catch (e) { errorModal.show(e, 'Salvar anotações do aluno') }
     finally { setSaving(false) }
   }
 
@@ -398,6 +406,7 @@ const BannerOrientacoes = ({ alunoId }) => {
 
   return (
     <div className="mb-6">
+      {errorModal.element}
       <CollapsibleBanner title="Anotações Globais do Aluno" variant="primary" action={action}>
         {editMode ? (
           <Textarea
@@ -453,7 +462,7 @@ const ModalEditarAlimento = ({ item, onSave, onClose }) => {
             <Input type="number" value={formData.ref_weight} onChange={v => handleChange('ref_weight', v)} />
           </FormGroup>
           <FormGroup label="Unidade">
-            <Select value={formData.unit} onChange={v => handleChange('unit', v)} options={['g', 'ml', 'unidade']} placeholder="" />
+            <Select value={formData.unit} onChange={v => handleChange('unit', v)} options={UNIT_OPTIONS} placeholder="" />
           </FormGroup>
           <FormGroup label="Medida Caseira">
             <Input value={formData.medida_caseira} onChange={v => handleChange('medida_caseira', v)} />
@@ -503,6 +512,7 @@ const ModalAdicionarRefeicaoPronta = ({ onClose, onSelectMeal }) => {
   const [query, setQuery] = useState('')
   const [resultados, setResultados] = useState([])
   const [carregando, setCarregando] = useState(false)
+  const errorModal = useErrorModal()
   const timerRef = { current: null }
 
   const buscar = (texto) => {
@@ -544,13 +554,19 @@ const ModalAdicionarRefeicaoPronta = ({ onClose, onSelectMeal }) => {
       if (data?.table_foods?.length > 0) {
         onSelectMeal(data.table_foods)
       } else {
-        alert('Essa refeição não possui alimentos cadastrados.')
+        errorModal.show({
+          type: 'validation',
+          title: 'Refeição vazia',
+          messages: ['Essa refeição pronta não possui alimentos cadastrados.'],
+          statusCode: 0,
+        }, 'Adicionar refeição pronta')
       }
-    } catch (e) { alert('Erro ao puxar alimentos: ' + e.message) }
+    } catch (e) { errorModal.show(e, 'Adicionar refeição pronta') }
     finally { setCarregando(false) }
   }
 
-  return (
+  return (<>
+    {errorModal.element}
     <Modal title="Adicionar Refeição Pronta" onClose={onClose} size="md">
       <div className="p-4 flex flex-col gap-4">
         <FormGroup label="Selecione a refeição">
@@ -572,7 +588,7 @@ const ModalAdicionarRefeicaoPronta = ({ onClose, onSelectMeal }) => {
         </div>
       </div>
     </Modal>
-  )
+  </>)
 }
 
 // ─── TabelaAlimentos ──────────────────────────────────────────────────────────
@@ -695,7 +711,7 @@ const TabelaAlimentos = ({ items, onUpdateItem, onAddItem, onDeleteItem, onDupli
                       <td className="px-2 py-1">
                         <select value={item.unit || 'g'} onChange={e => onUpdateItem(realIdx, 'unit', e.target.value)}
                           className="w-full h-7 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 appearance-none">
-                          <option>g</option><option>ml</option><option>unidade</option>
+                          {UNIT_OPTIONS.map(u => <option key={u} value={u}>{u}</option>)}
                         </select>
                       </td>
                       <td className="px-2 py-1">
@@ -848,20 +864,30 @@ const MEAL_LABELS = {
 const ModalSalvarRefeicaoPronta = ({ items, onClose }) => {
   const [nome, setNome] = useState('')
   const [salvando, setSalvando] = useState(false)
+  const errorModal = useErrorModal()
 
   const handleSalvar = async () => {
-    if (!nome.trim()) { alert('Digite um nome para a refeição.'); return }
+    if (!nome.trim()) {
+      errorModal.show({
+        type: 'mandatory',
+        title: 'Campo obrigatório',
+        messages: ['Digite um nome para a refeição.'],
+        statusCode: 0,
+      }, 'Salvar refeição pronta')
+      return
+    }
     setSalvando(true)
     try {
       const itemsLimpos = items.map(({ __uid, _base, ...rest }) => rest)
       await criarRefeicaoPronta({ full_name: nome.trim(), table_foods: itemsLimpos })
       alert('✅ Refeição salva com sucesso!')
       onClose()
-    } catch (e) { alert('Erro ao salvar: ' + e.message) }
+    } catch (e) { errorModal.show(e, 'Salvar refeição pronta') }
     finally { setSalvando(false) }
   }
 
-  return (
+  return (<>
+    {errorModal.element}
     <Modal
       title="Salvar como Refeição Pronta"
       onClose={onClose}
@@ -880,7 +906,7 @@ const ModalSalvarRefeicaoPronta = ({ items, onClose }) => {
         </FormGroup>
       </div>
     </Modal>
-  )
+  </>)
 }
 
 const ModalCopiarOpcao = ({ draft, itemsOrigem, onClose, onCopiar }) => {
@@ -1202,19 +1228,29 @@ export const ModalDuplicarDieta = ({ dietaId, nomeAtual, onClose, onDuplicado })
   const [dataInicial, setDataInicial] = useState('')
   const [dataFinal, setDataFinal] = useState('')
   const [duplicando, setDuplicando] = useState(false)
+  const errorModal = useErrorModal()
 
   const handleDuplicar = async () => {
-    if (modo === 'novo' && !novoAlunoId) { alert('Selecione um aluno.'); return }
+    if (modo === 'novo' && !novoAlunoId) {
+      errorModal.show({
+        type: 'mandatory',
+        title: 'Campo obrigatório',
+        messages: ['Selecione o aluno de destino para duplicar a dieta.'],
+        statusCode: 0,
+      }, 'Duplicar dieta')
+      return
+    }
     setDuplicando(true)
     try {
       const res = await duplicarDieta(dietaId, modo === 'novo' ? novoAlunoId : null, dataInicial || null, dataFinal || null)
       alert('✅ Dieta duplicada com sucesso!')
       onDuplicado(res?.name)
-    } catch (e) { alert('Erro ao duplicar: ' + e.message) }
+    } catch (e) { errorModal.show(e, 'Duplicar dieta') }
     finally { setDuplicando(false) }
   }
 
-  return (
+  return (<>
+    {errorModal.element}
     <Modal
       title="Duplicar Dieta"
       onClose={onClose}
@@ -1260,7 +1296,7 @@ export const ModalDuplicarDieta = ({ dietaId, nomeAtual, onClose, onDuplicado })
         </div>
       </div>
     </Modal>
-  )
+  </>)
 }
 
 // ─── DietaDetalhe ─────────────────────────────────────────────────────────────
@@ -1286,6 +1322,8 @@ export default function DietaDetalhe() {
   const [modeloMeta, setModeloMeta] = useState(null) // { titulo, categoria, descricao } quando isTemplate
   const [modalDuplicar, setModalDuplicar] = useState(false)
   const [modalSalvarModelo, setModalSalvarModelo] = useState(false)
+  const [notificar, setNotificar] = useState(null) // { entityName } | null
+  const errorModal = useErrorModal()
 
   const addUids = (d) => {
     const result = { ...d }
@@ -1337,7 +1375,15 @@ export default function DietaDetalhe() {
   }
 
   const handleSave = async () => {
-    if (!isTemplate && !draft?.aluno) { alert('Selecione um aluno antes de salvar.'); return }
+    if (!isTemplate && !draft?.aluno) {
+      errorModal.show({
+        type: 'mandatory',
+        title: 'Campo obrigatório',
+        messages: ['Selecione um aluno antes de salvar a dieta.'],
+        statusCode: 0,
+      }, isTemplate ? 'Salvar modelo' : 'Salvar dieta')
+      return
+    }
     setSaving(true)
     try {
       const totaisCalc = calcularTotais(draft)
@@ -1367,12 +1413,36 @@ export default function DietaDetalhe() {
         alert('Modelo salvo com sucesso!')
         navigate(backHref)
       } else {
-        await salvarDieta(id, payload)
-        alert('Dieta salva com sucesso!')
-        navigate(backHref)
+        // Não salva agora — guarda payload e abre modal de notificação.
+        // O save real acontece em executarSaveDieta (gatilhado pelo modal).
+        setPendingPayload({ payload, calculatedCalories: Math.round(totaisCalc?.kcal || 0) })
+        setNotificar({})
       }
     } catch (err) {
-      alert('Erro ao salvar: ' + err.message)
+      errorModal.show(err, isTemplate ? 'Salvar modelo' : 'Salvar dieta')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const executarSaveDieta = async (agendado_para) => {
+    const payload = pendingPayload?.payload
+    if (!payload || !draft?.aluno) return
+    setSaving(true)
+    try {
+      await salvarDieta(id, payload)
+      await criarNotificacaoAluno({
+        aluno: draft.aluno,
+        titulo: 'Sua nova dieta está disponível!',
+        descricao: 'Confira sua nova dieta no app.',
+        url: `/dieta/${id}`,
+        agendado_para,
+      })
+      setNotificar(null)
+      setPendingPayload(null)
+      navigate(backHref)
+    } catch (err) {
+      errorModal.show(err, 'Salvar dieta')
     } finally {
       setSaving(false)
     }
@@ -1457,7 +1527,7 @@ export default function DietaDetalhe() {
                   alert('Dieta excluída!')
                 }
                 navigate(backHref)
-              } catch (e) { alert('Erro ao excluir: ' + e.message) }
+              } catch (e) { errorModal.show(e, isTemplate ? 'Excluir modelo' : 'Excluir dieta') }
             }}
           >
             <span className="hidden sm:inline">Excluir</span>
@@ -1624,6 +1694,15 @@ export default function DietaDetalhe() {
         onClose={() => setModalSalvarModelo(false)}
       />
 
+      <NotificarAlunoModal
+        open={!!notificar}
+        onClose={() => { if (!saving) { setNotificar(null); setPendingPayload(null) } }}
+        onConfirm={executarSaveDieta}
+        loading={saving}
+        tipo="dieta"
+        alunoNome={draft?.nome_completo}
+      />
+
 
       {/* Toast substitutos */}
       {toastSubstitutos && (
@@ -1632,22 +1711,25 @@ export default function DietaDetalhe() {
           onClose={() => { setToastSubstitutos(null); setPendingPayload(null) }}
           onConfirmar={async () => {
             if (!pendingPayload) return
-            setSaving(true)
-            try {
-              if (isTemplate) {
+            if (isTemplate) {
+              setSaving(true)
+              try {
                 await persistirComoModelo(pendingPayload.payload)
-              } else {
-                await salvarDieta(id, pendingPayload.payload)
-              }
+                setToastSubstitutos(null); setPendingPayload(null)
+                alert('Modelo salvo com sucesso!'); navigate(backHref)
+              } catch (err) { errorModal.show(err, 'Salvar modelo') }
+              finally { setSaving(false) }
+            } else {
+              // Dieta com aluno: passa adiante pro modal de notificação.
+              // pendingPayload já está setado — só fecha o toast e abre o modal.
               setToastSubstitutos(null)
-              setPendingPayload(null)
-              alert(isTemplate ? 'Modelo salvo com sucesso!' : 'Dieta salva com sucesso!')
-              navigate(backHref)
-            } catch (err) { alert('Erro ao salvar: ' + err.message) }
-            finally { setSaving(false) }
+              setNotificar({})
+            }
           }}
         />
       )}
+
+      {errorModal.element}
     </div>
   )
 }

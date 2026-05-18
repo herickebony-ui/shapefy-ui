@@ -10,6 +10,7 @@ import {
 import ListPage from '../../components/templates/ListPage'
 import ExplorarBibliotecaModal from '../../components/ExplorarBibliotecaModal'
 import { extractVideoId } from '../../utils/video'
+import useErrorModal from '../../hooks/useErrorModal'
 
 const PLATAFORMAS = ['YouTube', 'Google Drive', 'Vimeo']
 
@@ -55,7 +56,7 @@ const buildVideoUrl = (id, platform) => {
 const ModalAlongamento = ({ alongamento, onSave, onClose }) => {
   const isEdit = !!alongamento?.name
   const [saving, setSaving] = useState(false)
-  const [erro, setErro] = useState('')
+  const errorModal = useErrorModal()
   const [nome, setNome] = useState(alongamento?.['nome_do_exercício'] || '')
   const [video, setVideo] = useState(alongamento?.video || '')
   const [plataforma, setPlataforma] = useState(alongamento?.['plataforma_do_vídeo'] || 'YouTube')
@@ -69,8 +70,16 @@ const ModalAlongamento = ({ alongamento, onSave, onClose }) => {
   }
 
   const handleSave = async () => {
-    if (!nome.trim()) { setErro('Nome do alongamento é obrigatório.'); return }
-    setSaving(true); setErro('')
+    if (!nome.trim()) {
+      errorModal.show({
+        type: 'mandatory',
+        title: 'Campo obrigatório',
+        messages: ['Nome do alongamento é obrigatório.'],
+        statusCode: 0,
+      }, isEdit ? 'Salvar alongamento' : 'Criar alongamento')
+      return
+    }
+    setSaving(true)
     try {
       const payload = {
         'nome_do_exercício': nome.trim(),
@@ -81,11 +90,12 @@ const ModalAlongamento = ({ alongamento, onSave, onClose }) => {
       const resultado = await salvarAlongamento(isEdit ? alongamento.name : null, payload)
       onSave(resultado)
     } catch (e) {
-      console.error(e); setErro(e?.response?.data?.exception || 'Erro ao salvar.')
+      errorModal.show(e, isEdit ? 'Salvar alongamento' : 'Criar alongamento')
     } finally { setSaving(false) }
   }
 
-  return (
+  return (<>
+    {errorModal.element}
     <Modal
       isOpen
       onClose={onClose}
@@ -99,12 +109,6 @@ const ModalAlongamento = ({ alongamento, onSave, onClose }) => {
       }
     >
       <div className="p-4 space-y-4">
-        {erro && (
-          <div className="bg-red-900/20 border border-red-500/30 text-red-400 text-sm rounded-lg px-3 py-2">
-            {erro}
-          </div>
-        )}
-
         <FormGroup label="Nome do Alongamento" required>
           <Input value={nome} onChange={setNome} placeholder="Ex: Alongamento de Quadríceps" />
         </FormGroup>
@@ -144,12 +148,13 @@ const ModalAlongamento = ({ alongamento, onSave, onClose }) => {
         </label>
       </div>
     </Modal>
-  )
+  </>)
 }
 
 // ─── GerenciarAlongamentos ────────────────────────────────────────────────────
 
 export default function GerenciarAlongamentos() {
+  const errorModal = useErrorModal()
   const [showBiblioteca, setShowBiblioteca] = useState(false)
   const [alongamentos, setAlongamentos] = useState([])
   const [loading, setLoading] = useState(true)
@@ -239,8 +244,7 @@ export default function GerenciarAlongamentos() {
       setAlongamentos(data)
       setDeletando(null)
     } catch (e) {
-      console.error(e)
-      alert('Erro ao excluir: ' + (e?.response?.data?.exception || e.message))
+      errorModal.show(e, 'Excluir alongamento')
     } finally { setDeleting(false) }
   }
 
@@ -403,6 +407,7 @@ export default function GerenciarAlongamentos() {
           </div>
         </Modal>
       )}
+      {errorModal.element}
     </>
   )
 }

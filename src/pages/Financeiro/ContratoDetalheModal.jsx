@@ -3,6 +3,7 @@ import {
   CheckCircle2, Eraser, Edit2, Trash2, Pause, Play, RefreshCcw, AlertTriangle, Clock,
 } from 'lucide-react'
 import { Modal, Button, Spinner, EmptyState } from '../../components/ui'
+import useErrorModal from '../../hooks/useErrorModal'
 import {
   buscarContrato, darBaixaParcela, removerBaixaParcela, pausarContrato,
   retomarContrato, renovarContrato, excluirContrato,
@@ -15,6 +16,7 @@ import {
 export default function ContratoDetalheModal({
   isOpen, contratoId, alunoNome, planos = [], onClose, onMutate, onEditar,
 }) {
+  const errorModal = useErrorModal()
   const [loading, setLoading] = useState(false)
   const [contrato, setContrato] = useState(null)
   const [acaoPendente, setAcaoPendente] = useState('')
@@ -26,7 +28,7 @@ export default function ContratoDetalheModal({
       const c = await buscarContrato(contratoId)
       setContrato(c)
     } catch (e) {
-      alert('Erro ao carregar contrato: ' + (e.response?.data?.exception || e.message))
+      errorModal.show(e, 'Carregar contrato')
       onClose()
     } finally {
       setLoading(false)
@@ -60,7 +62,7 @@ export default function ContratoDetalheModal({
       await carregar()
       onMutate?.()
     } catch (e) {
-      alert('Erro ao baixar parcela: ' + (e.response?.data?.exception || e.message))
+      errorModal.show(e, 'Baixar parcela')
     } finally {
       setAcaoPendente('')
     }
@@ -74,7 +76,7 @@ export default function ContratoDetalheModal({
       await carregar()
       onMutate?.()
     } catch (e) {
-      alert('Erro ao remover baixa: ' + (e.response?.data?.exception || e.message))
+      errorModal.show(e, 'Remover baixa')
     } finally {
       setAcaoPendente('')
     }
@@ -87,7 +89,7 @@ export default function ContratoDetalheModal({
       await carregar()
       onMutate?.()
     } catch (e) {
-      alert('Erro ao pausar: ' + (e.response?.data?.exception || e.message))
+      errorModal.show(e, 'Pausar contrato')
     } finally {
       setAcaoPendente('')
     }
@@ -100,7 +102,7 @@ export default function ContratoDetalheModal({
       await carregar()
       onMutate?.()
     } catch (e) {
-      alert('Erro ao retomar: ' + (e.response?.data?.exception || e.message))
+      errorModal.show(e, 'Retomar contrato')
     } finally {
       setAcaoPendente('')
     }
@@ -115,7 +117,7 @@ export default function ContratoDetalheModal({
       onClose()
       if (r?.name) alert(`Renovação criada: ${r.name}`)
     } catch (e) {
-      alert('Erro ao renovar: ' + (e.response?.data?.exception || e.message))
+      errorModal.show(e, 'Renovar contrato')
     } finally {
       setAcaoPendente('')
     }
@@ -129,7 +131,7 @@ export default function ContratoDetalheModal({
       onMutate?.()
       onClose()
     } catch (e) {
-      alert('Erro ao excluir: ' + (e.response?.data?.exception || e.message))
+      errorModal.show(e, 'Excluir contrato')
     } finally {
       setAcaoPendente('')
     }
@@ -138,6 +140,7 @@ export default function ContratoDetalheModal({
   if (!isOpen) return null
 
   return (
+    <>
     <Modal
       isOpen={isOpen}
       onClose={onClose}
@@ -344,6 +347,8 @@ export default function ContratoDetalheModal({
         </div>
       )}
     </Modal>
+    {errorModal.element}
+    </>
   )
 }
 

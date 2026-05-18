@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Search, RefreshCcw, ChevronLeft } from 'lucide-react'
 import { Modal, Button, EmptyState, FormGroup, Input, Select, Textarea } from '../../components/ui'
+import useErrorModal from '../../hooks/useErrorModal'
 import { renovarContrato } from '../../api/contratosAluno'
 import { formatCurrency, formatDateBr, normalizeDate, smartSearch } from './utils'
 
@@ -8,6 +9,7 @@ export default function RenovarContratoModal({
   isOpen, onClose, contratos, planos = [], alunosMap, onSuccess,
   contratoPreSelecionado = null,
 }) {
+  const errorModal = useErrorModal()
   const [query, setQuery] = useState('')
   const [selecionado, setSelecionado] = useState(null)
   const [renovando, setRenovando] = useState(false)
@@ -102,7 +104,7 @@ export default function RenovarContratoModal({
       onClose()
       if (r?.name) alert(`Renovação criada: ${r.name}`)
     } catch (e) {
-      alert('Erro ao renovar: ' + (e.response?.data?.exception || e.message))
+      errorModal.show(e, 'Renovar contrato')
     } finally {
       setRenovando(false)
     }
@@ -115,6 +117,7 @@ export default function RenovarContratoModal({
   const valorMudou = overrides.valor_liquido_total !== '' && valorNovoNum !== valorAtualNum
 
   return (
+    <>
     <Modal
       isOpen={isOpen}
       onClose={onClose}
@@ -248,5 +251,7 @@ export default function RenovarContratoModal({
         )}
       </div>
     </Modal>
+    {errorModal.element}
+    </>
   )
 }

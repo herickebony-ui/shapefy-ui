@@ -16,10 +16,13 @@ import { buscarModeloFicha, salvarModeloFicha, fichaParaSnapshot } from '../../a
 import { listarTextos, salvarNoBancoSeNovo, excluirTexto } from '../../api/bancoTextos'
 import {
   Button, FormGroup, Input, Select, Textarea,
-  Autocomplete, Modal, Spinner, TextareaComSugestoes,
+  Autocomplete, Modal, Spinner, TextareaComSugestoes, BotaoAjuda,
 } from '../../components/ui'
 import ModalSalvarComoModelo from '../Modelos/ModalSalvarComoModelo'
+import NotificarAlunoModal from '../../components/NotificarAlunoModal'
+import { criarNotificacaoAluno } from '../../api/notificacoes'
 import DownloadPdfButton from '../../components/DownloadPdfButton'
+import useErrorModal from '../../hooks/useErrorModal'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -757,6 +760,7 @@ const BannerOrientacoes = ({ alunoId }) => {
   const [temp, setTemp] = useState('')
   const [saving, setSaving] = useState(false)
   const [open, setOpen] = useState(false)
+  const errorModal = useErrorModal()
 
   useEffect(() => {
     if (!alunoId) return
@@ -773,12 +777,13 @@ const BannerOrientacoes = ({ alunoId }) => {
       await salvarAluno(alunoId, { orientacoes_globais: temp })
       setTexto(temp)
       setEditMode(false)
-    } catch (e) { alert('Erro ao salvar: ' + e.message) }
+    } catch (e) { errorModal.show(e, 'Salvar anotações do aluno') }
     finally { setSaving(false) }
   }
 
   return (
     <div className="shrink-0 bg-[#2563eb]/10 border-t border-[#2563eb]/30">
+      {errorModal.element}
       <div className="px-5 py-2 flex items-start gap-2">
         <button onClick={() => setOpen(o => !o)}
           className="flex items-center gap-1.5 text-[10px] font-bold italic text-gray-500 hover:text-gray-300 uppercase tracking-widest transition outline-none shrink-0">
@@ -1291,7 +1296,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
   const isEdit = !!fichaInicial?.name || isTemplate
   const [step, setStep] = useState(() => parseInt(localStorage.getItem('fichaStep') || '0'))
   const [saving, setSaving] = useState(false)
-  const [erro, setErro] = useState('')
+  const errorModal = useErrorModal()
   const [numSemanas, setNumSemanas] = useState(
     fichaInicial?.periodizacao?.length > 0 ? fichaInicial.periodizacao.length : 4
   )
@@ -1302,6 +1307,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
   const [detalheAlongamentoIdx, setDetalheAlongamentoIdx] = useState(null)
   const [gerenciadorAberto, setGerenciadorAberto] = useState(false)
   const [modalSalvarModelo, setModalSalvarModelo] = useState(false)
+  const [notificar, setNotificar] = useState(null) // { entityName } | null
 
   const [gruposDisponiveis, setGruposDisponiveis] = useState(GRUPOS_BASE)
   const [porGrupo, setPorGrupo] = useState({})
@@ -1425,9 +1431,28 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
     upd('periodizacao', novaTabela)
   }
 
-  const handleSave = async () => {
-    if (!isTemplate && !ficha.aluno) { setErro('Selecione um aluno antes de salvar.'); return }
-    setSaving(true); setErro('')
+  // Clicar Salvar: se for ficha real com aluno, abre modal de notificação.
+  // O save real acontece em executarSave, gatilhado pelo Notificar/Agendar do modal.
+  // Templates salvam direto (sem modal).
+  const handleSave = () => {
+    if (!isTemplate && !ficha.aluno) {
+      errorModal.show({
+        type: 'mandatory',
+        title: 'Campo obrigatório',
+        messages: ['Selecione um aluno antes de salvar a ficha.'],
+        statusCode: 0,
+      }, 'Salvar ficha')
+      return
+    }
+    if (isTemplate) {
+      executarSave(undefined)
+    } else {
+      setNotificar({})
+    }
+  }
+
+  const executarSave = async (agendado_para) => {
+    setSaving(true)
     try {
       const comIdx = (arr) => (arr || []).map((item, i) => {
         const { _id, ...rest } = item
@@ -1439,8 +1464,15 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
         if (rest.intensidade && typeof rest.intensidade !== 'string') rest.intensidade = JSON.stringify(rest.intensidade)
         return { ...rest, idx: i + 1 }
       })
+      // Periodização: idx + semana devem refletir a posição. Reordenações,
+      // deletes e adições deixam o `semana` desalinhado; ressincronizo aqui.
+      const comIdxESemana = (arr) => (arr || []).map((item, i) => {
+        const { _id, ...rest } = item
+        return { ...rest, idx: i + 1, semana: String(i + 1).padStart(2, '0') }
+      })
       const { name, creation, modified, modified_by, owner, docstatus, ...dados } = {
         ...ficha,
+        periodizacao: comIdxESemana(ficha.periodizacao),
         periodizacao_dos_aerobicos: comIdx((ficha.periodizacao_dos_aerobicos || []).filter(a => a.exercicios?.trim())),
         planilha_de_alongamentos_e_mobilidade: comIdx((ficha.planilha_de_alongamentos_e_mobilidade || []).filter(a => a.exercicio?.trim())),
         planilha_de_treino_a: comIdx(ficha.planilha_de_treino_a),
@@ -1464,9 +1496,20 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
         const resultado = ficha.name ? await salvarFicha(ficha.name, dados) : await criarFicha(dados)
         if (!ficha.name && resultado?.name) setFicha(f => ({ ...f, name: resultado.name }))
         onSave(resultado)
+        const entityName = resultado?.name || ficha.name
+        if (ficha.aluno && entityName) {
+          await criarNotificacaoAluno({
+            aluno: ficha.aluno,
+            titulo: 'Seu novo treino está disponível!',
+            descricao: 'Confira sua nova ficha de treino no app.',
+            url: `/ficha/${entityName}`,
+            agendado_para,
+          })
+        }
+        setNotificar(null)
       }
     } catch (e) {
-      console.error(e); setErro(e.message || 'Erro ao salvar a ficha.')
+      errorModal.show(e, isTemplate ? 'Salvar modelo' : 'Salvar ficha')
     } finally { setSaving(false) }
   }
 
@@ -1567,7 +1610,43 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
           </div>
 
           <div className="space-y-3">
-            <h3 className="text-white font-semibold text-sm border-b border-[#323238] pb-2">Periodização</h3>
+            <div className="flex items-center justify-between border-b border-[#323238] pb-2">
+              <h3 className="text-white font-semibold text-sm">Periodização</h3>
+              <BotaoAjuda
+                title="Como funciona a Periodização"
+                subtitle="Tabela global que define séries, repetições e descanso semana a semana"
+                topicos={[
+                  {
+                    title: '1. O que é',
+                    description: 'Cada linha da tabela é uma semana de treino. Em vez de mexer exercício por exercício pra progredir, você define a evolução aqui uma vez só, e ela vale pra ficha inteira.',
+                  },
+                  {
+                    title: '2. A regra de ouro',
+                    description: 'Para cada exercício (Puxada Alta, Supino...) você pode preencher série, repetição e descanso. Se preencher, vale o valor do exercício (fixo todas as semanas). Se deixar em branco, o app usa o que está na periodização daquela semana.',
+                  },
+                  {
+                    title: '3. Padrão recomendado',
+                    description: 'No exercício, preencha apenas SÉRIES (ex: 3) — pra você conseguir contar o volume da ficha. Deixe REPETIÇÕES em branco — elas vão progredir automaticamente conforme a periodização (sem 1 = 12 reps, sem 2 = 10 reps, etc.). Resultado: séries fixas, reps variando.',
+                  },
+                  {
+                    title: '4. Quando você quer variar TAMBÉM as séries',
+                    description: 'Plano tipo "sem 1 = 3 séries, sem 2 = 4 séries"? Então deixe o campo SÉRIES em branco no exercício também — ele vai puxar o valor da periodização semana a semana.',
+                  },
+                  {
+                    title: '5. Atenção ao volume',
+                    description: 'Se você deixar séries em branco no exercício pra variar via periodização, o app perde a referência pra calcular o volume total da ficha e fazer comparativo com semanas / fichas anteriores. É um trade-off entre flexibilidade e rastreamento.',
+                  },
+                  {
+                    title: '6. Atalho pra medir antes de apagar',
+                    description: 'Se quiser variar séries mas ainda saber o volume aproximado: preenche um valor de séries no exercício (ex: 4), confere o volume total na ficha, anota, e só depois apaga. A partir daí a periodização toma conta.',
+                  },
+                  {
+                    title: '7. Datas e botões',
+                    description: 'A coluna de período (DD/MM a DD/MM) é calculada a partir da "Data de início" da ficha. O botão de raio "Gerar" cria a tabela do zero com base na quantidade configurada; "Add Semana Manual" no rodapé acrescenta uma linha extra.',
+                  },
+                ]}
+              />
+            </div>
             <div className="bg-[#1a1a1a] rounded-lg border border-[#323238] overflow-hidden">
               <table className="w-full text-xs">
                 <thead>
@@ -1781,21 +1860,21 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
   }
 
   return (
-    <div className="flex flex-col min-h-full text-white">
+    <div className="flex flex-col min-h-full text-white min-w-0 overflow-x-hidden">
       {/* Header — sticky dentro do scroll container do AppLayout */}
-      <div className="sticky top-0 z-20 flex items-center justify-between px-6 py-3 border-b border-[#323238] bg-[#29292e]">
-        <div className="flex items-center gap-3">
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition">
+      <div className="sticky top-0 z-20 flex items-center justify-between gap-2 px-3 md:px-6 py-3 border-b border-[#323238] bg-[#29292e]">
+        <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition shrink-0">
             <ChevronLeft size={20} />
           </button>
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="min-w-0">
-              <h1 className="text-white font-bold truncate">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-white font-bold text-sm md:text-base truncate">
                 {isTemplate ? 'Editar Modelo' : (isEdit ? 'Editar Ficha' : 'Nova Ficha')}
               </h1>
               {isTemplate
-                ? modeloMeta?.titulo && <p className="text-gray-400 text-sm truncate">{modeloMeta.titulo}</p>
-                : ficha.nome_completo && <p className="text-gray-400 text-sm">{ficha.nome_completo}</p>
+                ? modeloMeta?.titulo && <p className="text-gray-400 text-xs md:text-sm truncate">{modeloMeta.titulo}</p>
+                : ficha.nome_completo && <p className="text-gray-400 text-xs md:text-sm truncate">{ficha.nome_completo}</p>
               }
             </div>
             {isTemplate && modeloMeta?.categoria && (
@@ -1805,25 +1884,24 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
             )}
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          {erro && <p className="text-red-400 text-sm max-w-xs truncate">{erro}</p>}
+        <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
           {isEdit && !isTemplate && (
             <Button variant="ghost" size="sm" icon={Bookmark} onClick={() => setModalSalvarModelo(true)}>
               <span className="hidden sm:inline">Salvar como modelo</span>
             </Button>
           )}
           {isEdit && !isTemplate && <DownloadPdfButton entity="ficha" name={ficha.name} />}
-          <Button variant="secondary" icon={Copy} onClick={() => setGerenciadorAberto(true)}>
-            Gerenciar Treinos
+          <Button variant="secondary" size="sm" icon={Copy} onClick={() => setGerenciadorAberto(true)}>
+            <span className="hidden sm:inline">Gerenciar Treinos</span>
           </Button>
-          <Button variant="primary" icon={Save} onClick={handleSave} loading={saving}>
-            {isTemplate ? 'Salvar Modelo' : 'Salvar Ficha'}
+          <Button variant="primary" size="sm" icon={Save} onClick={handleSave} loading={saving}>
+            <span className="hidden sm:inline">{isTemplate ? 'Salvar Modelo' : 'Salvar Ficha'}</span>
           </Button>
         </div>
       </div>
 
       {/* Step nav — sticky abaixo do header */}
-      <div className="sticky top-[57px] z-10 flex items-center gap-1 px-6 py-2 border-b border-[#323238] bg-[#29292e] overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="sticky top-[57px] z-10 flex items-center gap-1 px-3 md:px-6 py-2 border-b border-[#323238] bg-[#29292e] overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {steps.map((s, i) => (
           <button key={s.id} onClick={() => setStep(i)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition ${i === step ? 'bg-[#2563eb] text-white' : 'text-gray-400 hover:text-white hover:bg-[#323238]'}`}>
@@ -1833,7 +1911,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
       </div>
 
       {/* Conteúdo do step */}
-      <div className="flex-1 overflow-y-auto px-6 py-6 bg-[#202024]">
+      <div className="flex-1 overflow-y-auto px-3 md:px-6 py-4 md:py-6 bg-[#202024]">
         {renderStep()}
       </div>
 
@@ -1844,10 +1922,10 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
       {ficha.aluno && <BannerOrientacoes alunoId={ficha.aluno} />}
 
       {/* Prev / Next */}
-      <div className="sticky bottom-0 z-10 flex justify-between items-center px-6 py-3 bg-[#202024] border-t border-[#323238]">
-        <Button variant="ghost" icon={ChevronLeft} onClick={() => setStep(s => Math.max(0, s - 1))} disabled={step === 0}>Anterior</Button>
-        <span className="text-gray-600 text-xs">{step + 1} / {steps.length}</span>
-        <Button variant="ghost" iconRight={ChevronRight} onClick={() => setStep(s => Math.min(steps.length - 1, s + 1))} disabled={step === steps.length - 1}>Próximo</Button>
+      <div className="sticky bottom-0 z-10 flex justify-between items-center gap-2 px-3 md:px-6 py-3 bg-[#202024] border-t border-[#323238]">
+        <Button variant="ghost" size="sm" icon={ChevronLeft} onClick={() => setStep(s => Math.max(0, s - 1))} disabled={step === 0}>Anterior</Button>
+        <span className="text-gray-600 text-xs shrink-0">{step + 1} / {steps.length}</span>
+        <Button variant="ghost" size="sm" iconRight={ChevronRight} onClick={() => setStep(s => Math.min(steps.length - 1, s + 1))} disabled={step === steps.length - 1}>Próximo</Button>
       </div>
 
       {gerenciadorAberto && (
@@ -1864,6 +1942,17 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
         isOpen={modalSalvarModelo}
         onClose={() => setModalSalvarModelo(false)}
       />
+
+      <NotificarAlunoModal
+        open={!!notificar}
+        onClose={() => { if (!saving) setNotificar(null) }}
+        onConfirm={executarSave}
+        loading={saving}
+        tipo="treino"
+        alunoNome={ficha.nome_completo}
+      />
+
+      {errorModal.element}
     </div>
   )
 }

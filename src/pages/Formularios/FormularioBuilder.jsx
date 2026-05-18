@@ -7,6 +7,7 @@ import {
 } from '../../api/formularios'
 import { TIPOS_ANAMNESE, TIPOS_FEEDBACK, TIPOS_CONFIG } from '../../utils/formularioUtils'
 import { parseFrappeError } from '../../utils/frappeErrors'
+import useErrorModal from '../../hooks/useErrorModal'
 import { Button, FormGroup, Input, Select, Textarea, Spinner, Tabs, RichTextEditor, BotaoAjuda } from '../../components/ui'
 
 const TOPICOS_AJUDA_ANAMNESE = [
@@ -71,6 +72,7 @@ export default function FormularioBuilder() {
   const [salvando, setSalvando] = useState(false)
   const [abaAtiva, setAbaAtiva] = useState('perguntas')
   const [errors, setErrors] = useState({ titulo: null, geral: null, perguntas: {} })
+  const errorModal = useErrorModal()
 
   const TIPOS = isFeedback ? TIPOS_FEEDBACK : TIPOS_ANAMNESE
 
@@ -88,7 +90,7 @@ export default function FormularioBuilder() {
           setTreino(!!doc.treino)
         }
       })
-      .catch(e => { console.error(e); alert('Erro ao carregar formulário.') })
+      .catch(e => errorModal.show(e, 'Carregar formulário'))
       .finally(() => setLoading(false))
   }, [id, isNovo, isFeedback])
 
@@ -210,7 +212,6 @@ export default function FormularioBuilder() {
         }
       }
     } catch (e) {
-      console.error(e)
       const userMsg = parseFrappeError(e) || 'Erro ao salvar formulário.'
       const lineMatch = userMsg.match(/Linha\s*#?\s*(\d+)/i)
       if (lineMatch) {
@@ -224,10 +225,12 @@ export default function FormularioBuilder() {
             },
           }))
           setAbaAtiva('perguntas')
+          // Erro foi marcado inline na pergunta correspondente — não abre modal.
           return
         }
       }
       setErrors(prev => ({ ...prev, geral: userMsg }))
+      errorModal.show(e, isNovo ? 'Criar formulário' : 'Salvar formulário')
     } finally {
       setSalvando(false)
     }
@@ -443,6 +446,7 @@ export default function FormularioBuilder() {
           {isNovo ? 'Criar Formulário' : 'Salvar Alterações'}
         </Button>
       </div>
+      {errorModal.element}
     </div>
   )
 }

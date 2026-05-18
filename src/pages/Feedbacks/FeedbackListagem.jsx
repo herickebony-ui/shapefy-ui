@@ -5,7 +5,7 @@ import {
   listarFeedbacks, listarFormularios, buscarFeedback,
   salvarStatusFeedback, rotarImagemFeedback, trocarFotosFeedback, excluirFeedback,
 } from '../../api/feedbacks'
-import { parseFrappeError } from '../../utils/frappeErrors'
+import useErrorModal from '../../hooks/useErrorModal'
 import { Button, Badge, Spinner, EmptyState, DataTable, Modal } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 import ImagemInterativa from './ImagemInterativa'
@@ -227,6 +227,7 @@ function ViewComparacao({ dados, imgSrcs, onVoltar, onRotate, modoTrocarFoto, se
 // ─── Página principal ────────────────────────────────────────────────────────
 
 export default function FeedbackListagem() {
+  const errorModal = useErrorModal()
   const navigate = useNavigate()
 
   const [feedbacks, setFeedbacks] = useState([])
@@ -366,8 +367,7 @@ export default function FeedbackListagem() {
     try {
       await trocarFotosFeedback(f1.feedbackId, perguntas, f1.idx, f2.idx)
     } catch (e) {
-      console.error(e)
-      alert('Erro ao trocar fotos.')
+      errorModal.show(e, 'Trocar fotos do feedback')
     } finally {
       setSalvandoTroca(false)
     }
@@ -392,8 +392,7 @@ export default function FeedbackListagem() {
       setSelecionados(prev => prev.filter(f => f.name !== modalExcluir.name))
       setModalExcluir(null)
     } catch (e) {
-      console.error(e)
-      alert(parseFrappeError(e) || 'Erro ao excluir feedback.')
+      errorModal.show(e, 'Excluir feedback')
     } finally {
       setExcluindo(false)
     }
@@ -670,6 +669,7 @@ export default function FeedbackListagem() {
           </div>
         </Modal>
       )}
+      {errorModal.element}
     </>
   )
 }

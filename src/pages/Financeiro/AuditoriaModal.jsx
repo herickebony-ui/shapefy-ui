@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RefreshCw, FileText } from 'lucide-react'
 import { Modal, Button, Spinner, EmptyState } from '../../components/ui'
+import useErrorModal from '../../hooks/useErrorModal'
 import { listarAuditorias } from '../../api/auditoriaFinanceira'
 import { ACOES_AUDITORIA } from './constants'
 import { formatCurrency, formatDateBr } from './utils'
@@ -30,6 +31,7 @@ const ACAO_COLOR = {
 }
 
 export default function AuditoriaModal({ isOpen, onClose, alunosMap = {} }) {
+  const errorModal = useErrorModal()
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(false)
   const [filtroAcao, setFiltroAcao] = useState('')
@@ -42,7 +44,7 @@ export default function AuditoriaModal({ isOpen, onClose, alunosMap = {} }) {
       const res = await listarAuditorias({ acao: filtroAcao, dataInicio, dataFim, limit: 200 })
       setLogs(res || [])
     } catch (e) {
-      alert('Erro ao carregar auditoria: ' + (e.response?.data?.exception || e.message))
+      errorModal.show(e, 'Carregar auditoria')
     } finally {
       setLoading(false)
     }
@@ -63,6 +65,7 @@ export default function AuditoriaModal({ isOpen, onClose, alunosMap = {} }) {
   if (!isOpen) return null
 
   return (
+    <>
     <Modal
       isOpen={isOpen}
       onClose={onClose}
@@ -210,5 +213,7 @@ export default function AuditoriaModal({ isOpen, onClose, alunosMap = {} }) {
         )}
       </div>
     </Modal>
+    {errorModal.element}
+    </>
   )
 }

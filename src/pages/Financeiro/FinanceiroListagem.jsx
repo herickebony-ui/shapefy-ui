@@ -16,6 +16,7 @@ const TOPICOS_AJUDA_FINANCEIRO = [
   { icon: Package,      title: 'Planos vs. Pagamento', description: 'Plano é o produto que você vende (ex: "Mensal R$ 200"). Pagamento é o contrato de uma venda específica desse plano pra um aluno. Cadastre os planos uma vez em "Planos" no menu lateral; eles ficam disponíveis no form de novo pagamento.' },
   { icon: BookCheck,    title: 'Auditoria', description: 'Rastreia toda mudança em contrato (criação, edição, exclusão) com timestamp e usuário. Use quando algum valor não bate ou pra confirmar quem fez uma alteração.' },
 ]
+import useErrorModal from '../../hooks/useErrorModal'
 import ListPage from '../../components/templates/ListPage'
 import PlanoBadge from '../../components/financeiro/PlanoBadge'
 import MesBadge from '../../components/financeiro/MesBadge'
@@ -41,6 +42,7 @@ import HistoricoAlunoModal from './HistoricoAlunoModal'
 const PAGE_SIZE = 50
 
 export default function FinanceiroListagem() {
+  const errorModal = useErrorModal()
   const [view, setView] = useState('records') // 'records' | 'students'
   const [loading, setLoading] = useState(true)
   const [contratos, setContratos] = useState([])
@@ -99,8 +101,7 @@ export default function FinanceiroListagem() {
         setAlunosMap({})
       }
     } catch (e) {
-      console.error(e)
-      alert('Erro ao carregar financeiro: ' + (e.response?.data?.exception || e.message))
+      errorModal.show(e, 'Carregar financeiro')
     } finally {
       setLoading(false)
     }
@@ -857,7 +858,7 @@ export default function FinanceiroListagem() {
               await renovarContrato(contrato.name)
               await carregar()
             } catch (e) {
-              alert('Erro ao renovar: ' + (e.response?.data?.exception || e.message))
+              errorModal.show(e, 'Renovar contrato')
             }
           }}
         />
@@ -919,6 +920,7 @@ export default function FinanceiroListagem() {
         alunosMap={alunosMap}
         onClose={() => setHistoricoAluno(null)}
       />
+      {errorModal.element}
     </ListPage>
   )
 }

@@ -16,6 +16,7 @@ import { buscarSmart } from '../../utils/strings'
 import { Button, Badge, Spinner, EmptyState, DataTable } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 import ImagemInterativa from '../Feedbacks/ImagemInterativa'
+import useErrorModal from '../../hooks/useErrorModal'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 
@@ -72,6 +73,7 @@ function ChartTip({ active, payload, label }) {
 export default function AvaliacaoListagem() {
   const navigate = useNavigate()
   const location = useLocation()
+  const errorModal = useErrorModal()
   const [view, setView] = useState('list')
 
   // ─── List state ─────────────────────────────────────────────────────────────
@@ -164,7 +166,7 @@ export default function AvaliacaoListagem() {
     try {
       await excluirAvaliacao(av.name)
       setAvaliacoes(prev => prev.filter(a => a.name !== av.name))
-    } catch (err) { console.error(err); alert('Erro ao excluir avaliação.') }
+    } catch (err) { errorModal.show(err, 'Excluir avaliação') }
   }, [])
 
   // ─── Filtered list (client-side dobras toggle) ───────────────────────────────
@@ -1072,6 +1074,7 @@ export default function AvaliacaoListagem() {
           </div>
         </div>
       )}
+      {errorModal.element}
     </div>
   )
 }

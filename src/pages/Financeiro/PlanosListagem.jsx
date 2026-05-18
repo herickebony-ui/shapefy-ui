@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Plus, RefreshCw, Edit2, Trash2, Layers, ArrowLeft, Save } from 'lucide-react'
 import { Button, Spinner, Badge, DataTable } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
+import useErrorModal from '../../hooks/useErrorModal'
 import { listarPlanos, buscarPlano, criarPlano, salvarPlano, excluirPlano } from '../../api/planosShapefy'
 import { formatCurrency } from './utils'
 import { PlanoForm } from './PlanosManager'
@@ -17,6 +18,7 @@ const VARIACAO_VAZIA = {
 }
 
 export default function PlanosListagem() {
+  const errorModal = useErrorModal()
   const [planos, setPlanos] = useState([])
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
@@ -93,7 +95,7 @@ export default function PlanosListagem() {
       }
       setView('form')
     } catch (e) {
-      alert('Erro ao carregar plano: ' + (e.response?.data?.exception || e.message))
+      errorModal.show(e, 'Carregar plano')
     }
   }
 
@@ -113,7 +115,7 @@ export default function PlanosListagem() {
       voltarParaLista()
       carregar()
     } catch (e) {
-      alert('Erro ao salvar plano: ' + (e.response?.data?.exception || e.message))
+      errorModal.show(e, 'Salvar plano')
     } finally {
       setSalvando(false)
     }
@@ -126,7 +128,7 @@ export default function PlanosListagem() {
       await excluirPlano(plano.name)
       carregar()
     } catch (e) {
-      alert(e.response?.data?.exception || e.response?.data?.message || e.message)
+      errorModal.show(e, 'Excluir plano')
     } finally {
       setExcluindo('')
     }
@@ -275,6 +277,7 @@ export default function PlanosListagem() {
             </Button>
           </div>
         </div>
+        {errorModal.element}
       </div>
     )
   }
@@ -315,6 +318,7 @@ export default function PlanosListagem() {
           pageSize={100}
         />
       )}
+      {errorModal.element}
     </ListPage>
   )
 }

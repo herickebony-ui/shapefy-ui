@@ -1,21 +1,44 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Save, Plus, Trash2, BookmarkPlus, Edit2, Check, X, ChevronUp, ChevronDown } from 'lucide-react'
+import { Save, Plus, Trash2, BookmarkPlus, Edit2, Check, X, ChevronUp, ChevronDown, Database, Clock } from 'lucide-react'
 import { buscarPrescricao, criarPrescricao, salvarPrescricao } from '../../api/prescricoes'
 import {
   buscarManipulados, listarManipulados,
   criarManipulado, salvarManipulado, excluirManipulado,
 } from '../../api/manipulados'
+import {
+  buscarMomentosDeUso, listarMomentosDeUso,
+  criarMomentoDeUso, salvarMomentoDeUso, excluirMomentoDeUso,
+  garantirMomentoDeUso,
+} from '../../api/momentosDeUso'
+import { criarNotificacaoAluno } from '../../api/notificacoes'
 import { listarAlunos } from '../../api/alunos'
-import { Button, FormGroup, Input, Textarea, Autocomplete, Badge, Spinner, Modal } from '../../components/ui'
+import { Button, FormGroup, Input, Select, Textarea, Autocomplete, Badge, Spinner, Modal } from '../../components/ui'
 import DetailPage from '../../components/templates/DetailPage'
 import DownloadPdfButton from '../../components/DownloadPdfButton'
+import NotificarAlunoModal from '../../components/NotificarAlunoModal'
+import useErrorModal from '../../hooks/useErrorModal'
 
 const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
 
+const formatarDataBr = (iso) => {
+  if (!iso) return ''
+  const [y, m, d] = String(iso).split('-')
+  return `${d}/${m}/${y}`
+}
+
+const OPCOES_DIAS = [
+  { value: '', label: '—' },
+  { value: '30', label: '30 dias' },
+  { value: '60', label: '60 dias' },
+  { value: '90', label: '90 dias' },
+  { value: '120', label: '120 dias' },
+  { value: '180', label: '180 dias' },
+]
+
 // ─── Item row compacta ────────────────────────────────────────────────────────
 
-const ItemRow = ({ item, idx, total, onChange, onRemove, onSaveToBank, onMoveUp, onMoveDown, savingToBank }) => (
+const ItemRow = ({ item, idx, total, onChange, onRemove, onSaveItem, onMoveUp, onMoveDown, savingItem }) => (
   <tr className="border-b border-[#323238] last:border-0">
     <td className="pl-2 pr-1 py-1.5 w-8">
       <div className="flex flex-col items-center gap-0.5">
@@ -39,11 +62,26 @@ const ItemRow = ({ item, idx, total, onChange, onRemove, onSaveToBank, onMoveUp,
     <td className="px-1 py-1.5 min-w-[140px]">
       <Autocomplete
         compact
+        value={item.momento_de_uso || ''}
+        onChange={(v) => onChange('momento_de_uso', v)}
+        onSelect={(m) => onChange('momento_de_uso', m.nome_do_momento || m.name)}
+        searchFn={async (q) => buscarMomentosDeUso(q)}
+        renderItem={(m) => (
+          <p className="text-sm text-white">{m.nome_do_momento || m.name}</p>
+        )}
+        placeholder="Horário de uso..."
+        emptyState="Cadastre horários de uso primeiro"
+      />
+    </td>
+    <td className="px-1 py-1.5 min-w-[140px]">
+      <Autocomplete
+        compact
         value={item.manipulated || ''}
         onChange={(v) => onChange('manipulated', v)}
         onSelect={(m) => {
           onChange('manipulated', m.full_name || m.name)
           if (m.description) onChange('description', m.description)
+          if (m.momento_de_uso) onChange('momento_de_uso', m.momento_de_uso)
         }}
         searchFn={async (q) => buscarManipulados(q)}
         renderItem={(m) => (
@@ -67,12 +105,12 @@ const ItemRow = ({ item, idx, total, onChange, onRemove, onSaveToBank, onMoveUp,
     <td className="px-2 py-1.5 w-16">
       <div className="flex items-center gap-1">
         <button
-          onClick={onSaveToBank}
-          disabled={!item.manipulated || savingToBank}
-          title="Salvar no banco"
+          onClick={onSaveItem}
+          disabled={(!item.manipulated && !item.momento_de_uso) || savingItem}
+          title="Salvar manipulado e horário no banco"
           className="h-7 w-7 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors disabled:opacity-30"
         >
-          {savingToBank
+          {savingItem
             ? <span className="w-3 h-3 border border-blue-400 border-t-transparent rounded-full animate-spin" />
             : <BookmarkPlus size={12} />}
         </button>
@@ -87,7 +125,7 @@ const ItemRow = ({ item, idx, total, onChange, onRemove, onSaveToBank, onMoveUp,
 
 // ─── Item card mobile ─────────────────────────────────────────────────────────
 
-const ItemCard = ({ item, idx, total, onChange, onRemove, onSaveToBank, onMoveUp, onMoveDown, savingToBank }) => (
+const ItemCard = ({ item, idx, total, onChange, onRemove, onSaveItem, onMoveUp, onMoveDown, savingItem }) => (
   <div className="px-3 py-3 border-b border-[#323238] last:border-0">
     <div className="flex items-center justify-between mb-2">
       <div className="flex items-center gap-1.5">
@@ -104,9 +142,11 @@ const ItemCard = ({ item, idx, total, onChange, onRemove, onSaveToBank, onMoveUp
         </div>
       </div>
       <div className="flex items-center gap-1.5">
-        <button onClick={onSaveToBank} disabled={!item.manipulated || savingToBank}
+        <button onClick={onSaveItem}
+          disabled={(!item.manipulated && !item.momento_de_uso) || savingItem}
+          title="Salvar manipulado e horário no banco"
           className="h-9 w-9 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors disabled:opacity-30">
-          {savingToBank ? <span className="w-3 h-3 border border-blue-400 border-t-transparent rounded-full animate-spin" /> : <BookmarkPlus size={14} />}
+          {savingItem ? <span className="w-3 h-3 border border-blue-400 border-t-transparent rounded-full animate-spin" /> : <BookmarkPlus size={14} />}
         </button>
         <button onClick={onRemove}
           className="h-9 w-9 flex items-center justify-center text-[#850000] hover:text-white hover:bg-[#850000] border border-[#850000]/30 rounded-lg transition-colors">
@@ -117,11 +157,24 @@ const ItemCard = ({ item, idx, total, onChange, onRemove, onSaveToBank, onMoveUp
     <div className="space-y-2">
       <Autocomplete
         compact
+        value={item.momento_de_uso || ''}
+        onChange={(v) => onChange('momento_de_uso', v)}
+        onSelect={(m) => onChange('momento_de_uso', m.nome_do_momento || m.name)}
+        searchFn={async (q) => buscarMomentosDeUso(q)}
+        renderItem={(m) => (
+          <p className="text-sm text-white">{m.nome_do_momento || m.name}</p>
+        )}
+        placeholder="Horário de uso..."
+        emptyState="Cadastre horários de uso primeiro"
+      />
+      <Autocomplete
+        compact
         value={item.manipulated || ''}
         onChange={(v) => onChange('manipulated', v)}
         onSelect={(m) => {
           onChange('manipulated', m.full_name || m.name)
           if (m.description) onChange('description', m.description)
+          if (m.momento_de_uso) onChange('momento_de_uso', m.momento_de_uso)
         }}
         searchFn={async (q) => buscarManipulados(q)}
         renderItem={(m) => (
@@ -153,8 +206,11 @@ function BancoModal({ onClose }) {
   const [editingId, setEditingId] = useState(null)
   const [novoNome, setNovoNome] = useState('')
   const [novoDesc, setNovoDesc] = useState('')
+  const [novoMomento, setNovoMomento] = useState('')
   const [editNome, setEditNome] = useState('')
   const [editDesc, setEditDesc] = useState('')
+  const [editMomento, setEditMomento] = useState('')
+  const errorModal = useErrorModal()
 
   useEffect(() => {
     listarManipulados().then(setLista).catch(console.error).finally(() => setLoading(false))
@@ -164,22 +220,40 @@ function BancoModal({ onClose }) {
     if (!novoNome.trim()) return
     setSaving(true)
     try {
-      const created = await criarManipulado({ full_name: novoNome.trim(), description: novoDesc.trim() })
+      const momentoName = await garantirMomentoDeUso(novoMomento)
+      const created = await criarManipulado({
+        full_name: novoNome.trim(),
+        description: novoDesc.trim(),
+        momento_de_uso: momentoName || undefined,
+      })
       setLista(prev => [...prev, created].sort((a, b) => (a.full_name || '').localeCompare(b.full_name || '')))
-      setNovoNome(''); setNovoDesc('')
-    } catch (e) { console.error(e); alert('Erro ao criar.') }
+      setNovoNome(''); setNovoDesc(''); setNovoMomento('')
+    } catch (e) { errorModal.show(e, 'Criar manipulado') }
     finally { setSaving(false) }
   }
 
-  const startEdit = (item) => { setEditingId(item.name); setEditNome(item.full_name || ''); setEditDesc(item.description || '') }
+  const startEdit = (item) => {
+    setEditingId(item.name)
+    setEditNome(item.full_name || '')
+    setEditDesc(item.description || '')
+    setEditMomento(item.momento_de_uso || '')
+  }
 
   const handleSalvarEdit = async (name) => {
     setSaving(true)
     try {
-      await salvarManipulado(name, { full_name: editNome.trim(), description: editDesc.trim(), enabled: 1 })
-      setLista(prev => prev.map(i => i.name === name ? { ...i, full_name: editNome.trim(), description: editDesc.trim() } : i))
+      const momentoName = await garantirMomentoDeUso(editMomento)
+      await salvarManipulado(name, {
+        full_name: editNome.trim(),
+        description: editDesc.trim(),
+        momento_de_uso: momentoName || '',
+        enabled: 1,
+      })
+      setLista(prev => prev.map(i => i.name === name
+        ? { ...i, full_name: editNome.trim(), description: editDesc.trim(), momento_de_uso: momentoName }
+        : i))
       setEditingId(null)
-    } catch (e) { console.error(e); alert('Erro ao salvar.') }
+    } catch (e) { errorModal.show(e, 'Salvar manipulado') }
     finally { setSaving(false) }
   }
 
@@ -188,10 +262,11 @@ function BancoModal({ onClose }) {
     try {
       await excluirManipulado(item.name)
       setLista(prev => prev.filter(i => i.name !== item.name))
-    } catch (e) { console.error(e); alert('Erro ao excluir.') }
+    } catch (e) { errorModal.show(e, 'Excluir manipulado') }
   }
 
-  return (
+  return (<>
+    {errorModal.element}
     <Modal
       title="Banco de Manipulados"
       subtitle="Gerencie os compostos disponíveis para prescrição"
@@ -202,7 +277,18 @@ function BancoModal({ onClose }) {
       <div className="p-4 space-y-4">
         <div className="bg-[#222226] border border-[#323238] rounded-lg p-4 space-y-3">
           <p className="text-white text-sm font-semibold">Adicionar novo</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <FormGroup label="Horário de uso padrão">
+              <Autocomplete
+                value={novoMomento}
+                onChange={setNovoMomento}
+                onSelect={(m) => setNovoMomento(m.nome_do_momento || m.name)}
+                searchFn={async (q) => buscarMomentosDeUso(q)}
+                renderItem={(m) => <p className="text-sm text-white">{m.nome_do_momento || m.name}</p>}
+                placeholder="Ex: Ao acordar, Pré-treino..."
+                emptyState="Será cadastrado ao salvar"
+              />
+            </FormGroup>
             <FormGroup label="Nome do Manipulado" required>
               <Input value={novoNome} onChange={setNovoNome} placeholder="Ex: Creatina" />
             </FormGroup>
@@ -225,10 +311,15 @@ function BancoModal({ onClose }) {
               <div key={item.name} className="flex items-center gap-3 px-4 py-3 bg-[#1a1a1a] hover:bg-[#222226] transition-colors">
                 {editingId === item.name ? (
                   <>
-                    <div className="flex-1 grid grid-cols-2 gap-2">
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2">
+                      <input value={editMomento} onChange={e => setEditMomento(e.target.value)}
+                        placeholder="Horário de uso"
+                        className="h-7 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-sm outline-none focus:border-brand/60" />
                       <input value={editNome} onChange={e => setEditNome(e.target.value)}
+                        placeholder="Nome"
                         className="h-7 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-sm outline-none focus:border-brand/60" />
                       <input value={editDesc} onChange={e => setEditDesc(e.target.value)}
+                        placeholder="Descrição / dose"
                         className="h-7 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-sm outline-none focus:border-brand/60" />
                     </div>
                     <button onClick={() => handleSalvarEdit(item.name)} disabled={saving}
@@ -244,7 +335,14 @@ function BancoModal({ onClose }) {
                   <>
                     <div className="flex-1 min-w-0">
                       <p className="text-white text-sm font-medium truncate">{item.full_name}</p>
-                      {item.description && <p className="text-gray-500 text-xs truncate">{item.description}</p>}
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {item.description && <p className="text-gray-500 text-xs truncate">{item.description}</p>}
+                        {item.momento_de_uso && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded shrink-0">
+                            <Clock size={9} />{item.momento_de_uso}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <button onClick={() => startEdit(item)} title="Editar"
                       className="h-7 w-7 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors">
@@ -262,7 +360,123 @@ function BancoModal({ onClose }) {
         )}
       </div>
     </Modal>
-  )
+  </>)
+}
+
+// ─── Modal momentos de uso ────────────────────────────────────────────────────
+
+function MomentosModal({ onClose }) {
+  const [lista, setLista] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [novoNome, setNovoNome] = useState('')
+  const [editNome, setEditNome] = useState('')
+  const errorModal = useErrorModal()
+
+  useEffect(() => {
+    listarMomentosDeUso().then(setLista).catch(console.error).finally(() => setLoading(false))
+  }, [])
+
+  const handleCriar = async () => {
+    if (!novoNome.trim()) return
+    setSaving(true)
+    try {
+      const created = await criarMomentoDeUso({ nome_do_momento: novoNome.trim() })
+      setLista(prev => [...prev, created].sort((a, b) => (a.nome_do_momento || '').localeCompare(b.nome_do_momento || '')))
+      setNovoNome('')
+    } catch (e) { errorModal.show(e, 'Criar horário de uso') }
+    finally { setSaving(false) }
+  }
+
+  const startEdit = (item) => {
+    setEditingId(item.name)
+    setEditNome(item.nome_do_momento || '')
+  }
+
+  const handleSalvarEdit = async (name) => {
+    setSaving(true)
+    try {
+      await salvarMomentoDeUso(name, { nome_do_momento: editNome.trim() })
+      setLista(prev => prev.map(i => i.name === name
+        ? { ...i, nome_do_momento: editNome.trim() }
+        : i))
+      setEditingId(null)
+    } catch (e) { errorModal.show(e, 'Salvar horário de uso') }
+    finally { setSaving(false) }
+  }
+
+  const handleExcluir = async (item) => {
+    if (!confirm(`Excluir "${item.nome_do_momento}"?`)) return
+    try {
+      await excluirMomentoDeUso(item.name)
+      setLista(prev => prev.filter(i => i.name !== item.name))
+    } catch (e) { errorModal.show(e, 'Excluir horário de uso') }
+  }
+
+  return (<>
+    {errorModal.element}
+    <Modal
+      title="Horários de Uso"
+      subtitle="Catálogo de horários do dia para usar nas prescrições (ex: Ao acordar, Pré-treino, Antes de dormir)"
+      onClose={onClose}
+      size="lg"
+      footer={<Button variant="ghost" onClick={onClose}>Fechar</Button>}
+    >
+      <div className="p-4 space-y-4">
+        <div className="bg-[#222226] border border-[#323238] rounded-lg p-4 space-y-3">
+          <p className="text-white text-sm font-semibold">Adicionar novo</p>
+          <FormGroup label="Nome do Horário de Uso" required>
+            <Input value={novoNome} onChange={setNovoNome} placeholder="Ex: Ao acordar, Pré-treino, Antes de dormir" />
+          </FormGroup>
+          <Button variant="primary" size="sm" icon={Plus} onClick={handleCriar} loading={saving} disabled={!novoNome.trim()}>
+            Salvar
+          </Button>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-6"><Spinner /></div>
+        ) : lista.length === 0 ? (
+          <p className="text-gray-600 text-sm text-center py-6">Nenhum horário de uso cadastrado.</p>
+        ) : (
+          <div className="divide-y divide-[#323238] border border-[#323238] rounded-lg overflow-hidden">
+            {lista.map((item) => (
+              <div key={item.name} className="flex items-center gap-3 px-4 py-3 bg-[#1a1a1a] hover:bg-[#222226] transition-colors">
+                {editingId === item.name ? (
+                  <>
+                    <input value={editNome} onChange={e => setEditNome(e.target.value)}
+                      className="flex-1 h-7 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-sm outline-none focus:border-brand/60" />
+                    <button onClick={() => handleSalvarEdit(item.name)} disabled={saving}
+                      className="h-7 w-7 flex items-center justify-center text-green-400 hover:bg-green-600 hover:text-white border border-green-500/30 rounded-lg transition-colors">
+                      <Check size={12} />
+                    </button>
+                    <button onClick={() => setEditingId(null)}
+                      className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] rounded-lg transition-colors">
+                      <X size={12} />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-sm font-medium truncate">{item.nome_do_momento}</p>
+                    </div>
+                    <button onClick={() => startEdit(item)} title="Editar"
+                      className="h-7 w-7 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors">
+                      <Edit2 size={12} />
+                    </button>
+                    <button onClick={() => handleExcluir(item)} title="Excluir"
+                      className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white hover:bg-[#850000] border border-[#850000]/30 rounded-lg transition-colors">
+                      <Trash2 size={12} />
+                    </button>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </Modal>
+  </>)
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -275,13 +489,19 @@ export default function PrescricaoDetalhe() {
   const [loading, setLoading] = useState(!isNova)
   const [saving, setSaving] = useState(false)
   const [showBanco, setShowBanco] = useState(false)
-  const [savingToBank, setSavingToBank] = useState(null)
+  const [showMomentos, setShowMomentos] = useState(false)
+  const [notificar, setNotificar] = useState(null) // { entityName } | null
+  const [savingItem, setSavingItem] = useState(null)
+  const errorModal = useErrorModal()
 
   const [aluno, setAluno] = useState('')
   const [alunoNome, setAlunoNome] = useState('')
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [description, setDescription] = useState('')
   const [published, setPublished] = useState(false)
+  const [validadeDias, setValidadeDias] = useState('')
+  const [aviarPara, setAviarPara] = useState('')
+  const [dataFim, setDataFim] = useState('')
   const [prescriptions, setPrescriptions] = useState([])
 
   useEffect(() => {
@@ -295,9 +515,13 @@ export default function PrescricaoDetalhe() {
         setDate(data.date || '')
         setDescription(data.description || '')
         setPublished(!!data.published)
+        setValidadeDias(data.validade_dias || '')
+        setAviarPara(data.aviar_para || '')
+        setDataFim(data.data_fim || '')
         setPrescriptions((data.prescriptions || []).map(item => ({
           manipulated: item.manipulated || '',
           description: item.description || '',
+          momento_de_uso: item.momento_de_uso || '',
         })))
       } catch (e) { console.error(e) }
       finally { setLoading(false) }
@@ -305,34 +529,129 @@ export default function PrescricaoDetalhe() {
     carregar()
   }, [id])
 
-  const handleSave = async () => {
+  // Auto-cadastra momentos digitados livremente que ainda não existem no catálogo.
+  // Devolve a lista de items com `momento_de_uso` substituído pelo `name` válido.
+  const garantirMomentos = async (items) => {
+    const valores = [...new Set(items.map(i => (i.momento_de_uso || '').trim()).filter(Boolean))]
+    if (!valores.length) return items
+
+    const catalogo = await listarMomentosDeUso()
+    const mapa = {}
+    catalogo.forEach(m => {
+      mapa[m.nome_do_momento] = m.name
+      mapa[m.name] = m.name
+    })
+
+    for (const valor of valores) {
+      if (mapa[valor]) continue
+      try {
+        const novo = await criarMomentoDeUso({ nome_do_momento: valor, ordem: 0 })
+        mapa[valor] = novo?.name || valor
+      } catch (e) {
+        console.warn(`[momentos] falha ao criar "${valor}"`, e?.response?.data)
+        mapa[valor] = valor
+      }
+    }
+
+    return items.map(i => ({
+      ...i,
+      momento_de_uso: i.momento_de_uso ? (mapa[i.momento_de_uso] || i.momento_de_uso) : '',
+    }))
+  }
+
+  // Clicar em Salvar agora só ABRE o modal de notificação. O save real acontece
+  // dentro de handleConfirmarSave, gatilhado por Notificar ou Confirmar (agendar).
+  // "Não" no modal → cancela tudo (não salva).
+  const handleSave = () => {
+    if (!aluno) {
+      errorModal.show(new Error('Selecione um aluno antes de salvar.'), 'Salvar prescrição')
+      return
+    }
+    setNotificar({})
+  }
+
+  const handleConfirmarSave = async (agendado_para) => {
     setSaving(true)
     try {
+      const prescriptionsNormalizadas = await garantirMomentos(prescriptions)
+      if (prescriptionsNormalizadas !== prescriptions) setPrescriptions(prescriptionsNormalizadas)
+
       const payload = {
         aluno, nome_completo: alunoNome, profissional: profissionalLogado(),
-        date, description, published: published ? 1 : 0, prescriptions,
+        date, description, published: published ? 1 : 0,
+        validade_dias: validadeDias || null,
+        aviar_para: aviarPara || null,
+        prescriptions: prescriptionsNormalizadas,
       }
+      let entityName
       if (isNova) {
         const novo = await criarPrescricao(payload)
+        setDataFim(novo.data_fim || '')
+        entityName = novo.name
         navigate(`/prescricoes/${encodeURIComponent(novo.name)}`, { replace: true })
       } else {
-        await salvarPrescricao(decodeURIComponent(id), payload)
+        const atualizado = await salvarPrescricao(decodeURIComponent(id), payload)
+        setDataFim(atualizado?.data_fim || '')
+        entityName = decodeURIComponent(id)
       }
-    } catch (e) { console.error(e); alert('Erro ao salvar prescrição.') }
+      await criarNotificacaoAluno({
+        aluno,
+        titulo: 'Sua nova prescrição está disponível!',
+        descricao: 'Confira sua nova prescrição no app.',
+        url: `/prescricao/${entityName}`,
+        agendado_para,
+      })
+      setNotificar(null)
+    } catch (e) { errorModal.show(e, isNova ? 'Criar prescrição' : 'Salvar prescrição') }
     finally { setSaving(false) }
   }
 
-  const handleSaveToBank = async (idx) => {
-    const item = prescriptions[idx]
-    if (!item.manipulated) return
-    setSavingToBank(idx)
-    try {
-      await criarManipulado({ full_name: item.manipulated, description: item.description || '' })
-    } catch (e) { console.error(e) }
-    finally { setSavingToBank(null) }
+  // Duplicate é silenciado (UX otimista — item já está no catálogo).
+  const ehDuplicado = (e) => {
+    const status = e?.response?.status
+    const exc = e?.response?.data?.exception || ''
+    return status === 409 || exc.includes('DuplicateEntryError')
   }
 
-  const addItem = () => setPrescriptions(prev => [...prev, { manipulated: '', description: '' }])
+  const handleSaveItem = async (idx) => {
+    const item = prescriptions[idx]
+    const manipulado = (item.manipulated || '').trim()
+    const horario = (item.momento_de_uso || '').trim()
+    if (!manipulado && !horario) return
+
+    setSavingItem(idx)
+    try {
+      // 1) Garante o momento no catálogo (cria se não existir) e pega o name canônico.
+      let momentoName = ''
+      try {
+        momentoName = await garantirMomentoDeUso(horario)
+      } catch (e) {
+        if (!ehDuplicado(e)) errorModal.show(e, 'Salvar item no catálogo')
+      }
+
+      // 2) Se o name mudou (slug diferente do digitado), sincroniza no state.
+      if (momentoName && momentoName !== horario) {
+        setPrescriptions(prev => prev.map((it, i) => i === idx ? { ...it, momento_de_uso: momentoName } : it))
+      }
+
+      // 3) Cria o manipulado vinculado ao momento. Duplicado é silenciado.
+      if (manipulado) {
+        try {
+          await criarManipulado({
+            full_name: manipulado,
+            description: item.description || '',
+            momento_de_uso: momentoName || undefined,
+          })
+        } catch (e) {
+          if (!ehDuplicado(e)) errorModal.show(e, 'Salvar item no catálogo')
+        }
+      }
+    } finally {
+      setSavingItem(null)
+    }
+  }
+
+  const addItem = () => setPrescriptions(prev => [...prev, { manipulated: '', description: '', momento_de_uso: '' }])
   const updateItem = (idx, field, value) =>
     setPrescriptions(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item))
   const removeItem = (idx) => setPrescriptions(prev => prev.filter((_, i) => i !== idx))
@@ -359,7 +678,17 @@ export default function PrescricaoDetalhe() {
             {published ? 'Ativa' : 'Inativa'}
           </Badge>
         )}
-        actions={!isNova && <DownloadPdfButton entity="prescricao" name={id} />}
+        actions={
+          <>
+            <Button variant="secondary" size="sm" icon={Database} onClick={() => setShowBanco(true)}>
+              <span className="hidden sm:inline">Banco</span>
+            </Button>
+            <Button variant="secondary" size="sm" icon={Clock} onClick={() => setShowMomentos(true)}>
+              <span className="hidden sm:inline">Horários de Uso</span>
+            </Button>
+            {!isNova && <DownloadPdfButton entity="prescricao" name={id} />}
+          </>
+        }
         footer={
           <div className="flex justify-end gap-2 px-4 md:px-8 py-4 border-t border-[#323238] bg-[#0a0a0a]">
             <Button variant="ghost" onClick={() => navigate('/prescricoes')}>Cancelar</Button>
@@ -386,16 +715,22 @@ export default function PrescricaoDetalhe() {
                 placeholder="Buscar aluno..."
               />
             </FormGroup>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <FormGroup label="Data" required>
                 <Input type="date" value={date} onChange={setDate} />
+              </FormGroup>
+              <FormGroup label="Validade" hint={dataFim ? `Válida até ${formatarDataBr(dataFim)}` : 'Calculado automaticamente'}>
+                <Select value={validadeDias} onChange={setValidadeDias} options={OPCOES_DIAS} />
+              </FormGroup>
+              <FormGroup label="Aviar para" hint="Quantidade a manipular">
+                <Select value={aviarPara} onChange={setAviarPara} options={OPCOES_DIAS} />
               </FormGroup>
               <FormGroup label="Status">
                 <div className="flex items-center gap-3 h-10">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)}
                       className="w-4 h-4 accent-brand" />
-                    <span className="text-gray-300 text-sm">Prescrição ativa (visível ao aluno)</span>
+                    <span className="text-gray-300 text-sm">Prescrição ativa</span>
                   </label>
                 </div>
               </FormGroup>
@@ -423,6 +758,7 @@ export default function PrescricaoDetalhe() {
                     <thead>
                       <tr className="border-b border-[#323238] bg-[#111113]">
                         <th className="pl-3 pr-1 py-2 w-7 text-left text-[10px] text-gray-600">#</th>
+                        <th className="px-1 py-2 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Horário de Uso</th>
                         <th className="px-1 py-2 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Manipulado</th>
                         <th className="px-1 py-2 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Posologia / Descrição</th>
                         <th className="px-2 py-2 w-16"></th>
@@ -437,10 +773,10 @@ export default function PrescricaoDetalhe() {
                           total={prescriptions.length}
                           onChange={(field, value) => updateItem(idx, field, value)}
                           onRemove={() => removeItem(idx)}
-                          onSaveToBank={() => handleSaveToBank(idx)}
+                          onSaveItem={() => handleSaveItem(idx)}
                           onMoveUp={() => moveItem(idx, -1)}
                           onMoveDown={() => moveItem(idx, 1)}
-                          savingToBank={savingToBank === idx}
+                          savingItem={savingItem === idx}
                         />
                       ))}
                     </tbody>
@@ -456,10 +792,10 @@ export default function PrescricaoDetalhe() {
                       total={prescriptions.length}
                       onChange={(field, value) => updateItem(idx, field, value)}
                       onRemove={() => removeItem(idx)}
-                      onSaveToBank={() => handleSaveToBank(idx)}
+                      onSaveItem={() => handleSaveItem(idx)}
                       onMoveUp={() => moveItem(idx, -1)}
                       onMoveDown={() => moveItem(idx, 1)}
-                      savingToBank={savingToBank === idx}
+                      savingItem={savingItem === idx}
                     />
                   ))}
                 </div>
@@ -479,6 +815,16 @@ export default function PrescricaoDetalhe() {
       </DetailPage>
 
       {showBanco && <BancoModal onClose={() => setShowBanco(false)} />}
+      {showMomentos && <MomentosModal onClose={() => setShowMomentos(false)} />}
+      <NotificarAlunoModal
+        open={!!notificar}
+        onClose={() => { if (!saving) setNotificar(null) }}
+        onConfirm={handleConfirmarSave}
+        loading={saving}
+        tipo="prescricao"
+        alunoNome={alunoNome}
+      />
+      {errorModal.element}
     </>
   )
 }

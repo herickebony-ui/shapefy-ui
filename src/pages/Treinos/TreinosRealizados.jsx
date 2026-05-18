@@ -3,16 +3,17 @@ import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, RefreshCw, ChevronLeft, ChevronRight,
   Dumbbell, Activity, Clock, MessageSquare, LineChart,
-  Save, Search, Calendar, TrendingUp, Check, Eye, EyeOff,
+  Save, Search, Calendar, TrendingUp, Check, Eye, EyeOff, Trash2,
 } from 'lucide-react'
 import { buscarSmart } from '../../utils/strings'
 import {
   listarTreinosRealizados, buscarTreinoRealizado,
-  salvarFeedbackProfissional, marcarEntregueTreino,
+  salvarFeedbackProfissional, marcarEntregueTreino, excluirTreinoRealizado,
 } from '../../api/treinosRealizados'
 import { buscarFicha } from '../../api/fichas'
-import { Button, Badge, Spinner } from '../../components/ui'
+import { Button, Badge, Spinner, Modal } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
+import useErrorModal from '../../hooks/useErrorModal'
 
 // ─── Cache em memória (sessão) ────────────────────────────────────────────────
 const TREINO_TTL_MS = 5 * 60 * 1000
@@ -649,7 +650,25 @@ export default function TreinosRealizados() {
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
   const [treinoAberto, setTreinoAberto] = useState(null)
+  const [modalExcluir, setModalExcluir] = useState(null) // treino a confirmar
+  const [excluindo, setExcluindo] = useState(false)
+  const errorModal = useErrorModal()
   const debounceRef = useRef(null)
+
+  const handleConfirmarExcluir = async () => {
+    if (!modalExcluir || excluindo) return
+    setExcluindo(true)
+    try {
+      await excluirTreinoRealizado(modalExcluir.name)
+      invalidarTreinoCache(modalExcluir.name)
+      setLista(prev => prev.filter(x => x.name !== modalExcluir.name))
+      setModalExcluir(null)
+    } catch (e) {
+      errorModal.show(e, 'Excluir treino realizado')
+    } finally {
+      setExcluindo(false)
+    }
+  }
 
   const carregar = async (reset = true, query = queryBusca, status = statusFiltro) => {
     setLoading(true)
@@ -835,8 +854,21 @@ export default function TreinosRealizados() {
                       {t.status || '—'}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <ChevronRight size={14} className="text-gray-600 group-hover:text-white transition-colors inline-block" />
+                  <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => setModalExcluir(t)}
+                        title="Excluir treino realizado"
+                        className="h-7 w-7 flex items-center justify-center text-[#2563eb] hover:text-white border border-[#2563eb]/30 hover:bg-[#2563eb] rounded-lg transition-colors"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                      <ChevronRight
+                        size={14}
+                        className="text-gray-600 group-hover:text-white transition-colors cursor-pointer"
+                        onClick={() => { setTreinoAberto(t); setView('detalhe') }}
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -851,6 +883,63 @@ export default function TreinosRealizados() {
           )}
         </div>
       )}
+      {modalExcluir && (
+        <Modal
+          isOpen
+          onClose={() => !excluindo && setModalExcluir(null)}
+          title="Excluir treino realizado"
+          size="sm"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setModalExcluir(null)} disabled={excluindo}>
+                Cancelar
+              </Button>
+              <Button variant="danger" icon={Trash2} onClick={handleConfirmarExcluir} loading={excluindo}>
+                Sim, excluir
+              </Button>
+            </>
+          }
+        >
+          <div className="p-5 space-y-4">
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 flex items-start gap-3">
+              <Trash2 size={20} className="text-red-400 mt-0.5 shrink-0" />
+              <div>
+                <h3 className="text-red-400 font-bold text-sm">Tem certeza?</h3>
+                <p className="text-gray-400 text-xs mt-1">
+                  Você está prestes a excluir o treino realizado de{' '}
+                  <strong className="text-gray-200">{modalExcluir.nome_completo}</strong>.{' '}
+                  Essa ação <span className="text-red-400 underline">não pode ser desfeita</span>.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-[#1a1a1a] border border-[#323238] rounded-lg divide-y divide-[#323238]/60">
+              <div className="px-3 py-2 flex items-center justify-between">
+                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-500">Treino</span>
+                <span className="text-xs font-mono text-blue-300">{modalExcluir.treino_label || modalExcluir.treino || '—'}</span>
+              </div>
+              <div className="px-3 py-2 flex items-center justify-between">
+                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-500">Data</span>
+                <span className="text-xs text-gray-300">{fmtDate(modalExcluir.data_e_hora_do_inicio)} · {fmtTime(modalExcluir.data_e_hora_do_inicio)}</span>
+              </div>
+              {modalExcluir.tempo_total_de_treino && (
+                <div className="px-3 py-2 flex items-center justify-between">
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-gray-500">Duração</span>
+                  <span className="text-xs text-gray-300">{modalExcluir.tempo_total_de_treino}</span>
+                </div>
+              )}
+              {modalExcluir.status && (
+                <div className="px-3 py-2 flex items-center justify-between">
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-gray-500">Status</span>
+                  <Badge variant={STATUS_VARIANT[modalExcluir.status] || 'default'} size="sm">{modalExcluir.status}</Badge>
+                </div>
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {errorModal.element}
     </ListPage>
   )
 }

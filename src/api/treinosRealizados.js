@@ -46,6 +46,10 @@ export const salvarFeedbackProfissional = async (id, feedback) => {
   return res.data.data
 }
 
+export const excluirTreinoRealizado = async (id) => {
+  await client.delete(`/api/resource/${DOCTYPE}/${encodeURIComponent(id)}`)
+}
+
 export const marcarEntregueTreino = async (id, entregue = true) => {
   const payload = entregue
     ? { entregue: 1, data_entrega: nowFrappeDatetime() }

@@ -8,8 +8,8 @@ const FIELDS = [
   'nao_sou_brasileiro_pf', 'endereco_pf',
   'razao_social_pj', 'nome_fantasia_pj', 'cnpj_pj',
   'nao_e_uma_empresa_brasileira_pj', 'telefone_da_empresa', 'endereco_da_empresa_pj',
-  'instagram', 'area_atuacao',
-  'foto', 'banner', 'cover_image', 'professional_logo',
+  'instagram', 'area_atuacao', 'registro_profissional',
+  'foto', 'banner', 'cover_image', 'professional_logo', 'assinatura',
   'theme_color', 'theme_mode',
 ]
 

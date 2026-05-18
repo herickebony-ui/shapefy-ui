@@ -9,6 +9,7 @@ import {
 import { Button, Badge, Modal, FormGroup, Input, Spinner } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 import DataTable from '../../components/ui/DataTable'
+import useErrorModal from '../../hooks/useErrorModal'
 
 const fmtDate = (d) => {
   if (!d) return '—'
@@ -29,6 +30,7 @@ function BancoModal({ onClose }) {
   const [novoDesc, setNovoDesc] = useState('')
   const [editNome, setEditNome] = useState('')
   const [editDesc, setEditDesc] = useState('')
+  const errorModal = useErrorModal()
 
   useEffect(() => {
     listarManipulados().then(setLista).catch(console.error).finally(() => setLoading(false))
@@ -41,7 +43,7 @@ function BancoModal({ onClose }) {
       const created = await criarManipulado({ full_name: novoNome.trim(), description: novoDesc.trim() })
       setLista(prev => [...prev, created].sort((a, b) => (a.full_name || '').localeCompare(b.full_name || '')))
       setNovoNome(''); setNovoDesc('')
-    } catch (e) { console.error(e); alert('Erro ao criar.') }
+    } catch (e) { errorModal.show(e, 'Criar manipulado') }
     finally { setSaving(false) }
   }
 
@@ -53,7 +55,7 @@ function BancoModal({ onClose }) {
       await salvarManipulado(name, { full_name: editNome.trim(), description: editDesc.trim(), enabled: 1 })
       setLista(prev => prev.map(i => i.name === name ? { ...i, full_name: editNome.trim(), description: editDesc.trim() } : i))
       setEditingId(null)
-    } catch (e) { console.error(e); alert('Erro ao salvar.') }
+    } catch (e) { errorModal.show(e, 'Salvar manipulado') }
     finally { setSaving(false) }
   }
 
@@ -62,10 +64,11 @@ function BancoModal({ onClose }) {
     try {
       await excluirManipulado(item.name)
       setLista(prev => prev.filter(i => i.name !== item.name))
-    } catch (e) { console.error(e); alert('Erro ao excluir.') }
+    } catch (e) { errorModal.show(e, 'Excluir manipulado') }
   }
 
-  return (
+  return (<>
+    {errorModal.element}
     <Modal
       title="Banco de Manipulados"
       subtitle="Gerencie os compostos disponíveis para prescrição"
@@ -136,7 +139,7 @@ function BancoModal({ onClose }) {
         )}
       </div>
     </Modal>
-  )
+  </>)
 }
 
 export default function PrescricaoListagem() {
@@ -153,6 +156,7 @@ export default function PrescricaoListagem() {
   const [previewLoading, setPreviewLoading] = useState(false)
   const [duplicando, setDuplicando] = useState(null)
   const [showBanco, setShowBanco] = useState(false)
+  const errorModal = useErrorModal()
 
   const carregar = async (reset = true, query = queryBusca) => {
     setLoading(true)
@@ -184,8 +188,7 @@ export default function PrescricaoListagem() {
       await excluirPrescricao(name)
       await carregar()
     } catch (e) {
-      console.error(e)
-      alert('Erro ao excluir prescrição.')
+      errorModal.show(e, 'Excluir prescrição')
     }
   }
 
@@ -229,8 +232,7 @@ export default function PrescricaoListagem() {
       })
       navigate(`/prescricoes/${encodeURIComponent(novo.name)}`)
     } catch (e) {
-      console.error(e)
-      alert('Erro ao duplicar prescrição.')
+      errorModal.show(e, 'Duplicar prescrição')
     } finally {
       setDuplicando(null)
     }
@@ -378,6 +380,7 @@ export default function PrescricaoListagem() {
           </div>
         </Modal>
       )}
+      {errorModal.element}
     </>
   )
 }

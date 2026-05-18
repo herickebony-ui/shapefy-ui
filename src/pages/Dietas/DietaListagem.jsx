@@ -12,6 +12,7 @@ import { ModalDuplicarDieta } from './DietaDetalhe'
 import ModalEscolherModelo from '../Modelos/ModalEscolherModelo'
 import { Button, FormGroup, Input, Autocomplete, Modal, EmptyState, Pagination, DataTable } from '../../components/ui'
 import { buscarSmart } from '../../utils/strings'
+import useErrorModal from '../../hooks/useErrorModal'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -128,6 +129,7 @@ const RowDietaPeriodo = ({ dieta, onDatasAtualizadas }) => {
   const [editando, setEditando] = useState(false)
   const [datas, setDatas] = useState({ date: toYMD(dieta.date) || '', final_date: toYMD(dieta.final_date) || '' })
   const [salvando, setSalvando] = useState(false)
+  const errorModal = useErrorModal()
   const ref = useRef(null)
 
   useEffect(() => {
@@ -145,12 +147,13 @@ const RowDietaPeriodo = ({ dieta, onDatasAtualizadas }) => {
       onDatasAtualizadas(dieta.name, datas)
       setEditando(false)
     } catch (err) {
-      alert('Erro ao salvar datas: ' + err.message)
+      errorModal.show(err, 'Salvar datas da dieta')
     } finally { setSalvando(false) }
   }
 
   return (
     <div className="relative" ref={ref}>
+      {errorModal.element}
       <button onClick={(e) => { e.stopPropagation(); setEditando(v => !v) }}
         className="flex items-center gap-2 text-gray-400 hover:text-white text-xs transition-colors group/btn">
         <Calendar size={11} className="shrink-0" />
@@ -447,6 +450,7 @@ const buscarAlunosFn = async (q) => {
 const ModalNovaDieta = ({ onClose, onCriada }) => {
   const [aluno, setAluno] = useState(null)
   const [criando, setCriando] = useState(false)
+  const errorModal = useErrorModal()
 
   const handleCriar = async () => {
     if (!aluno) return
@@ -463,11 +467,12 @@ const ModalNovaDieta = ({ onClose, onCriada }) => {
       const nova = await criarDieta({ aluno: aluno.name, ...dadosAluno })
       onCriada(nova.name)
     } catch (err) {
-      alert('Erro ao criar dieta: ' + err.message)
+      errorModal.show(err, 'Criar dieta')
     } finally { setCriando(false) }
   }
 
-  return (
+  return (<>
+    {errorModal.element}
     <Modal
       isOpen
       onClose={onClose}
@@ -507,7 +512,7 @@ const ModalNovaDieta = ({ onClose, onCriada }) => {
         </FormGroup>
       </div>
     </Modal>
-  )
+  </>)
 }
 
 // ─── DietaListagem ────────────────────────────────────────────────────────────
@@ -523,6 +528,7 @@ export default function DietaListagem() {
   const [modalNovaDieta, setModalNovaDieta] = useState(false)
   const [modalEscolherModelo, setModalEscolherModelo] = useState(false)
   const [dietas, setDietas] = useState([])
+  const errorModal = useErrorModal()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
@@ -587,7 +593,7 @@ export default function DietaListagem() {
       await excluirDieta(id)
       fetchDietas()
     } catch (e) {
-      alert('Erro ao excluir: ' + e.message)
+      errorModal.show(e, 'Excluir dieta')
     }
   }
 
@@ -781,6 +787,7 @@ export default function DietaListagem() {
           />
         )}
       </div>
+      {errorModal.element}
     </div>
   )
 }

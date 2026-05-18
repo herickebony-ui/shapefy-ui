@@ -10,7 +10,7 @@ import {
 import ListPage from '../../components/templates/ListPage'
 import ExplorarBibliotecaModal from '../../components/ExplorarBibliotecaModal'
 import { extractVideoId } from '../../utils/video'
-import { parseFrappeError } from '../../utils/frappeErrors'
+import useErrorModal from '../../hooks/useErrorModal'
 
 const normalizar = (s = '') =>
   String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
@@ -71,7 +71,7 @@ const normIntensidade = (v) => String(v ?? '').replace('.', ',')
 const ModalExercicio = ({ exercicio, grupos, onSave, onClose }) => {
   const isEdit = !!exercicio?.name
   const [saving, setSaving] = useState(false)
-  const [erro, setErro] = useState('')
+  const errorModal = useErrorModal()
 
   const [nome, setNome] = useState(exercicio?.nome_do_exercicio || '')
   const [grupo, setGrupo] = useState(exercicio?.grupo_muscular || '')
@@ -125,14 +125,14 @@ const ModalExercicio = ({ exercicio, grupos, onSave, onClose }) => {
       const resultado = await salvarTreinoExercicio(isEdit ? exercicio.name : null, payload)
       onSave(resultado)
     } catch (e) {
-      console.error(e)
-      setErro(parseFrappeError(e) || e.message || 'Erro ao salvar.')
+      errorModal.show(e, isEdit ? 'Salvar exercício' : 'Criar exercício')
     } finally { setSaving(false) }
   }
 
   const grupoOpts = useMemo(() => grupos.map(g => ({ value: g, label: g })), [grupos])
 
-  return (
+  return (<>
+    {errorModal.element}
     <Modal
       isOpen
       onClose={onClose}
@@ -146,11 +146,6 @@ const ModalExercicio = ({ exercicio, grupos, onSave, onClose }) => {
       }
     >
       <div className="p-4 space-y-4">
-        {erro && (
-          <div className="bg-red-900/20 border border-red-500/30 text-red-400 text-sm rounded-lg px-3 py-2">
-            {erro}
-          </div>
-        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormGroup label="Nome do Exercício" required>
@@ -273,12 +268,13 @@ const ModalExercicio = ({ exercicio, grupos, onSave, onClose }) => {
         </div>
       </div>
     </Modal>
-  )
+  </>)
 }
 
 // ─── GerenciarTreino ──────────────────────────────────────────────────────────
 
 export default function GerenciarTreino() {
+  const errorModal = useErrorModal()
   const [exercicios, setExercicios] = useState([])
   const [grupos, setGrupos] = useState([])
   const [loading, setLoading] = useState(true)
@@ -369,8 +365,7 @@ export default function GerenciarTreino() {
       setExercicios(exs)
       setDeletando(null)
     } catch (e) {
-      console.error(e)
-      alert('Erro ao excluir: ' + e.message)
+      errorModal.show(e, 'Excluir exercício')
     } finally { setDeleting(false) }
   }
 
@@ -562,6 +557,7 @@ export default function GerenciarTreino() {
           </div>
         </Modal>
       )}
+      {errorModal.element}
     </>
   )
 }

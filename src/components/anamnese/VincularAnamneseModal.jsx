@@ -3,7 +3,7 @@ import { Plus, X, FileText, Send } from 'lucide-react'
 import { Modal, Button, FormGroup, Autocomplete, Spinner, EmptyState } from '../ui'
 import { listarAlunos } from '../../api/alunos'
 import { listarFormularios, vincularAnamnese, listarAnamneses } from '../../api/anamneses'
-import { parseFrappeError } from '../../utils/frappeErrors'
+import useErrorModal from '../../hooks/useErrorModal'
 
 const buscarAlunosFn = async (q) => {
   if (q.length < 1) return []
@@ -25,6 +25,7 @@ export default function VincularAnamneseModal({
   const [loadingForms, setLoadingForms] = useState(true)
   const [vinculando, setVinculando] = useState(false)
   const [anamnesesAluno, setAnamnesesAluno] = useState([])
+  const errorModal = useErrorModal()
 
   useEffect(() => {
     listarFormularios()
@@ -41,8 +42,18 @@ export default function VincularAnamneseModal({
   }, [aluno])
 
   const handleVincular = async () => {
-    if (!aluno) return alert('Selecione um aluno.')
-    if (!formularioSelecionado) return alert('Selecione um formulário.')
+    if (!aluno || !formularioSelecionado) {
+      const faltando = []
+      if (!aluno) faltando.push('Campo obrigatório: Aluno')
+      if (!formularioSelecionado) faltando.push('Campo obrigatório: Formulário')
+      errorModal.show({
+        type: 'mandatory',
+        title: 'Campos obrigatórios não preenchidos',
+        messages: faltando,
+        statusCode: 0,
+      }, 'Vincular anamnese')
+      return
+    }
     if (vinculando) return
 
     const formNome = formularios.find(f => f.name === formularioSelecionado)?.titulo || formularioSelecionado
@@ -59,12 +70,12 @@ export default function VincularAnamneseModal({
       onVinculada?.()
       onClose()
     } catch (e) {
-      console.error(e)
-      alert(parseFrappeError(e) || 'Erro ao vincular anamnese.')
+      errorModal.show(e, 'Vincular anamnese')
     } finally { setVinculando(false) }
   }
 
-  return (
+  return (<>
+    {errorModal.element}
     <Modal
       isOpen
       onClose={onClose}
@@ -175,5 +186,5 @@ export default function VincularAnamneseModal({
         </button>
       </div>
     </Modal>
-  )
+  </>)
 }

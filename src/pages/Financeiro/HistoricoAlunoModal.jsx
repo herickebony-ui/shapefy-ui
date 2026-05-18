@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Modal, Spinner, EmptyState, Button } from '../../components/ui'
+import useErrorModal from '../../hooks/useErrorModal'
 import { listarContratos, buscarContrato } from '../../api/contratosAluno'
 import PlanoBadge from '../../components/financeiro/PlanoBadge'
 import StudentBadge from '../../components/financeiro/StudentBadge'
@@ -8,6 +9,7 @@ import { formatCurrency, formatDateBr, normalizeDate, withConcurrency } from './
 export default function HistoricoAlunoModal({
   isOpen, alunoId, alunoNome, planos = [], alunosMap = {}, onClose,
 }) {
+  const errorModal = useErrorModal()
   const [loading, setLoading] = useState(false)
   const [contratos, setContratos] = useState([])
   const [parcelasPorContrato, setParcelasPorContrato] = useState({})
@@ -32,7 +34,7 @@ export default function HistoricoAlunoModal({
       detalhes.forEach((d, i) => { if (d) map[list[i].name] = d.parcelas || [] })
       setParcelasPorContrato(map)
     } catch (e) {
-      alert('Erro ao carregar histórico: ' + (e.response?.data?.exception || e.message))
+      errorModal.show(e, 'Carregar histórico')
     } finally {
       setLoading(false)
     }
@@ -68,6 +70,7 @@ export default function HistoricoAlunoModal({
   if (!isOpen) return null
 
   return (
+    <>
     <Modal
       isOpen={isOpen}
       onClose={onClose}
@@ -180,6 +183,8 @@ export default function HistoricoAlunoModal({
         </div>
       )}
     </Modal>
+    {errorModal.element}
+    </>
   )
 }
 

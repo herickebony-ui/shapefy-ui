@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Plus, Trash2, Edit2, X, Save, ChevronRight, ChevronLeft, ToggleLeft, ToggleRight, Equal } from 'lucide-react'
 import { Button, FormGroup, Input, Spinner, EmptyState } from '../../components/ui'
+import useErrorModal from '../../hooks/useErrorModal'
 import { ALLOWED_COLORS, COLOR_DOT } from './constants'
 import { buscarPlano, criarPlano, salvarPlano, excluirPlano } from '../../api/planosShapefy'
 import { formatCurrency } from './utils'
@@ -31,6 +32,7 @@ export default function PlanosManager({
   onCloseRequest,
   active = true,
 }) {
+  const errorModal = useErrorModal()
   const [view, setView] = useState('list')
   const [editing, setEditing] = useState(null)
   const [formData, setFormData] = useState(null)
@@ -81,7 +83,7 @@ export default function PlanosManager({
       }
       setView('form')
     } catch (e) {
-      alert('Erro ao carregar plano: ' + (e.response?.data?.exception || e.message))
+      errorModal.show(e, 'Carregar plano')
     } finally {
       setLoadingDetalhe(false)
     }
@@ -97,7 +99,7 @@ export default function PlanosManager({
       onMutate?.()
       setView('list')
     } catch (e) {
-      alert('Erro ao salvar plano: ' + (e.response?.data?.exception || e.message))
+      errorModal.show(e, 'Salvar plano')
     } finally {
       setSalvando(false)
     }
@@ -110,7 +112,7 @@ export default function PlanosManager({
       await excluirPlano(plano.name)
       onMutate?.()
     } catch (e) {
-      alert(e.response?.data?.exception || e.response?.data?.message || e.message)
+      errorModal.show(e, 'Excluir plano')
     } finally {
       setExcluindo('')
     }
@@ -168,6 +170,7 @@ export default function PlanosManager({
           </>
         )}
       </div>
+      {errorModal.element}
     </div>
   )
 }

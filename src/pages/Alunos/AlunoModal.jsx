@@ -11,6 +11,7 @@ import {
   FormGroup, Input, Select, Textarea,
 } from '../../components/ui'
 import ImagemInterativa from '../Feedbacks/ImagemInterativa'
+import useErrorModal from '../../hooks/useErrorModal'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 
@@ -167,6 +168,7 @@ export function TabPerfil({ aluno: inicial, alunoId, onSaved }) {
   const [buscandoCep, setBuscandoCep] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [salvo, setSalvo] = useState(false)
+  const errorModal = useErrorModal()
 
   const set = (campo) => (val) => setForm(prev => ({ ...prev, [campo]: val }))
   const toggle = (campo) => (val) => setForm(prev => ({ ...prev, [campo]: val }))
@@ -212,8 +214,7 @@ export function TabPerfil({ aluno: inicial, alunoId, onSaved }) {
       setSalvo(true)
       setTimeout(() => setSalvo(false), 2000)
     } catch (e) {
-      console.error(e)
-      alert('Erro ao salvar.')
+      errorModal.show(e, 'Salvar aluno')
     } finally {
       setSalvando(false)
     }
@@ -221,6 +222,7 @@ export function TabPerfil({ aluno: inicial, alunoId, onSaved }) {
 
   return (
     <div className="space-y-3">
+      {errorModal.element}
       <SecaoPerfil titulo="Informações Básicas" />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <FormGroup label="Nome completo" className="lg:col-span-2">
@@ -356,6 +358,7 @@ function AnamneseViewer({ anamnese: inicial, onVoltar }) {
   const [salvando, setSalvando] = useState(false)
   const [salvo, setSalvo] = useState(false)
   const [imgSrcs, setImgSrcs] = useState({})
+  const errorModal = useErrorModal()
 
   const setResposta = (idx, valor) => setRespostas(prev => prev.map((p, i) => i === idx ? { ...p, resposta: valor } : p))
   const handleRotate = (fileUrl, idx) => {
@@ -370,12 +373,13 @@ function AnamneseViewer({ anamnese: inicial, onVoltar }) {
       if (limpas.length !== respostas.length) setRespostas(limpas.map(p => ({ ...p })))
       setSalvo(true); setEditando(false)
       setTimeout(() => setSalvo(false), 2000)
-    } catch (e) { console.error(e); alert('Erro ao salvar anamnese.') }
+    } catch (e) { errorModal.show(e, 'Salvar anamnese') }
     finally { setSalvando(false) }
   }
 
   return (
     <div className="flex flex-col">
+      {errorModal.element}
       <div className="flex items-center justify-between mb-4">
         <button onClick={onVoltar} className="flex items-center gap-1.5 text-gray-500 hover:text-white text-xs font-bold uppercase tracking-wide transition-colors">
           <ArrowLeft size={14} /> Voltar
@@ -443,6 +447,7 @@ function ModalNovaAnamnese({ alunoId, onClose, onCriada }) {
   const [formularios, setFormularios] = useState([])
   const [loading, setLoading] = useState(true)
   const [vinculando, setVinculando] = useState(null)
+  const errorModal = useErrorModal()
 
   useEffect(() => {
     listarFormularios()
@@ -458,14 +463,14 @@ function ModalNovaAnamnese({ alunoId, onClose, onCriada }) {
       onCriada()
       onClose()
     } catch (e) {
-      console.error(e)
-      alert('Erro ao vincular anamnese.')
+      errorModal.show(e, 'Vincular anamnese')
     } finally {
       setVinculando(null)
     }
   }
 
-  return (
+  return (<>
+    {errorModal.element}
     <Modal isOpen onClose={onClose} title="Nova Anamnese" subtitle="Selecione um template" size="sm">
       <div className="p-4">
         {loading ? (
@@ -495,7 +500,7 @@ function ModalNovaAnamnese({ alunoId, onClose, onCriada }) {
         )}
       </div>
     </Modal>
-  )
+  </>)
 }
 
 export function TabAnamnese({ anamneses: inicial, loading, alunoId, onRecarregar }) {
@@ -504,6 +509,7 @@ export function TabAnamnese({ anamneses: inicial, loading, alunoId, onRecarregar
   const [loadingDetalhe, setLoadingDetalhe] = useState(false)
   const [excluindo, setExcluindo] = useState(null)
   const [showNovaAnamnese, setShowNovaAnamnese] = useState(false)
+  const errorModal = useErrorModal()
 
   useEffect(() => { setLista(inicial) }, [inicial])
 
@@ -525,8 +531,7 @@ export function TabAnamnese({ anamneses: inicial, loading, alunoId, onRecarregar
       await excluirAnamnese(a.name)
       setLista(prev => prev.filter(x => x.name !== a.name))
     } catch (err) {
-      console.error(err)
-      alert('Erro ao excluir anamnese.')
+      errorModal.show(err, 'Excluir anamnese')
     } finally { setExcluindo(null) }
   }
 
@@ -535,6 +540,7 @@ export function TabAnamnese({ anamneses: inicial, loading, alunoId, onRecarregar
 
   return (
     <div className="space-y-3">
+      {errorModal.element}
       <div className="flex items-center justify-between">
         <span className="text-gray-500 text-xs">{lista.length} anamnese{lista.length !== 1 ? 's' : ''}</span>
         <Button variant="primary" size="xs" icon={Plus} onClick={() => setShowNovaAnamnese(true)}>

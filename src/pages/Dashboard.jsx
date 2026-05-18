@@ -1,9 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Users, UserCheck, UserX, CalendarPlus, Plus, RefreshCw, Trash2, Link2, AlertTriangle, ClipboardList, Activity } from 'lucide-react'
-import { listarAlunos, criarAluno, buscarStatsAlunos, excluirAluno } from '../api/alunos'
-import { listarDietas } from '../api/dietas'
-import { listarFichas } from '../api/fichas'
+import { Users, UserCheck, UserX, CalendarPlus, Plus, RefreshCw, Trash2, Link2, AlertTriangle, Archive, Info } from 'lucide-react'
+import { listarAlunos, criarAluno, buscarStatsAlunos, excluirAluno, salvarAluno } from '../api/alunos'
+import { listarVinculosAluno, excluirVinculosExcluiveis } from '../api/alunoVinculos'
 import { parseFrappeError } from '../utils/frappeErrors'
 import {
   Button, Badge, DataTable, Spinner,
@@ -58,11 +57,14 @@ export default function Dashboard() {
   // Stats
   const [stats, setStats] = useState({ total: null, ativos: null, inativos: null, novos: null })
 
-  // Modal excluir
+  // Modal excluir/desativar
   const [alunoExcluir, setAlunoExcluir] = useState(null)
   const [excluindo, setExcluindo] = useState(false)
-  const [bloqueio, setBloqueio] = useState(null) // { checking, dietas, fichas }
+  const [vinculos, setVinculos] = useState(null) // { checking, categorias[], total, temProtegidos, podeExcluir }
+  const [confirmaExclusao, setConfirmaExclusao] = useState(false)
+  const [progresso, setProgresso] = useState(null) // { done, total, current }
   const [erroExcluir, setErroExcluir] = useState(null)
+  const [falhasParciais, setFalhasParciais] = useState(null) // [{label,name,erro}]
 
   // Modal novo aluno
   const [showModal, setShowModal] = useState(false)
@@ -82,22 +84,29 @@ export default function Dashboard() {
   // Reset page on filter change
   useEffect(() => { setPage(1) }, [filtroStatus, filtroSexo])
 
-  // Pré-checa dietas e fichas vinculadas ao abrir o modal de exclusão
+  // Pré-checa TODOS os DocTypes vinculados ao aluno ao abrir o modal
   useEffect(() => {
     if (!alunoExcluir) {
-      setBloqueio(null)
+      setVinculos(null)
+      setConfirmaExclusao(false)
+      setProgresso(null)
       setErroExcluir(null)
+      setFalhasParciais(null)
       return
     }
-    setBloqueio({ checking: true, dietas: 0, fichas: 0 })
+    setVinculos({ checking: true, categorias: [], total: 0, temProtegidos: false, podeExcluir: true })
     setErroExcluir(null)
+    setFalhasParciais(null)
     let cancelado = false
-    Promise.all([
-      listarDietas({ alunoId: alunoExcluir.name, limit: 50 }).then(r => r.list?.length || 0).catch(() => 0),
-      listarFichas({ aluno: alunoExcluir.name, limit: 50 }).then(r => r.list?.length || 0).catch(() => 0),
-    ]).then(([dietas, fichas]) => {
-      if (!cancelado) setBloqueio({ checking: false, dietas, fichas })
-    })
+    listarVinculosAluno(alunoExcluir.name)
+      .then(res => { if (!cancelado) setVinculos({ checking: false, ...res }) })
+      .catch(e => {
+        console.error(e)
+        if (!cancelado) {
+          setVinculos({ checking: false, categorias: [], total: 0, temProtegidos: false, podeExcluir: false })
+          setErroExcluir(parseFrappeError(e) || 'Não foi possível verificar os vínculos do aluno.')
+        }
+      })
     return () => { cancelado = true }
   }, [alunoExcluir])
 
@@ -128,10 +137,23 @@ export default function Dashboard() {
   useEffect(() => { refreshCounts().catch(console.error) }, [refreshCounts])
 
   const handleExcluir = async () => {
-    if (!alunoExcluir) return
+    if (!alunoExcluir || !vinculos?.podeExcluir) return
+    const temExcluiveis = (vinculos?.totalExcluiveis || 0) > 0
     setExcluindo(true)
     setErroExcluir(null)
+    setFalhasParciais(null)
     try {
+      if (temExcluiveis) {
+        setProgresso({ done: 0, total: vinculos.totalExcluiveis, current: null })
+        const { ok, falhas } = await excluirVinculosExcluiveis(alunoExcluir.name, (p) => setProgresso(p))
+        if (!ok) {
+          setFalhasParciais(falhas)
+          setErroExcluir(`${falhas.length} registro(s) não foram removidos. Tente novamente.`)
+          const novo = await listarVinculosAluno(alunoExcluir.name)
+          setVinculos({ checking: false, ...novo })
+          return
+        }
+      }
       await excluirAluno(alunoExcluir.name)
       setAlunoExcluir(null)
       carregar()
@@ -139,7 +161,27 @@ export default function Dashboard() {
     } catch (e) {
       console.error(e)
       setErroExcluir(parseFrappeError(e) || 'Não foi possível excluir o aluno.')
-    } finally { setExcluindo(false) }
+    } finally {
+      setExcluindo(false)
+      setProgresso(null)
+    }
+  }
+
+  const handleDesativar = async () => {
+    if (!alunoExcluir) return
+    setExcluindo(true)
+    setErroExcluir(null)
+    try {
+      await salvarAluno(alunoExcluir.name, { enabled: 0 })
+      setAlunoExcluir(null)
+      carregar()
+      buscarStatsAlunos().then(setStats).catch(() => {})
+    } catch (e) {
+      console.error(e)
+      setErroExcluir(parseFrappeError(e) || 'Não foi possível desativar o aluno.')
+    } finally {
+      setExcluindo(false)
+    }
   }
 
   const setField = (campo) => (val) => setNovoAluno(prev => ({ ...prev, [campo]: val }))
@@ -294,72 +336,175 @@ export default function Dashboard() {
       <OnboardingModal />
 
       {alunoExcluir && (() => {
-        const checando = bloqueio?.checking
-        const temBloqueio = bloqueio && !bloqueio.checking && (bloqueio.dietas > 0 || bloqueio.fichas > 0)
+        const checando = vinculos?.checking
+        const protegidos = (vinculos?.categorias || []).filter(c => !c.excluivel && c.total > 0)
+        const excluiveis = (vinculos?.categorias || []).filter(c => c.excluivel && c.total > 0)
+        const modo = checando
+          ? 'checking'
+          : vinculos?.temProtegidos ? 'desativar'
+          : vinculos?.total > 0 ? 'excluirComDocs'
+          : 'excluirDireto'
+
+        const titulo =
+          modo === 'desativar' ? 'Não é possível excluir — desativar?'
+          : modo === 'excluirComDocs' ? 'Excluir aluno e documentos clínicos?'
+          : 'Excluir aluno?'
+
+        const podeAcionar = !excluindo && !checando && (modo === 'desativar' || confirmaExclusao || modo === 'excluirDireto')
+
         return (
           <Modal
             isOpen
-            onClose={() => setAlunoExcluir(null)}
-            title={temBloqueio ? 'Não é possível excluir' : 'Excluir Aluno'}
-            size="sm"
+            onClose={() => { if (!excluindo) setAlunoExcluir(null) }}
+            title={titulo}
+            size="md"
+            closeOnOverlayClick={!excluindo}
             footer={
-              temBloqueio ? (
-                <>
-                  <Button variant="ghost" onClick={() => setAlunoExcluir(null)}>Fechar</Button>
-                  <Button variant="primary" onClick={() => { const id = alunoExcluir.name; setAlunoExcluir(null); navigate(`/alunos/${encodeURIComponent(id)}`) }}>
-                    Abrir perfil
+              <>
+                <Button variant="ghost" onClick={() => setAlunoExcluir(null)} disabled={excluindo}>Cancelar</Button>
+                {modo === 'desativar' ? (
+                  <Button variant="primary" icon={Archive} loading={excluindo} disabled={!podeAcionar} onClick={handleDesativar}>
+                    Desativar aluno
                   </Button>
-                </>
-              ) : (
-                <>
-                  <Button variant="ghost" onClick={() => setAlunoExcluir(null)}>Cancelar</Button>
-                  <Button variant="danger" loading={excluindo} disabled={checando} onClick={handleExcluir}>Excluir</Button>
-                </>
-              )
+                ) : (
+                  <Button variant="danger" loading={excluindo} disabled={!podeAcionar} onClick={handleExcluir}>
+                    {modo === 'excluirComDocs' ? `Excluir (${(vinculos.totalExcluiveis || 0) + 1})` : 'Excluir'}
+                  </Button>
+                )}
+              </>
             }
           >
             {checando ? (
               <div className="p-6 flex items-center justify-center gap-3 text-sm text-gray-400">
                 <Spinner size="sm" />
-                <span>Verificando vínculos…</span>
+                <span>Verificando vínculos do aluno…</span>
               </div>
-            ) : temBloqueio ? (
+            ) : excluindo && progresso ? (
+              <div className="p-4 space-y-3">
+                <p className="text-sm text-gray-300">
+                  Removendo documentos clínicos de <span className="text-white font-semibold">{alunoExcluir.nome_completo}</span>…
+                </p>
+                <div className="w-full h-2 bg-[#1a1a1a] rounded overflow-hidden border border-[#323238]">
+                  <div
+                    className="h-full bg-[#2563eb] transition-all"
+                    style={{ width: `${progresso.total ? (progresso.done / progresso.total) * 100 : 0}%` }}
+                  />
+                </div>
+                <p className="text-xs text-gray-500">
+                  {progresso.done} de {progresso.total} removidos
+                  {progresso.current ? ` · ${progresso.current.label}` : ''}
+                </p>
+              </div>
+            ) : modo === 'desativar' ? (() => {
+              const todos = (vinculos.categorias || []).filter(c => c.total > 0)
+              return (
               <div className="p-4 space-y-4">
                 <div className="flex items-start gap-3">
                   <div className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg bg-yellow-500/10 border border-yellow-500/30">
-                    <AlertTriangle size={16} className="text-yellow-500" />
+                    <Info size={16} className="text-yellow-400" />
                   </div>
                   <div className="text-sm text-gray-300 leading-relaxed">
-                    <span className="text-white font-semibold">{alunoExcluir.nome_completo}</span> tem registros vinculados que precisam ser removidos antes da exclusão.
+                    <span className="text-white font-semibold">{alunoExcluir.nome_completo}</span> tem registros de histórico que não podem ser apagados (proteção LGPD / prova de atendimento). Você pode <span className="text-white font-semibold">desativar</span> — o aluno some das listagens ativas e <span className="text-white font-semibold">todo o histórico fica preservado</span>.
                   </div>
                 </div>
 
-                <div className="bg-[#1a1a1a] rounded-lg border border-[#323238] divide-y divide-[#323238]/60">
-                  {bloqueio.dietas > 0 && (
-                    <div className="flex items-center justify-between px-3 py-2.5">
-                      <div className="flex items-center gap-2.5">
-                        <ClipboardList size={14} className="text-blue-400" />
-                        <span className="text-white text-xs font-medium">Dietas vinculadas</span>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider font-bold text-gray-500 mb-2">
+                    Documentos vinculados ao aluno ({vinculos.total})
+                  </p>
+                  <div className="bg-[#1a1a1a] rounded-lg border border-[#323238] divide-y divide-[#323238]/60 max-h-64 overflow-y-auto">
+                    {todos.map(cat => (
+                      <div key={cat.key} className="flex items-center justify-between px-3 py-2.5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-white text-xs font-medium truncate">{cat.label}</span>
+                          {!cat.excluivel && (
+                            <span className="text-[9px] text-yellow-400 uppercase tracking-wider shrink-0">protegido</span>
+                          )}
+                        </div>
+                        <Badge variant={cat.excluivel ? 'default' : 'warning'} size="sm">{cat.total}</Badge>
                       </div>
-                      <Badge variant="info" size="sm">{bloqueio.dietas}</Badge>
-                    </div>
-                  )}
-                  {bloqueio.fichas > 0 && (
-                    <div className="flex items-center justify-between px-3 py-2.5">
-                      <div className="flex items-center gap-2.5">
-                        <Activity size={14} className="text-purple-400" />
-                        <span className="text-white text-xs font-medium">Fichas de treino vinculadas</span>
-                      </div>
-                      <Badge variant="purple" size="sm">{bloqueio.fichas}</Badge>
-                    </div>
-                  )}
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-gray-600 mt-2 leading-relaxed">
+                    Itens <span className="text-yellow-400">protegidos</span> nunca são apagados automaticamente. Os demais permanecem associados ao aluno desativado.
+                  </p>
                 </div>
 
-                <p className="text-gray-500 text-xs">
-                  Abra o perfil do aluno e exclua {bloqueio.dietas > 0 && bloqueio.fichas > 0 ? 'as dietas e fichas' : bloqueio.dietas > 0 ? 'as dietas' : 'as fichas'} antes de tentar novamente.
-                </p>
+                {erroExcluir && (
+                  <div className="flex items-start gap-2.5 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                    <AlertTriangle size={14} className="text-red-400 shrink-0 mt-0.5" />
+                    <p className="text-xs text-red-300 leading-relaxed">{erroExcluir}</p>
+                  </div>
+                )}
               </div>
-            ) : (
+              )
+            })() : modo === 'excluirComDocs' ? (() => {
+              const temSensiveis = excluiveis.some(c => c.sensivel && c.total > 0)
+              return (
+              <div className="p-4 space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg bg-red-500/10 border border-red-500/30">
+                    <AlertTriangle size={16} className="text-red-400" />
+                  </div>
+                  <div className="text-sm text-gray-300 leading-relaxed">
+                    <span className="text-white font-semibold">{alunoExcluir.nome_completo}</span> tem{' '}
+                    <span className="text-white font-semibold">{vinculos.totalExcluiveis}</span> documento(s) vinculado(s). Serão apagados junto com o aluno.
+                  </div>
+                </div>
+
+                <div className="bg-[#1a1a1a] rounded-lg border border-[#323238] divide-y divide-[#323238]/60 max-h-48 overflow-y-auto">
+                  {excluiveis.map(cat => (
+                    <div key={cat.key} className="flex items-center justify-between px-3 py-2.5">
+                      <span className="text-white text-xs font-medium">
+                        {cat.label}
+                        {cat.sensivel && <span className="ml-2 text-[10px] text-yellow-400 uppercase tracking-wider">histórico</span>}
+                      </span>
+                      <Badge variant="danger" size="sm">{cat.total}</Badge>
+                    </div>
+                  ))}
+                </div>
+
+                {temSensiveis && (
+                  <div className="flex items-start gap-2.5 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                    <AlertTriangle size={14} className="text-yellow-400 shrink-0 mt-0.5" />
+                    <p className="text-xs text-yellow-200/90 leading-relaxed">
+                      <span className="font-semibold">Atenção:</span> isso inclui registros de execução (treinos/aeróbicos realizados). Esse histórico não tem como recuperar — considere <span className="font-semibold">desativar o aluno</span> se quiser preservá-lo.
+                    </p>
+                  </div>
+                )}
+
+                <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={confirmaExclusao}
+                    onChange={(e) => setConfirmaExclusao(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-red-500 shrink-0"
+                  />
+                  <span className="text-xs text-gray-300 leading-relaxed">
+                    Tenho certeza — esta ação é <span className="text-white font-semibold">irreversível</span>.
+                  </span>
+                </label>
+
+                {falhasParciais && falhasParciais.length > 0 && (
+                  <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg space-y-2">
+                    <p className="text-xs text-red-300 font-semibold">
+                      {falhasParciais.length} registro(s) não puderam ser removidos:
+                    </p>
+                    <p className="text-[11px] text-red-200/80 leading-relaxed">
+                      <span className="font-semibold">Motivo:</span> {falhasParciais[0].erro}
+                    </p>
+                  </div>
+                )}
+
+                {erroExcluir && !falhasParciais && (
+                  <div className="flex items-start gap-2.5 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                    <AlertTriangle size={14} className="text-red-400 shrink-0 mt-0.5" />
+                    <p className="text-xs text-red-300 leading-relaxed">{erroExcluir}</p>
+                  </div>
+                )}
+              </div>
+              )
+            })() : (
               <div className="p-4 space-y-3">
                 <p className="text-sm text-gray-300">
                   Tem certeza que deseja excluir <span className="text-white font-semibold">{alunoExcluir.nome_completo}</span>? Esta ação não pode ser desfeita.

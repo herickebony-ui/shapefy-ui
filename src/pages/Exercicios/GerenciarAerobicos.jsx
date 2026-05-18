@@ -10,6 +10,7 @@ import {
 import ListPage from '../../components/templates/ListPage'
 import ExplorarBibliotecaModal from '../../components/ExplorarBibliotecaModal'
 import { extractVideoId } from '../../utils/video'
+import useErrorModal from '../../hooks/useErrorModal'
 
 const PLATAFORMAS = ['YouTube', 'Google Drive', 'Vimeo']
 
@@ -55,7 +56,7 @@ const buildVideoUrl = (id, platform) => {
 const ModalAerobico = ({ aerobico, onSave, onClose }) => {
   const isEdit = !!aerobico?.name
   const [saving, setSaving] = useState(false)
-  const [erro, setErro] = useState('')
+  const errorModal = useErrorModal()
   const [nome, setNome] = useState(aerobico?.exercicio_aerobico || '')
   const [video, setVideo] = useState(aerobico?.video || '')
   const [plataforma, setPlataforma] = useState(aerobico?.['plataforma_do_vídeo'] || 'YouTube')
@@ -69,8 +70,16 @@ const ModalAerobico = ({ aerobico, onSave, onClose }) => {
   }
 
   const handleSave = async () => {
-    if (!nome.trim()) { setErro('Nome do exercício é obrigatório.'); return }
-    setSaving(true); setErro('')
+    if (!nome.trim()) {
+      errorModal.show({
+        type: 'mandatory',
+        title: 'Campo obrigatório',
+        messages: ['Nome do exercício é obrigatório.'],
+        statusCode: 0,
+      }, isEdit ? 'Salvar aeróbico' : 'Criar aeróbico')
+      return
+    }
+    setSaving(true)
     try {
       const payload = {
         exercicio_aerobico: nome.trim(),
@@ -81,11 +90,12 @@ const ModalAerobico = ({ aerobico, onSave, onClose }) => {
       const resultado = await salvarAerobico(isEdit ? aerobico.name : null, payload)
       onSave(resultado)
     } catch (e) {
-      console.error(e); setErro(e?.response?.data?.exception || 'Erro ao salvar.')
+      errorModal.show(e, isEdit ? 'Salvar aeróbico' : 'Criar aeróbico')
     } finally { setSaving(false) }
   }
 
-  return (
+  return (<>
+    {errorModal.element}
     <Modal
       isOpen
       onClose={onClose}
@@ -99,12 +109,6 @@ const ModalAerobico = ({ aerobico, onSave, onClose }) => {
       }
     >
       <div className="p-4 space-y-4">
-        {erro && (
-          <div className="bg-red-900/20 border border-red-500/30 text-red-400 text-sm rounded-lg px-3 py-2">
-            {erro}
-          </div>
-        )}
-
         <FormGroup label="Nome do Exercício Aeróbico" required>
           <Input value={nome} onChange={setNome} placeholder="Ex: Esteira, Bike, Polichinelo..." />
         </FormGroup>
@@ -144,12 +148,13 @@ const ModalAerobico = ({ aerobico, onSave, onClose }) => {
         </label>
       </div>
     </Modal>
-  )
+  </>)
 }
 
 // ─── GerenciarAerobicos ───────────────────────────────────────────────────────
 
 export default function GerenciarAerobicos() {
+  const errorModal = useErrorModal()
   const [showBiblioteca, setShowBiblioteca] = useState(false)
   const [aerobicos, setAerobicos] = useState([])
   const [loading, setLoading] = useState(true)
@@ -239,8 +244,7 @@ export default function GerenciarAerobicos() {
       setAerobicos(data)
       setDeletando(null)
     } catch (e) {
-      console.error(e)
-      alert('Erro ao excluir: ' + (e?.response?.data?.exception || e.message))
+      errorModal.show(e, 'Excluir aeróbico')
     } finally { setDeleting(false) }
   }
 
@@ -403,6 +407,7 @@ export default function GerenciarAerobicos() {
           </div>
         </Modal>
       )}
+      {errorModal.element}
     </>
   )
 }

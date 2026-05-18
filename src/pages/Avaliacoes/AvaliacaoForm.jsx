@@ -8,6 +8,7 @@ import {
   Button, FormGroup, Input, Select, Autocomplete, Spinner,
 } from '../../components/ui'
 import DetailPage from '../../components/templates/DetailPage'
+import useErrorModal from '../../hooks/useErrorModal'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 
@@ -58,11 +59,17 @@ function FotoUpload({ label, value, onChange }) {
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const inputRef = useRef(null)
+  const errorModal = useErrorModal()
 
   const enviarArquivo = async (file) => {
     if (!file) return
     if (!file.type.startsWith('image/')) {
-      alert('Envie apenas arquivos de imagem (PNG, JPG, WEBP).')
+      errorModal.show({
+        type: 'validation',
+        title: 'Arquivo inválido',
+        messages: ['Envie apenas arquivos de imagem (PNG, JPG, WEBP).'],
+        statusCode: 0,
+      }, 'Upload de foto')
       return
     }
     setUploading(true)
@@ -78,10 +85,14 @@ function FotoUpload({ label, value, onChange }) {
       })
       const url = res.data?.message?.file_url
       if (url) onChange(url)
-      else alert('Upload concluiu mas não retornou URL.')
+      else errorModal.show({
+        type: 'server',
+        title: 'Upload incompleto',
+        messages: ['O upload concluiu mas o servidor não retornou a URL do arquivo.'],
+        statusCode: 0,
+      }, 'Upload de foto')
     } catch (err) {
-      console.error(err)
-      alert('Erro ao enviar a foto.')
+      errorModal.show(err, 'Upload de foto')
     } finally {
       setUploading(false)
     }
@@ -105,6 +116,7 @@ function FotoUpload({ label, value, onChange }) {
 
   return (
     <div className="bg-[#1a1a1a] border border-[#323238] rounded-lg p-2 space-y-2">
+      {errorModal.element}
       <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">{label}</p>
       <div
         onClick={() => !uploading && inputRef.current?.click()}
@@ -178,6 +190,7 @@ export default function AvaliacaoForm() {
   })
   const [salvando, setSalvando] = useState(false)
   const [carregando, setCarregando] = useState(editando)
+  const errorModal = useErrorModal()
 
   useEffect(() => {
     if (!editando) return
@@ -198,8 +211,7 @@ export default function AvaliacaoForm() {
         setForm(prev => ({ ...prev, ...limpo }))
       })
       .catch(e => {
-        console.error(e)
-        alert('Erro ao carregar avaliação.')
+        errorModal.show(e, 'Carregar avaliação')
         navigate('/avaliacoes')
       })
       .finally(() => { if (!cancelado) setCarregando(false) })
@@ -224,7 +236,16 @@ export default function AvaliacaoForm() {
 
   const handleSalvar = async () => {
     if (!form.aluno || !form.weight || !form.date) {
-      alert('Preencha os campos obrigatórios: Aluno, Data e Peso.')
+      const faltando = []
+      if (!form.aluno) faltando.push('Campo obrigatório: Aluno')
+      if (!form.date) faltando.push('Campo obrigatório: Data')
+      if (!form.weight) faltando.push('Campo obrigatório: Peso')
+      errorModal.show({
+        type: 'mandatory',
+        title: 'Campos obrigatórios não preenchidos',
+        messages: faltando,
+        statusCode: 0,
+      }, editando ? 'Salvar avaliação' : 'Criar avaliação')
       return
     }
     setSalvando(true)
@@ -249,8 +270,7 @@ export default function AvaliacaoForm() {
       }
       navigate('/avaliacoes')
     } catch (e) {
-      console.error(e)
-      alert(`Erro ao ${editando ? 'salvar alterações' : 'criar avaliação'}.`)
+      errorModal.show(e, editando ? 'Salvar avaliação' : 'Criar avaliação')
     } finally {
       setSalvando(false)
     }
@@ -399,6 +419,7 @@ export default function AvaliacaoForm() {
         </SecaoForm>
 
       </div>
+      {errorModal.element}
     </DetailPage>
   )
 }

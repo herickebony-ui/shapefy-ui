@@ -10,6 +10,7 @@ import { listarAlunos } from '../../api/alunos'
 import ModalEscolherModelo from '../Modelos/ModalEscolherModelo'
 import { Button, FormGroup, Input, Autocomplete, Modal, EmptyState, Pagination, DataTable } from '../../components/ui'
 import { buscarSmart } from '../../utils/strings'
+import useErrorModal from '../../hooks/useErrorModal'
 
 // Indexa por nome_do_exercicio E name do DocType para cobrir fichas antigas e novas
 const buildIntensMap = (lista) => {
@@ -528,6 +529,7 @@ const buscarAlunosFn = async (q) => {
 const ModalNovaFicha = ({ onClose, onCriada }) => {
   const [aluno, setAluno] = useState(null)
   const [criando, setCriando] = useState(false)
+  const errorModal = useErrorModal()
 
   const handleCriar = async () => {
     if (!aluno) return
@@ -536,11 +538,12 @@ const ModalNovaFicha = ({ onClose, onCriada }) => {
       const nova = await criarFicha({ aluno: aluno.name, nome_completo: aluno.nome_completo })
       onCriada(nova.name)
     } catch (err) {
-      alert('Erro ao criar ficha: ' + err.message)
+      errorModal.show(err, 'Criar ficha')
     } finally { setCriando(false) }
   }
 
-  return (
+  return (<>
+    {errorModal.element}
     <Modal
       isOpen
       onClose={onClose}
@@ -580,7 +583,7 @@ const ModalNovaFicha = ({ onClose, onCriada }) => {
         </FormGroup>
       </div>
     </Modal>
-  )
+  </>)
 }
 
 // ─── Modal Excluir Ficha ──────────────────────────────────────────────────────
@@ -630,6 +633,7 @@ const ModalExcluirFicha = ({ ficha, onClose, onConfirm }) => {
 const ModalDuplicarFicha = ({ ficha, onClose, onDuplicada }) => {
   const [aluno, setAluno] = useState(null)
   const [duplicando, setDuplicando] = useState(false)
+  const errorModal = useErrorModal()
 
   const handleDuplicar = async () => {
     if (!aluno) return
@@ -663,11 +667,12 @@ const ModalDuplicarFicha = ({ ficha, onClose, onDuplicada }) => {
       const nova = await criarFicha(novaFicha)
       onDuplicada(nova.name)
     } catch (err) {
-      alert('Erro ao duplicar: ' + err.message)
+      errorModal.show(err, 'Duplicar ficha')
     } finally { setDuplicando(false) }
   }
 
-  return (
+  return (<>
+    {errorModal.element}
     <Modal
       isOpen
       onClose={onClose}
@@ -708,7 +713,7 @@ const ModalDuplicarFicha = ({ ficha, onClose, onDuplicada }) => {
         </FormGroup>
       </div>
     </Modal>
-  )
+  </>)
 }
 
 // ─── Modal Histórico / Comparativo de Volume ─────────────────────────────────
@@ -940,6 +945,7 @@ export default function FichaListagem() {
   const [modalDuplicar, setModalDuplicar] = useState(null)
   const [modalExcluir, setModalExcluir] = useState(null)
   const [modalViz, setModalViz] = useState(null)
+  const errorModal = useErrorModal()
   const [modalHistorico, setModalHistorico] = useState(null)
 
   // Carrega mapa de intensidade uma vez para calcVolume no modal de visualização
@@ -1010,7 +1016,7 @@ export default function FichaListagem() {
       await excluirFicha(ficha.name)
       setFichas(prev => prev.filter(f => f.name !== ficha.name))
     } catch (e) {
-      alert('Erro ao excluir: ' + e.message)
+      errorModal.show(e, 'Excluir ficha')
     }
   }
 
@@ -1226,6 +1232,7 @@ export default function FichaListagem() {
           />
         )}
       </div>
+      {errorModal.element}
     </div>
   )
 }

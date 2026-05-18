@@ -113,10 +113,12 @@ export default function PerfilProfissional() {
   // Identidade visual
   const [instagram, setInstagram] = useState('')
   const [areaAtuacao, setAreaAtuacao] = useState('')
+  const [registroProfissional, setRegistroProfissional] = useState('')
   const [foto, setFoto] = useState('')
   const [banner, setBanner] = useState('')
   const [coverImage, setCoverImage] = useState('')
   const [professionalLogo, setProfessionalLogo] = useState('')
+  const [assinatura, setAssinatura] = useState('')
   const [themeColor, setThemeColor] = useState('#2563eb')
   const [themeMode, setThemeMode] = useState('light')
 
@@ -142,10 +144,12 @@ export default function PerfilProfissional() {
           setEnderecoPjName(data.endereco_da_empresa_pj || null)
           setInstagram(data.instagram || '')
           setAreaAtuacao(data.area_atuacao || '')
+          setRegistroProfissional(data.registro_profissional || '')
           setFoto(data.foto || '')
           setBanner(data.banner || '')
           setCoverImage(data.cover_image || '')
           setProfessionalLogo(data.professional_logo || '')
+          setAssinatura(data.assinatura || '')
           setThemeColor(data.theme_color || '#2563eb')
           setThemeMode(data.theme_mode || 'light')
         }
@@ -183,10 +187,12 @@ export default function PerfilProfissional() {
         telefone_da_empresa: telEmpresa,
         instagram,
         area_atuacao: areaAtuacao,
+        registro_profissional: registroProfissional,
         foto,
         banner,
         cover_image: coverImage,
         professional_logo: professionalLogo,
+        assinatura,
         theme_color: themeColor,
         theme_mode: themeMode,
       })
@@ -329,15 +335,18 @@ export default function PerfilProfissional() {
         <div className="bg-[#29292e] border border-[#323238] rounded-lg p-5 space-y-4">
           <div>
             <p className="text-white font-semibold text-sm">Identidade Visual</p>
-            <p className="text-gray-600 text-xs mt-0.5">Imagens e cores aplicadas nos PDFs gerados pelo sistema</p>
+            <p className="text-gray-600 text-xs mt-0.5">Cada imagem tem um uso específico — siga as dimensões recomendadas pra evitar distorção</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <FormGroup label="Instagram">
               <Input value={instagram} onChange={setInstagram} placeholder="@seuperfil" />
             </FormGroup>
             <FormGroup label="Área de Atuação">
               <Input value={areaAtuacao} onChange={setAreaAtuacao} placeholder="Ex: Personal Trainer" />
+            </FormGroup>
+            <FormGroup label="Registro Profissional" hint="Ex: CRN-12345, CREF-001234-G/SP">
+              <Input value={registroProfissional} onChange={setRegistroProfissional} placeholder="CRN-12345" />
             </FormGroup>
           </div>
 
@@ -345,22 +354,27 @@ export default function PerfilProfissional() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-1">
               <ImageUploadField
                 label="Foto de Perfil"
-                hint="1080 × 1080 px — cabeçalho dos PDFs"
+                hint="Aparece no app do aluno e na sua identificação interna. Quadrada — 1080 × 1080 px"
                 value={foto} fieldname="foto" docname={docname} onUploaded={setFoto}
               />
               <ImageUploadField
                 label="Logo Profissional"
-                hint="PNG transparente recomendado"
+                hint="Usada nos PDFs de Dieta, Ficha e Prescrição. Quadrada — 400 × 400 px · PNG com fundo transparente"
                 value={professionalLogo} fieldname="professional_logo" docname={docname} onUploaded={setProfessionalLogo}
               />
               <ImageUploadField
-                label="Banner"
-                hint="1920 × 250 px — faixa no topo dos PDFs"
+                label="Assinatura Digital"
+                hint="Usada no PDF de Prescrição (e futuramente Exames). Horizontal — 800 × 250 px · PNG com fundo transparente obrigatório"
+                value={assinatura} fieldname="assinatura" docname={docname} onUploaded={setAssinatura}
+              />
+              <ImageUploadField
+                label="Banner do App"
+                hint="Capa que aparece no topo do app do aluno. Horizontal — 1920 × 250 px"
                 value={banner} fieldname="banner" docname={docname} onUploaded={setBanner}
               />
               <ImageUploadField
                 label="Capa de Impressão"
-                hint="2480 × 3508 px (A4) — página de capa"
+                hint="Primeira página dos PDFs (capa de Dieta, Ficha e Prescrição). A4 — 2480 × 3508 px"
                 value={coverImage} fieldname="cover_image" docname={docname} onUploaded={setCoverImage}
               />
             </div>

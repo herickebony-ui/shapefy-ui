@@ -7,6 +7,7 @@ import {
   desativarFormularioFeedback,
 } from '../../api/formularios'
 import { parseFrappeError } from '../../utils/frappeErrors'
+import useErrorModal from '../../hooks/useErrorModal'
 import { Button, Badge, Tabs, EmptyState, BotaoAjuda } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 
@@ -43,6 +44,7 @@ export default function FormularioListagem({ tipoFixo }) {
   const [loading, setLoading] = useState(false)
   const [excluindo, setExcluindo] = useState(null)
   const [duplicando, setDuplicando] = useState(null)
+  const errorModal = useErrorModal()
 
   useEffect(() => { if (tipoFixo) setAba(tipoFixo) }, [tipoFixo])
 
@@ -78,7 +80,6 @@ export default function FormularioListagem({ tipoFixo }) {
       else await excluirFormularioFeedback(item.name)
       await carregar()
     } catch (e) {
-      console.error(e)
       const isLinkExists = e?.response?.data?.exc_type === 'LinkExistsError'
       const msg = parseFrappeError(e) || 'Erro ao excluir formulário.'
       // Frappe sugere desativar quando o template está vinculado a um agendamento.
@@ -92,12 +93,11 @@ export default function FormularioListagem({ tipoFixo }) {
             await desativarFormularioFeedback(item.name)
             await carregar()
           } catch (err) {
-            console.error(err)
-            alert(parseFrappeError(err) || 'Erro ao desativar formulário.')
+            errorModal.show(err, 'Desativar formulário')
           }
         }
       } else {
-        alert(msg)
+        errorModal.show(e, 'Excluir formulário')
       }
     } finally {
       setExcluindo(null) }
@@ -110,8 +110,7 @@ export default function FormularioListagem({ tipoFixo }) {
       else await duplicarFormularioFeedback(item.name)
       await carregar()
     } catch (e) {
-      console.error(e)
-      alert('Erro ao duplicar formulário.')
+      errorModal.show(e, 'Duplicar formulário')
     } finally {
       setDuplicando(null)
     }
@@ -221,6 +220,7 @@ export default function FormularioListagem({ tipoFixo }) {
           ))}
         </div>
       )}
+      {errorModal.element}
     </ListPage>
   )
 }

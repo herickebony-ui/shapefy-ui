@@ -15,6 +15,7 @@ import {
   DataTable, Badge, Autocomplete,
 } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
+import { UNIT_OPTIONS } from './DietaDetalhe'
 
 const BASE_OWNERS = ['administrator', 'teste@shapefy.com']
 const podeEditar = (owner) => !BASE_OWNERS.includes((owner || '').toLowerCase())
@@ -91,7 +92,7 @@ function ModalEditarAlimento({ item, onSave, onClose }) {
             <Input type="number" value={formData.ref_weight} onChange={v => handleChange('ref_weight', v)} />
           </FormGroup>
           <FormGroup label="Unidade">
-            <Select value={formData.unit} onChange={v => handleChange('unit', v)} options={['g', 'ml', 'unidade']} placeholder="" />
+            <Select value={formData.unit} onChange={v => handleChange('unit', v)} options={UNIT_OPTIONS} placeholder="" />
           </FormGroup>
           <FormGroup label="Medida Caseira">
             <Input value={formData.medida_caseira || ''} onChange={v => handleChange('medida_caseira', v)} />
