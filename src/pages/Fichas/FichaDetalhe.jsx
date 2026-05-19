@@ -3,8 +3,8 @@ import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import {
   ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Save,
-  Plus, X, Trash2, Copy, Info, Loader,
-  Zap, BookmarkPlus, BookmarkCheck, Bookmark,
+  Plus, X, Trash2, Copy, Info, Loader, Check,
+  Zap, Bookmark,
   Link2, ListOrdered,
 } from 'lucide-react'
 import {
@@ -186,6 +186,7 @@ const TextareaExpansivel = ({ value, onChange, placeholder = '', resetKey, class
   const [dropOpen, setDropOpen] = useState(false)
   const [dropPos, setDropPos] = useState(null)
   const [salvoBanco, setSalvoBanco] = useState(false)
+  const [previewSug, setPreviewSug] = useState(null) // { texto, top }
 
   useEffect(() => {
     if (ref.current) ref.current.style.height = '2rem'
@@ -196,6 +197,10 @@ const TextareaExpansivel = ({ value, onChange, placeholder = '', resetKey, class
       ref.current.style.height = 'auto'
       ref.current.style.height = Math.max(ref.current.scrollHeight, 32) + 'px'
     }
+  }
+
+  const collapse = () => {
+    if (ref.current) ref.current.style.height = '2rem'
   }
 
   const posicionar = () => {
@@ -228,6 +233,15 @@ const TextareaExpansivel = ({ value, onChange, placeholder = '', resetKey, class
     })
   }
 
+  // Normaliza no mesmo formato do bancoTextos.salvarNoBancoSeNovo pra detectar
+  // se a frase atual já existe — esconde o "+" pra não duplicar.
+  const normalizar = (s) => (s || '').trim().toLowerCase().replace(/[.,;:!?]+$/, '').replace(/\s+/g, ' ')
+  const jaExisteNoBanco = useMemo(() => {
+    if (!todasSugestoes || !value?.trim()) return false
+    const n = normalizar(value)
+    return todasSugestoes.some(s => normalizar(s[campo]) === n)
+  }, [todasSugestoes, value, campo])
+
   const abrirDrop = async () => {
     const lista = await carregarTodas()
     const filtradas = filtrar(lista, value)
@@ -247,11 +261,20 @@ const TextareaExpansivel = ({ value, onChange, placeholder = '', resetKey, class
   }, [value, dropOpen])
 
   const salvarNoBanco = async () => {
-    if (!value?.trim() || !doctype || !campo) return
+    const valorTrim = (value || '').trim()
+    if (!valorTrim || !doctype || !campo) return
     try {
-      await salvarNoBancoSeNovo(doctype, campo, value.trim())
+      await salvarNoBancoSeNovo(doctype, campo, valorTrim)
+      // Atualiza cache local otimisticamente pra que o "+" suma imediatamente
+      // (`jaExisteNoBanco` recalcula a partir de todasSugestoes)
+      setTodasSugestoes(prev => {
+        const n = normalizar(valorTrim)
+        const base = prev || []
+        if (base.some(s => normalizar(s[campo]) === n)) return base
+        return [...base, { name: `__local_${Date.now()}`, [campo]: valorTrim, enabled: 1 }]
+      })
       setSalvoBanco(true)
-      setTimeout(() => setSalvoBanco(false), 2000)
+      setTimeout(() => setSalvoBanco(false), 1500)
     } catch (e) { console.error('salvar banco:', e.message) }
   }
 
@@ -262,8 +285,19 @@ const TextareaExpansivel = ({ value, onChange, placeholder = '', resetKey, class
     } catch (e) { console.error('excluir sugestão:', e.message) }
   }
 
-  const handleBlur = () => { blurRef.current = setTimeout(() => setDropOpen(false), 200) }
+  const handleBlur = () => {
+    // Atrasa pra dar tempo do clique num item do dropdown executar antes do colapso
+    blurRef.current = setTimeout(() => { setDropOpen(false); collapse() }, 200)
+  }
   const handleFocus = async () => { clearTimeout(blurRef.current); grow(); await abrirDrop() }
+
+  // Carrega sugestões na primeira renderização com valor — necessário pra que
+  // o check `jaExisteNoBanco` funcione sem precisar focar antes.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (doctype && campo && value?.trim() && todasSugestoes === null) carregarTodas()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, doctype, campo])
 
   return (
     <div className="relative">
@@ -275,41 +309,57 @@ const TextareaExpansivel = ({ value, onChange, placeholder = '', resetKey, class
         onBlur={handleBlur}
         placeholder={placeholder}
         rows={1}
-        className={`bg-[#29292e] border border-[#323238] text-gray-200 text-xs rounded px-2 py-1.5 w-full outline-none focus:border-[#2563eb]/60 resize-none leading-tight min-h-[2rem] ${doctype ? 'pr-5' : ''} ${className}`}
+        className={`bg-[#29292e] border border-[#323238] text-gray-200 text-xs rounded px-2 py-1.5 w-full outline-none focus:border-[#2563eb]/60 resize-none leading-tight min-h-[2rem] ${doctype ? 'pr-6' : ''} ${className}`}
       />
-      {doctype && campo && value?.trim() && (
+      {doctype && campo && value?.trim() && !jaExisteNoBanco && (
         <button type="button"
           onMouseDown={(e) => { e.preventDefault(); salvarNoBanco() }}
-          className="absolute top-1 right-0.5 transition-colors"
-          title="Salvar no banco de textos">
+          className="absolute top-1 right-0.5 h-5 w-5 flex items-center justify-center rounded transition-colors hover:bg-[#2563eb]/15"
+          title="Salvar no Banco de Textos">
           {salvoBanco
-            ? <BookmarkCheck size={13} className="text-green-400" />
-            : <BookmarkPlus size={13} className="text-blue-400/60 hover:text-blue-400" />}
+            ? <Check size={13} className="text-green-400" strokeWidth={3} />
+            : <Plus size={14} className="text-blue-300/70 hover:text-blue-300" strokeWidth={2.75} />}
         </button>
       )}
       {dropOpen && dropPos && createPortal(
-        <div style={{ position: 'fixed', top: dropPos.top, left: dropPos.left, zIndex: 9999, width: dropPos.width }}
-          className="bg-[#29292e] border border-[#323238] rounded-lg shadow-xl overflow-hidden">
-          <div className="max-h-44 overflow-y-auto">
-            {sugestoesFiltradas.length === 0
-              ? <p className="text-gray-500 text-xs text-center py-3">Nenhuma sugestão cadastrada</p>
-              : sugestoesFiltradas.map(item => (
-                <div key={item.name} className="flex items-center group/sug border-b border-[#323238]/50 last:border-0 hover:bg-[#323238] transition-colors">
-                  <button type="button"
-                    onMouseDown={() => { clearTimeout(blurRef.current); onChange(item[campo]); setDropOpen(false); setTimeout(grow, 0) }}
-                    className="flex-1 text-left px-3 py-1.5 text-xs text-gray-300 group-hover/sug:text-white">
-                    {item[campo]}
-                  </button>
-                  <button type="button"
-                    onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); excluirSugestao(item) }}
-                    className="px-2 py-1.5 text-gray-600 hover:text-red-400 opacity-0 group-hover/sug:opacity-100 transition-all shrink-0"
-                    title="Excluir do banco">
-                    <X size={10} />
-                  </button>
-                </div>
-              ))}
+        <>
+          <div style={{ position: 'fixed', top: dropPos.top, left: dropPos.left, zIndex: 9999, width: dropPos.width }}
+            className="bg-[#29292e] border border-[#323238] rounded-lg shadow-xl overflow-hidden">
+            <div className="max-h-44 overflow-y-auto">
+              {sugestoesFiltradas.length === 0
+                ? <p className="text-gray-500 text-xs text-center py-3">Nenhuma sugestão cadastrada</p>
+                : sugestoesFiltradas.map(item => (
+                  <div key={item.name}
+                    onMouseEnter={(e) => setPreviewSug({ texto: item[campo], top: e.currentTarget.getBoundingClientRect().top })}
+                    onMouseLeave={() => setPreviewSug(null)}
+                    className="flex items-center group/sug border-b border-[#323238]/50 last:border-0 hover:bg-[#323238] transition-colors">
+                    <button type="button"
+                      onMouseDown={() => { clearTimeout(blurRef.current); onChange(item[campo]); setDropOpen(false); setPreviewSug(null); setTimeout(grow, 0) }}
+                      className="flex-1 text-left px-3 py-1.5 text-xs text-gray-300 group-hover/sug:text-white truncate min-w-0">
+                      {item[campo]}
+                    </button>
+                    <button type="button"
+                      onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); excluirSugestao(item) }}
+                      className="px-2 py-1.5 text-gray-600 hover:text-red-400 opacity-0 group-hover/sug:opacity-100 transition-all shrink-0"
+                      title="Remover sugestão">
+                      <X size={10} />
+                    </button>
+                  </div>
+                ))}
+            </div>
           </div>
-        </div>,
+          {previewSug && (() => {
+            const espacoDireita = window.innerWidth - (dropPos.left + dropPos.width + 16)
+            const aDireita = espacoDireita >= 260
+            const left = aDireita ? dropPos.left + dropPos.width + 8 : Math.max(8, dropPos.left - 8 - 320)
+            return (
+              <div style={{ position: 'fixed', top: previewSug.top, left, zIndex: 10000, maxWidth: aDireita ? Math.min(espacoDireita - 8, 360) : 320 }}
+                className="bg-[#1a1a1a] border border-[#2563eb]/40 rounded-lg shadow-2xl p-3 text-xs text-gray-100 leading-relaxed pointer-events-none whitespace-pre-wrap break-words">
+                {previewSug.texto}
+              </div>
+            )
+          })()}
+        </>,
         document.body
       )}
     </div>
@@ -319,13 +369,19 @@ const TextareaExpansivel = ({ value, onChange, placeholder = '', resetKey, class
 // ─── InputSug ─────────────────────────────────────────────────────────────────
 // Input de célula de tabela com auto-sugestão ao digitar (portal fixed).
 
-const InputSug = ({ value, onChange, doctype, campo, className = '' }) => {
+// extraSources: array de { doctype, campo } cujos valores são mesclados na
+// lista de sugestões. Útil quando você quer reaproveitar valores cadastrados
+// em outro DocType — ex.: na célula Descanso, puxar também os descanso_vinculado
+// já cadastrados em Repetições. Itens vindos de extraSources são read-only
+// (não exibe o "×" pra remover do banco).
+const InputSug = ({ value, onChange, doctype, campo, className = '', extra = null, onSelect = null, extraSources = [] }) => {
   const ref = useRef(null)
   const blurRef = useRef(null)
   const [todasSugestoes, setTodasSugestoes] = useState(null)
   const [dropOpen, setDropOpen] = useState(false)
   const [dropPos, setDropPos] = useState(null)
   const [salvoBanco, setSalvoBanco] = useState(false)
+  const [previewSug, setPreviewSug] = useState(null)
 
   const posicionar = () => {
     if (!ref.current) return
@@ -336,9 +392,35 @@ const InputSug = ({ value, onChange, doctype, campo, className = '' }) => {
   const carregarTodas = async () => {
     if (todasSugestoes !== null) return todasSugestoes
     try {
-      const lista = await listarTextos(doctype, campo, { apenasAtivos: true })
-      setTodasSugestoes(lista)
-      return lista
+      const principal = await listarTextos(doctype, campo, { apenasAtivos: true, extra })
+      const extras = await Promise.all(
+        (extraSources || []).map(src =>
+          listarTextos(src.doctype, src.campo, { apenasAtivos: true })
+            .then(lista => lista
+              .filter(it => (it[src.campo] || '').trim())
+              .map(it => ({
+                name: `__ext_${src.doctype}_${it.name}`,
+                [campo]: it[src.campo], // normaliza pro campo principal
+                enabled: 1,
+                __readOnly: true,
+                __origemLabel: src.label || src.doctype,
+              }))
+            )
+            .catch(() => [])
+        )
+      )
+      // Mescla, deduplicando por valor normalizado (preferindo o principal)
+      const norm = (s) => (s || '').trim().toLowerCase().replace(/[.,;:!?]+$/, '').replace(/\s+/g, ' ')
+      const vistos = new Set(principal.map(it => norm(it[campo])))
+      const mesclado = [...principal]
+      for (const lista of extras) {
+        for (const it of lista) {
+          const k = norm(it[campo])
+          if (!vistos.has(k)) { vistos.add(k); mesclado.push(it) }
+        }
+      }
+      setTodasSugestoes(mesclado)
+      return mesclado
     } catch (e) { console.error('sugestões:', e.message); return [] }
   }
 
@@ -353,6 +435,13 @@ const InputSug = ({ value, onChange, doctype, campo, className = '' }) => {
       return re.test(texto) && texto !== trimmed
     })
   }
+
+  const normalizar = (s) => (s || '').trim().toLowerCase().replace(/[.,;:!?]+$/, '').replace(/\s+/g, ' ')
+  const jaExisteNoBanco = useMemo(() => {
+    if (!todasSugestoes || !value?.trim()) return false
+    const n = normalizar(value)
+    return todasSugestoes.some(s => normalizar(s[campo]) === n)
+  }, [todasSugestoes, value, campo])
 
   const sugestoesFiltradas = useMemo(() => {
     if (!todasSugestoes) return []
@@ -371,12 +460,25 @@ const InputSug = ({ value, onChange, doctype, campo, className = '' }) => {
     if (dropOpen) posicionar()
   }, [value, dropOpen])
 
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (doctype && campo && value?.trim() && todasSugestoes === null) carregarTodas()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, doctype, campo])
+
   const salvarNoBanco = async () => {
-    if (!value?.trim()) return
+    const valorTrim = (value || '').trim()
+    if (!valorTrim) return
     try {
-      await salvarNoBancoSeNovo(doctype, campo, value.trim())
+      await salvarNoBancoSeNovo(doctype, campo, valorTrim)
+      setTodasSugestoes(prev => {
+        const n = normalizar(valorTrim)
+        const base = prev || []
+        if (base.some(s => normalizar(s[campo]) === n)) return base
+        return [...base, { name: `__local_${Date.now()}`, [campo]: valorTrim, enabled: 1 }]
+      })
       setSalvoBanco(true)
-      setTimeout(() => setSalvoBanco(false), 2000)
+      setTimeout(() => setSalvoBanco(false), 1500)
     } catch (e) { console.error('salvar banco:', e.message) }
   }
 
@@ -393,38 +495,63 @@ const InputSug = ({ value, onChange, doctype, campo, className = '' }) => {
     <div className="relative flex items-center">
       <input ref={ref} value={value || ''} onChange={e => onChange(e.target.value)}
         onBlur={handleBlur} onFocus={async () => { clearTimeout(blurRef.current); await abrirDrop() }}
-        className={`w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 pr-5 ${className}`} />
-      {value?.trim() && (
+        className={`w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 pr-6 ${className}`} />
+      {value?.trim() && !jaExisteNoBanco && (
         <button type="button" onMouseDown={(e) => { e.preventDefault(); salvarNoBanco() }}
-          className="absolute right-0.5 transition-colors" title="Salvar no banco">
+          className="absolute right-0.5 h-5 w-5 flex items-center justify-center rounded transition-colors hover:bg-[#2563eb]/15"
+          title="Salvar no Banco de Textos">
           {salvoBanco
-            ? <BookmarkCheck size={13} className="text-green-400" />
-            : <BookmarkPlus size={13} className="text-blue-400/60 hover:text-blue-400" />}
+            ? <Check size={13} className="text-green-400" strokeWidth={3} />
+            : <Plus size={14} className="text-blue-300/70 hover:text-blue-300" strokeWidth={2.75} />}
         </button>
       )}
       {dropOpen && dropPos && createPortal(
-        <div style={{ position: 'fixed', top: dropPos.top, left: dropPos.left, zIndex: 9999, width: dropPos.width }}
-          className="bg-[#29292e] border border-[#323238] rounded-lg shadow-xl overflow-hidden">
-          <div className="max-h-44 overflow-y-auto">
-            {sugestoesFiltradas.length === 0
-              ? <p className="text-gray-500 text-xs text-center py-3">Nenhuma sugestão</p>
-              : sugestoesFiltradas.map(item => (
-                <div key={item.name} className="flex items-center group/sug border-b border-[#323238]/50 last:border-0 hover:bg-[#323238] transition-colors">
-                  <button type="button"
-                    onMouseDown={() => { clearTimeout(blurRef.current); onChange(item[campo]); setDropOpen(false) }}
-                    className="flex-1 text-left px-3 py-1.5 text-xs text-gray-300 group-hover/sug:text-white">
-                    {item[campo]}
-                  </button>
-                  <button type="button"
-                    onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); excluirSugestao(item) }}
-                    className="px-2 py-1.5 text-gray-600 hover:text-red-400 opacity-0 group-hover/sug:opacity-100 transition-all shrink-0"
-                    title="Excluir do banco">
-                    <X size={10} />
-                  </button>
-                </div>
-              ))}
+        <>
+          <div style={{ position: 'fixed', top: dropPos.top, left: dropPos.left, zIndex: 9999, width: dropPos.width }}
+            className="bg-[#29292e] border border-[#323238] rounded-lg shadow-xl overflow-hidden">
+            <div className="max-h-44 overflow-y-auto">
+              {sugestoesFiltradas.length === 0
+                ? <p className="text-gray-500 text-xs text-center py-3">Nenhuma sugestão</p>
+                : sugestoesFiltradas.map(item => (
+                  <div key={item.name}
+                    onMouseEnter={(e) => setPreviewSug({ texto: item[campo], top: e.currentTarget.getBoundingClientRect().top })}
+                    onMouseLeave={() => setPreviewSug(null)}
+                    className="flex items-center group/sug border-b border-[#323238]/50 last:border-0 hover:bg-[#323238] transition-colors">
+                    <button type="button"
+                      onMouseDown={() => { clearTimeout(blurRef.current); onChange(item[campo]); if (onSelect) onSelect(item); setDropOpen(false); setPreviewSug(null) }}
+                      className="flex-1 text-left px-3 py-1.5 text-xs text-gray-300 group-hover/sug:text-white truncate min-w-0 flex items-center gap-2">
+                      <span className="truncate">{item[campo]}</span>
+                      {extra && item[extra] && (
+                        <span className="text-[10px] text-blue-300/70 shrink-0">↳ {item[extra]}</span>
+                      )}
+                      {item.__readOnly && (
+                        <span className="text-[9px] text-amber-400/70 shrink-0 ml-auto" title={`Vinculado a ${item.__origemLabel || 'outro registro'}`}>vinc</span>
+                      )}
+                    </button>
+                    {!item.__readOnly && (
+                      <button type="button"
+                        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); excluirSugestao(item) }}
+                        className="px-2 py-1.5 text-gray-600 hover:text-red-400 opacity-0 group-hover/sug:opacity-100 transition-all shrink-0"
+                        title="Remover sugestão">
+                        <X size={10} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+            </div>
           </div>
-        </div>,
+          {previewSug && (() => {
+            const espacoDireita = window.innerWidth - (dropPos.left + dropPos.width + 16)
+            const aDireita = espacoDireita >= 260
+            const left = aDireita ? dropPos.left + dropPos.width + 8 : Math.max(8, dropPos.left - 8 - 320)
+            return (
+              <div style={{ position: 'fixed', top: previewSug.top, left, zIndex: 10000, maxWidth: aDireita ? Math.min(espacoDireita - 8, 360) : 320 }}
+                className="bg-[#1a1a1a] border border-[#2563eb]/40 rounded-lg shadow-2xl p-3 text-xs text-gray-100 leading-relaxed pointer-events-none whitespace-pre-wrap break-words">
+                {previewSug.texto}
+              </div>
+            )
+          })()}
+        </>,
         document.body
       )}
     </div>
@@ -1127,15 +1254,19 @@ const ExRow = ({ ex, i, total, isPart, position, onChange, onMove, onDup, onRemo
         </div>
         {seriesOpen && <SeriesNamePopover ex={ex} onChange={onChange} anchor={seriesBtnRef.current} onClose={() => setSeriesOpen(false)} />}
       </td>
-      {/* Reps */}
+      {/* Reps — banco "Repeticao Treino" com auto-fill de descanso quando vinculado */}
       <td className="px-2 py-1 align-middle">
-        <input value={ex.repeticoes || ''} onChange={e => upd('repeticoes', e.target.value)}
-          className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 text-center" placeholder="8 a 12" />
+        <InputSug value={ex.repeticoes || ''} onChange={v => upd('repeticoes', v)}
+          onSelect={item => { if (item.descanso_vinculado) upd('descanso', item.descanso_vinculado) }}
+          doctype="Repeticao Treino" campo="repeticao_treino" extra="descanso_vinculado"
+          className="text-center" />
       </td>
-      {/* Descanso */}
+      {/* Descanso — banco "Descanso Treino" + mescla descansos_vinculados de Repetições */}
       <td className="px-2 py-1 align-middle">
-        <input value={ex.descanso || ''} onChange={e => upd('descanso', e.target.value)}
-          className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 text-center" placeholder="00:45 a 01:30" />
+        <InputSug value={ex.descanso || ''} onChange={v => upd('descanso', v)}
+          doctype="Descanso Treino" campo="descanso_treino"
+          extraSources={[{ doctype: 'Repeticao Treino', campo: 'descanso_vinculado', label: 'Vinculado a Repetição' }]}
+          className="text-center" />
       </td>
       {/* Instruções */}
       <td className="px-2 py-1 align-middle">
@@ -1588,7 +1719,9 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
           </div>
 
           <FormGroup label="Orientações Gerais">
-            <Textarea value={ficha.orientacoes || ''} onChange={v => upd('orientacoes', v)} placeholder="Orientações gerais..." rows={3} />
+            <TextareaComSugestoes value={ficha.orientacoes || ''} onChange={v => upd('orientacoes', v)}
+              placeholder="Orientações gerais..." rows={3}
+              doctype="Orientacao Geral Treino" campo="orientacao_geral_treino" />
           </FormGroup>
         </div>
 
@@ -1656,7 +1789,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
                     <th className="py-2 px-3 text-center">Séries</th>
                     <th className="py-2 px-3 text-center">Reps</th>
                     <th className="py-2 px-3 text-center">Descanso</th>
-                    <th className="w-10" />
+                    <th className="w-16" />
                   </tr>
                 </thead>
                 <tbody>
@@ -1667,20 +1800,46 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
                       const sem = sems[i]
                       if (sem) periodoTexto = `${formatarDataBr(sem.inicio)} - ${formatarDataBr(sem.fim)}`
                     }
+                    // Resync idx+semana sempre que a lista mutar; remove `name` ao
+                    // duplicar pra evitar colapso pelo Frappe (mesmo padrão do dupe de exercícios).
+                    const sincronizar = (lista) => lista.map((item, k) => ({
+                      ...item, idx: k + 1, semana: String(k + 1).padStart(2, '0'),
+                    }))
                     return (
                       <tr key={i} className="border-b border-[#323238]/50 group h-10 hover:bg-[#202024]">
                         <td className="px-3 text-gray-400 font-mono">{String(i + 1).padStart(2, '0')}</td>
                         <td className="px-2 text-gray-500 text-[10px]">{periodoTexto}</td>
                         <td className="px-2 py-1"><input value={p.series || ''} onChange={e => { const a = [...ficha.periodizacao]; a[i] = { ...a[i], series: e.target.value }; upd('periodizacao', a) }} className="bg-[#29292e] border border-[#323238] text-gray-200 text-xs rounded px-2 py-1 w-full outline-none text-center" /></td>
-                        <td className="px-2 py-1"><input value={p.repeticoes || ''} onChange={e => { const a = [...ficha.periodizacao]; a[i] = { ...a[i], repeticoes: e.target.value }; upd('periodizacao', a) }} className="bg-[#29292e] border border-[#323238] text-gray-200 text-xs rounded px-2 py-1 w-full outline-none text-center" /></td>
-                        <td className="px-2 py-1"><input value={p.descanso || ''} onChange={e => { const a = [...ficha.periodizacao]; a[i] = { ...a[i], descanso: e.target.value }; upd('periodizacao', a) }} className="bg-[#29292e] border border-[#323238] text-gray-200 text-xs rounded px-2 py-1 w-full outline-none text-center" /></td>
-                        <td className="px-2 text-center"><button onClick={() => upd('periodizacao', ficha.periodizacao.filter((_, idx) => idx !== i))} className="text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition"><X size={11} /></button></td>
+                        <td className="px-2 py-1">
+                          <InputSug value={p.repeticoes || ''}
+                            onChange={v => { const a = [...ficha.periodizacao]; a[i] = { ...a[i], repeticoes: v }; upd('periodizacao', a) }}
+                            onSelect={item => { if (item.descanso_vinculado) { const a = [...ficha.periodizacao]; a[i] = { ...a[i], descanso: item.descanso_vinculado }; upd('periodizacao', a) } }}
+                            doctype="Repeticao Treino" campo="repeticao_treino" extra="descanso_vinculado"
+                            className="text-center" />
+                        </td>
+                        <td className="px-2 py-1">
+                          <InputSug value={p.descanso || ''}
+                            onChange={v => { const a = [...ficha.periodizacao]; a[i] = { ...a[i], descanso: v }; upd('periodizacao', a) }}
+                            doctype="Descanso Treino" campo="descanso_treino"
+                            extraSources={[{ doctype: 'Repeticao Treino', campo: 'descanso_vinculado', label: 'Vinculado a Repetição' }]}
+                            className="text-center" />
+                        </td>
+                        <td className="px-1 text-center">
+                          <div className="flex items-center justify-center gap-0.5 opacity-0 group-hover:opacity-100 transition">
+                            <button onClick={() => { const { name: _n, ...sem } = p; const a = [...ficha.periodizacao]; a.splice(i + 1, 0, { ...sem }); upd('periodizacao', sincronizar(a)) }}
+                              title="Duplicar semana"
+                              className="text-gray-500 hover:text-blue-400"><Copy size={11} /></button>
+                            <button onClick={() => upd('periodizacao', sincronizar(ficha.periodizacao.filter((_, idx) => idx !== i)))}
+                              title="Remover semana"
+                              className="text-gray-500 hover:text-red-400"><X size={11} /></button>
+                          </div>
+                        </td>
                       </tr>
                     )
                   })}
                 </tbody>
               </table>
-              <button onClick={() => { const a = ficha.periodizacao || []; const ul = a[a.length - 1]; upd('periodizacao', [...a, { semana: String(a.length + 1).padStart(2, '0'), series: ul?.series || '3', repeticoes: ul?.repeticoes || '', descanso: ul?.descanso || '' }]) }}
+              <button onClick={() => { const a = ficha.periodizacao || []; const ul = a[a.length - 1]; const nova = [...a, { series: ul?.series || '3', repeticoes: ul?.repeticoes || '', descanso: ul?.descanso || '' }]; upd('periodizacao', nova.map((item, k) => ({ ...item, idx: k + 1, semana: String(k + 1).padStart(2, '0') }))) }}
                 className="w-full py-2 text-xs text-gray-500 hover:text-gray-300 flex items-center justify-center gap-1 transition border-t border-[#323238]/30">
                 <Plus size={10} /> Add Semana Manual
               </button>
@@ -1700,7 +1859,9 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
           />
         )}
         <FormGroup label="Orientações Aeróbicos">
-          <Textarea value={ficha.orientacoes_aerobicos || ''} onChange={v => upd('orientacoes_aerobicos', v)} rows={3} placeholder="Orientações gerais para os aeróbicos..." />
+          <TextareaComSugestoes value={ficha.orientacoes_aerobicos || ''} onChange={v => upd('orientacoes_aerobicos', v)}
+            rows={3} placeholder="Orientações gerais para os aeróbicos..."
+            doctype="Orientacao Aerobico" campo="orientacao_aerobico" />
         </FormGroup>
         <div className="rounded-lg border border-[#323238] bg-[#1a1a1a] overflow-hidden">
           <div className="overflow-x-auto">
@@ -1711,7 +1872,6 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
                   <th className="text-left py-2 px-2 w-56">Exercício</th>
                   <th className="text-left py-2 px-2 w-36">Frequência</th>
                   <th className="text-left py-2 px-2">Instruções</th>
-                  <th className="py-2 px-2 w-32" />
                 </tr>
               </thead>
               <tbody>
@@ -1732,20 +1892,20 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
                       </td>
                       <td className="px-2 py-1 align-middle"><SearchableCombo value={a.exercicios || ''} onChange={v => set('exercicios', v)} options={aerobs} placeholder="Buscar..." /></td>
                       <td className="px-2 py-1 align-middle"><InputSug value={a.frequencia || ''} onChange={v => set('frequencia', v)} doctype="Frequencia Aerobico" campo="frequencia_aerobico" /></td>
-                      <td className="px-2 py-1 align-top"><TextareaExpansivel value={a.instrucao || ''} onChange={v => set('instrucao', v)} placeholder="Instruções..." resetKey={aerobicoResetKey} doctype="Instrucao Aerobico" campo="instrucao_aerobico" /></td>
-                      <td className="px-1 py-1 align-middle">
-                        <div className="flex items-center justify-end gap-0.5">
+                      <td className="px-2 py-1 align-top relative">
+                        <TextareaExpansivel value={a.instrucao || ''} onChange={v => set('instrucao', v)} placeholder="Instruções..." resetKey={aerobicoResetKey} doctype="Instrucao Aerobico" campo="instrucao_aerobico" />
+                        <div className="absolute bottom-1 right-1 flex items-center gap-0.5 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition bg-[#1a1a1a]/95 backdrop-blur-sm rounded border border-[#323238] p-0.5 z-10">
                           <button onClick={() => setDetalheAerobicoIdx(i)} title="Detalhes"
-                            className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-gray-200 hover:bg-[#29292e] rounded transition"><Info size={12} /></button>
+                            className="h-6 w-6 flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#29292e] rounded transition"><Info size={12} /></button>
                           <button onClick={() => {
                               const arr = [...ficha.periodizacao_dos_aerobicos]
                               const { name, ...sem } = a
                               arr.splice(i+1, 0, { ...sem, _id: uid() })
                               upd('periodizacao_dos_aerobicos', arr)
                             }} title="Duplicar"
-                            className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-gray-200 hover:bg-[#29292e] rounded transition"><Copy size={12} /></button>
+                            className="h-6 w-6 flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#29292e] rounded transition"><Copy size={12} /></button>
                           <button onClick={() => upd('periodizacao_dos_aerobicos', ficha.periodizacao_dos_aerobicos.filter((_, idx) => idx !== i))} title="Excluir"
-                            className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded transition"><Trash2 size={12} /></button>
+                            className="h-6 w-6 flex items-center justify-center text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded transition"><Trash2 size={12} /></button>
                         </div>
                       </td>
                     </tr>
@@ -1772,7 +1932,9 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
           />
         )}
         <FormGroup label="Orientações Alongamentos e Mobilidade">
-          <Textarea value={ficha.orientacoes_aem || ''} onChange={v => upd('orientacoes_aem', v)} rows={3} placeholder="Orientações gerais para alongamentos..." />
+          <TextareaComSugestoes value={ficha.orientacoes_aem || ''} onChange={v => upd('orientacoes_aem', v)}
+            rows={3} placeholder="Orientações gerais para alongamentos..."
+            doctype="Orientacao Alongamento" campo="orientacao_alongamento" />
         </FormGroup>
         <div className="rounded-lg border border-[#323238] bg-[#1a1a1a] overflow-hidden">
           <div className="overflow-x-auto">
@@ -1783,7 +1945,6 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
                   <th className="text-left py-2 px-2 w-56">Exercício</th>
                   <th className="text-center py-2 px-2 w-20">Séries</th>
                   <th className="text-left py-2 px-2">Observação</th>
-                  <th className="py-2 px-2 w-32" />
                 </tr>
               </thead>
               <tbody>
@@ -1804,20 +1965,20 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
                       </td>
                       <td className="px-2 py-1 align-middle"><SearchableCombo value={a.exercicio || ''} onChange={v => set('exercicio', v)} options={alongs} placeholder="Buscar..." /></td>
                       <td className="px-2 py-1 align-middle"><input type="number" value={a.series || ''} onChange={e => set('series', e.target.value)} className="w-full h-8 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 text-center" /></td>
-                      <td className="px-2 py-1 align-top"><TextareaExpansivel value={a.observacoes || ''} onChange={v => set('observacoes', v)} placeholder="Observações..." resetKey={alongamentoResetKey} doctype="Alongamento Observacao" campo="alongamento_observacao" /></td>
-                      <td className="px-1 py-1 align-middle">
-                        <div className="flex items-center justify-end gap-0.5">
+                      <td className="px-2 py-1 align-top relative">
+                        <TextareaExpansivel value={a.observacoes || ''} onChange={v => set('observacoes', v)} placeholder="Observações..." resetKey={alongamentoResetKey} doctype="Alongamento Observacao" campo="alongamento_observacao" />
+                        <div className="absolute bottom-1 right-1 flex items-center gap-0.5 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition bg-[#1a1a1a]/95 backdrop-blur-sm rounded border border-[#323238] p-0.5 z-10">
                           <button onClick={() => setDetalheAlongamentoIdx(i)} title="Detalhes"
-                            className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-gray-200 hover:bg-[#29292e] rounded transition"><Info size={12} /></button>
+                            className="h-6 w-6 flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#29292e] rounded transition"><Info size={12} /></button>
                           <button onClick={() => {
                               const arr = [...ficha.planilha_de_alongamentos_e_mobilidade]
                               const { name, ...sem } = a
                               arr.splice(i+1, 0, { ...sem, _id: uid() })
                               upd('planilha_de_alongamentos_e_mobilidade', arr)
                             }} title="Duplicar"
-                            className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-gray-200 hover:bg-[#29292e] rounded transition"><Copy size={12} /></button>
+                            className="h-6 w-6 flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#29292e] rounded transition"><Copy size={12} /></button>
                           <button onClick={() => upd('planilha_de_alongamentos_e_mobilidade', ficha.planilha_de_alongamentos_e_mobilidade.filter((_, idx) => idx !== i))} title="Excluir"
-                            className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded transition"><Trash2 size={12} /></button>
+                            className="h-6 w-6 flex items-center justify-center text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded transition"><Trash2 size={12} /></button>
                         </div>
                       </td>
                     </tr>
@@ -1844,7 +2005,9 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
           </FormGroup>
         </div>
         <FormGroup label={`Orientações Treino ${t.toUpperCase()}`}>
-          <Textarea value={ficha[`orientacoes_treino_${t}`] || ''} onChange={v => upd(`orientacoes_treino_${t}`, v)} rows={3} placeholder="Orientações específicas deste treino..." />
+          <TextareaComSugestoes value={ficha[`orientacoes_treino_${t}`] || ''} onChange={v => upd(`orientacoes_treino_${t}`, v)}
+            rows={3} placeholder="Orientações específicas deste treino..."
+            doctype="Orientacao Treino Bloco" campo="orientacao_treino_bloco" />
         </FormGroup>
         <TabelaExercicios
           key={t}

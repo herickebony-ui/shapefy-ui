@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, ChevronRight, BarChart2, ToggleLeft, ToggleRight, Copy, Check, Trash2, Plus, FileText } from 'lucide-react'
 import { buscarAluno, salvarAluno } from '../../api/alunos'
-import { listarDietas } from '../../api/dietas'
+import { listarDietas, normalizarAlturaCm } from '../../api/dietas'
 import { listarFichas } from '../../api/fichas'
 import { listarAnamneses, buscarAnamnese, salvarAnamnese, excluirAnamnese, listarFormularios, vincularAnamnese } from '../../api/anamneses'
 import { listarAvaliacoesPorAluno } from '../../api/avaliacoes'
@@ -206,6 +206,8 @@ export function TabPerfil({ aluno: inicial, alunoId, onSaved }) {
       const atualizado = await salvarAluno(alunoId, {
         ...payload,
         'endereço': formatarEndereco(address),
+        // Sempre cm. Aceita digitação em metros (1.70) ou cm (170).
+        height: form.height === '' ? '' : normalizarAlturaCm(form.height),
         enabled: form.enabled ? 1 : 0,
         dieta: form.dieta ? 1 : 0,
         treino: form.treino ? 1 : 0,

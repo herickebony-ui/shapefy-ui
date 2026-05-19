@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { BookmarkPlus, BookmarkCheck, X } from 'lucide-react'
+import { Plus, Check, X } from 'lucide-react'
 import { listarTextos, salvarNoBancoSeNovo, excluirTexto } from '../../api/bancoTextos'
+
+const normalizar = (s) => (s || '').trim().toLowerCase().replace(/[.,;:!?]+$/, '').replace(/\s+/g, ' ')
 
 export default function TextareaComSugestoes({
   value,
@@ -44,6 +46,18 @@ export default function TextareaComSugestoes({
     return filtrar(todasSugestoes, value)
   }, [todasSugestoes, value])
 
+  const jaExisteNoBanco = useMemo(() => {
+    if (!todasSugestoes || !value?.trim()) return false
+    const n = normalizar(value)
+    return todasSugestoes.some(s => normalizar(s[campo]) === n)
+  }, [todasSugestoes, value, campo])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (doctype && campo && value?.trim() && todasSugestoes === null) carregarTodas()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, doctype, campo])
+
   const abrirDrop = async () => {
     const lista = await carregarTodas()
     const filtradas = filtrar(lista, value)
@@ -51,11 +65,18 @@ export default function TextareaComSugestoes({
   }
 
   const salvarNoBanco = async () => {
-    if (!value?.trim() || !doctype || !campo) return
+    const valorTrim = (value || '').trim()
+    if (!valorTrim || !doctype || !campo) return
     try {
-      await salvarNoBancoSeNovo(doctype, campo, value.trim())
+      await salvarNoBancoSeNovo(doctype, campo, valorTrim)
+      setTodasSugestoes(prev => {
+        const n = normalizar(valorTrim)
+        const base = prev || []
+        if (base.some(s => normalizar(s[campo]) === n)) return base
+        return [...base, { name: `__local_${Date.now()}`, [campo]: valorTrim, enabled: 1 }]
+      })
       setSalvado(true)
-      setTimeout(() => setSalvado(false), 2000)
+      setTimeout(() => setSalvado(false), 1500)
     } catch (e) { console.error('salvar banco:', e.message) }
   }
 
@@ -83,16 +104,16 @@ export default function TextareaComSugestoes({
       />
 
       {/* Botão salvar no banco — canto inferior direito da textarea */}
-      {doctype && campo && value?.trim() && (
+      {doctype && campo && value?.trim() && !jaExisteNoBanco && (
         <button
           type="button"
           onMouseDown={(e) => { e.preventDefault(); salvarNoBanco() }}
-          className="absolute bottom-2 right-2 transition-colors"
-          title="Salvar no banco de textos"
+          className="absolute bottom-2 right-2 h-6 w-6 flex items-center justify-center rounded transition-colors hover:bg-[#2563eb]/15"
+          title="Salvar no Banco de Textos"
         >
           {salvado
-            ? <BookmarkCheck size={14} className="text-green-400" />
-            : <BookmarkPlus size={14} className="text-blue-400/60 hover:text-blue-400" />}
+            ? <Check size={14} className="text-green-400" strokeWidth={3} />
+            : <Plus size={15} className="text-blue-300/70 hover:text-blue-300" strokeWidth={2.75} />}
         </button>
       )}
 
@@ -115,7 +136,7 @@ export default function TextareaComSugestoes({
                   type="button"
                   onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); excluirSugestao(item) }}
                   className="p-2 text-gray-600 hover:text-red-400 opacity-0 group-hover/sug:opacity-100 transition-all shrink-0"
-                  title="Excluir do banco"
+                  title="Remover sugestão"
                 >
                   <X size={10} />
                 </button>

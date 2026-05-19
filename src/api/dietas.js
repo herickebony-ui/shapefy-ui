@@ -1,12 +1,14 @@
 import client from './client'
 import { buscarAluno } from './alunos'
 
-// Normaliza altura: se vier em metros (< 3), converte pra cm.
-// Aluno cadastra em cm no AlunoModal mas dados antigos podem estar em metros.
+// Normaliza altura pra cm — aceita entrada em metros (1.70) ou cm (170) e
+// devolve sempre cm. Aplicar em TODO ponto de save/load de altura pra que o
+// banco fique sempre em cm e a UI nunca mostre valor ambíguo.
+// Heurística: valores entre 0 e 3 (exclusivos) são tratados como metros.
 export const normalizarAlturaCm = (h) => {
   const n = Number(h) || 0
   if (n > 0 && n < 3) return Math.round(n * 100)
-  return n
+  return Math.round(n)
 }
 
 // Extrai os campos antropométricos + PAL de um doc Aluno pra payload de Dieta.

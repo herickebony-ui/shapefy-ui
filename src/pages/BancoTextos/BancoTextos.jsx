@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Plus, RefreshCw, Pencil, Trash2, ToggleLeft, ToggleRight, Check, X } from 'lucide-react'
+import { Plus, RefreshCw, Pencil, Copy, Trash2, ToggleLeft, ToggleRight, Check, X } from 'lucide-react'
 import {
   CATEGORIAS,
+  GRUPOS_CATEGORIA,
   listarTodosTextos,
   criarTexto,
   editarTexto,
@@ -11,6 +12,7 @@ import {
 import { Button, Tabs, FormGroup, Input, Modal, EmptyState } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 import { FileText } from 'lucide-react'
+import useErrorModal from '../../hooks/useErrorModal'
 
 export default function BancoTextos() {
   const [abaSelecionada, setAbaSelecionada] = useState(CATEGORIAS[0].id)
@@ -25,9 +27,12 @@ export default function BancoTextos() {
   const [campoExtra, setCampoExtra] = useState('')
   const [salvando, setSalvando] = useState(false)
 
+  const errorModal = useErrorModal()
   const debounceRef = useRef(null)
 
   const categoria = CATEGORIAS.find((c) => c.id === abaSelecionada)
+  const grupoAtivo = categoria?.grupo || GRUPOS_CATEGORIA[0].id
+  const categoriasDoGrupo = CATEGORIAS.filter((c) => c.grupo === grupoAtivo)
 
   const carregar = useCallback(async () => {
     if (!categoria) return
@@ -70,6 +75,16 @@ export default function BancoTextos() {
     setModalAberto(true)
   }
 
+  const abrirDuplicar = (item) => {
+    // Pré-preenche o modal de criação com o conteúdo do item de origem.
+    // Para DocTypes com unique no campo (ex.: Repeticao Treino, Descanso Treino),
+    // o usuário precisa editar antes de salvar; senão o Frappe rejeita.
+    setEditando(null)
+    setCampoTexto(item[categoria.campo] || '')
+    setCampoExtra(categoria.extra ? item[categoria.extra] || '' : '')
+    setModalAberto(true)
+  }
+
   const fecharModal = () => {
     setModalAberto(false)
     setEditando(null)
@@ -91,8 +106,7 @@ export default function BancoTextos() {
       fecharModal()
       carregar()
     } catch (e) {
-      console.error('Erro ao salvar:', e.message)
-      alert('Erro ao salvar texto.')
+      errorModal.show(e, `Salvar ${categoria?.label || 'texto'}`)
     } finally {
       setSalvando(false)
     }
@@ -115,8 +129,7 @@ export default function BancoTextos() {
       await excluirTexto(categoria.doctype, item.name)
       setLista((prev) => prev.filter((i) => i.name !== item.name))
     } catch (e) {
-      console.error('Erro ao excluir:', e.message)
-      alert('Erro ao excluir texto. Verifique as permissões no Frappe.')
+      errorModal.show(e, `Excluir ${categoria?.label || 'texto'}`)
     }
   }
 
@@ -124,7 +137,12 @@ export default function BancoTextos() {
     ? lista
     : lista.filter((i) => i.enabled !== 0)
 
-  const tabs = CATEGORIAS.map((c) => ({ id: c.id, label: c.label }))
+  const tabsDoGrupo = categoriasDoGrupo.map((c) => ({ id: c.id, label: c.label }))
+
+  const trocarGrupo = (novoGrupoId) => {
+    const primeira = CATEGORIAS.find((c) => c.grupo === novoGrupoId)
+    if (primeira) setAbaSelecionada(primeira.id)
+  }
 
   return (
     <>
@@ -163,14 +181,36 @@ export default function BancoTextos() {
             : null
         }
       >
-        {/* Tabs */}
-        <div className="px-4 pt-2 pb-0">
-          <Tabs
-            tabs={tabs}
-            active={abaSelecionada}
-            onChange={(id) => setAbaSelecionada(id)}
-            variant="underline"
-          />
+        {/* Navegação em 2 níveis: Grupo (pílulas) + Tabs do grupo (sublinhado) */}
+        <div className="px-4 pt-2 pb-0 space-y-2">
+          {/* Grupos — pílulas que cabem em mobile sem scroll horizontal */}
+          <div className="flex flex-wrap gap-1.5">
+            {GRUPOS_CATEGORIA.map((g) => {
+              const ativo = g.id === grupoAtivo
+              return (
+                <button
+                  key={g.id}
+                  onClick={() => trocarGrupo(g.id)}
+                  className={`h-8 px-3 text-xs font-semibold rounded-lg border transition-colors
+                    ${ativo
+                      ? 'bg-[#2563eb] border-[#2563eb] text-white'
+                      : 'bg-transparent border-[#323238] text-gray-400 hover:text-white hover:border-gray-500'
+                    }`}
+                >
+                  {g.label}
+                </button>
+              )
+            })}
+          </div>
+          {/* Tabs do grupo selecionado */}
+          {tabsDoGrupo.length > 1 && (
+            <Tabs
+              tabs={tabsDoGrupo}
+              active={abaSelecionada}
+              onChange={(id) => setAbaSelecionada(id)}
+              variant="underline"
+            />
+          )}
         </div>
 
         {/* Tabela */}
@@ -182,16 +222,16 @@ export default function BancoTextos() {
                   <tr className="border-b border-[#323238]">
                     {categoria?.extra && (
                       <th className="text-left px-4 py-2.5 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-40">
-                        {categoria.extra === 'full_name' ? 'Refeição' : categoria.extra}
+                        {categoria.extraLabel || categoria.extra}
                       </th>
                     )}
                     <th className="text-left px-4 py-2.5 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                      Texto
+                      {categoria?.campoLabel || 'Texto'}
                     </th>
                     <th className="text-center px-3 py-2.5 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-20">
                       Status
                     </th>
-                    <th className="text-center px-3 py-2.5 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24">
+                    <th className="text-center px-3 py-2.5 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-32">
                       Ações
                     </th>
                   </tr>
@@ -232,6 +272,13 @@ export default function BancoTextos() {
                             className="h-7 w-7 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors"
                           >
                             <Pencil size={12} />
+                          </button>
+                          <button
+                            onClick={() => abrirDuplicar(item)}
+                            title="Duplicar"
+                            className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-600 border border-[#323238] hover:border-gray-500 rounded-lg transition-colors"
+                          >
+                            <Copy size={12} />
                           </button>
                           <button
                             onClick={() => handleExcluir(item)}
@@ -279,32 +326,43 @@ export default function BancoTextos() {
           }
         >
           <div className="p-4 space-y-4">
+            <FormGroup label={categoria?.campoLabel || 'Texto'} required>
+              {categoria?.campoMultiline === false ? (
+                <Input
+                  autoFocus
+                  value={campoTexto}
+                  onChange={setCampoTexto}
+                  placeholder={categoria?.campoPlaceholder || 'Digite...'}
+                />
+              ) : (
+                <textarea
+                  autoFocus
+                  value={campoTexto}
+                  onChange={(e) => setCampoTexto(e.target.value)}
+                  rows={4}
+                  placeholder={categoria?.campoPlaceholder || 'Digite o texto...'}
+                  className="w-full bg-[#1a1a1a] border border-[#323238] focus:border-[#2563eb]/60 text-white text-sm rounded-lg px-3 py-2 outline-none resize-none leading-relaxed transition-colors placeholder-gray-600"
+                />
+              )}
+            </FormGroup>
+
             {categoria?.extra && (
               <FormGroup
-                label={categoria.extra === 'full_name' ? 'Nome da Refeição' : categoria.extra}
-                hint="Identificador do texto (opcional)"
+                label={categoria.extraLabel || categoria.extra}
+                hint={categoria.extraHint || 'Identificador do texto (opcional)'}
               >
                 <Input
                   value={campoExtra}
                   onChange={setCampoExtra}
-                  placeholder="Ex: Café da Manhã"
+                  placeholder={categoria.extraPlaceholder || ''}
                 />
               </FormGroup>
             )}
-
-            <FormGroup label="Texto" required>
-              <textarea
-                autoFocus={!categoria?.extra}
-                value={campoTexto}
-                onChange={(e) => setCampoTexto(e.target.value)}
-                rows={4}
-                placeholder="Digite o texto..."
-                className="w-full bg-[#1a1a1a] border border-[#323238] focus:border-[#2563eb]/60 text-white text-sm rounded-lg px-3 py-2 outline-none resize-none leading-relaxed transition-colors placeholder-gray-600"
-              />
-            </FormGroup>
           </div>
         </Modal>
       )}
+
+      {errorModal.element}
     </>
   )
 }

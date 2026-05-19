@@ -7,7 +7,7 @@ import {
   BookmarkPlus, BookmarkCheck, Bookmark,
 } from 'lucide-react'
 import {
-  buscarDieta, salvarDieta, listarAlimentos,
+  buscarDieta, salvarDieta, listarAlimentos, normalizarAlturaCm,
   listarRefeicoesProntas, buscarRefeicaoPronta,
   criarRefeicaoPronta, excluirDieta, duplicarDieta,
   dadosAntropometricosFromAluno,
@@ -19,7 +19,7 @@ import {
 import { listarTextos, salvarNoBancoSeNovo, excluirTexto } from '../../api/bancoTextos'
 import {
   Button, FormGroup, Input, Select, Textarea, Autocomplete,
-  Modal, CollapsibleBanner, Tabs, FooterTotais,
+  Modal, CollapsibleBanner, Tabs, FooterTotais, TextareaComSugestoes,
 } from '../../components/ui'
 import ModalSalvarComoModelo from '../Modelos/ModalSalvarComoModelo'
 import NotificarAlunoModal from '../../components/NotificarAlunoModal'
@@ -1387,7 +1387,12 @@ export default function DietaDetalhe() {
     setSaving(true)
     try {
       const totaisCalc = calcularTotais(draft)
-      const payload = { ...draft, total_calories: Math.round(totaisCalc?.kcal || 0) }
+      const payload = {
+        ...draft,
+        total_calories: Math.round(totaisCalc?.kcal || 0),
+        // Garante DB sempre em cm — aceita digitação em metros (1.70) ou cm (170)
+        height: draft.height === '' || draft.height == null ? '' : normalizarAlturaCm(draft.height),
+      }
       delete payload.nome_completo
 
       for (let i = 1; i <= 8; i++) {
@@ -1628,10 +1633,14 @@ export default function DietaDetalhe() {
           <div className="bg-[#29292e] border border-[#323238] rounded-lg p-4 md:p-6 space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <FormGroup label="Descrições Gerais">
-                <Textarea value={draft.general_description} onChange={(v) => handleChange('general_description', v)} placeholder="Ex: Consumo de água..." />
+                <TextareaComSugestoes value={draft.general_description} onChange={(v) => handleChange('general_description', v)}
+                  placeholder="Ex: Consumo de água..."
+                  doctype="Dieta Descricao Geral" campo="descricao_geral" />
               </FormGroup>
               <FormGroup label="Observações">
-                <Textarea value={draft.obs} onChange={(v) => handleChange('obs', v)} placeholder="Ex: Vegetais permitidos..." />
+                <TextareaComSugestoes value={draft.obs} onChange={(v) => handleChange('obs', v)}
+                  placeholder="Ex: Vegetais permitidos..."
+                  doctype="Dieta Observacao" campo="dieta_observacao" />
               </FormGroup>
             </div>
           </div>

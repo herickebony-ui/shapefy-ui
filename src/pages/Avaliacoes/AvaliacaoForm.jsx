@@ -4,6 +4,7 @@ import { User, Ruler, Dumbbell, Check, RefreshCw, Image as ImageIcon, Upload, Tr
 import client from '../../api/client'
 import { criarAvaliacao, salvarAvaliacao, buscarAvaliacao } from '../../api/avaliacoes'
 import { listarAlunos, buscarAluno } from '../../api/alunos'
+import { normalizarAlturaCm } from '../../api/dietas'
 import {
   Button, FormGroup, Input, Select, Autocomplete, Spinner,
 } from '../../components/ui'
@@ -226,7 +227,8 @@ export default function AvaliacaoForm() {
       const d = await buscarAluno(item.name)
       setForm(prev => ({
         ...prev,
-        height: d.height ? String(d.height) : prev.height,
+        // Sempre cm — aceita aluno legado em metros
+        height: d.height ? String(normalizarAlturaCm(d.height)) : prev.height,
         age: d.age ? String(d.age) : prev.age,
         sex: d.sexo || d.sex || prev.sex,
         weight: d.weight ? String(d.weight) : prev.weight,
@@ -251,6 +253,10 @@ export default function AvaliacaoForm() {
     setSalvando(true)
     try {
       const payload = { ...form }
+      // Garante altura sempre em cm antes da coerção numérica genérica abaixo
+      if (payload.height !== '' && payload.height != null) {
+        payload.height = String(normalizarAlturaCm(payload.height))
+      }
       Object.keys(payload).forEach(k => {
         // Fotos guardam URL — não converter pra número, e vazio fica null pra Frappe limpar o campo.
         if (PHOTO_KEYS.includes(k)) {

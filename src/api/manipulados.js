@@ -8,6 +8,8 @@ import client from './client'
 const FIELDS_BASE = ['name', 'full_name', 'description']
 const FIELDS_FULL = [...FIELDS_BASE, 'momento_de_uso']
 
+const frappeOwner = () => localStorage.getItem('frappe_user') || ''
+
 // Cache em memória — false inicialmente; vira true se o backend aceitar o campo.
 let momentoDeUsoDisponivel = null // null | true | false
 
@@ -36,7 +38,9 @@ const getComFallback = async (baseParams) => {
 }
 
 export const buscarManipulados = async (busca = '', limit = 20) => {
+  const owner = frappeOwner()
   const filters = [['enabled', '=', 1]]
+  if (owner) filters.push(['owner', '=', owner])
   if (busca) filters.push(['full_name', 'like', `%${busca}%`])
   const res = await getComFallback({
     filters: JSON.stringify(filters),
@@ -47,8 +51,10 @@ export const buscarManipulados = async (busca = '', limit = 20) => {
 }
 
 export const listarManipulados = async () => {
+  const owner = frappeOwner()
+  const filters = owner ? [['owner', '=', owner]] : []
   const res = await getComFallback({
-    filters: JSON.stringify([]),
+    filters: JSON.stringify(filters),
     limit: 200,
     order_by: 'full_name asc',
   })
