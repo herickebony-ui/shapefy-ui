@@ -106,8 +106,16 @@ const ModalExercicio = ({ exercicio, grupos, onSave, onClose }) => {
   const removeIntens = (i) => setIntensidades(prev => prev.filter((_, idx) => idx !== i))
 
   const handleSave = async () => {
-    if (!nome.trim()) { setErro('Nome do exercício é obrigatório.'); return }
-    setSaving(true); setErro('')
+    if (!nome.trim()) {
+      errorModal.show({
+        type: 'mandatory',
+        title: 'Campo obrigatório',
+        messages: ['Nome do exercício é obrigatório.'],
+        statusCode: 0,
+      }, isEdit ? 'Salvar exercício' : 'Criar exercício')
+      return
+    }
+    setSaving(true)
     try {
       const intens = intensidades.filter(i => i.grupo_muscular && i.intensidade !== '')
       const payload = {
