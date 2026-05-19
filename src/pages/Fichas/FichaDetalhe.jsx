@@ -1863,15 +1863,16 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
             rows={3} placeholder="Orientações gerais para os aeróbicos..."
             doctype="Orientacao Aerobico" campo="orientacao_aerobico" />
         </FormGroup>
-        <div className="rounded-lg border border-[#323238] bg-[#1a1a1a] overflow-hidden">
+        <div className="rounded-xl border border-[#323238] bg-[#1a1a1a] overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[700px]">
+            <table className="w-full text-sm min-w-[760px]">
               <thead>
-                <tr className="text-gray-400 text-xs uppercase tracking-wide border-b border-[#323238]">
-                  <th className="w-8 py-2 px-2" />
-                  <th className="text-left py-2 px-2 w-56">Exercício</th>
-                  <th className="text-left py-2 px-2 w-36">Frequência</th>
-                  <th className="text-left py-2 px-2">Instruções</th>
+                <tr className="text-gray-500 text-[10px] uppercase tracking-wider border-b border-[#323238] bg-[#19191d]">
+                  <th className="w-8 py-2.5 px-2" />
+                  <th className="text-left py-2.5 px-2 w-56">Exercício</th>
+                  <th className="text-left py-2.5 px-2 w-36">Frequência</th>
+                  <th className="text-left py-2.5 px-2">Instruções</th>
+                  <th className="text-right py-2.5 px-2 w-28">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -1892,20 +1893,22 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
                       </td>
                       <td className="px-2 py-1 align-middle"><SearchableCombo value={a.exercicios || ''} onChange={v => set('exercicios', v)} options={aerobs} placeholder="Buscar..." /></td>
                       <td className="px-2 py-1 align-middle"><InputSug value={a.frequencia || ''} onChange={v => set('frequencia', v)} doctype="Frequencia Aerobico" campo="frequencia_aerobico" /></td>
-                      <td className="px-2 py-1 align-top relative">
+                      <td className="px-2 py-1 align-middle">
                         <TextareaExpansivel value={a.instrucao || ''} onChange={v => set('instrucao', v)} placeholder="Instruções..." resetKey={aerobicoResetKey} doctype="Instrucao Aerobico" campo="instrucao_aerobico" />
-                        <div className="absolute bottom-1 right-1 flex items-center gap-0.5 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition bg-[#1a1a1a]/95 backdrop-blur-sm rounded border border-[#323238] p-0.5 z-10">
+                      </td>
+                      <td className="px-1 py-1 align-middle">
+                        <div className="flex items-center justify-end gap-0.5">
                           <button onClick={() => setDetalheAerobicoIdx(i)} title="Detalhes"
-                            className="h-6 w-6 flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#29292e] rounded transition"><Info size={12} /></button>
+                            className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-gray-200 hover:bg-[#29292e] rounded transition"><Info size={12} /></button>
                           <button onClick={() => {
                               const arr = [...ficha.periodizacao_dos_aerobicos]
                               const { name, ...sem } = a
                               arr.splice(i+1, 0, { ...sem, _id: uid() })
                               upd('periodizacao_dos_aerobicos', arr)
                             }} title="Duplicar"
-                            className="h-6 w-6 flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#29292e] rounded transition"><Copy size={12} /></button>
+                            className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-gray-200 hover:bg-[#29292e] rounded transition"><Copy size={12} /></button>
                           <button onClick={() => upd('periodizacao_dos_aerobicos', ficha.periodizacao_dos_aerobicos.filter((_, idx) => idx !== i))} title="Excluir"
-                            className="h-6 w-6 flex items-center justify-center text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded transition"><Trash2 size={12} /></button>
+                            className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded transition"><Trash2 size={12} /></button>
                         </div>
                       </td>
                     </tr>
@@ -1936,15 +1939,16 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
             rows={3} placeholder="Orientações gerais para alongamentos..."
             doctype="Orientacao Alongamento" campo="orientacao_alongamento" />
         </FormGroup>
-        <div className="rounded-lg border border-[#323238] bg-[#1a1a1a] overflow-hidden">
+        <div className="rounded-xl border border-[#323238] bg-[#1a1a1a] overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[600px]">
+            <table className="w-full text-sm min-w-[680px]">
               <thead>
-                <tr className="text-gray-400 text-xs uppercase tracking-wide border-b border-[#323238]">
-                  <th className="w-8 py-2 px-2" />
-                  <th className="text-left py-2 px-2 w-56">Exercício</th>
-                  <th className="text-center py-2 px-2 w-20">Séries</th>
-                  <th className="text-left py-2 px-2">Observação</th>
+                <tr className="text-gray-500 text-[10px] uppercase tracking-wider border-b border-[#323238] bg-[#19191d]">
+                  <th className="w-8 py-2.5 px-2" />
+                  <th className="text-left py-2.5 px-2 w-56">Exercício</th>
+                  <th className="text-center py-2.5 px-2 w-20">Séries</th>
+                  <th className="text-left py-2.5 px-2">Observação</th>
+                  <th className="text-right py-2.5 px-2 w-28">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -1965,20 +1969,22 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
                       </td>
                       <td className="px-2 py-1 align-middle"><SearchableCombo value={a.exercicio || ''} onChange={v => set('exercicio', v)} options={alongs} placeholder="Buscar..." /></td>
                       <td className="px-2 py-1 align-middle"><input type="number" value={a.series || ''} onChange={e => set('series', e.target.value)} className="w-full h-8 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 text-center" /></td>
-                      <td className="px-2 py-1 align-top relative">
+                      <td className="px-2 py-1 align-middle">
                         <TextareaExpansivel value={a.observacoes || ''} onChange={v => set('observacoes', v)} placeholder="Observações..." resetKey={alongamentoResetKey} doctype="Alongamento Observacao" campo="alongamento_observacao" />
-                        <div className="absolute bottom-1 right-1 flex items-center gap-0.5 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition bg-[#1a1a1a]/95 backdrop-blur-sm rounded border border-[#323238] p-0.5 z-10">
+                      </td>
+                      <td className="px-1 py-1 align-middle">
+                        <div className="flex items-center justify-end gap-0.5">
                           <button onClick={() => setDetalheAlongamentoIdx(i)} title="Detalhes"
-                            className="h-6 w-6 flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#29292e] rounded transition"><Info size={12} /></button>
+                            className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-gray-200 hover:bg-[#29292e] rounded transition"><Info size={12} /></button>
                           <button onClick={() => {
                               const arr = [...ficha.planilha_de_alongamentos_e_mobilidade]
                               const { name, ...sem } = a
                               arr.splice(i+1, 0, { ...sem, _id: uid() })
                               upd('planilha_de_alongamentos_e_mobilidade', arr)
                             }} title="Duplicar"
-                            className="h-6 w-6 flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#29292e] rounded transition"><Copy size={12} /></button>
+                            className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-gray-200 hover:bg-[#29292e] rounded transition"><Copy size={12} /></button>
                           <button onClick={() => upd('planilha_de_alongamentos_e_mobilidade', ficha.planilha_de_alongamentos_e_mobilidade.filter((_, idx) => idx !== i))} title="Excluir"
-                            className="h-6 w-6 flex items-center justify-center text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded transition"><Trash2 size={12} /></button>
+                            className="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded transition"><Trash2 size={12} /></button>
                         </div>
                       </td>
                     </tr>
