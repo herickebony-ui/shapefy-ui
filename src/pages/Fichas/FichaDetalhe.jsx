@@ -1332,16 +1332,27 @@ const GerenciadorTreinos = ({ ficha, upd, onClose }) => {
     const exOrigem = (ficha[chaveOrigem] || []).map(limpar)
     const exDestino = (ficha[chaveDestino] || []).map(limpar)
 
+    const labelOrigem = ficha[`treino_${origem}_label`] || ''
+    const labelDestino = ficha[`treino_${destino}_label`] || ''
+
     if (acao === 'copiar') {
       upd(chaveDestino, [...exDestino, ...exOrigem])
+      // leva o nome customizado junto — sem sobrescrever um nome já definido no destino.
+      if (labelOrigem && !labelDestino) upd(`treino_${destino}_label`, labelOrigem)
       setFeedback(`✅ Exercícios do ${labelTreino(origem, ficha)} copiados para ${labelTreino(destino, ficha)}.`)
     } else if (acao === 'mover') {
       upd(chaveDestino, [...exDestino, ...exOrigem])
       upd(chaveOrigem, [])
+      // o nome customizado acompanha o treino movido e é limpo da origem.
+      if (labelOrigem && !labelDestino) upd(`treino_${destino}_label`, labelOrigem)
+      if (labelOrigem) upd(`treino_${origem}_label`, '')
       setFeedback(`✅ Exercícios movidos de ${labelTreino(origem, ficha)} para ${labelTreino(destino, ficha)}.`)
     } else if (acao === 'inverter') {
       upd(chaveOrigem, exDestino)
       upd(chaveDestino, exOrigem)
+      // inverte também os nomes customizados.
+      upd(`treino_${origem}_label`, labelDestino)
+      upd(`treino_${destino}_label`, labelOrigem)
       setFeedback(`✅ ${labelTreino(origem, ficha)} e ${labelTreino(destino, ficha)} invertidos.`)
     } else if (acao === 'excluir') {
       if (!window.confirm(`Excluir todos os exercícios do ${labelTreino(origem, ficha)}?`)) return
