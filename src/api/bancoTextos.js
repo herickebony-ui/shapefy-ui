@@ -1,26 +1,10 @@
 import client from './client'
 
 const encode = (dt) => encodeURIComponent(dt)
-const frappeOwner = () => localStorage.getItem('frappe_user') || ''
 
-// DocTypes que já têm `if_owner=1` configurado no Frappe — o backend garante
-// isolamento multi-tenant automaticamente, então NÃO filtramos por owner no
-// front (filtro redundante + sobrecarga de query). Os DocTypes antigos (Treino
-// Observacao, Alongamento Observacao, Instrucao Aerobico, Frequencia Aerobico,
-// Legendas) têm `if_owner=0` e precisam do filtro do front.
-const DOCTYPES_COM_ISOLAMENTO_NO_BACKEND = new Set([
-  'Orientacao Geral Treino',
-  'Orientacao Treino Bloco',
-  'Orientacao Alongamento',
-  'Orientacao Aerobico',
-  'Repeticao Treino',
-  'Descanso Treino',
-  'Dieta Descricao Geral',
-  'Dieta Observacao',
-])
-
-const precisaFiltroOwnerNoFront = (doctype) =>
-  !DOCTYPES_COM_ISOLAMENTO_NO_BACKEND.has(doctype)
+// Todos os 13 DocTypes do banco de textos têm `if_owner=1` para a role
+// Shapefy Professional no Frappe — o backend isola por owner automaticamente.
+// Não filtramos por owner no front (seria redundante).
 
 // Grupos pra navegação em 2 níveis no BancoTextos (ordem importa — usada na UI)
 export const GRUPOS_CATEGORIA = [
@@ -160,10 +144,7 @@ export const CATEGORIAS = [
     grupo: 'dieta',
     doctype: 'Legendas',
     campo: 'legend',
-    extra: 'full_name',
-    extraLabel: 'Nome da Refeição',
-    extraPlaceholder: 'Ex: Café da Manhã',
-    extraHint: 'Identificador do texto (opcional)',
+    extra: null,
   },
 ]
 
@@ -172,10 +153,6 @@ export const listarTextos = async (doctype, campo, { busca, apenasAtivos = true,
   if (extra) fields.push(extra)
 
   const filters = []
-  if (precisaFiltroOwnerNoFront(doctype)) {
-    const owner = frappeOwner()
-    if (owner) filters.push(['owner', '=', owner])
-  }
   if (apenasAtivos) filters.push(['enabled', '=', 1])
   if (busca) filters.push([campo, 'like', `%${busca}%`])
 
@@ -195,10 +172,6 @@ export const listarTodosTextos = async (doctype, campo, { busca, extra = null } 
   if (extra) fields.push(extra)
 
   const filters = []
-  if (precisaFiltroOwnerNoFront(doctype)) {
-    const owner = frappeOwner()
-    if (owner) filters.push(['owner', '=', owner])
-  }
   if (busca) filters.push([campo, 'like', `%${busca}%`])
 
   const res = await client.get(`/api/resource/${encode(doctype)}`, {
@@ -243,17 +216,22 @@ export const excluirTexto = async (doctype, id) => {
 
 // Salva no banco apenas se não existir entrada normalizada igual.
 // Normalização: trim + lowercase + remove pontuação final + colapsa espaços.
+// Retorna o registro real (criado ou já existente, com `name` do backend) —
+// ou null se nada foi salvo. O `name` real é essencial pra que a sugestão
+// possa ser excluída depois sem 404.
 const norm = (s) =>
   (s || '').trim().toLowerCase().replace(/[.,;:!?]+$/, '').replace(/\s+/g, ' ')
 
 export const salvarNoBancoSeNovo = async (doctype, campo, valor, extra = {}) => {
-  if (!valor?.trim()) return
+  if (!valor?.trim()) return null
   const normalizado = norm(valor)
   try {
     const existentes = await listarTextos(doctype, campo, { apenasAtivos: true })
-    const jaExiste = existentes.some(item => norm(item[campo] || '') === normalizado)
-    if (!jaExiste) await criarTexto(doctype, campo, valor.trim(), extra)
+    const existente = existentes.find(item => norm(item[campo] || '') === normalizado)
+    if (existente) return existente
+    return await criarTexto(doctype, campo, valor.trim(), extra)
   } catch (e) {
     console.warn(`Banco de textos sync [${doctype}]:`, e.message)
+    return null
   }
 }

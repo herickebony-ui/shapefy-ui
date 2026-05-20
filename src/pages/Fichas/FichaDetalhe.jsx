@@ -264,15 +264,17 @@ const TextareaExpansivel = ({ value, onChange, placeholder = '', resetKey, class
     const valorTrim = (value || '').trim()
     if (!valorTrim || !doctype || !campo) return
     try {
-      await salvarNoBancoSeNovo(doctype, campo, valorTrim)
-      // Atualiza cache local otimisticamente pra que o "+" suma imediatamente
-      // (`jaExisteNoBanco` recalcula a partir de todasSugestoes)
-      setTodasSugestoes(prev => {
-        const n = normalizar(valorTrim)
-        const base = prev || []
-        if (base.some(s => normalizar(s[campo]) === n)) return base
-        return [...base, { name: `__local_${Date.now()}`, [campo]: valorTrim, enabled: 1 }]
-      })
+      const registro = await salvarNoBancoSeNovo(doctype, campo, valorTrim)
+      // Adiciona o registro real (com `name` do backend) ao cache local pra que
+      // o "+" suma (`jaExisteNoBanco` recalcula) e a sugestão possa ser excluída
+      // depois sem 404.
+      if (registro?.name) {
+        setTodasSugestoes(prev => {
+          const base = prev || []
+          if (base.some(s => s.name === registro.name)) return base
+          return [...base, registro]
+        })
+      }
       setSalvoBanco(true)
       setTimeout(() => setSalvoBanco(false), 1500)
     } catch (e) { console.error('salvar banco:', e.message) }

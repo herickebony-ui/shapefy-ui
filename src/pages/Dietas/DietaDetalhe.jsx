@@ -113,7 +113,7 @@ const LegendaSug = ({ value, onChange }) => {
   const carregarTodas = async () => {
     if (todasSugestoes !== null) return todasSugestoes
     try {
-      const lista = await listarTextos('Legendas', 'legend', { apenasAtivos: true, extra: 'full_name' })
+      const lista = await listarTextos('Legendas', 'legend', { apenasAtivos: true })
       setTodasSugestoes(lista)
       return lista
     } catch (e) { console.error('sugestões legendas:', e.message); return [] }
@@ -148,7 +148,13 @@ const LegendaSug = ({ value, onChange }) => {
   const salvarNoBanco = async () => {
     if (!value?.trim()) return
     try {
-      await salvarNoBancoSeNovo('Legendas', 'legend', value.trim())
+      const registro = await salvarNoBancoSeNovo('Legendas', 'legend', value.trim())
+      if (registro?.name) {
+        setTodasSugestoes(prev => {
+          const base = prev || []
+          return base.some(s => s.name === registro.name) ? base : [...base, registro]
+        })
+      }
       setSalvoBanco(true)
       setTimeout(() => setSalvoBanco(false), 2000)
     } catch (e) { console.error('salvar legenda banco:', e.message) }
@@ -188,7 +194,6 @@ const LegendaSug = ({ value, onChange }) => {
                 <button type="button"
                   onMouseDown={() => { clearTimeout(blurRef.current); onChange(item.legend); setDropOpen(false) }}
                   className="flex-1 text-left px-3 py-2 text-xs text-gray-300 group-hover/sug:text-white">
-                  {item.full_name && <span className="text-[10px] text-gray-500 block mb-0.5">{item.full_name}</span>}
                   {item.legend}
                 </button>
                 <button type="button"
