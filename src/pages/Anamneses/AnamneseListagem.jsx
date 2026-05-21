@@ -47,7 +47,7 @@ const STATUS_OPTS = [
 ]
 
 const TOPICOS_AJUDA_ANAMNESES = [
-  { icon: UserPlus, title: 'Alunos sem anamnese', description: 'Alunos recém-cadastrados que ainda não receberam nenhum questionário aparecem no topo com status "Sem anamnese". Clique em "Vincular" pra escolher um template e enviar.' },
+  { icon: UserPlus, title: 'Alunos sem anamnese', description: 'Alunos recém-cadastrados que ainda não receberam nenhum questionário aparecem com status "Sem anamnese". A tela abre filtrada nas respondidas — use o filtro de status "Sem anamnese" pra vê-los e clicar em "Vincular".' },
   { icon: Link2,    title: 'Vincular anamnese', description: 'O botão "Vincular Anamnese" no canto superior direito abre um modal pra escolher o aluno + o template e enviar de uma vez. Use também pra anamneses de retorno do mesmo aluno.' },
   { icon: Send,     title: 'Enviar e acompanhar', description: 'Após vincular, o status muda pra "Enviada". Quando o aluno responder, vira "Respondida". Use os filtros pra ver só pendentes ou já entregues.' },
   { icon: Check,    title: 'Marcar entregue', description: 'Sinaliza que você já entregou o plano (dieta/treino) baseado nessa anamnese pro aluno — e dispara automaticamente uma notificação no app dele avisando que o plano está disponível. Serve também como controle interno pra ver quais alunos já receberam.' },
@@ -122,13 +122,14 @@ export default function AnamneseListagem() {
       }))
   }, [lista, alunos])
 
-  // Ordenação por criação (mais recentes primeiro), misturando anamneses e
-  // alunos sem anamnese conforme a data de cadastro/vinculação.
+  // Linha do tempo única (mais recente no topo): respondidas usam data_resposta;
+  // não respondidas e alunos sem anamnese caem no creation. Assim quem respondeu
+  // por último sobe pro topo, sem deslocar as pendentes da ordem por cadastro.
   const listaCompleta = useMemo(() => {
     const todos = [...linhasSemAnamnese, ...lista]
     return todos.sort((a, b) => {
-      const cA = a.creation || a.date || ''
-      const cB = b.creation || b.date || ''
+      const cA = a.data_resposta || a.creation || a.date || ''
+      const cB = b.data_resposta || b.creation || b.date || ''
       return String(cB).localeCompare(String(cA))
     })
   }, [linhasSemAnamnese, lista])
@@ -226,7 +227,7 @@ export default function AnamneseListagem() {
   const columns = [
     {
       label: 'Aluno',
-      headerClass: 'min-w-[220px]',
+      headerClass: 'min-w-[170px]',
       render: (a) => (
         <div className="min-w-0">
           <p className="text-white text-sm font-medium truncate">
@@ -243,22 +244,11 @@ export default function AnamneseListagem() {
     {
       label: 'Anamnese',
       headerClass: 'min-w-[220px]',
-      render: (a) => {
-        if (a._semAnamnese) {
-          return (
-            <div className="min-w-0">
-              <p className="text-gray-500 text-xs font-medium italic">— sem anamnese vinculada —</p>
-              <p className="text-gray-600 text-[10px]">cadastrado em {fmtData(a.date)}</p>
-            </div>
-          )
-        }
-        return (
-          <div className="min-w-0">
-            <p className="text-gray-300 text-xs font-medium truncate">{a.titulo || a.name}</p>
-            <p className="text-gray-600 text-[10px]">{fmtData(a.date)}</p>
-          </div>
-        )
-      },
+      render: (a) => (
+        a._semAnamnese
+          ? <p className="text-gray-500 text-xs font-medium italic">— sem anamnese vinculada —</p>
+          : <p className="text-gray-300 text-xs font-medium truncate">{a.titulo || a.name}</p>
+      ),
     },
     {
       label: 'Status',
@@ -271,6 +261,22 @@ export default function AnamneseListagem() {
         if (a.status === 'Enviado') return <Badge variant="warning" size="sm">Enviada</Badge>
         return <Badge variant="default" size="sm">Pendente</Badge>
       },
+    },
+    {
+      label: 'Criada em',
+      headerClass: 'w-28 text-center whitespace-nowrap',
+      cellClass: 'text-center',
+      render: (a) => <span className="text-gray-400 text-xs">{fmtData(a.date)}</span>,
+    },
+    {
+      label: 'Respondida em',
+      headerClass: 'w-32 text-center whitespace-nowrap',
+      cellClass: 'text-center',
+      render: (a) => (
+        a.data_resposta
+          ? <span className="text-green-300/90 text-xs">{fmtData(a.data_resposta)}</span>
+          : <span className="text-gray-700 text-xs">—</span>
+      ),
     },
     {
       label: 'Entrega',
@@ -495,7 +501,12 @@ export default function AnamneseListagem() {
                         {a.nome_completo || <span className="text-gray-600 italic">sem aluno</span>}
                       </p>
                       <p className="text-gray-400 text-[11px] truncate">{a.titulo || a.name}</p>
-                      <p className="text-gray-600 text-[10px]">{fmtData(a.date)}</p>
+                      <p className="text-gray-600 text-[10px]">
+                        Criada {fmtData(a.date)}
+                        {a.data_resposta && (
+                          <> · <span className="text-green-300/80">Respondida {fmtData(a.data_resposta)}</span></>
+                        )}
+                      </p>
                     </div>
                     <div className="shrink-0">{statusBadge}</div>
                   </div>

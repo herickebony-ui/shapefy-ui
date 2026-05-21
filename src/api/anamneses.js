@@ -7,7 +7,7 @@ export const listarAnamneses = async ({ alunoId, page = 1, limit = 50 } = {}) =>
   const params = {
     fields: JSON.stringify([
       "name","titulo","status","date","enviar_aluno","aluno_preencheu","aluno",
-      "nome_completo","entregue","data_entrega","formulario","creation",
+      "nome_completo","entregue","data_entrega","formulario","creation","data_resposta",
     ]),
     limit,
     limit_start: (page - 1) * limit,

@@ -14,6 +14,7 @@ import { logout } from '../../api/auth'
 const NAV_ITEMS = [
   { type: 'divider', label: 'Início' },
   { id: 'main',         label: 'Meus Alunos',         icon: Users,           path: '/' },
+  { id: 'anamneses',    label: 'Gestão de Anamnese',   icon: ClipboardList,  path: '/anamneses' },
 
   { type: 'divider', label: 'Prescrições' },
   { id: 'fichas',       label: 'Fichas de Treino',    icon: Dumbbell,        path: '/fichas',       modulo: 'treino' },
@@ -26,7 +27,6 @@ const NAV_ITEMS = [
 
   { type: 'divider', label: 'Avaliação' },
   { id: 'avaliacoes',   label: 'Avaliações Corporais', icon: BarChart2,      path: '/avaliacoes' },
-  { id: 'anamneses',    label: 'Gestão de Anamnese',   icon: ClipboardList,  path: '/anamneses' },
 
   { type: 'divider', label: 'Acompanhamento' },
   { id: 'painel-feedbacks',     label: 'Central de Feedbacks',         icon: LayoutDashboard, path: '/painel-feedbacks' },
