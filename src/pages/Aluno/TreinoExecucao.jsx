@@ -1159,7 +1159,10 @@ export default function TreinoExecucao() {
         </h1>
       </div>
 
-      <div className="px-4 pt-3 pb-2 sticky top-0 z-50 bg-[var(--sf-bg)]/95 backdrop-blur-md">
+      {/* Cronometro fixed na viewport — top calculado com a altura do header
+          do AlunoLayout (~56px). Backdrop blur deixa nitido sobre o conteudo
+          que rola por baixo. Compensar com mt no proximo bloco. */}
+      <div className="fixed top-14 left-0 right-0 z-50 px-4 py-3 bg-[var(--sf-bg)]/95 backdrop-blur-md border-b border-[var(--sf-border)]">
         <CronometrosBar
           inicioMs={estado.inicio}
           agora={agora}
@@ -1167,6 +1170,9 @@ export default function TreinoExecucao() {
           onPularDescanso={pularDescanso}
         />
       </div>
+
+      {/* Spacer pro fixed cronometro nao cobrir o primeiro conteudo */}
+      <div className="h-[88px]" aria-hidden="true" />
 
       {orientacoes_treino && (
         <div className="px-4 mt-3">
