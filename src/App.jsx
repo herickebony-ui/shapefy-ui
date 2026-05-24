@@ -46,6 +46,8 @@ import AnamneseResposta from './pages/Aluno/AnamneseResposta'
 import TreinoLista from './pages/Aluno/TreinoLista'
 import TreinoFicha from './pages/Aluno/TreinoFicha'
 import TreinoExecucao from './pages/Aluno/TreinoExecucao'
+import PrescricaoListagemAluno from './pages/Aluno/PrescricaoListagem'
+import PrescricaoDetalheAluno from './pages/Aluno/PrescricaoDetalhe'
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -108,6 +110,8 @@ function App() {
           <Route path="treinos" element={<TreinoLista />} />
           <Route path="treinos/:fichaName" element={<TreinoFicha />} />
           <Route path="treinos/:fichaName/:treinoId" element={<TreinoExecucao />} />
+          <Route path="prescricoes" element={<PrescricaoListagemAluno />} />
+          <Route path="prescricoes/:name" element={<PrescricaoDetalheAluno />} />
         </Route>
 
         <Route
