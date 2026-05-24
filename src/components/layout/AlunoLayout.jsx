@@ -1,6 +1,7 @@
 import { LogOut } from 'lucide-react'
 import { Outlet, useNavigate } from 'react-router-dom'
 import useAuthStore from '../../store/authStore'
+import { logoutAluno } from '../../api/aluno'
 
 export default function AlunoLayout() {
   const navigate = useNavigate()
@@ -11,7 +12,8 @@ export default function AlunoLayout() {
   const primeiraLetra = nome.charAt(0).toUpperCase()
   const fotoAluno = aluno?.foto_url || null
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await logoutAluno()
     clearAuth()
     navigate('/login')
   }

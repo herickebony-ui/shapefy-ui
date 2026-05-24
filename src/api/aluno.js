@@ -7,6 +7,16 @@ export const autenticarAluno = async (senha) => {
   return res.data?.message || null
 }
 
+// Encerra a sessão do aluno no backend (limpa cookie em shapefy.online).
+// Sem isso o cookie cross-domain fica vivo 30 dias mesmo depois do logout local.
+export const logoutAluno = async () => {
+  try {
+    await client.post('/api/method/shapefy.www.login_aluno.logout_aluno')
+  } catch (err) {
+    console.warn('Falha ao deslogar aluno no backend:', err)
+  }
+}
+
 // Dados consolidados pra home do aluno: aluno, profissional (banner+IG+área),
 // cards (5 módulos com url_legado), pendencias (anamnese/feedback/feedback_agendado/avaliações),
 // notificacoes (10 últimas) e nao_visualizadas (badge). Cache Redis 60s no backend.
