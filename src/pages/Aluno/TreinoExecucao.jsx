@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft, Play, AlertCircle, CheckCircle2, Check, Replace, Ban,
-  StickyNote, Trophy, Info, Eye, ExternalLink, X,
+  StickyNote, Trophy, Info, Eye, ExternalLink, X, Timer,
 } from 'lucide-react'
 import { FormGroup, Select, Spinner, Textarea } from '../../components/ui'
 import {
@@ -225,45 +225,40 @@ function VideoEmbed({ id, plataforma }) {
 }
 
 // ============================================================
-// Cronometros — fixed top sobrepoe o header do AlunoLayout
+// Cronometro card glass premium — fica no topo do conteudo (nao fixed),
+// segue o padrao da area do aluno (sf-card + neon).
 // ============================================================
 
 function CronometrosBar({ inicioMs, agora, descanso, onPularDescanso }) {
   const elapsedTreino = Math.max(0, Math.floor((agora - inicioMs) / 1000))
-  let statusEl = (
-    <span className="text-white/80 text-xs font-medium">Pronto para a proxima serie</span>
-  )
-
-  if (descanso?.ativo) {
-    const elapsedDesc = Math.max(0, Math.floor((agora - descanso.inicioMs) / 1000))
-    const total = descanso.upper || descanso.lower || 60
-    const ratio = elapsedDesc / Math.max(total, 1)
-    let cor = 'text-white'
-    if (ratio >= 1) cor = 'text-red-300'
-    else if (ratio >= 0.7) cor = 'text-orange-200'
-    statusEl = (
-      <>
-        <span className={`text-xs font-bold tabular-nums ${cor}`}>
-          Descansando - {formatarTempo(elapsedDesc)}
-        </span>
-        <button
-          onClick={onPularDescanso}
-          className="h-7 px-2 rounded-md bg-white/15 hover:bg-white/25 text-white text-[10px] font-bold uppercase tracking-widest transition-colors"
-        >
-          Pular
-        </button>
-      </>
-    )
-  }
+  const descansando = !!descanso?.ativo
+  const elapsedDesc = descansando ? Math.max(0, Math.floor((agora - descanso.inicioMs) / 1000)) : 0
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[60] bg-[#0d4f5c] border-b border-[#1c6877] shadow-[0_4px_18px_rgba(13,79,92,0.6)]">
-      <div className="px-4 py-2.5 flex items-center justify-between gap-3">
-        <span className="text-white text-base font-bold tabular-nums">
+    <div className="sf-card flex items-center justify-between gap-3 px-4 py-3">
+      <div className="flex items-center gap-3 min-w-0">
+        <Timer size={20} className="text-[#60A5FA] shrink-0" />
+        <span className="text-white text-xl font-bold tabular-nums">
           {formatarTempoLongo(elapsedTreino)}
         </span>
-        <div className="flex items-center gap-2 min-w-0">{statusEl}</div>
       </div>
+      {descansando ? (
+        <>
+          <span className="text-[#FB7185] text-sm font-bold tabular-nums">
+            Descansando - {formatarTempo(elapsedDesc)}
+          </span>
+          <button
+            onClick={onPularDescanso}
+            className="h-9 px-3 rounded-lg bg-[var(--sf-surface-2)] border border-[var(--sf-border-strong)] text-[#60A5FA] hover:bg-[#2563EB] hover:text-white hover:border-[#2563EB] text-xs font-bold uppercase tracking-widest transition-colors"
+          >
+            Pular
+          </button>
+        </>
+      ) : (
+        <span className="text-[var(--sf-text-muted)] text-xs font-medium">
+          Pronto para a próxima série
+        </span>
+      )}
     </div>
   )
 }
@@ -1150,15 +1145,8 @@ export default function TreinoExecucao() {
   const descansoState = estado.descanso
 
   return (
-    <div className="bg-[var(--sf-bg)] min-h-full pb-28 pt-12">
-      <CronometrosBar
-        inicioMs={estado.inicio}
-        agora={agora}
-        descanso={descansoState}
-        onPularDescanso={pularDescanso}
-      />
-
-      <div className="px-4 pt-4 pb-4 flex items-center gap-3 border-b border-[var(--sf-border)]">
+    <div className="bg-[var(--sf-bg)] min-h-full pb-28">
+      <div className="px-4 pt-3 pb-3 flex items-center gap-3 border-b border-[var(--sf-border)] sticky top-0 z-20 bg-[var(--sf-bg)]/95 backdrop-blur-sm">
         <button
           onClick={() => navigate(`/aluno/treinos/${fichaName}`)}
           className="h-9 w-9 flex items-center justify-center rounded-xl text-white hover:bg-[var(--sf-surface-2)] transition-colors"
@@ -1169,6 +1157,15 @@ export default function TreinoExecucao() {
         <h1 className="flex-1 text-center text-white text-base font-bold pr-9">
           {treino_label || treinoIdDecoded}
         </h1>
+      </div>
+
+      <div className="px-4 mt-3">
+        <CronometrosBar
+          inicioMs={estado.inicio}
+          agora={agora}
+          descanso={descansoState}
+          onPularDescanso={pularDescanso}
+        />
       </div>
 
       {orientacoes_treino && (
