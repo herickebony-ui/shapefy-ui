@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
-import { Check, AlertCircle } from 'lucide-react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { Check, AlertCircle, ArrowLeft } from 'lucide-react'
 import { Button, Spinner, ImageUploadResposta } from '../../components/ui'
 import { buscarFeedbackAluno, responderFeedback, uploadFotoAluno } from '../../api/aluno'
 import useErrorModal from '../../hooks/useErrorModal'
@@ -48,6 +48,7 @@ const respostaPreenchida = (r) => {
 
 export default function FeedbackResposta() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const errorModal = useErrorModal()
   const errorModalRef = useRef(errorModal)
   useEffect(() => { errorModalRef.current = errorModal }, [errorModal])
@@ -127,9 +128,12 @@ export default function FeedbackResposta() {
           <Check className="text-green-400" size={32} />
         </div>
         <h2 className="text-white text-xl font-bold mb-2">Respostas enviadas!</h2>
-        <p className="text-gray-400 text-sm max-w-md">
+        <p className="text-gray-400 text-sm max-w-md mb-6">
           Obrigado por preencher. Seu profissional já recebeu as respostas e vai te dar retorno em breve.
         </p>
+        <Button variant="primary" onClick={() => navigate('/aluno')} icon={ArrowLeft}>
+          Voltar para o início
+        </Button>
       </div>
     )
   }
@@ -145,12 +149,21 @@ export default function FeedbackResposta() {
   return (
     <div className="pb-32">
       {errorModal.element}
-      <div className="px-4 pt-4 pb-3 border-b border-[#323238] bg-[#0a0a0a] sticky top-0 z-10">
-        <h1 className="text-white text-base font-bold leading-tight">{feedback.titulo || 'Feedback'}</h1>
-        <p className="text-gray-500 text-xs mt-1">
-          {fmtData(feedback.date)}
-          {feedback.nome_completo ? ` · ${feedback.nome_completo}` : ''}
-        </p>
+      <div className="px-4 pt-4 pb-3 border-b border-[#323238] bg-[#0a0a0a] sticky top-0 z-10 flex items-start gap-3">
+        <button
+          onClick={() => navigate('/aluno')}
+          title="Voltar"
+          className="h-9 w-9 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-[#2563eb] rounded-lg transition-colors shrink-0"
+        >
+          <ArrowLeft size={16} />
+        </button>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-white text-base font-bold leading-tight truncate">{feedback.titulo || 'Feedback'}</h1>
+          <p className="text-gray-500 text-xs mt-1 truncate">
+            {fmtData(feedback.date)}
+            {feedback.nome_completo ? ` · ${feedback.nome_completo}` : ''}
+          </p>
+        </div>
       </div>
 
       <div className="divide-y divide-[#323238]/40 bg-[#1a1a1a] mx-4 mt-3 rounded-xl border border-[#323238] overflow-hidden">

@@ -9,6 +9,7 @@ export default function AlunoLayout() {
 
   const nome = aluno?.nome_completo || 'Aluno'
   const primeiraLetra = nome.charAt(0).toUpperCase()
+  const fotoAluno = aluno?.foto_url || null
 
   const handleLogout = () => {
     clearAuth()
@@ -26,9 +27,17 @@ export default function AlunoLayout() {
           <p className="text-gray-400 text-xs font-medium truncate">{nome}</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-[#2563eb] flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
-            {primeiraLetra}
-          </div>
+          {fotoAluno ? (
+            <img
+              src={fotoAluno}
+              alt={nome}
+              className="w-8 h-8 rounded-full object-cover border border-[#323238] flex-shrink-0"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-[#2563eb] flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+              {primeiraLetra}
+            </div>
+          )}
           <button
             onClick={handleLogout}
             title="Sair"

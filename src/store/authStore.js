@@ -13,15 +13,16 @@ const useAuthStore = create(
       modulos: { ...MODULOS_DEFAULT },
       tipo: 'profissional',
       aluno: null,
+      profissional: null,
 
       setAuth: (user, token) => {
         localStorage.setItem('frappe_token', token)
         localStorage.setItem('frappe_user', user)
         localStorage.removeItem('aluno_token')
-        set({ user, token, isAuthenticated: true, tipo: 'profissional', aluno: null })
+        set({ user, token, isAuthenticated: true, tipo: 'profissional', aluno: null, profissional: null })
       },
 
-      setAuthAluno: (aluno, token) => {
+      setAuthAluno: (aluno, token, profissional = null) => {
         localStorage.setItem('aluno_token', token)
         localStorage.removeItem('frappe_token')
         localStorage.removeItem('frappe_user')
@@ -31,6 +32,7 @@ const useAuthStore = create(
           isAuthenticated: true,
           tipo: 'aluno',
           aluno,
+          profissional,
         })
       },
 
@@ -48,6 +50,7 @@ const useAuthStore = create(
           isAuthenticated: false,
           tipo: 'profissional',
           aluno: null,
+          profissional: null,
           modulos: { ...MODULOS_DEFAULT },
         })
       },

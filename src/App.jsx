@@ -40,6 +40,7 @@ import MeuLinkCadastro from './pages/Cadastro/MeuLinkCadastro'
 import ModeloDietaListagem from './pages/Modelos/ModeloDietaListagem'
 import ModeloFichaListagem from './pages/Modelos/ModeloFichaListagem'
 import AlunoLayout from './components/layout/AlunoLayout'
+import AlunoHome from './pages/Aluno/AlunoHome'
 import FeedbackResposta from './pages/Aluno/FeedbackResposta'
 
 function PrivateRoute({ children }) {
@@ -96,6 +97,7 @@ function App() {
             </PrivateAlunoRoute>
           }
         >
+          <Route index element={<AlunoHome />} />
           <Route path="feedbacks/:id" element={<FeedbackResposta />} />
         </Route>
 

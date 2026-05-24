@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
 import useAuthStore from '../store/authStore'
 import { login } from '../api/auth'
-import { autenticarAluno } from '../api/aluno'
+import { autenticarAluno, homeAluno } from '../api/aluno'
 import { buscarAssinatura, buscarPlano } from '../api/assinatura'
 import { Input, Button } from '../components/ui'
 import { tw } from '../styles/tokens'
@@ -74,6 +74,14 @@ export default function Login() {
         return
       }
       setAuthAluno(aluno, aluno.senha_de_acesso)
+      try {
+        const home = await homeAluno()
+        if (home?.aluno) {
+          setAuthAluno({ ...aluno, ...home.aluno }, aluno.senha_de_acesso, home.profissional || null)
+        }
+      } catch (err) {
+        console.warn('Falha ao buscar home do aluno:', err)
+      }
       navigate(next && next.startsWith('/aluno') ? next : '/aluno')
     } catch (err) {
       console.log('ERRO:', err.response?.data || err.message)
