@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Dumbbell, Apple, ClipboardList, Scale, MessageSquare,
-  Bell, Calendar, ChevronRight, AlertCircle, LayoutGrid, X,
+  Bell, Calendar, ChevronRight, AlertCircle, LayoutGrid, X, Pill,
 } from 'lucide-react'
 import { Spinner } from '../../components/ui'
 import { HexIcon, AlunoCard, DataChip, SectionHeader } from '../../components/aluno'
@@ -21,6 +21,7 @@ const ICON_POR_ID = {
   anamnese: ClipboardList,
   avaliacoes: Scale,
   feedback: MessageSquare,
+  prescricoes: Pill,
 }
 
 const InstagramIcon = (props) => (
@@ -36,7 +37,7 @@ function resolveCardLink(card, pendencias, flags) {
   switch (card.id) {
     case 'treino':
       if (flags && flags.tem_treino === false) return { disabled: true }
-      return { href: legado('/ficha_aluno'), externa: true }
+      return { reactPath: '/aluno/treinos' }
     case 'dieta':
       if (flags && flags.tem_dieta === false) return { disabled: true }
       return { href: legado('/dieta_aluno'), externa: true }
@@ -56,6 +57,8 @@ function resolveCardLink(card, pendencias, flags) {
       }
       if (pendencias?.feedback) return { reactPath: `/aluno/feedbacks/${pendencias.feedback}` }
       return { disabled: true, hint: 'Nenhum feedback disponível no momento' }
+    case 'prescricoes':
+      return { reactPath: '/aluno/prescricoes' }
     default:
       return { href: legado(card.url_legado || '/'), externa: true }
   }

@@ -43,6 +43,9 @@ import AlunoLayout from './components/layout/AlunoLayout'
 import AlunoHome from './pages/Aluno/AlunoHome'
 import FeedbackResposta from './pages/Aluno/FeedbackResposta'
 import AnamneseResposta from './pages/Aluno/AnamneseResposta'
+import TreinoLista from './pages/Aluno/TreinoLista'
+import TreinoFicha from './pages/Aluno/TreinoFicha'
+import TreinoExecucao from './pages/Aluno/TreinoExecucao'
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -102,6 +105,9 @@ function App() {
           <Route index element={<AlunoHome />} />
           <Route path="feedbacks/:id" element={<FeedbackResposta />} />
           <Route path="anamneses/:id" element={<AnamneseResposta />} />
+          <Route path="treinos" element={<TreinoLista />} />
+          <Route path="treinos/:fichaName" element={<TreinoFicha />} />
+          <Route path="treinos/:fichaName/:treinoId" element={<TreinoExecucao />} />
         </Route>
 
         <Route

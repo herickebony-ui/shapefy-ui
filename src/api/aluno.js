@@ -63,6 +63,13 @@ export const responderFeedback = async (name, perguntas) => {
   return res.data?.message || null
 }
 
+// Lista todas as prescrições publicadas do aluno (ordenadas da mais recente).
+// Backend retorna { prescricoes: [...] } com profissional+itens já populados.
+export const listarPrescricoesAluno = async () => {
+  const res = await client.get('/api/method/shapefy.api.aluno.prescricoes')
+  return res.data?.message?.prescricoes || []
+}
+
 // Busca uma anamnese específica do aluno (validação de posse no backend).
 export const buscarAnamneseAluno = async (name) => {
   const res = await client.get('/api/method/shapefy.api.aluno.anamnese', { params: { name } })
