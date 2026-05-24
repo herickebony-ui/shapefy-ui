@@ -59,14 +59,14 @@ export const buscarAnamneseAluno = async (name) => {
   return res.data?.message || null
 }
 
-// Envia as respostas da anamnese. Mesmo padrão do feedback, mas sem `verificar`
-// (anamnese não tem rotina de imagens privadas hoje). Backend seta data_resposta
-// e aluno_preencheu=1 via controller (before_save).
+// Envia as respostas da anamnese. Backend cuida de status='Respondido',
+// aluno_preencheu=1, data_resposta (before_save) e verificar=1 (cron
+// process_anamnese_images_to_public converte imagens privadas em públicas).
+// Front só envia name + child table.
 export const responderAnamnese = async (name, perguntas) => {
   const res = await client.post('/api/method/shapefy.api.aluno.responder_anamnese', {
     name,
     perguntas_e_respostas: perguntas,
-    status: 'Respondido',
   })
   return res.data?.message || null
 }

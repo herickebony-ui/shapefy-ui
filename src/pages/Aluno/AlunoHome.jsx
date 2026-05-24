@@ -42,7 +42,7 @@ function resolveCardLink(card, pendencias, flags) {
       return { href: legado('/dieta_aluno'), externa: true }
     case 'anamnese':
       return pendencias?.anamnese
-        ? { href: legado(`/preencher_anamnese?name=${encodeURIComponent(pendencias.anamnese)}`), externa: true }
+        ? { reactPath: `/aluno/anamneses/${pendencias.anamnese}` }
         : { href: legado('/anamnese'), externa: true }
     case 'avaliacoes': {
       const recentes = pendencias?.avaliacoes_recentes || []
@@ -250,7 +250,7 @@ export default function AlunoHome() {
   const irPraPendencia = () => {
     if (pendencias.feedback) navigate(`/aluno/feedbacks/${pendencias.feedback}`)
     else if (pendencias.feedback_agendado_formulario) window.open(`${FRAPPE_URL}/verificar_feedback?form=${encodeURIComponent(pendencias.feedback_agendado_formulario)}`, '_blank', 'noopener')
-    else if (pendencias.anamnese) window.open(`${FRAPPE_URL}/preencher_anamnese?name=${encodeURIComponent(pendencias.anamnese)}`, '_blank', 'noopener')
+    else if (pendencias.anamnese) navigate(`/aluno/anamneses/${pendencias.anamnese}`)
   }
 
   const badgePorCard = (id) => {

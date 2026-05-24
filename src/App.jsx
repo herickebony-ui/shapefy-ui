@@ -42,6 +42,7 @@ import ModeloFichaListagem from './pages/Modelos/ModeloFichaListagem'
 import AlunoLayout from './components/layout/AlunoLayout'
 import AlunoHome from './pages/Aluno/AlunoHome'
 import FeedbackResposta from './pages/Aluno/FeedbackResposta'
+import AnamneseResposta from './pages/Aluno/AnamneseResposta'
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -99,6 +100,7 @@ function App() {
         >
           <Route index element={<AlunoHome />} />
           <Route path="feedbacks/:id" element={<FeedbackResposta />} />
+          <Route path="anamneses/:id" element={<AnamneseResposta />} />
         </Route>
 
         <Route
