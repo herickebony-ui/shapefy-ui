@@ -66,7 +66,8 @@ function PrivateAlunoRoute({ children }) {
 
   if (!isAuthenticated || tipo !== 'aluno' || !hasToken) {
     if (isAuthenticated && !hasToken) clearAuth()
-    return <Navigate to="/login" replace />
+    const redirect = `${window.location.pathname}${window.location.search}`
+    return <Navigate to={`/login?role=aluno&redirect=${encodeURIComponent(redirect)}`} replace />
   }
   return children
 }

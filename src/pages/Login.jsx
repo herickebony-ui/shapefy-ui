@@ -14,14 +14,16 @@ export default function Login() {
   const setAuth = useAuthStore((s) => s.setAuth)
   const setAuthAluno = useAuthStore((s) => s.setAuthAluno)
   const setModulos = useAuthStore((s) => s.setModulos)
-  const [tipo, setTipo] = useState('profissional')
+  const initialRole = searchParams.get('role') === 'aluno' ? 'aluno' : 'profissional'
+  const [tipo, setTipo] = useState(initialRole)
   const [form, setForm] = useState({ usr: '', pwd: '' })
   const [codigo, setCodigo] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showPwd, setShowPwd] = useState(false)
 
-  const next = searchParams.get('next')
+  // Aceita ?redirect (padrão do backend) e ?next (legado interno).
+  const next = searchParams.get('redirect') || searchParams.get('next')
 
   async function handleLoginProfissional(e) {
     e.preventDefault()
