@@ -1,22 +1,29 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
 import useAuthStore from '../store/authStore'
 import { login } from '../api/auth'
+import { autenticarAluno } from '../api/aluno'
 import { buscarAssinatura, buscarPlano } from '../api/assinatura'
 import { Input, Button } from '../components/ui'
 import { tw } from '../styles/tokens'
 
 export default function Login() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const setAuth = useAuthStore((s) => s.setAuth)
+  const setAuthAluno = useAuthStore((s) => s.setAuthAluno)
   const setModulos = useAuthStore((s) => s.setModulos)
+  const [tipo, setTipo] = useState('profissional')
   const [form, setForm] = useState({ usr: '', pwd: '' })
+  const [codigo, setCodigo] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showPwd, setShowPwd] = useState(false)
 
-  async function handleLogin(e) {
+  const next = searchParams.get('next')
+
+  async function handleLoginProfissional(e) {
     e.preventDefault()
     setLoading(true)
     setError('')
@@ -43,10 +50,34 @@ export default function Login() {
         console.error('Erro ao buscar módulos do plano:', e)
       }
 
-      navigate('/')
+      navigate(next && next.startsWith('/') && !next.startsWith('/aluno') ? next : '/')
     } catch (err) {
       console.log('ERRO:', err.response?.data)
       setError('Usuário ou senha incorretos. Tente novamente.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleLoginAluno(e) {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+
+    try {
+      const aluno = await autenticarAluno(codigo)
+      if (!aluno?.senha_de_acesso || !aluno?.name) {
+        throw new Error('resposta inválida do servidor')
+      }
+      if (!aluno.enabled) {
+        setError('Seu acesso está desativado. Fale com seu profissional.')
+        return
+      }
+      setAuthAluno(aluno, aluno.senha_de_acesso)
+      navigate(next && next.startsWith('/aluno') ? next : '/aluno')
+    } catch (err) {
+      console.log('ERRO:', err.response?.data || err.message)
+      setError('Código de acesso inválido. Verifique e tente novamente.')
     } finally {
       setLoading(false)
     }
@@ -56,8 +87,7 @@ export default function Login() {
     <div className={`${tw.page} flex items-center justify-center px-4`}>
       <div className="w-full max-w-md">
 
-        {/* Logo */}
-        <div className="text-center mb-10">
+        <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-white tracking-tight">
             Shape<span className="text-[#2563eb]">fy</span>
           </h1>
@@ -66,76 +96,136 @@ export default function Login() {
           </p>
         </div>
 
-        {/* Card */}
-        <div className={`${tw.card} p-8 shadow-xl`}>
-          <h2 className="text-white text-xl font-semibold mb-6">
-            Entrar na sua conta
-          </h2>
+        <div className={`${tw.card} p-6 shadow-xl`}>
+          <div className="grid grid-cols-2 gap-2 p-1 bg-[#1a1a1a] border border-[#323238] rounded-lg mb-6">
+            <button
+              type="button"
+              onClick={() => { setTipo('profissional'); setError('') }}
+              className={`h-10 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors
+                ${tipo === 'profissional'
+                  ? 'bg-[#2563eb] text-white'
+                  : 'text-gray-400 hover:text-white'
+                }`}
+            >
+              Sou profissional
+            </button>
+            <button
+              type="button"
+              onClick={() => { setTipo('aluno'); setError('') }}
+              className={`h-10 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors
+                ${tipo === 'aluno'
+                  ? 'bg-[#2563eb] text-white'
+                  : 'text-gray-400 hover:text-white'
+                }`}
+            >
+              Sou aluno
+            </button>
+          </div>
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <Input
-              label="E-mail ou usuário"
-              type="text"
-              value={form.usr}
-              onChange={(val) => setForm({ ...form, usr: val })}
-              placeholder="seu@email.com"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              required
-            />
-
-            <div className="space-y-1">
-              <div className="relative">
+          {tipo === 'profissional' ? (
+            <>
+              <h2 className="text-white text-lg font-semibold mb-5">Entrar na sua conta</h2>
+              <form onSubmit={handleLoginProfissional} className="space-y-4">
                 <Input
-                  label="Senha"
-                  type={showPwd ? 'text' : 'password'}
-                  value={form.pwd}
-                  onChange={(val) => setForm({ ...form, pwd: val })}
-                  placeholder="••••••••"
-                  className="pr-10"
+                  label="E-mail ou usuário"
+                  type="text"
+                  value={form.usr}
+                  onChange={(val) => setForm({ ...form, usr: val })}
+                  placeholder="seu@email.com"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   required
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPwd(v => !v)}
-                  aria-label={showPwd ? 'Ocultar senha' : 'Mostrar senha'}
-                  title={showPwd ? 'Ocultar senha' : 'Mostrar senha'}
-                  className="absolute right-3 top-[34px] text-gray-500 hover:text-gray-300 transition-colors"
+                <div className="space-y-1">
+                  <div className="relative">
+                    <Input
+                      label="Senha"
+                      type={showPwd ? 'text' : 'password'}
+                      value={form.pwd}
+                      onChange={(val) => setForm({ ...form, pwd: val })}
+                      placeholder="••••••••"
+                      className="pr-10"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPwd(v => !v)}
+                      aria-label={showPwd ? 'Ocultar senha' : 'Mostrar senha'}
+                      title={showPwd ? 'Ocultar senha' : 'Mostrar senha'}
+                      className="absolute right-3 top-[34px] text-gray-500 hover:text-gray-300 transition-colors"
+                    >
+                      {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                  <div className="flex justify-end">
+                    <Link to="/forgot-password" className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
+                      Esqueci minha senha
+                    </Link>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className={`${tw.badge.danger} rounded-lg px-4 py-3`}>
+                    <p className="text-sm">{error}</p>
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="lg"
+                  loading={loading}
+                  className="w-full mt-2"
                 >
-                  {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-              <div className="flex justify-end">
-                <Link to="/forgot-password" className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
-                  Esqueci minha senha
-                </Link>
-              </div>
-            </div>
+                  Entrar
+                </Button>
 
-            {error && (
-              <div className={`${tw.badge.danger} rounded-lg px-4 py-3`}>
-                <p className="text-sm">{error}</p>
-              </div>
-            )}
+                <a
+                  href="https://shapefy.online"
+                  className="w-full h-10 mt-2 rounded-lg border border-[#323238] hover:border-[#2563eb] bg-transparent hover:bg-[#2563eb]/10 text-gray-300 hover:text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+                >
+                  <ArrowLeft size={14} /> Voltar à página inicial
+                </a>
+              </form>
+            </>
+          ) : (
+            <>
+              <h2 className="text-white text-lg font-semibold mb-1">Entrar no app</h2>
+              <p className="text-gray-500 text-xs mb-5">
+                Use o código de acesso que seu profissional te enviou.
+              </p>
+              <form onSubmit={handleLoginAluno} className="space-y-4">
+                <Input
+                  label="Código de acesso"
+                  type="text"
+                  value={codigo}
+                  onChange={setCodigo}
+                  placeholder="Ex: abc123xyz"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  required
+                />
 
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              loading={loading}
-              className="w-full mt-2"
-            >
-              Entrar
-            </Button>
+                {error && (
+                  <div className={`${tw.badge.danger} rounded-lg px-4 py-3`}>
+                    <p className="text-sm">{error}</p>
+                  </div>
+                )}
 
-            <a
-              href="https://shapefy.online"
-              className="w-full h-10 mt-2 rounded-lg border border-[#323238] hover:border-[#2563eb] bg-transparent hover:bg-[#2563eb]/10 text-gray-300 hover:text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors"
-            >
-              <ArrowLeft size={14} /> Voltar à página inicial
-            </a>
-          </form>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="lg"
+                  loading={loading}
+                  className="w-full mt-2"
+                >
+                  Entrar
+                </Button>
+              </form>
+            </>
+          )}
         </div>
 
         <p className="text-center text-gray-600 text-xs mt-6">

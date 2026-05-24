@@ -11,11 +11,27 @@ const useAuthStore = create(
       token: null,
       isAuthenticated: false,
       modulos: { ...MODULOS_DEFAULT },
+      tipo: 'profissional',
+      aluno: null,
 
       setAuth: (user, token) => {
         localStorage.setItem('frappe_token', token)
         localStorage.setItem('frappe_user', user)
-        set({ user, token, isAuthenticated: true })
+        localStorage.removeItem('aluno_token')
+        set({ user, token, isAuthenticated: true, tipo: 'profissional', aluno: null })
+      },
+
+      setAuthAluno: (aluno, token) => {
+        localStorage.setItem('aluno_token', token)
+        localStorage.removeItem('frappe_token')
+        localStorage.removeItem('frappe_user')
+        set({
+          user: aluno.name,
+          token: null,
+          isAuthenticated: true,
+          tipo: 'aluno',
+          aluno,
+        })
       },
 
       setModulos: (modulos) => set({ modulos: { ...MODULOS_DEFAULT, ...modulos } }),
@@ -23,40 +39,50 @@ const useAuthStore = create(
       clearAuth: () => {
         localStorage.removeItem('frappe_token')
         localStorage.removeItem('frappe_user')
+        localStorage.removeItem('aluno_token')
         localStorage.removeItem('shapefy-jornada-dismissed')
         useOnboardingStore.getState().resetOnboarding()
-        set({ user: null, token: null, isAuthenticated: false, modulos: { ...MODULOS_DEFAULT } })
+        set({
+          user: null,
+          token: null,
+          isAuthenticated: false,
+          tipo: 'profissional',
+          aluno: null,
+          modulos: { ...MODULOS_DEFAULT },
+        })
       },
     }),
     {
       name: 'shapefy-auth',
-      version: 2,
+      version: 3,
       migrate: (state, version) => {
         if (!state) return state
         if (!state.modulos || version < 1) {
           state.modulos = { ...MODULOS_DEFAULT, ...(state.modulos || {}) }
         }
         if (version < 2) {
-          // anamnese e feedback nunca existiram como flag no Plano de Assinatura;
-          // antes do fix do login eles eram persistidos como false. Forçar default.
           state.modulos = {
             ...(state.modulos || {}),
             anamnese: true,
             feedback: true,
           }
         }
+        if (version < 3) {
+          state.tipo = state.tipo || 'profissional'
+          state.aluno = state.aluno || null
+        }
         return state
       },
       merge: (persisted, current) => {
         const persistedModulos = { ...(persisted?.modulos || {}) }
-        // Sanity: garante que flags universais sempre fiquem true mesmo se vieram
-        // como false de versões anteriores que ainda não migraram.
         if (persistedModulos.anamnese === false) persistedModulos.anamnese = true
         if (persistedModulos.feedback === false) persistedModulos.feedback = true
         return {
           ...current,
           ...persisted,
           modulos: { ...MODULOS_DEFAULT, ...persistedModulos },
+          tipo: persisted?.tipo || 'profissional',
+          aluno: persisted?.aluno || null,
         }
       },
     }

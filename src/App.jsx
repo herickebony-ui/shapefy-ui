@@ -39,13 +39,30 @@ import CadastroPublico from './pages/Cadastro/CadastroPublico'
 import MeuLinkCadastro from './pages/Cadastro/MeuLinkCadastro'
 import ModeloDietaListagem from './pages/Modelos/ModeloDietaListagem'
 import ModeloFichaListagem from './pages/Modelos/ModeloFichaListagem'
+import AlunoLayout from './components/layout/AlunoLayout'
+import FeedbackResposta from './pages/Aluno/FeedbackResposta'
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const tipo = useAuthStore((s) => s.tipo)
   const clearAuth = useAuthStore((s) => s.clearAuth)
   const hasToken = !!localStorage.getItem('frappe_token')
 
   if (!isAuthenticated || !hasToken) {
+    if (isAuthenticated && !hasToken) clearAuth()
+    return <Navigate to="/login" replace />
+  }
+  if (tipo === 'aluno') return <Navigate to="/aluno" replace />
+  return children
+}
+
+function PrivateAlunoRoute({ children }) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const tipo = useAuthStore((s) => s.tipo)
+  const clearAuth = useAuthStore((s) => s.clearAuth)
+  const hasToken = !!localStorage.getItem('aluno_token')
+
+  if (!isAuthenticated || tipo !== 'aluno' || !hasToken) {
     if (isAuthenticated && !hasToken) clearAuth()
     return <Navigate to="/login" replace />
   }
@@ -69,6 +86,19 @@ function App() {
         <Route path="/update-password" element={<UpdatePassword />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/cadastro/:slug" element={<CadastroPublico />} />
+
+        {/* Área do aluno (auth via X-Aluno-Token) */}
+        <Route
+          path="/aluno"
+          element={
+            <PrivateAlunoRoute>
+              <AlunoLayout />
+            </PrivateAlunoRoute>
+          }
+        >
+          <Route path="feedbacks/:id" element={<FeedbackResposta />} />
+        </Route>
+
         <Route
           path="/"
           element={

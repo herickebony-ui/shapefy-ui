@@ -7,9 +7,12 @@ const client = axios.create({
 })
 
 client.interceptors.request.use((config) => {
-  const token = localStorage.getItem('frappe_token')
-  if (token) {
-    config.headers['Authorization'] = `JWT ${token}`
+  const profissionalToken = localStorage.getItem('frappe_token')
+  const alunoToken = localStorage.getItem('aluno_token')
+  if (profissionalToken) {
+    config.headers['Authorization'] = `JWT ${profissionalToken}`
+  } else if (alunoToken) {
+    config.headers['X-Aluno-Token'] = alunoToken
   }
   return config
 })
@@ -21,6 +24,7 @@ client.interceptors.response.use(
       localStorage.removeItem('frappe_token')
       localStorage.removeItem('frappe_user')
       localStorage.removeItem('frappe_user_name')
+      localStorage.removeItem('aluno_token')
       localStorage.removeItem('shapefy-auth')
       localStorage.removeItem('shapefy-onboarding')
       localStorage.removeItem('shapefy-jornada-dismissed')
