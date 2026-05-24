@@ -37,6 +37,41 @@
   --sf-radius-button: 16px;
 }
 
+/* Card glassmorphism padrao da area do aluno (variant 'default' do GlassCard).
+   Reusavel em qualquer JSX que precise do card sem ter que importar o componente. */
+.sf-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--sf-border);
+  border-radius: var(--sf-radius-card);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(37, 99, 235, 0.16), transparent 45%),
+    var(--sf-card);
+  box-shadow:
+    0 0 34px var(--sf-blue-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(14px);
+}
+
+/* Variante highlight — borda azul mais forte (usar em destaques de pendencia/CTA). */
+.sf-card--highlight {
+  border-color: var(--sf-border-strong);
+  box-shadow:
+    0 0 34px rgba(37, 99, 235, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Variante success — borda + glow verde (acoes concluidas). */
+.sf-card--success {
+  border-color: rgba(34, 197, 94, 0.30);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.16), transparent 45%),
+    rgba(8, 42, 28, 0.86);
+  box-shadow:
+    0 0 34px rgba(16, 185, 129, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
 * {
   box-sizing: border-box;
   margin: 0;

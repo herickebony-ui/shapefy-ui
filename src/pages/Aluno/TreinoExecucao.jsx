@@ -13,9 +13,12 @@ import {
 // Tokens visuais
 // ============================================================
 
-const CARD = 'bg-[#0d2042] border border-[#1c3661] rounded-2xl'
-const CARD_DESTAQUE = 'bg-[#16306a] border border-[#2563eb]/60 rounded-2xl'
-const LABEL = 'text-[#60a5fa] text-[10px] font-bold uppercase tracking-widest'
+// Padrao mobile glass (var CLAUDE.md > Padrao Mobile). Equivale ao
+// <GlassCard /> primitivo, mas como string utility pra usar em divs.
+const CARD = 'sf-card'
+const CARD_DESTAQUE = 'sf-card sf-card--highlight'
+const LABEL = 'text-[#60A5FA] text-[11px] font-bold uppercase'
+const LABEL_STYLE = { letterSpacing: '0.18em' }
 
 // ============================================================
 // Helpers
@@ -142,15 +145,15 @@ function VideoEmbed({ id, plataforma }) {
         <button
           type="button"
           onClick={() => setModalCheio(true)}
-          className="relative w-full aspect-video rounded-xl overflow-hidden border border-[#1c3661] bg-gradient-to-br from-[#16306a] to-[#08152e] group flex items-center justify-center"
+          className="relative w-full aspect-video rounded-xl overflow-hidden border border-[var(--sf-border)] bg-gradient-to-br from-[var(--sf-surface-2)] to-[var(--sf-bg)] group flex items-center justify-center"
         >
-          <span className="absolute top-2 left-2 text-[10px] font-bold uppercase tracking-widest text-[#60a5fa] bg-black/60 px-2 py-0.5 rounded">
+          <span className="absolute top-2 left-2 text-[10px] font-bold uppercase tracking-widest text-[#60A5FA] bg-black/60 px-2 py-0.5 rounded">
             Google Drive
           </span>
           <div className="h-14 w-14 rounded-full bg-[#2563eb] flex items-center justify-center shadow-[0_0_28px_rgba(37,99,235,0.6)] group-hover:scale-110 transition-transform">
             <Play size={22} className="text-white fill-white ml-0.5" />
           </div>
-          <span className="absolute bottom-2 text-[10px] text-[#8ba6c8]">
+          <span className="absolute bottom-2 text-[10px] text-[var(--sf-text-muted)]">
             Toque para ver em tela cheia
           </span>
         </button>
@@ -180,7 +183,7 @@ function VideoEmbed({ id, plataforma }) {
   if (aberto) {
     const src = ehVimeo ? getVimeoEmbed(id) : getYouTubeEmbed(id)
     return (
-      <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-[#1c3661] bg-black">
+      <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-[var(--sf-border)] bg-black">
         <iframe
           src={src}
           title="Video"
@@ -196,11 +199,11 @@ function VideoEmbed({ id, plataforma }) {
     <button
       type="button"
       onClick={() => setAberto(true)}
-      className="relative w-full aspect-video rounded-xl overflow-hidden border border-[#1c3661] bg-black group"
+      className="relative w-full aspect-video rounded-xl overflow-hidden border border-[var(--sf-border)] bg-black group"
     >
       {ehVimeo ? (
-        <div className="w-full h-full bg-gradient-to-br from-[#16306a] to-[#08152e] flex items-center justify-center">
-          <span className="text-[#60a5fa] text-xs uppercase tracking-widest font-bold">Vimeo</span>
+        <div className="w-full h-full bg-gradient-to-br from-[var(--sf-surface-2)] to-[var(--sf-bg)] flex items-center justify-center">
+          <span className="text-[#60A5FA] text-xs uppercase tracking-widest font-bold">Vimeo</span>
         </div>
       ) : (
         <img
@@ -286,7 +289,7 @@ function SerieLinha({ exercicio, idx, serie, onUpdate, onConcluir, onAnotar }) {
         <div className="min-w-[88px]">
           <p className="text-white text-sm font-bold">Serie {idx + 1}</p>
           {tipoSerie && (
-            <p className="text-[#8ba6c8] text-[11px]">{tipoSerie}</p>
+            <p className="text-[var(--sf-text-muted)] text-[11px]">{tipoSerie}</p>
           )}
         </div>
         <input
@@ -295,7 +298,7 @@ function SerieLinha({ exercicio, idx, serie, onUpdate, onConcluir, onAnotar }) {
           placeholder="Reps"
           value={serie.repeticoes || ''}
           onChange={(e) => onUpdate({ repeticoes: parseInt(e.target.value, 10) || 0 })}
-          className="w-16 h-9 px-2 bg-[#0a1a35] border border-[#1c3661] text-white rounded-full text-xs outline-none focus:border-[#2563eb] placeholder:text-[#8ba6c8] text-center font-bold"
+          className="w-16 h-9 px-2 bg-[var(--sf-surface)] border border-[var(--sf-border)] text-white rounded-full text-xs outline-none focus:border-[#2563eb] placeholder:text-[var(--sf-text-muted)] text-center font-bold"
         />
         <input
           type="number"
@@ -304,15 +307,15 @@ function SerieLinha({ exercicio, idx, serie, onUpdate, onConcluir, onAnotar }) {
           placeholder="Kg"
           value={serie.carga || ''}
           onChange={(e) => onUpdate({ carga: parseFloat(e.target.value) || 0 })}
-          className="w-16 h-9 px-2 bg-[#0a1a35] border border-[#1c3661] text-white rounded-full text-xs outline-none focus:border-[#2563eb] placeholder:text-[#8ba6c8] text-center font-bold"
+          className="w-16 h-9 px-2 bg-[var(--sf-surface)] border border-[var(--sf-border)] text-white rounded-full text-xs outline-none focus:border-[#2563eb] placeholder:text-[var(--sf-text-muted)] text-center font-bold"
         />
         <button
           onClick={onAnotar}
           title="Anotar"
           className={`h-9 w-9 flex items-center justify-center rounded-lg transition-colors shrink-0 ${
             serie.nota
-              ? 'text-[#60a5fa] bg-[#0a2956] border border-[#2563eb]/60'
-              : 'text-white bg-[#0a1a35] border border-[#1c3661] hover:bg-[#13294e]'
+              ? 'text-[#60A5FA] bg-[#0a2956] border border-[#2563eb]/60'
+              : 'text-white bg-[var(--sf-surface)] border border-[var(--sf-border)] hover:bg-[var(--sf-surface-2)]'
           }`}
         >
           <StickyNote size={14} />
@@ -326,12 +329,12 @@ function SerieLinha({ exercicio, idx, serie, onUpdate, onConcluir, onAnotar }) {
         </button>
       </div>
       {hist?.repeticoes != null && (
-        <p className="text-[#8ba6c8] text-[11px] pl-[88px] ml-2.5">
+        <p className="text-[var(--sf-text-muted)] text-[11px] pl-[88px] ml-2.5">
           historico: {hist.repeticoes} reps - {hist.carga}kg
         </p>
       )}
       {serie.nota && (
-        <p className="text-[#60a5fa] text-[11px] italic pl-[88px] ml-2.5">{serie.nota}</p>
+        <p className="text-[#60A5FA] text-[11px] italic pl-[88px] ml-2.5">{serie.nota}</p>
       )}
     </div>
   )
@@ -358,20 +361,20 @@ function ExercicioBody({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           {exercicio.grupo_muscular && (
-            <p className="text-[#60a5fa] text-[9px] font-bold uppercase tracking-widest">
+            <p className="text-[#60A5FA] text-[9px] font-bold uppercase tracking-widest">
               {exercicio.grupo_muscular}
             </p>
           )}
           <p className="text-white text-sm font-bold mt-0.5 leading-snug">
             {tituloFinal}
           </p>
-          <p className="text-[#60a5fa] text-[11px] mt-1">
+          <p className="text-[#60A5FA] text-[11px] mt-1">
             {exercicio.series ? `${exercicio.series}x ` : ''}{exercicio.repeticoes || '-'}
             {exercicio.descanso && ` - desc ${exercicio.descanso}`}
             {exercicio.carga_sugerida ? ` - sugerido ${exercicio.carga_sugerida}kg` : ''}
           </p>
           {exercicio.observacao && (
-            <p className="text-[#60a5fa] text-[11px] mt-1.5 leading-relaxed">
+            <p className="text-[#60A5FA] text-[11px] mt-1.5 leading-relaxed">
               {exercicio.observacao}
             </p>
           )}
@@ -380,7 +383,7 @@ function ExercicioBody({
           <button
             onClick={onSubstituir}
             title="Substituir"
-            className="h-7 w-7 flex items-center justify-center text-[#60a5fa] hover:text-white border border-[#2563eb]/40 hover:bg-[#2563eb] rounded-lg transition-colors"
+            className="h-7 w-7 flex items-center justify-center text-[#60A5FA] hover:text-white border border-[#2563eb]/40 hover:bg-[#2563eb] rounded-lg transition-colors"
           >
             <Replace size={12} />
           </button>
@@ -435,7 +438,7 @@ function ExercicioBody({
           onChange={(e) => onFeedback(e.target.value)}
           placeholder="Como foi a execucao?"
           rows={2}
-          className="w-full mt-3 px-3 py-2 bg-[#08152e] border border-[#1c3661] text-white rounded-lg text-xs outline-none focus:border-[#2563eb] resize-none placeholder:text-[#5b7ba3]"
+          className="w-full mt-3 px-3 py-2 bg-[var(--sf-bg)] border border-[var(--sf-border)] text-white rounded-lg text-xs outline-none focus:border-[#2563eb] resize-none placeholder:text-[var(--sf-text-soft)]"
         />
       )}
     </div>
@@ -453,7 +456,7 @@ function AlongamentoCard({ alongamento, estado, onConcluir, onFeedback }) {
       <p className="text-white text-xs font-bold uppercase tracking-wider leading-snug">
         {alongamento.exercicio}
       </p>
-      <p className="text-[#8ba6c8] text-[11px] mt-1">
+      <p className="text-[var(--sf-text-muted)] text-[11px] mt-1">
         {alongamento.series} {alongamento.series === 1 ? 'serie' : 'series'}
         {alongamento.observacoes && ` - ${alongamento.observacoes}`}
       </p>
@@ -469,7 +472,7 @@ function AlongamentoCard({ alongamento, estado, onConcluir, onFeedback }) {
         onChange={(e) => onFeedback(e.target.value)}
         placeholder="Como foi? Observacoes..."
         rows={2}
-        className="w-full mt-3 px-3 py-2 bg-[#08152e] border border-[#1c3661] text-white rounded-lg text-xs outline-none focus:border-[#2563eb] resize-none placeholder:text-[#5b7ba3]"
+        className="w-full mt-3 px-3 py-2 bg-[var(--sf-bg)] border border-[var(--sf-border)] text-white rounded-lg text-xs outline-none focus:border-[#2563eb] resize-none placeholder:text-[var(--sf-text-soft)]"
       />
       <button
         onClick={onConcluir}
@@ -494,7 +497,7 @@ function VerExercicioInline({ titulo, sub, video, plataforma_video, uppercase })
           <p className={`text-white text-sm font-bold leading-snug ${uppercase ? 'uppercase tracking-wider' : ''}`}>
             {titulo}
           </p>
-          {sub && <p className="text-[#8ba6c8] text-[11px] mt-0.5">{sub}</p>}
+          {sub && <p className="text-[var(--sf-text-muted)] text-[11px] mt-0.5">{sub}</p>}
         </div>
       </div>
       {video && (
@@ -534,7 +537,7 @@ function ExercicioCard({
             <span className="px-2 py-0.5 rounded-md bg-emerald-900/40 text-emerald-300 text-[9px] font-bold uppercase tracking-widest border border-emerald-500/40">
               {item.titulo}
             </span>
-            <span className="text-[#8ba6c8] text-[10px]">Execute em sequencia</span>
+            <span className="text-[var(--sf-text-muted)] text-[10px]">Execute em sequencia</span>
           </div>
         )}
         <div className="flex flex-col gap-5">
@@ -596,12 +599,12 @@ function PromptModal({ aberto, title, subtitle, placeholder, initialValue, confi
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[420px] bg-[#0d2042] border border-[#1c3661] rounded-2xl shadow-[0_25px_50px_rgba(0,0,0,0.6)] overflow-hidden"
+        className="w-full max-w-[420px] bg-[var(--sf-surface)] border border-[var(--sf-border)] rounded-2xl shadow-[0_25px_50px_rgba(0,0,0,0.6)] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-4 py-3 border-b border-[#1c3661]">
+        <div className="px-4 py-3 border-b border-[var(--sf-border)]">
           <p className="text-white text-sm font-bold">{title}</p>
-          {subtitle && <p className="text-[#8ba6c8] text-[11px] mt-0.5">{subtitle}</p>}
+          {subtitle && <p className="text-[var(--sf-text-muted)] text-[11px] mt-0.5">{subtitle}</p>}
         </div>
         <div className="p-4">
           <input
@@ -611,13 +614,13 @@ function PromptModal({ aberto, title, subtitle, placeholder, initialValue, confi
             onKeyDown={(e) => e.key === 'Enter' && submit()}
             placeholder={placeholder || ''}
             autoFocus
-            className="w-full h-10 px-3 bg-[#08152e] border border-[#1c3661] text-white rounded-lg text-sm outline-none focus:border-[#2563eb] placeholder:text-[#5b7ba3]"
+            className="w-full h-10 px-3 bg-[var(--sf-bg)] border border-[var(--sf-border)] text-white rounded-lg text-sm outline-none focus:border-[#2563eb] placeholder:text-[var(--sf-text-soft)]"
           />
         </div>
-        <div className="px-4 py-3 border-t border-[#1c3661] flex items-center justify-end gap-2">
+        <div className="px-4 py-3 border-t border-[var(--sf-border)] flex items-center justify-end gap-2">
           <button
             onClick={onClose}
-            className="h-9 px-4 rounded-lg border border-[#1c3661] text-gray-300 text-xs font-bold hover:bg-[#13294e] transition-colors"
+            className="h-9 px-4 rounded-lg border border-[var(--sf-border)] text-gray-300 text-xs font-bold hover:bg-[var(--sf-surface-2)] transition-colors"
           >
             Cancelar
           </button>
@@ -649,17 +652,17 @@ function ConfirmModal({ aberto, title, message, confirmLabel, confirmVariant, on
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[380px] bg-[#0d2042] border border-[#1c3661] rounded-2xl shadow-[0_25px_50px_rgba(0,0,0,0.6)] overflow-hidden"
+        className="w-full max-w-[380px] bg-[var(--sf-surface)] border border-[var(--sf-border)] rounded-2xl shadow-[0_25px_50px_rgba(0,0,0,0.6)] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 py-4">
           <p className="text-white text-sm font-bold">{title}</p>
-          {message && <p className="text-[#8ba6c8] text-xs mt-1.5 leading-relaxed">{message}</p>}
+          {message && <p className="text-[var(--sf-text-muted)] text-xs mt-1.5 leading-relaxed">{message}</p>}
         </div>
         <div className="px-4 pb-4 flex items-center justify-end gap-2">
           <button
             onClick={onClose}
-            className="h-9 px-4 rounded-lg border border-[#1c3661] text-gray-300 text-xs font-bold hover:bg-[#13294e] transition-colors"
+            className="h-9 px-4 rounded-lg border border-[var(--sf-border)] text-gray-300 text-xs font-bold hover:bg-[var(--sf-surface-2)] transition-colors"
           >
             Cancelar
           </button>
@@ -703,12 +706,12 @@ function FinalizarPopup({ aberto, onClose, onConfirmar, enviando }) {
       onClick={enviando ? undefined : onClose}
     >
       <div
-        className="w-full max-w-[420px] bg-[#0d2042] border border-[#1c3661] rounded-2xl shadow-[0_25px_50px_rgba(0,0,0,0.6)] overflow-hidden"
+        className="w-full max-w-[420px] bg-[var(--sf-surface)] border border-[var(--sf-border)] rounded-2xl shadow-[0_25px_50px_rgba(0,0,0,0.6)] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-4 py-3 border-b border-[#1c3661]">
+        <div className="px-4 py-3 border-b border-[var(--sf-border)]">
           <p className="text-white text-sm font-bold">Finalizar treino</p>
-          <p className="text-[#8ba6c8] text-[11px] mt-0.5">Conta como foi sua sessao</p>
+          <p className="text-[var(--sf-text-muted)] text-[11px] mt-0.5">Conta como foi sua sessao</p>
         </div>
         <div className="p-4 space-y-3">
           <FormGroup label="Intensidade" required error={erro}>
@@ -728,11 +731,11 @@ function FinalizarPopup({ aberto, onClose, onConfirmar, enviando }) {
             />
           </FormGroup>
         </div>
-        <div className="px-4 py-3 border-t border-[#1c3661] flex items-center justify-end gap-2">
+        <div className="px-4 py-3 border-t border-[var(--sf-border)] flex items-center justify-end gap-2">
           <button
             onClick={onClose}
             disabled={enviando}
-            className="h-9 px-4 rounded-lg border border-[#1c3661] text-gray-300 text-xs font-bold hover:bg-[#13294e] disabled:opacity-50 transition-colors"
+            className="h-9 px-4 rounded-lg border border-[var(--sf-border)] text-gray-300 text-xs font-bold hover:bg-[var(--sf-surface-2)] disabled:opacity-50 transition-colors"
           >
             Voltar
           </button>
@@ -989,7 +992,7 @@ export default function TreinoExecucao() {
 
   if (carregando) {
     return (
-      <div className="min-h-full bg-[#08152e] flex items-center justify-center">
+      <div className="min-h-full bg-[var(--sf-bg)] flex items-center justify-center">
         <Spinner />
       </div>
     )
@@ -997,11 +1000,11 @@ export default function TreinoExecucao() {
 
   if (erro) {
     return (
-      <div className="pb-8 bg-[#08152e] min-h-full">
+      <div className="pb-8 bg-[var(--sf-bg)] min-h-full">
         <div className="px-4 pt-4">
           <button
             onClick={() => navigate(`/aluno/treinos/${fichaName}`)}
-            className="h-9 w-9 flex items-center justify-center rounded-xl border border-[#1c3661] text-gray-300 hover:text-white hover:border-[#2563eb] transition-colors"
+            className="h-9 w-9 flex items-center justify-center rounded-xl border border-[var(--sf-border)] text-gray-300 hover:text-white hover:border-[#2563eb] transition-colors"
             aria-label="Voltar"
           >
             <ArrowLeft size={15} />
@@ -1009,7 +1012,7 @@ export default function TreinoExecucao() {
         </div>
         <div className="px-4 mt-4">
           <div className={`${CARD_DESTAQUE} px-4 py-5 flex items-start gap-3`}>
-            <AlertCircle size={18} className="text-[#60a5fa] shrink-0 mt-0.5" />
+            <AlertCircle size={18} className="text-[#60A5FA] shrink-0 mt-0.5" />
             <p className="text-gray-200 text-sm leading-relaxed">{erro}</p>
           </div>
         </div>
@@ -1019,11 +1022,11 @@ export default function TreinoExecucao() {
 
   if (jaFinalizadoHoje) {
     return (
-      <div className="pb-8 bg-[#08152e] min-h-full">
+      <div className="pb-8 bg-[var(--sf-bg)] min-h-full">
         <div className="px-4 pt-4">
           <button
             onClick={() => navigate(`/aluno/treinos/${fichaName}`)}
-            className="h-9 w-9 flex items-center justify-center rounded-xl border border-[#1c3661] text-gray-300 hover:text-white hover:border-[#2563eb] transition-colors"
+            className="h-9 w-9 flex items-center justify-center rounded-xl border border-[var(--sf-border)] text-gray-300 hover:text-white hover:border-[#2563eb] transition-colors"
             aria-label="Voltar"
           >
             <ArrowLeft size={15} />
@@ -1035,7 +1038,7 @@ export default function TreinoExecucao() {
               <CheckCircle2 size={20} />
             </div>
             <p className="text-white text-sm font-bold">Treino ja registrado hoje!</p>
-            <p className="text-[#8ba6c8] text-xs mt-1">Volte amanha pra treinar novamente.</p>
+            <p className="text-[var(--sf-text-muted)] text-xs mt-1">Volte amanha pra treinar novamente.</p>
             <button
               onClick={() => navigate(`/aluno/treinos/${fichaName}`)}
               className="mt-4 h-9 px-4 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs font-bold transition-colors"
@@ -1063,11 +1066,11 @@ export default function TreinoExecucao() {
       }
     }
     return (
-      <div className="bg-[#08152e] min-h-full pb-24">
-        <div className="px-4 pt-4 pb-4 flex items-center gap-3 border-b border-[#13294e]">
+      <div className="bg-[var(--sf-bg)] min-h-full pb-24">
+        <div className="px-4 pt-4 pb-4 flex items-center gap-3 border-b border-[var(--sf-border)]">
           <button
             onClick={() => navigate(`/aluno/treinos/${fichaName}`)}
-            className="h-9 w-9 flex items-center justify-center rounded-xl text-white hover:bg-[#13294e] transition-colors"
+            className="h-9 w-9 flex items-center justify-center rounded-xl text-white hover:bg-[var(--sf-surface-2)] transition-colors"
             aria-label="Voltar"
           >
             <ArrowLeft size={18} />
@@ -1079,7 +1082,7 @@ export default function TreinoExecucao() {
 
         <div className="px-4 mt-4">
           <div className={`${CARD_DESTAQUE} px-4 py-3 flex items-start gap-3`}>
-            <Info size={16} className="text-[#60a5fa] shrink-0 mt-0.5" />
+            <Info size={16} className="text-[#60A5FA] shrink-0 mt-0.5" />
             <p className="text-gray-200 text-xs leading-relaxed">
               Esta e uma <span className="font-bold text-white">visualizacao</span> do treino. Toque em <span className="font-bold text-white">Iniciar treino</span> para comecar e registrar sua sessao.
             </p>
@@ -1147,7 +1150,7 @@ export default function TreinoExecucao() {
   const descansoState = estado.descanso
 
   return (
-    <div className="bg-[#08152e] min-h-full pb-28 pt-12">
+    <div className="bg-[var(--sf-bg)] min-h-full pb-28 pt-12">
       <CronometrosBar
         inicioMs={estado.inicio}
         agora={agora}
@@ -1155,10 +1158,10 @@ export default function TreinoExecucao() {
         onPularDescanso={pularDescanso}
       />
 
-      <div className="px-4 pt-4 pb-4 flex items-center gap-3 border-b border-[#13294e]">
+      <div className="px-4 pt-4 pb-4 flex items-center gap-3 border-b border-[var(--sf-border)]">
         <button
           onClick={() => navigate(`/aluno/treinos/${fichaName}`)}
-          className="h-9 w-9 flex items-center justify-center rounded-xl text-white hover:bg-[#13294e] transition-colors"
+          className="h-9 w-9 flex items-center justify-center rounded-xl text-white hover:bg-[var(--sf-surface-2)] transition-colors"
           aria-label="Voltar"
         >
           <ArrowLeft size={18} />
