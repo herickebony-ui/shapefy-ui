@@ -270,7 +270,11 @@ function CronometrosBar({ inicioMs, agora, descanso, onPularDescanso }) {
 // ============================================================
 
 function SerieLinha({ exercicio, idx, serie, onUpdate, onConcluir, onAnotar }) {
-  const tipoSerie = exercicio.tipo_de_serie_list?.[idx] || ''
+  // Remove o prefixo numerico ("1a ", "2a ", "1º ") — fica so o nome
+  // (Aquecimento, Preparatoria, Trabalho).
+  const tipoSerie = (exercicio.tipo_de_serie_list?.[idx] || '')
+    .replace(/^\d+[aºo°]?\s*/i, '')
+    .trim()
   const hist = exercicio.historico_series?.[idx]
   const concluida = serie.concluida === true
 
