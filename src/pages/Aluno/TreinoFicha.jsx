@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  ArrowLeft, ChevronRight, Play, Eye, History, AlertCircle, Moon,
+  ArrowLeft, Play, Eye, History, AlertCircle,
 } from 'lucide-react'
 import { Spinner } from '../../components/ui'
 import { buscarFichaTreino } from '../../api/treino'
@@ -93,10 +93,9 @@ export default function TreinoFicha() {
   if (!dados) return null
 
   const {
-    ficha, dias_da_semana = [], treino_do_dia, ultimo_treino,
+    ficha, dias_da_semana = [], ultimo_treino,
     periodizacao = [], execucoes_por_treino = {},
   } = dados
-  const treinoDoDiaEhOff = !treino_do_dia || treino_do_dia === 'Off'
 
   return (
     <div className="pb-10 bg-[#08152e] min-h-full">
@@ -130,48 +129,6 @@ export default function TreinoFicha() {
         </div>
       </div>
 
-      {/* Treino do dia */}
-      {!treinoDoDiaEhOff && (
-        <div className="px-4 mt-3">
-          <button
-            onClick={() => navigate(`/aluno/treinos/${fichaName}/${encodeURIComponent(treino_do_dia)}`)}
-            className={`${CARD_DESTAQUE} w-full px-4 py-4 flex items-center gap-3 text-left hover:bg-[#1a387a] transition-colors`}
-          >
-            <div className="w-11 h-11 rounded-xl bg-[#2563eb] flex items-center justify-center shrink-0">
-              <Play size={18} className="text-white fill-white ml-0.5" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded-md bg-[#2563eb] text-white text-[9px] font-bold uppercase tracking-widest">
-                  Hoje
-                </span>
-                <span className="text-[#60a5fa] text-[10px] font-bold uppercase tracking-widest">
-                  {treino_do_dia}
-                </span>
-              </div>
-              <p className="text-white text-sm font-bold mt-1.5 truncate">
-                {labelDe(treino_do_dia)}
-              </p>
-            </div>
-            <ChevronRight size={18} className="text-[#60a5fa] shrink-0" />
-          </button>
-        </div>
-      )}
-
-      {treinoDoDiaEhOff && (
-        <div className="px-4 mt-3">
-          <div className={`${CARD} px-4 py-4 flex items-center gap-3`}>
-            <div className="w-11 h-11 rounded-xl border border-[#1c3661] bg-[#0a1a35] flex items-center justify-center text-gray-400 shrink-0">
-              <Moon size={18} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-white text-sm font-bold">Hoje e dia de descanso</p>
-              <p className="text-[#8ba6c8] text-xs mt-0.5">Aproveite pra recuperar bem.</p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Ultimo treino */}
       {ultimo_treino?.treino && (
         <div className="px-4 mt-3">
@@ -194,18 +151,25 @@ export default function TreinoFicha() {
       <div className="px-4 mt-4">
         <div className={`${CARD} px-4 py-4`}>
           <p className={`${LABEL} mb-3`}>Distribuicao semanal</p>
-          <div className="flex flex-col">
+          <div className="flex flex-col gap-1">
             {dias_da_semana.map((d, i) => {
               const ehOff = !d.treino || d.treino === 'Off'
+              const diasPt = ['Domingo', 'Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado']
+              const hojeNome = diasPt[new Date().getDay()]
+              const ehHoje = (d.dia_da_semana || '').toLowerCase() === hojeNome.toLowerCase()
               return (
                 <div
                   key={i}
-                  className={`flex items-center justify-between py-2.5 ${
-                    i < dias_da_semana.length - 1 ? 'border-b border-[#13294e]' : ''
+                  className={`flex items-center justify-between px-3 py-2.5 rounded-lg ${
+                    ehHoje
+                      ? 'bg-[#0a2956] border border-[#2563eb] text-[#60a5fa]'
+                      : 'text-gray-300'
                   }`}
                 >
-                  <span className="text-gray-300 text-sm">{d.dia_da_semana}</span>
-                  <span className={`text-sm font-bold text-right ${ehOff ? 'text-[#8ba6c8]/60' : 'text-white'}`}>
+                  <span className={`text-sm ${ehHoje ? 'font-bold' : ''}`}>{d.dia_da_semana}</span>
+                  <span className={`text-sm font-bold text-right ${
+                    ehHoje ? '' : ehOff ? 'text-[#8ba6c8]/60' : 'text-white'
+                  }`}>
                     {ehOff ? 'Off' : labelDe(d.treino)}
                   </span>
                 </div>

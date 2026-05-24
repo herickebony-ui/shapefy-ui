@@ -133,59 +133,44 @@ function VideoEmbed({ id, plataforma }) {
   const ehDrive = plat.includes('drive')
   const ehVimeo = plat.includes('vimeo')
 
-  // Drive: player do Google e minimalista demais quando embedded em area pequena.
-  // Abrimos em modal fullscreen pra dar espaco ao player.
+  // Drive: player embarcado e limitado. Abrimos em modal verdadeiramente fullscreen
+  // (iframe ocupa 100% da viewport) com so um botao flutuante de fechar — assim o
+  // player do Google tem o maximo de espaco e a experiencia fica decente.
   if (ehDrive) {
     return (
       <>
         <button
           type="button"
           onClick={() => setModalCheio(true)}
-          className="relative w-full aspect-video rounded-xl overflow-hidden border border-[#1c3661] bg-gradient-to-br from-[#16306a] to-[#08152e] group"
+          className="relative w-full aspect-video rounded-xl overflow-hidden border border-[#1c3661] bg-gradient-to-br from-[#16306a] to-[#08152e] group flex items-center justify-center"
         >
           <span className="absolute top-2 left-2 text-[10px] font-bold uppercase tracking-widest text-[#60a5fa] bg-black/60 px-2 py-0.5 rounded">
             Google Drive
           </span>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="h-14 w-14 rounded-full bg-[#2563eb] flex items-center justify-center shadow-[0_0_28px_rgba(37,99,235,0.6)] group-hover:scale-110 transition-transform">
-              <Play size={22} className="text-white fill-white ml-0.5" />
-            </div>
+          <div className="h-14 w-14 rounded-full bg-[#2563eb] flex items-center justify-center shadow-[0_0_28px_rgba(37,99,235,0.6)] group-hover:scale-110 transition-transform">
+            <Play size={22} className="text-white fill-white ml-0.5" />
           </div>
+          <span className="absolute bottom-2 text-[10px] text-[#8ba6c8]">
+            Toque para ver em tela cheia
+          </span>
         </button>
         {modalCheio && (
-          <div
-            className="fixed inset-0 z-[200] bg-black flex flex-col"
-            onClick={() => setModalCheio(false)}
-          >
-            <div className="px-4 py-3 flex items-center justify-between border-b border-[#1c3661] shrink-0 bg-[#0d2042]">
-              <span className="text-white text-sm font-bold">Video do exercicio</span>
-              <div className="flex items-center gap-2">
-                <a
-                  href={`https://drive.google.com/file/d/${id}/view`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="h-8 px-3 rounded-lg border border-[#1c3661] text-[#60a5fa] text-[11px] font-bold hover:bg-[#13294e] transition-colors flex items-center gap-1.5"
-                >
-                  <ExternalLink size={12} /> Abrir no Drive
-                </a>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setModalCheio(false) }}
-                  className="h-8 w-8 flex items-center justify-center rounded-lg border border-[#1c3661] text-white hover:bg-[#13294e] transition-colors"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            </div>
-            <div className="flex-1 bg-black" onClick={(e) => e.stopPropagation()}>
-              <iframe
-                src={getDriveEmbed(id)}
-                title="Video"
-                allow="autoplay; encrypted-media; picture-in-picture"
-                allowFullScreen
-                className="w-full h-full"
-              />
-            </div>
+          <div className="fixed inset-0 z-[200] bg-black">
+            <iframe
+              src={getDriveEmbed(id)}
+              title="Video"
+              allow="autoplay; encrypted-media; picture-in-picture"
+              allowFullScreen
+              className="w-full h-full border-0"
+            />
+            <button
+              onClick={() => setModalCheio(false)}
+              className="fixed top-3 right-3 z-10 h-10 w-10 flex items-center justify-center rounded-full bg-black/70 backdrop-blur text-white border border-white/20 hover:bg-black/90 transition-colors shadow-lg"
+              style={{ top: 'max(0.75rem, env(safe-area-inset-top))' }}
+              aria-label="Fechar"
+            >
+              <X size={18} />
+            </button>
           </div>
         )}
       </>
@@ -306,8 +291,7 @@ function SerieLinha({ exercicio, idx, serie, onUpdate, onConcluir, onAnotar }) {
           placeholder="Reps"
           value={serie.repeticoes || ''}
           onChange={(e) => onUpdate({ repeticoes: parseInt(e.target.value, 10) || 0 })}
-          disabled={concluida}
-          className="w-16 h-9 px-2 bg-[#0a1a35] border border-[#1c3661] text-white rounded-full text-xs outline-none focus:border-[#2563eb] disabled:cursor-not-allowed placeholder:text-[#8ba6c8] text-center font-bold"
+          className="w-16 h-9 px-2 bg-[#0a1a35] border border-[#1c3661] text-white rounded-full text-xs outline-none focus:border-[#2563eb] placeholder:text-[#8ba6c8] text-center font-bold"
         />
         <input
           type="number"
@@ -316,8 +300,7 @@ function SerieLinha({ exercicio, idx, serie, onUpdate, onConcluir, onAnotar }) {
           placeholder="Kg"
           value={serie.carga || ''}
           onChange={(e) => onUpdate({ carga: parseFloat(e.target.value) || 0 })}
-          disabled={concluida}
-          className="w-16 h-9 px-2 bg-[#0a1a35] border border-[#1c3661] text-white rounded-full text-xs outline-none focus:border-[#2563eb] disabled:cursor-not-allowed placeholder:text-[#8ba6c8] text-center font-bold"
+          className="w-16 h-9 px-2 bg-[#0a1a35] border border-[#1c3661] text-white rounded-full text-xs outline-none focus:border-[#2563eb] placeholder:text-[#8ba6c8] text-center font-bold"
         />
         <button
           onClick={onAnotar}
