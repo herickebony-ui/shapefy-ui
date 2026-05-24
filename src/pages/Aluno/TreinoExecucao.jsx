@@ -1146,7 +1146,7 @@ export default function TreinoExecucao() {
 
   return (
     <div className="bg-[var(--sf-bg)] min-h-full pb-28">
-      <div className="px-4 pt-3 pb-3 flex items-center gap-3 border-b border-[var(--sf-border)] sticky top-0 z-20 bg-[var(--sf-bg)]/95 backdrop-blur-sm">
+      <div className="px-4 pt-3 pb-3 flex items-center gap-3 border-b border-[var(--sf-border)]">
         <button
           onClick={() => navigate(`/aluno/treinos/${fichaName}`)}
           className="h-9 w-9 flex items-center justify-center rounded-xl text-white hover:bg-[var(--sf-surface-2)] transition-colors"
@@ -1159,7 +1159,7 @@ export default function TreinoExecucao() {
         </h1>
       </div>
 
-      <div className="px-4 mt-3">
+      <div className="px-4 pt-3 pb-2 sticky top-0 z-30 bg-[var(--sf-bg)]/90 backdrop-blur-md">
         <CronometrosBar
           inicioMs={estado.inicio}
           agora={agora}
