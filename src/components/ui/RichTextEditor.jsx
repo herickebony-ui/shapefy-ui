@@ -2,31 +2,66 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
+import TextAlign from '@tiptap/extension-text-align'
 import { TextStyle, Color } from '@tiptap/extension-text-style'
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
-  Heading1, Heading2, List, ListOrdered, Quote, Code,
+  List, ListOrdered, Quote, Code,
   Link as LinkIcon, Undo2, Redo2, Eraser, Palette,
+  AlignLeft, AlignCenter, AlignRight, AlignJustify,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import Modal from './Modal'
+import Button from './Button'
+import FormGroup from './FormGroup'
+import Input from './Input'
 
-const PALETTE = [
-  ['#000000', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#a855f7'],
-  ['#ffffff', '#fecaca', '#fed7aa', '#fef08a', '#bbf7d0', '#bfdbfe', '#e9d5ff'],
-  ['#d1d5db', '#fca5a5', '#fdba74', '#fde047', '#86efac', '#93c5fd', '#d8b4fe'],
-  ['#6b7280', '#dc2626', '#ea580c', '#ca8a04', '#16a34a', '#2563eb', '#9333ea'],
-  ['#374151', '#7f1d1d', '#9a3412', '#854d0e', '#166534', '#1e40af', '#6b21a8'],
+// Extensão custom de tamanho de fonte (marca inline).
+// Estende TextStyle pra adicionar atributo `fontSize` — aplica em <span style="font-size:...">
+// só na seleção do usuário (sem virar bloco).
+const TextStyleWithFontSize = TextStyle.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      fontSize: {
+        default: null,
+        parseHTML: el => el.style.fontSize?.replace(/['"]+/g, '') || null,
+        renderHTML: attrs => {
+          if (!attrs.fontSize) return {}
+          return { style: `font-size: ${attrs.fontSize}` }
+        },
+      },
+    }
+  },
+  addCommands() {
+    return {
+      ...this.parent?.(),
+      setFontSize: (fontSize) => ({ chain }) =>
+        chain().setMark(this.name, { fontSize }).run(),
+      unsetFontSize: () => ({ chain }) =>
+        chain().setMark(this.name, { fontSize: null }).removeEmptyTextStyle().run(),
+    }
+  },
+})
+
+const TAMANHOS = [
+  { value: '12px', label: 'Pequeno' },
+  { value: '14px', label: 'Normal' },
+  { value: '18px', label: 'Médio' },
+  { value: '24px', label: 'Grande' },
+  { value: '32px', label: 'Enorme' },
 ]
 
 const ToolbarButton = ({ onClick, active, disabled, title, children }) => (
   <button
     type="button"
+    onMouseDown={(e) => e.preventDefault()}
     onClick={onClick}
     disabled={disabled}
     title={title}
-    className={`h-9 w-9 sm:h-7 sm:w-7 flex items-center justify-center rounded transition-colors shrink-0
+    className={`h-8 w-8 flex items-center justify-center rounded-md transition-colors shrink-0
       ${active
-        ? 'bg-[#2563eb] text-white'
+        ? 'bg-[#2563eb] text-white shadow-[0_0_8px_rgba(37,99,235,0.4)]'
         : 'text-gray-400 hover:text-white hover:bg-[#323238]'
       }
       disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-400
@@ -44,33 +79,34 @@ export default function RichTextEditor({
   placeholder = 'Digite o conteúdo...',
   minHeight = 200,
 }) {
-  const [colorOpen, setColorOpen] = useState(false)
-  const colorRef = useRef(null)
+  const updatingFromEditor = useRef(false)
 
-  useEffect(() => {
-    if (!colorOpen) return
-    const handler = (e) => { if (!colorRef.current?.contains(e.target)) setColorOpen(false) }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [colorOpen])
+  const [linkOpen, setLinkOpen] = useState(false)
+  const [linkUrl, setLinkUrl] = useState('')
+  const [linkText, setLinkText] = useState('')
+  const colorInputRef = useRef(null)
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({
-        heading: { levels: [1, 2, 3] },
-      }),
+      StarterKit,
       Underline,
-      TextStyle,
-      Color,
+      TextStyleWithFontSize,
+      Color.configure({ types: ['textStyle'] }),
+      TextAlign.configure({
+        types: ['heading', 'paragraph'],
+        alignments: ['left', 'center', 'right', 'justify'],
+      }),
       Link.configure({
         openOnClick: false,
-        HTMLAttributes: { class: 'text-[#60a5fa] underline' },
+        HTMLAttributes: { class: 'text-[#60a5fa] underline', target: '_blank', rel: 'noopener noreferrer' },
       }),
     ],
     content: value || '',
     onUpdate: ({ editor }) => {
+      updatingFromEditor.current = true
       const html = editor.getHTML()
       onChange?.(html === '<p></p>' ? '' : html)
+      queueMicrotask(() => { updatingFromEditor.current = false })
     },
     editorProps: {
       attributes: {
@@ -80,9 +116,9 @@ export default function RichTextEditor({
     },
   })
 
-  // Sync external value changes (ex: load existing form)
   useEffect(() => {
     if (!editor) return
+    if (updatingFromEditor.current) return
     const current = editor.getHTML()
     const incoming = value || ''
     if (incoming !== current && incoming !== '<p></p>') {
@@ -92,154 +128,237 @@ export default function RichTextEditor({
 
   if (!editor) return null
 
-  const addLink = () => {
-    const previous = editor.getAttributes('link').href
-    const url = window.prompt('URL do link:', previous || 'https://')
-    if (url === null) return
-    if (url === '') {
-      editor.chain().focus().extendMarkRange('link').unsetLink().run()
-      return
-    }
-    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
+  const abrirModalLink = () => {
+    const previous = editor.getAttributes('link').href || ''
+    const selecionado = editor.state.doc.textBetween(editor.state.selection.from, editor.state.selection.to, ' ')
+    setLinkUrl(previous || 'https://')
+    setLinkText(selecionado || '')
+    setLinkOpen(true)
   }
 
+  const confirmarLink = () => {
+    if (!linkUrl || linkUrl === 'https://') {
+      setLinkOpen(false)
+      return
+    }
+    let url = linkUrl.trim()
+    if (!/^https?:\/\//i.test(url) && !url.startsWith('mailto:') && !url.startsWith('tel:')) {
+      url = `https://${url}`
+    }
+    const chain = editor.chain().focus().extendMarkRange('link')
+    if (editor.state.selection.empty && linkText) {
+      chain.insertContent(`<a href="${url}">${linkText.replace(/[<>]/g, '')}</a>`).run()
+    } else {
+      chain.setLink({ href: url }).run()
+    }
+    setLinkOpen(false)
+    setLinkUrl('')
+    setLinkText('')
+  }
+
+  const removerLink = () => {
+    editor.chain().focus().extendMarkRange('link').unsetLink().run()
+    setLinkOpen(false)
+  }
+
+  const aplicarCor = (cor) => {
+    editor.chain().focus().setColor(cor).run()
+  }
+
+  const aplicarTamanho = (size) => {
+    if (!size) editor.chain().focus().unsetFontSize().run()
+    else editor.chain().focus().setFontSize(size).run()
+  }
+
+  const corAtual = editor.getAttributes('textStyle')?.color || '#ffffff'
+  const tamanhoAtual = editor.getAttributes('textStyle')?.fontSize || ''
+
   return (
-    <div className="border border-[#323238] rounded-lg bg-[#1a1a1a] overflow-hidden focus-within:border-[#2563eb]/60 transition-colors">
-      <div className="flex items-center flex-wrap gap-0.5 px-2 py-1.5 border-b border-[#323238] bg-[#222226] overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-          active={editor.isActive('heading', { level: 1 })}
-          title="Título 1"
-        ><Heading1 size={13} /></ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          active={editor.isActive('heading', { level: 2 })}
-          title="Título 2"
-        ><Heading2 size={13} /></ToolbarButton>
+    <>
+      <div className="border border-[#323238] rounded-lg bg-[#1a1a1a] overflow-hidden focus-within:border-[#2563eb]/60 focus-within:shadow-[0_0_12px_rgba(37,99,235,0.15)] transition-all">
+        <div className="flex items-center flex-wrap gap-0.5 px-2 py-1.5 border-b border-[#323238] bg-[#222226]">
+          {/* Tamanho da fonte — select nativo, browser cuida do posicionamento */}
+          <select
+            value={tamanhoAtual}
+            onMouseDown={(e) => e.stopPropagation()}
+            onChange={(e) => aplicarTamanho(e.target.value)}
+            title="Tamanho do texto"
+            className="h-8 px-2 text-xs font-medium rounded-md bg-transparent text-gray-300 hover:text-white hover:bg-[#323238] border-0 outline-none cursor-pointer transition-colors"
+          >
+            <option value="">Tamanho</option>
+            {TAMANHOS.map(t => (
+              <option key={t.value} value={t.value}>{t.label} ({t.value})</option>
+            ))}
+          </select>
 
-        <ToolbarSep />
+          <ToolbarSep />
 
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          active={editor.isActive('bold')}
-          title="Negrito"
-        ><Bold size={13} /></ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          active={editor.isActive('italic')}
-          title="Itálico"
-        ><Italic size={13} /></ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
-          active={editor.isActive('underline')}
-          title="Sublinhado"
-        ><UnderlineIcon size={13} /></ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleStrike().run()}
-          active={editor.isActive('strike')}
-          title="Tachado"
-        ><Strikethrough size={13} /></ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleCode().run()}
-          active={editor.isActive('code')}
-          title="Código inline"
-        ><Code size={13} /></ToolbarButton>
+          {/* Marcações */}
+          <ToolbarButton
+            onClick={() => editor.chain().focus().toggleBold().run()}
+            active={editor.isActive('bold')}
+            title="Negrito"
+          ><Bold size={14} /></ToolbarButton>
+          <ToolbarButton
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+            active={editor.isActive('italic')}
+            title="Itálico"
+          ><Italic size={14} /></ToolbarButton>
+          <ToolbarButton
+            onClick={() => editor.chain().focus().toggleUnderline().run()}
+            active={editor.isActive('underline')}
+            title="Sublinhado"
+          ><UnderlineIcon size={14} /></ToolbarButton>
+          <ToolbarButton
+            onClick={() => editor.chain().focus().toggleStrike().run()}
+            active={editor.isActive('strike')}
+            title="Tachado"
+          ><Strikethrough size={14} /></ToolbarButton>
+          <ToolbarButton
+            onClick={() => editor.chain().focus().toggleCode().run()}
+            active={editor.isActive('code')}
+            title="Código inline"
+          ><Code size={14} /></ToolbarButton>
 
-        <ToolbarSep />
+          <ToolbarSep />
 
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-          active={editor.isActive('bulletList')}
-          title="Lista com marcadores"
-        ><List size={13} /></ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          active={editor.isActive('orderedList')}
-          title="Lista numerada"
-        ><ListOrdered size={13} /></ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBlockquote().run()}
-          active={editor.isActive('blockquote')}
-          title="Citação"
-        ><Quote size={13} /></ToolbarButton>
+          {/* Alinhamento */}
+          <ToolbarButton
+            onClick={() => editor.chain().focus().setTextAlign('left').run()}
+            active={editor.isActive({ textAlign: 'left' })}
+            title="Esquerda"
+          ><AlignLeft size={14} /></ToolbarButton>
+          <ToolbarButton
+            onClick={() => editor.chain().focus().setTextAlign('center').run()}
+            active={editor.isActive({ textAlign: 'center' })}
+            title="Centro"
+          ><AlignCenter size={14} /></ToolbarButton>
+          <ToolbarButton
+            onClick={() => editor.chain().focus().setTextAlign('right').run()}
+            active={editor.isActive({ textAlign: 'right' })}
+            title="Direita"
+          ><AlignRight size={14} /></ToolbarButton>
+          <ToolbarButton
+            onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+            active={editor.isActive({ textAlign: 'justify' })}
+            title="Justificado"
+          ><AlignJustify size={14} /></ToolbarButton>
 
-        <ToolbarSep />
+          <ToolbarSep />
 
-        <div className="relative" ref={colorRef}>
+          {/* Listas */}
+          <ToolbarButton
+            onClick={() => editor.chain().focus().toggleBulletList().run()}
+            active={editor.isActive('bulletList')}
+            title="Lista com marcadores"
+          ><List size={14} /></ToolbarButton>
+          <ToolbarButton
+            onClick={() => editor.chain().focus().toggleOrderedList().run()}
+            active={editor.isActive('orderedList')}
+            title="Lista numerada"
+          ><ListOrdered size={14} /></ToolbarButton>
+          <ToolbarButton
+            onClick={() => editor.chain().focus().toggleBlockquote().run()}
+            active={editor.isActive('blockquote')}
+            title="Citação"
+          ><Quote size={14} /></ToolbarButton>
+
+          <ToolbarSep />
+
+          {/* Cor */}
           <button
             type="button"
-            onClick={() => setColorOpen(v => !v)}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => colorInputRef.current?.click()}
             title="Cor do texto"
-            className={`h-9 w-9 sm:h-7 sm:w-7 flex flex-col items-center justify-center rounded transition-colors shrink-0
-              ${colorOpen ? 'bg-[#323238]' : 'text-gray-400 hover:text-white hover:bg-[#323238]'}
-            `}
+            className="relative h-8 w-8 flex flex-col items-center justify-center rounded-md text-gray-400 hover:text-white hover:bg-[#323238] transition-colors shrink-0"
           >
-            <Palette size={11} className="text-gray-300" />
+            <Palette size={12} />
             <span
-              className="block w-4 h-1 rounded-sm mt-0.5"
-              style={{ background: editor.getAttributes('textStyle')?.color || '#ffffff' }}
+              className="block w-4 h-1 rounded-sm mt-0.5 border border-white/20"
+              style={{ background: corAtual }}
+            />
+            <input
+              ref={colorInputRef}
+              type="color"
+              value={corAtual}
+              onChange={(e) => aplicarCor(e.target.value)}
+              className="absolute inset-0 opacity-0 cursor-pointer"
+              tabIndex={-1}
             />
           </button>
-          {colorOpen && (
-            <div className="absolute top-full left-0 mt-1 z-20 p-2 bg-[#1a1a1a] border border-[#323238] rounded-lg shadow-xl">
-              <div className="space-y-1">
-                {PALETTE.map((row, ri) => (
-                  <div key={ri} className="flex gap-1">
-                    {row.map(c => (
-                      <button
-                        key={c}
-                        type="button"
-                        onClick={() => {
-                          editor.chain().focus().setColor(c).run()
-                          setColorOpen(false)
-                        }}
-                        title={c}
-                        className="w-5 h-5 rounded border border-[#323238] hover:scale-110 transition-transform"
-                        style={{ background: c }}
-                      />
-                    ))}
-                  </div>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  editor.chain().focus().unsetColor().run()
-                  setColorOpen(false)
-                }}
-                className="mt-2 w-full text-[10px] uppercase tracking-wider text-gray-400 hover:text-white py-1 px-2 border border-[#323238] hover:border-gray-500 rounded transition-colors"
-              >
-                Cor padrão
-              </button>
-            </div>
-          )}
+          <ToolbarButton
+            onClick={() => editor.chain().focus().unsetColor().run()}
+            title="Remover cor"
+          ><span className="text-[10px] font-bold">A</span></ToolbarButton>
+
+          <ToolbarSep />
+
+          {/* Link */}
+          <ToolbarButton
+            onClick={abrirModalLink}
+            active={editor.isActive('link')}
+            title="Inserir/editar link"
+          ><LinkIcon size={14} /></ToolbarButton>
+
+          {/* Limpar */}
+          <ToolbarButton
+            onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
+            title="Limpar formatação"
+          ><Eraser size={14} /></ToolbarButton>
+
+          <div className="ml-auto flex items-center gap-0.5">
+            <ToolbarButton
+              onClick={() => editor.chain().focus().undo().run()}
+              disabled={!editor.can().undo()}
+              title="Desfazer"
+            ><Undo2 size={14} /></ToolbarButton>
+            <ToolbarButton
+              onClick={() => editor.chain().focus().redo().run()}
+              disabled={!editor.can().redo()}
+              title="Refazer"
+            ><Redo2 size={14} /></ToolbarButton>
+          </div>
         </div>
 
-        <ToolbarButton
-          onClick={addLink}
-          active={editor.isActive('link')}
-          title="Inserir link"
-        ><LinkIcon size={13} /></ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
-          title="Limpar formatação"
-        ><Eraser size={13} /></ToolbarButton>
-
-        <div className="ml-auto flex items-center gap-0.5">
-          <ToolbarButton
-            onClick={() => editor.chain().focus().undo().run()}
-            disabled={!editor.can().undo()}
-            title="Desfazer"
-          ><Undo2 size={13} /></ToolbarButton>
-          <ToolbarButton
-            onClick={() => editor.chain().focus().redo().run()}
-            disabled={!editor.can().redo()}
-            title="Refazer"
-          ><Redo2 size={13} /></ToolbarButton>
-        </div>
+        <EditorContent editor={editor} placeholder={placeholder} />
       </div>
 
-      <EditorContent editor={editor} placeholder={placeholder} />
-    </div>
+      {linkOpen && (
+        <Modal
+          isOpen
+          onClose={() => setLinkOpen(false)}
+          title="Inserir link"
+          size="sm"
+          footer={
+            <>
+              {editor.isActive('link') && (
+                <Button variant="ghost" onClick={removerLink}>Remover link</Button>
+              )}
+              <Button variant="ghost" onClick={() => setLinkOpen(false)}>Cancelar</Button>
+              <Button variant="primary" onClick={confirmarLink}>Inserir</Button>
+            </>
+          }
+        >
+          <div className="p-4 space-y-3">
+            <FormGroup label="URL" required>
+              <Input
+                value={linkUrl}
+                onChange={setLinkUrl}
+                placeholder="https://exemplo.com"
+                autoFocus
+              />
+            </FormGroup>
+            <FormGroup label="Texto do link" hint="Opcional. Se vazio, usa o texto selecionado.">
+              <Input
+                value={linkText}
+                onChange={setLinkText}
+                placeholder="Clique aqui"
+              />
+            </FormGroup>
+          </div>
+        </Modal>
+      )}
+    </>
   )
 }

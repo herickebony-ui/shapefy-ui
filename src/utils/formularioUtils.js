@@ -8,7 +8,7 @@ export const TIPO_DO_FRAPPE = {
   'Select': 'selecao', 'Seleção': 'selecao',
   'Attach Image': 'imagem', 'Anexar Imagem': 'imagem',
   'Checks': 'multipla', 'Múltipla Escolha': 'multipla',
-  'Bloco HTML': 'html',
+  'Bloco HTML': 'html', 'HTML': 'html',
 }
 
 // Mapa canonical → Frappe por doctype
@@ -16,7 +16,7 @@ export const TIPO_PARA_FRAPPE = {
   anamnese: {
     texto_curto: 'Data', texto_longo: 'Small Text', numero: 'Int',
     avaliacao: 'Rating', secao: 'Section Break', selecao: 'Select',
-    imagem: 'Attach Image', multipla: 'Checks',
+    imagem: 'Attach Image', multipla: 'Checks', html: 'HTML',
   },
   feedback: {
     texto_curto: 'Texto Curto', texto_longo: 'Texto Longo', numero: 'Número',
@@ -34,11 +34,10 @@ export const TIPOS_CONFIG = {
   selecao:     { label: 'Seleção (lista)', hasOpcoes: true, opcoesLabel: 'Opções — uma por linha', hasHtml: false, isLayout: false, descricao: 'O aluno escolhe uma única opção em uma lista. Liste as opções abaixo, uma por linha.' },
   imagem:      { label: 'Anexar Imagem', hasOpcoes: false, hasHtml: false, isLayout: false, descricao: 'Permite o aluno anexar uma foto. Útil para fotos de progresso, prato de comida, postura.' },
   multipla:    { label: 'Múltipla Escolha', hasOpcoes: true, opcoesLabel: 'Opções — uma por linha', hasHtml: false, isLayout: false, descricao: 'O aluno pode marcar várias opções. Liste as opções abaixo, uma por linha.' },
-  html:        { label: 'Bloco HTML', hasOpcoes: false, hasHtml: true, isLayout: true, feedbackOnly: true, descricao: 'Não é uma pergunta — é um pequeno editor onde você escreve um texto formatado (negrito, itálico, listas, links) para o aluno ler. Use para dar instruções antes das perguntas, explicar algo, fixar um aviso ou contextualizar uma seção. O aluno apenas lê — não responde.' },
+  html:        { label: 'Bloco HTML', hasOpcoes: false, hasHtml: true, isLayout: true, descricao: 'Não é uma pergunta — é um pequeno editor onde você escreve um texto formatado (negrito, itálico, listas, links) para o aluno ler. Use para dar instruções antes das perguntas, explicar algo, fixar um aviso ou contextualizar uma seção. O aluno apenas lê — não responde.' },
 }
 
 export const TIPOS_ANAMNESE = Object.entries(TIPOS_CONFIG)
-  .filter(([k]) => k !== 'html')
   .map(([k, v]) => ({ value: k, label: v.label }))
 
 export const TIPOS_FEEDBACK = Object.entries(TIPOS_CONFIG)
