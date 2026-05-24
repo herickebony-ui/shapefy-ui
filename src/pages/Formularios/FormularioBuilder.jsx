@@ -5,7 +5,7 @@ import {
   criarFormularioAnamnese, salvarFormularioAnamnese, buscarFormularioAnamnese,
   criarFormularioFeedback, salvarFormularioFeedback, buscarFormularioFeedback,
 } from '../../api/formularios'
-import { TIPOS_ANAMNESE, TIPOS_FEEDBACK, TIPOS_CONFIG } from '../../utils/formularioUtils'
+import { TIPOS_ANAMNESE, TIPOS_FEEDBACK, TIPOS_CONFIG, sanearPerguntas } from '../../utils/formularioUtils'
 import { parseFrappeError } from '../../utils/frappeErrors'
 import useErrorModal from '../../hooks/useErrorModal'
 import { Button, FormGroup, Input, Select, Textarea, Spinner, Tabs, RichTextEditor, BotaoAjuda } from '../../components/ui'
@@ -82,7 +82,7 @@ export default function FormularioBuilder() {
     buscar(id)
       .then(doc => {
         setTitulo(doc.titulo || '')
-        setPerguntas(doc.perguntas?.length ? doc.perguntas : [perguntaVazia()])
+        setPerguntas(doc.perguntas?.length ? sanearPerguntas(doc.perguntas) : [perguntaVazia()])
         if (isFeedback) {
           setEnabled(!!doc.enabled)
           setFeedbackInicial(!!doc.feedback_inicial)
@@ -128,7 +128,15 @@ export default function FormularioBuilder() {
   }
 
   const updatePergunta = (idx, campo, valor) => {
-    setPerguntas(prev => prev.map((p, i) => i === idx ? { ...p, [campo]: valor } : p))
+    setPerguntas(prev => prev.map((p, i) => {
+      if (i !== idx) return p
+      const proximo = { ...p, [campo]: valor }
+      // Trocou tipo pra layout (Quebra de Seção / Bloco HTML) → zera reqd
+      if (campo === 'tipo' && TIPOS_CONFIG[valor]?.isLayout) {
+        proximo.reqd = false
+      }
+      return proximo
+    }))
     limparErroPergunta(idx, campo)
   }
 
@@ -193,9 +201,10 @@ export default function FormularioBuilder() {
     setErrors({ titulo: null, geral: null, perguntas: {} })
 
     setSalvando(true)
+    const perguntasSaneadas = sanearPerguntas(perguntas)
     try {
       if (isFeedback) {
-        const payload = { titulo, enabled, feedback_inicial: feedbackInicial, dieta, treino, perguntas }
+        const payload = { titulo, enabled, feedback_inicial: feedbackInicial, dieta, treino, perguntas: perguntasSaneadas }
         if (isNovo) {
           const doc = await criarFormularioFeedback(payload)
           navigate(`/criar-formularios/feedback/${doc.name}`, { replace: true })
@@ -203,7 +212,7 @@ export default function FormularioBuilder() {
           await salvarFormularioFeedback(id, payload)
         }
       } else {
-        const payload = { titulo, perguntas }
+        const payload = { titulo, perguntas: perguntasSaneadas }
         if (isNovo) {
           const doc = await criarFormularioAnamnese(payload)
           navigate(`/criar-formularios/anamnese/${doc.name}`, { replace: true })

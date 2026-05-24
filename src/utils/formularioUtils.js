@@ -49,6 +49,17 @@ export const tipoCanonical = (frappeTipo) =>
 export const tipoParaFrappe = (canonical, doctype) =>
   TIPO_PARA_FRAPPE[doctype]?.[canonical] || canonical
 
+// Garante invariantes da pergunta:
+// - Quebra de Seção e Bloco HTML nunca podem ser obrigatórios (não há resposta a validar).
+// Aplicar ao carregar (limpa dados antigos corrompidos) e antes de salvar.
+export const sanearPergunta = (p) => {
+  const config = TIPOS_CONFIG[p.tipo] || {}
+  return config.isLayout ? { ...p, reqd: false } : p
+}
+
+export const sanearPerguntas = (perguntas) =>
+  (perguntas || []).map(sanearPergunta)
+
 export const FREQUENCIA_OPTS = [
   'Semanal', 'Quinzenal', 'Mensal', 'Bimestral', 'Semestral', 'Anual', 'Personalizado',
 ].map(v => ({ value: v, label: v }))
