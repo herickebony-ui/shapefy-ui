@@ -1441,13 +1441,16 @@ export default function DietaDetalhe() {
     setSaving(true)
     try {
       await salvarDieta(id, payload)
-      await criarNotificacaoAluno({
-        aluno: draft.aluno,
-        titulo: 'Sua nova dieta está disponível!',
-        descricao: 'Confira sua nova dieta no app.',
-        url: `/dieta/${id}`,
-        agendado_para,
-      })
+      // agendado_para === false → salvou sem notificar (escolha do profissional)
+      if (agendado_para !== false) {
+        await criarNotificacaoAluno({
+          aluno: draft.aluno,
+          titulo: 'Sua nova dieta está disponível!',
+          descricao: 'Confira sua nova dieta no app.',
+          url: `/dieta/${id}`,
+          agendado_para,
+        })
+      }
       setNotificar(null)
       setPendingPayload(null)
       navigate(backHref)

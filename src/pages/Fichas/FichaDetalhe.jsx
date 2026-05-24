@@ -1641,7 +1641,8 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
         if (!ficha.name && resultado?.name) setFicha(f => ({ ...f, name: resultado.name }))
         onSave(resultado)
         const entityName = resultado?.name || ficha.name
-        if (ficha.aluno && entityName) {
+        // agendado_para === false → salvou sem notificar (escolha do profissional)
+        if (agendado_para !== false && ficha.aluno && entityName) {
           await criarNotificacaoAluno({
             aluno: ficha.aluno,
             titulo: 'Seu novo treino está disponível!',

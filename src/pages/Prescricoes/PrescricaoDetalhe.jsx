@@ -594,13 +594,16 @@ export default function PrescricaoDetalhe() {
         setDataFim(atualizado?.data_fim || '')
         entityName = decodeURIComponent(id)
       }
-      await criarNotificacaoAluno({
-        aluno,
-        titulo: 'Sua nova prescrição está disponível!',
-        descricao: 'Confira sua nova prescrição no app.',
-        url: `/prescricao/${entityName}`,
-        agendado_para,
-      })
+      // agendado_para === false → salvou sem notificar (escolha do profissional)
+      if (agendado_para !== false) {
+        await criarNotificacaoAluno({
+          aluno,
+          titulo: 'Sua nova prescrição está disponível!',
+          descricao: 'Confira sua nova prescrição no app.',
+          url: `/prescricao/${entityName}`,
+          agendado_para,
+        })
+      }
       setNotificar(null)
     } catch (e) { errorModal.show(e, isNova ? 'Criar prescrição' : 'Salvar prescrição') }
     finally { setSaving(false) }

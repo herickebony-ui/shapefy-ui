@@ -1,16 +1,15 @@
 // Modal de notificação ao salvar dieta/treino/prescrição.
 // O modal NÃO chama a API — só dispara callbacks. O caller controla:
-//   - onConfirm(agendado_para)  → save + notificar (agendado_para=null = imediato; string = agendado)
+//   - onConfirm(agendado_para)  → save (e talvez notifica)
+//       agendado_para = null   → save + notifica imediato
+//       agendado_para = string → save + notifica agendado pra esse horário
+//       agendado_para = false  → save SEM notificar
 //   - onClose()                 → cancela tudo (fecha modal, NÃO salva)
-//
-// Estados internos:
-//   'inicio'  → Não | Notificar  +  Agendar notificação
-//   'agendar' → Data + Hora  →  Voltar | Confirmar
 //
 // Props:
 //   open: bool
 //   onClose: () => void                 (cancela — modal fecha sem salvar)
-//   onConfirm: (agendado_para) => void  (caller salva + notifica)
+//   onConfirm: (agendado_para) => void  (caller salva e, conforme valor, notifica ou não)
 //   loading: bool                       (caller controla loading durante save)
 //   tipo: 'treino' | 'dieta' | 'prescricao'
 //   alunoNome?: string
@@ -43,6 +42,7 @@ export default function NotificarAlunoModal({ open, onClose, onConfirm, loading 
   if (!open) return null
 
   const handleNotificarAgora = () => onConfirm(null)
+  const handleSalvarSemNotificar = () => onConfirm(false)
   const handleConfirmarAgendado = () => {
     if (!data || !hora) return
     onConfirm(`${data} ${hora}:00`)
@@ -67,9 +67,9 @@ export default function NotificarAlunoModal({ open, onClose, onConfirm, loading 
               O aluno recebe um aviso no app dele.
             </p>
             <p className="mt-1 text-[11px] text-gray-600">
-              <span className="text-yellow-400">Não</span> volta sem salvar.
+              <span className="text-yellow-400">Cancelar</span> não salva.
               {' '}
-              <span className="text-gray-400">Notificar</span> ou <span className="text-gray-400">Agendar</span> salvam.
+              <span className="text-gray-400">Salvar sem notificar</span>, <span className="text-gray-400">Notificar</span> e <span className="text-gray-400">Agendar</span> salvam.
             </p>
 
             <div className="mt-3 flex items-center justify-center gap-3 text-[11px] text-gray-500">
@@ -82,9 +82,12 @@ export default function NotificarAlunoModal({ open, onClose, onConfirm, loading 
 
             <div className="w-full mt-6 space-y-2">
               <div className="grid grid-cols-2 gap-2">
-                <Button variant="ghost" onClick={onClose} disabled={loading}>Não</Button>
+                <Button variant="ghost" onClick={onClose} disabled={loading}>Cancelar</Button>
                 <Button variant="danger" loading={loading} onClick={handleNotificarAgora}>Notificar</Button>
               </div>
+              <Button variant="secondary" onClick={handleSalvarSemNotificar} disabled={loading} fullWidth>
+                Salvar sem notificar
+              </Button>
               <Button variant="secondary" icon={Calendar} onClick={() => setView('agendar')} disabled={loading} fullWidth>
                 Agendar notificação
               </Button>
