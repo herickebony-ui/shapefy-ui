@@ -2,6 +2,41 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Tokens da identidade visual mobile (Area do Aluno).
+   Ver CLAUDE.md > Padrao Mobile pra regras de uso. */
+:root {
+  --sf-bg: #05070D;
+  --sf-bg-soft: #070B14;
+  --sf-surface: #081426;
+  --sf-surface-2: #0B1C33;
+  --sf-card: rgba(8, 22, 42, 0.86);
+
+  --sf-blue: #2563EB;
+  --sf-blue-light: #3B82F6;
+  --sf-blue-glow: rgba(37, 99, 235, 0.38);
+
+  --sf-cyan: #38BDF8;
+
+  --sf-green: #10B981;
+  --sf-green-light: #22C55E;
+  --sf-green-glow: rgba(16, 185, 129, 0.35);
+
+  --sf-red: #EF4444;
+  --sf-red-soft: rgba(239, 68, 68, 0.16);
+
+  --sf-pink-rest: #FB7185;
+
+  --sf-text: #F8FAFC;
+  --sf-text-muted: #94A3B8;
+  --sf-text-soft: #64748B;
+
+  --sf-border: rgba(59, 130, 246, 0.24);
+  --sf-border-strong: rgba(59, 130, 246, 0.42);
+
+  --sf-radius-card: 24px;
+  --sf-radius-button: 16px;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;

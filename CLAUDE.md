@@ -265,6 +265,107 @@ Grupos de ações contextuais que podem ser mais largos que o container no mobil
 
 ---
 
+## Padrão Mobile — Área do Aluno
+
+**A área do aluno (`src/pages/Aluno/*`) tem identidade visual própria e usa um design system separado** do DS do profissional (Titanium Dark v2). O objetivo é "app premium nativo", não painel web adaptado.
+
+### Tokens CSS (`src/index.css :root`)
+
+Toda cor, raio, glow e borda da área do aluno **deve** vir destas vars. Não hardcodar hex novo — adicionar token aqui primeiro.
+
+| Token | Uso |
+|---|---|
+| `--sf-bg` `#05070D` | Fundo de página |
+| `--sf-bg-soft` `#070B14` | Fundo secundário |
+| `--sf-surface` `#081426` | Superfícies (header, nav) |
+| `--sf-surface-2` `#0B1C33` | Hover de superfície |
+| `--sf-card` `rgba(8,22,42,.86)` | Fundo de card glass |
+| `--sf-blue` `#2563EB` | Cor principal (CTA, foco, accent) |
+| `--sf-blue-light` `#3B82F6` | Variação clara |
+| `--sf-blue-glow` | Glow do tema |
+| `--sf-cyan` `#38BDF8` | Highlight info |
+| `--sf-green` / `--sf-green-light` / `--sf-green-glow` | **Apenas** sucesso (concluído, salvo, treino finalizado) |
+| `--sf-red` / `--sf-red-soft` | **Apenas** logo, erro, bloqueio, alerta crítico |
+| `--sf-pink-rest` `#FB7185` | Descanso (timer rest) |
+| `--sf-text` / `--sf-text-muted` / `--sf-text-soft` | Hierarquia de texto |
+| `--sf-border` / `--sf-border-strong` | Bordas (variantes default/forte) |
+| `--sf-radius-card` `24px` | Raio de cards |
+| `--sf-radius-button` `16px` | Raio de botões |
+
+### Componentes base obrigatórios (`src/components/aluno/`)
+
+Toda tela mobile **deve** consumir esses primitives. **Não duplicar CSS solto** — se precisar de variação, criar via `variant=`.
+
+| Componente | Variants | Uso |
+|---|---|---|
+| `GlassCard` | `default` / `success` / `danger` | Wrapper de card glassmorphism com glow azul/verde/vermelho. Substitui `AlunoCard`. |
+| `SectionHeader` | — | Header de seção (ícone + label uppercase com tracking) |
+| `ActionButton` | `primary` / `success` / `danger` / `ghost` | Botão de ação. Min-height 52px, gradient + glow no primary |
+| `StatusPill` | `success` / `danger` / `info` / `muted` | Pill de status (Ativa/Expirada/Pendente) |
+| `ModuleCard` | — | Card de módulo da home (hex icon + label + badge) |
+| `AlertCard` | `info` / `warning` / `danger` | Callout de pendência/aviso |
+| `HexIcon` | — | Hexágono outline azul com ícone (já existente) |
+| `DataChip` | `sm` / `md` / `lg` | Chip de data destacado (24 MAI) |
+
+**Futuros (criar quando a tela usar):**
+- `MobileShell` / `MobileTopBar` / `ProfileHero` — quando a próxima tela de aluno precisar
+- `WorkoutExerciseCard` / `SetRow` / `TimerBar` / `VideoPreviewCard` — quando atacar a tela de treino em execução
+
+### Estilo base obrigatório dos cards
+
+Implementado no `GlassCard`:
+
+```css
+background:
+  radial-gradient(circle at 50% 0%, rgba(37,99,235,0.16), transparent 45%),
+  var(--sf-card);
+border: 1px solid var(--sf-border);
+border-radius: var(--sf-radius-card);
+box-shadow:
+  0 0 34px var(--sf-blue-glow),
+  inset 0 1px 0 rgba(255,255,255,0.06);
+backdrop-filter: blur(14px);
+```
+
+### Regras obrigatórias
+
+- **Mobile-first** — largura fluida, padding lateral 16–20px. Nada de aparência de desktop comprimido.
+- **Cards** sempre via `<GlassCard variant="...">`. Nunca card "chapado" sem glow/border.
+- **Botões principais** via `<ActionButton variant="primary">`. Min-height **52px**.
+- **Ícones** sempre dentro de container arredondado (HexIcon, círculo, rounded-xl).
+- **Títulos de seção** sempre uppercase com `letter-spacing: 0.18em`, cor `text-blue-300`, peso 800.
+- **Verde** só em **conclusão/sucesso** (treino finalizado, série concluída, salvo).
+- **Vermelho** só em **erro/perigo** (excluir, bloqueio, alerta crítico, logo).
+- **Cinza** nunca como destaque principal — azul elétrico é a identidade.
+- Toda variação visual via `variant=`, nunca CSS solto duplicado em cada tela.
+
+### Exemplo de uso correto
+
+```jsx
+import { GlassCard, ActionButton, StatusPill, SectionHeader } from '../../components/aluno'
+
+<SectionHeader icon={<Pill size={15} />} label="Suas prescrições" />
+
+<GlassCard variant="default" as="button" onClick={...}>
+  <StatusPill variant="success">Ativa</StatusPill>
+  ...
+</GlassCard>
+
+<ActionButton variant="primary" fullWidth onClick={enviar}>
+  Enviar respostas
+</ActionButton>
+```
+
+```jsx
+// ❌ NUNCA — CSS hardcoded espalhado em cada tela
+<div className="bg-[#0d0d0f] border border-blue-500/20 rounded-2xl ...">
+
+// ✅ SEMPRE
+<GlassCard>
+```
+
+---
+
 ## Templates de Página (`src/components/templates/`)
 
 Usar os templates para montar novas telas. **Não construir layout de página do zero.**
