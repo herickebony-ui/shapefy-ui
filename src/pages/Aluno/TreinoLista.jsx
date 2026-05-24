@@ -4,11 +4,8 @@ import {
   Dumbbell, ArrowLeft, Calendar, ChevronRight, AlertCircle, Target, BarChart3,
 } from 'lucide-react'
 import { Spinner } from '../../components/ui'
+import { GlassCard, SectionHeader, AlertCard } from '../../components/aluno'
 import { listarTreinos } from '../../api/treino'
-
-const CARD = 'bg-[#0d2042] border border-[#1c3661] rounded-2xl'
-const CARD_DESTAQUE = 'bg-[#16306a] border border-[#2563eb]/60 rounded-2xl'
-const LABEL = 'text-[#60a5fa] text-[10px] font-bold uppercase tracking-widest'
 
 const fmtDataBR = (d) => {
   if (!d) return ''
@@ -40,48 +37,46 @@ export default function TreinoLista() {
   }, [])
 
   return (
-    <div className="pb-8 bg-[#08152e] min-h-full">
-      {/* Header */}
-      <div className="px-4 pt-4 pb-4 flex items-center gap-3 border-b border-[#13294e]">
+    <div className="pb-8 bg-[var(--sf-bg)] min-h-full">
+      <div className="px-4 pt-4 pb-3 border-b border-[var(--sf-border)] bg-[var(--sf-bg)]/95 backdrop-blur-sm sticky top-0 z-10 flex items-center gap-3">
         <button
           onClick={() => navigate('/aluno')}
-          className="h-9 w-9 flex items-center justify-center rounded-xl text-white hover:bg-[#13294e] transition-colors"
-          aria-label="Voltar"
+          title="Voltar"
+          className="h-9 w-9 flex items-center justify-center text-gray-400 hover:text-white border border-[var(--sf-border)] hover:border-[var(--sf-border-strong)] rounded-lg transition-colors shrink-0"
         >
-          <ArrowLeft size={18} />
+          <ArrowLeft size={16} />
         </button>
-        <h1 className="flex-1 text-center text-white text-base font-bold pr-9">
-          Meus treinos
-        </h1>
+        <h1 className="text-white text-base font-bold">Meus treinos</h1>
       </div>
 
-      <div className="px-4 mt-5">
-        <p className={`${LABEL} mb-3 px-1`}>Minhas fichas</p>
+      <div className="px-4 pt-4">
+        <SectionHeader
+          icon={<Dumbbell size={15} />}
+          label="Minhas fichas"
+        />
 
         {carregando ? (
           <div className="h-40 flex items-center justify-center"><Spinner /></div>
         ) : erro ? (
-          <div className={`${CARD_DESTAQUE} px-4 py-5 flex items-start gap-3`}>
-            <AlertCircle size={18} className="text-[#60a5fa] shrink-0 mt-0.5" />
-            <p className="text-gray-200 text-sm leading-relaxed">{erro}</p>
-          </div>
+          <AlertCard variant="danger" titulo={erro} icon={<AlertCircle size={18} />} />
         ) : fichas.length === 0 ? (
-          <div className={`${CARD} px-4 py-8 flex flex-col items-center text-center`}>
-            <Dumbbell size={32} className="text-[#5b7ba3] mb-3" />
-            <p className="text-gray-200 text-sm font-bold">Nenhuma ficha ativa</p>
-            <p className="text-[#8ba6c8] text-xs mt-1">
+          <GlassCard as="div" className="px-4 py-8 flex flex-col items-center text-center">
+            <Dumbbell size={32} className="text-[var(--sf-text-soft)] mb-3" />
+            <p className="text-white text-sm font-bold">Nenhuma ficha ativa</p>
+            <p className="text-[var(--sf-text-muted)] text-xs mt-1 max-w-xs">
               Voce nao tem fichas de treino ativas no momento. Fale com o seu profissional.
             </p>
-          </div>
+          </GlassCard>
         ) : (
           <div className="flex flex-col gap-3">
             {fichas.map(f => (
-              <button
+              <GlassCard
                 key={f.name}
+                as="button"
                 onClick={() => navigate(`/aluno/treinos/${f.name}`)}
-                className={`${CARD} hover:border-[#2563eb] px-4 py-4 flex items-start gap-3 text-left transition-colors`}
+                className="px-4 py-4 flex items-start gap-3"
               >
-                <div className="w-11 h-11 rounded-xl border border-[#2563eb]/40 bg-[#0a2956] flex items-center justify-center text-[#60a5fa] shrink-0">
+                <div className="w-11 h-11 rounded-xl border border-[var(--sf-border-strong)] bg-[var(--sf-surface-2)] flex items-center justify-center text-[#60A5FA] shrink-0 shadow-[0_0_10px_rgba(37,99,235,0.25)]">
                   <Dumbbell size={18} />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -89,29 +84,29 @@ export default function TreinoLista() {
                     {f.nome_completo || `Ficha ${f.name}`}
                   </p>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-[11px]">
-                    <span className="flex items-center gap-1 text-[#8ba6c8]">
+                    <span className="flex items-center gap-1 text-[var(--sf-text-muted)]">
                       <Calendar size={11} />
                       {fmtDataBR(f.data_de_inicio)} - {fmtDataBR(f.data_de_fim)}
                     </span>
                     {f.nivel && (
-                      <span className="flex items-center gap-1 text-[#8ba6c8]">
+                      <span className="flex items-center gap-1 text-[var(--sf-text-muted)]">
                         <BarChart3 size={11} />
                         {f.nivel}
                       </span>
                     )}
                     {f.objetivo && (
-                      <span className="flex items-center gap-1 text-[#8ba6c8] truncate max-w-[160px]">
+                      <span className="flex items-center gap-1 text-[var(--sf-text-muted)] truncate max-w-[160px]">
                         <Target size={11} />
                         <span className="truncate">{f.objetivo}</span>
                       </span>
                     )}
                   </div>
                   {f.dias_info && (
-                    <p className="text-[#60a5fa] text-[11px] font-bold mt-2">{f.dias_info}</p>
+                    <p className="text-[#60A5FA] text-[11px] font-bold mt-2">{f.dias_info}</p>
                   )}
                 </div>
-                <ChevronRight size={16} className="text-[#5b7ba3] shrink-0 mt-1" />
-              </button>
+                <ChevronRight size={16} className="text-[var(--sf-text-soft)] shrink-0 mt-1" />
+              </GlassCard>
             ))}
           </div>
         )}

@@ -1126,10 +1126,10 @@ export default function TreinoExecucao() {
           </section>
         )}
 
-        <div className="fixed bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-[#08152e] via-[#08152e]/95 to-transparent pt-6 pb-[max(1rem,env(safe-area-inset-bottom))] px-4">
+        <div className="px-4 mt-8 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <button
             onClick={() => navigate(`/aluno/treinos/${fichaName}/${encodeURIComponent(treinoIdDecoded)}`)}
-            className="w-full h-12 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-bold flex items-center justify-center gap-2 transition-colors shadow-[0_0_24px_rgba(37,99,235,0.4)]"
+            className="w-full min-h-[52px] rounded-2xl bg-gradient-to-b from-[#3B82F6] to-[#2563EB] hover:shadow-[0_0_36px_rgba(37,99,235,0.55)] text-white text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-[0_0_28px_rgba(37,99,235,0.35)] active:scale-[0.98]"
           >
             <Play size={16} className="fill-white" /> Iniciar treino
           </button>
@@ -1212,10 +1212,10 @@ export default function TreinoExecucao() {
         </section>
       )}
 
-      <div className="fixed bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-[#08152e] via-[#08152e]/95 to-transparent pt-6 pb-[max(1rem,env(safe-area-inset-bottom))] px-4">
+      <div className="px-4 mt-8 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <button
           onClick={() => setModalFinalizar(true)}
-          className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold flex items-center justify-center gap-2 transition-colors shadow-[0_0_24px_rgba(16,185,129,0.4)]"
+          className="w-full min-h-[52px] rounded-2xl bg-gradient-to-b from-[#22C55E] to-[#10B981] hover:shadow-[0_0_36px_rgba(16,185,129,0.55)] text-white text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-[0_0_28px_rgba(16,185,129,0.35)] active:scale-[0.98]"
         >
           <Trophy size={16} /> Finalizar treino
         </button>

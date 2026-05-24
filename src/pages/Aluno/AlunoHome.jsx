@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Dumbbell, Apple, ClipboardList, Scale, MessageSquare,
-  Bell, Calendar, ChevronRight, AlertCircle, LayoutGrid, X, Pill,
+  Bell, Calendar, ChevronRight, LayoutGrid, X, Pill,
 } from 'lucide-react'
 import { Spinner } from '../../components/ui'
-import { HexIcon, AlunoCard, DataChip, SectionHeader } from '../../components/aluno'
+import {
+  GlassCard, ModuleCard, AlertCard, DataChip, SectionHeader,
+} from '../../components/aluno'
 import useAuthStore from '../../store/authStore'
 import {
   homeAluno,
@@ -79,12 +81,12 @@ const fmtRelativo = (iso) => {
 
 const iconePorTitulo = (titulo = '') => {
   const t = titulo.toLowerCase()
-  if (t.includes('feedback')) return { Icon: MessageSquare, cor: 'text-[#60a5fa]' }
+  if (t.includes('feedback')) return { Icon: MessageSquare, cor: 'text-[#60A5FA]' }
   if (t.includes('treino') || t.includes('ficha')) return { Icon: Dumbbell, cor: 'text-orange-400' }
-  if (t.includes('dieta')) return { Icon: Apple, cor: 'text-green-400' }
+  if (t.includes('dieta')) return { Icon: Apple, cor: 'text-[#22C55E]' }
   if (t.includes('anamnese')) return { Icon: ClipboardList, cor: 'text-purple-400' }
-  if (t.includes('prescri')) return { Icon: Scale, cor: 'text-cyan-400' }
-  return { Icon: Bell, cor: 'text-gray-400' }
+  if (t.includes('prescri')) return { Icon: Pill, cor: 'text-[#38BDF8]' }
+  return { Icon: Bell, cor: 'text-[#94A3B8]' }
 }
 
 const fmtDataBR = (d) => {
@@ -100,7 +102,6 @@ function BannerProfissional({ profissional, naoVisualizadas, onAbrirNotificacoes
 
   return (
     <div className="relative">
-      {/* Banner — usa banner_url do backend se houver, senão fallback gradient + linhas */}
       <div
         className="h-52 w-full relative overflow-hidden"
         style={banner
@@ -114,7 +115,6 @@ function BannerProfissional({ profissional, naoVisualizadas, onAbrirNotificacoes
             }
         }
       >
-        {/* Linhas decorativas SVG */}
         {!banner && (
           <svg
             className="absolute inset-0 w-full h-full opacity-50"
@@ -137,23 +137,21 @@ function BannerProfissional({ profissional, naoVisualizadas, onAbrirNotificacoes
         <span className="absolute top-3 left-4 z-10 text-white/85 text-[10px] font-bold uppercase tracking-widest drop-shadow">
           Seu profissional
         </span>
-        <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/0 to-[#050507]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/0 to-[var(--sf-bg)]" />
       </div>
 
-      {/* Foto sobreposta com aura azul */}
       <div className="px-4 -mt-20 pb-5 flex flex-col items-center text-center relative">
         <div className="relative">
-          {/* Aura — 2 camadas */}
-          <div className="absolute -inset-3 rounded-full bg-[#2563eb]/40 blur-2xl" aria-hidden="true" />
-          <div className="absolute -inset-1 rounded-full bg-[#60a5fa]/30 blur-lg" aria-hidden="true" />
+          <div className="absolute -inset-3 rounded-full bg-[#2563EB]/40 blur-2xl" aria-hidden="true" />
+          <div className="absolute -inset-1 rounded-full bg-[#60A5FA]/30 blur-lg" aria-hidden="true" />
           {profissional.foto_url ? (
             <img
               src={profissional.foto_url}
               alt={profissional.nome}
-              className="relative w-28 h-28 rounded-full object-cover ring-2 ring-[#60a5fa] shadow-[0_0_30px_rgba(37,99,235,0.6)]"
+              className="relative w-28 h-28 rounded-full object-cover ring-2 ring-[#60A5FA] shadow-[0_0_30px_rgba(37,99,235,0.6)]"
             />
           ) : (
-            <div className="relative w-28 h-28 rounded-full bg-[#0a0a0c] flex items-center justify-center text-white font-bold text-2xl ring-2 ring-[#60a5fa] shadow-[0_0_30px_rgba(37,99,235,0.6)]">
+            <div className="relative w-28 h-28 rounded-full bg-[var(--sf-bg)] flex items-center justify-center text-white font-bold text-2xl ring-2 ring-[#60A5FA] shadow-[0_0_30px_rgba(37,99,235,0.6)]">
               {iniciais || 'P'}
             </div>
           )}
@@ -165,11 +163,11 @@ function BannerProfissional({ profissional, naoVisualizadas, onAbrirNotificacoes
             type="button"
             title="Notificações"
             onClick={onAbrirNotificacoes}
-            className="relative h-10 w-10 flex items-center justify-center rounded-xl border border-[#2563eb]/60 text-[#60a5fa] hover:bg-[#2563eb]/15 hover:border-[#60a5fa] transition-colors shadow-[0_0_12px_rgba(37,99,235,0.25)]"
+            className="relative h-10 w-10 flex items-center justify-center rounded-xl border border-[var(--sf-border-strong)] text-[#60A5FA] hover:bg-[#2563EB]/15 hover:border-[#60A5FA] transition-colors shadow-[0_0_12px_rgba(37,99,235,0.25)]"
           >
             <Bell size={15} />
             {naoVisualizadas > 0 && (
-              <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-[var(--sf-red)] text-white text-[9px] font-bold flex items-center justify-center">
                 {naoVisualizadas}
               </span>
             )}
@@ -177,7 +175,7 @@ function BannerProfissional({ profissional, naoVisualizadas, onAbrirNotificacoes
         </div>
 
         {profissional.area_atuacao && (
-          <p className="text-gray-400 text-sm mt-1">{profissional.area_atuacao}</p>
+          <p className="text-[var(--sf-text-muted)] text-sm mt-1">{profissional.area_atuacao}</p>
         )}
         {profissional.instagram && (
           <a
@@ -270,7 +268,7 @@ export default function AlunoHome() {
   }
 
   return (
-    <div className="pb-8 bg-[#050507] min-h-full">
+    <div className="pb-8 bg-[var(--sf-bg)] min-h-full">
       <BannerProfissional
         profissional={profissional}
         naoVisualizadas={home?.nao_visualizadas || 0}
@@ -279,23 +277,12 @@ export default function AlunoHome() {
 
       {temPendencia && (
         <div className="px-4 mt-2">
-          <AlunoCard
-            as="button"
-            variant="highlight"
+          <AlertCard
+            variant="info"
+            titulo={`Você tem ${textoPendencia()} pendente.`}
+            descricao="Toque pra responder."
             onClick={irPraPendencia}
-            className="w-full px-4 py-4 flex items-center gap-4 text-left"
-          >
-            <div className="w-11 h-11 rounded-full border-2 border-[#2563eb] flex items-center justify-center shrink-0 shadow-[0_0_12px_rgba(37,99,235,0.35)]">
-              <AlertCircle size={18} className="text-[#60a5fa]" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-white text-sm font-bold leading-snug">
-                Você tem {textoPendencia()} pendente.
-              </p>
-              <p className="text-gray-400 text-xs mt-0.5">Toque pra responder.</p>
-            </div>
-            <ChevronRight size={18} className="text-gray-500 shrink-0" />
-          </AlunoCard>
+          />
         </div>
       )}
 
@@ -309,7 +296,7 @@ export default function AlunoHome() {
             {proximosFuturos.map((p, i) => {
               const data = p.data_agendada || p.data || p.date
               return (
-                <AlunoCard
+                <GlassCard
                   key={p.name || i}
                   as="div"
                   className="px-4 py-3 flex items-center gap-4"
@@ -319,10 +306,10 @@ export default function AlunoHome() {
                     <p className="text-white text-sm font-bold truncate">
                       {p.titulo || p.formulario_titulo || 'Feedback'}
                     </p>
-                    <p className="text-gray-500 text-xs mt-0.5">{fmtDataBR(data)}</p>
+                    <p className="text-[var(--sf-text-soft)] text-xs mt-0.5">{fmtDataBR(data)}</p>
                   </div>
-                  <ChevronRight size={18} className="text-gray-600 shrink-0" />
-                </AlunoCard>
+                  <ChevronRight size={18} className="text-[var(--sf-text-soft)] shrink-0" />
+                </GlassCard>
               )
             })}
           </div>
@@ -341,31 +328,16 @@ export default function AlunoHome() {
             {cards.map(card => {
               const link = resolveCardLink(card, pendencias, flags)
               const IconComp = ICON_POR_ID[card.id] || Dumbbell
-              const badge = badgePorCard(card.id)
               return (
-                <AlunoCard
+                <ModuleCard
                   key={card.id}
-                  as="button"
-                  disabled={link.disabled}
+                  icon={<IconComp size={18} strokeWidth={1.6} />}
+                  label={card.titulo}
+                  badge={badgePorCard(card.id)}
                   onClick={handleCardClick(card)}
-                  title={link.disabled ? (link.hint || 'Não incluso no seu plano') : undefined}
-                  className="px-3 py-4 flex items-center gap-2 text-left"
-                >
-                  <HexIcon size={42}>
-                    <IconComp size={18} strokeWidth={1.6} />
-                  </HexIcon>
-                  <span className="flex-1 min-w-0 text-white text-sm font-bold truncate">
-                    {card.titulo}
-                  </span>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {badge && (
-                      <span className="h-5 min-w-5 px-1.5 rounded-md bg-[#2563eb] text-white text-[10px] font-bold flex items-center justify-center shadow-[0_0_8px_rgba(37,99,235,0.4)]">
-                        {badge}
-                      </span>
-                    )}
-                    <ChevronRight size={14} className="text-gray-600" />
-                  </div>
-                </AlunoCard>
+                  disabled={link.disabled}
+                  hint={link.disabled ? (link.hint || 'Não incluso no seu plano') : undefined}
+                />
               )
             })}
           </div>
@@ -378,11 +350,11 @@ export default function AlunoHome() {
             className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
             onClick={() => setNotifAberto(false)}
           />
-          <div className="fixed left-3 right-3 top-16 z-50 max-h-[75vh] flex flex-col bg-[#0a0a0c] border border-[#2563eb]/30 rounded-2xl shadow-[0_0_40px_rgba(37,99,235,0.25)] overflow-hidden">
-            <div className="px-4 py-3 border-b border-[#1f1f24] flex items-center justify-between bg-gradient-to-r from-[#0a0a0c] to-[#0d1535]">
+          <div className="fixed left-3 right-3 top-16 z-50 max-h-[75vh] flex flex-col bg-[var(--sf-bg)] border border-[var(--sf-border)] rounded-2xl shadow-[0_0_40px_rgba(37,99,235,0.25)] overflow-hidden">
+            <div className="px-4 py-3 border-b border-[var(--sf-border)] flex items-center justify-between bg-gradient-to-r from-[var(--sf-bg)] to-[var(--sf-surface-2)]">
               <div>
                 <h3 className="text-white text-sm font-bold">Notificações</h3>
-                <p className="text-gray-500 text-xs mt-0.5">
+                <p className="text-[var(--sf-text-soft)] text-xs mt-0.5">
                   {(home?.nao_visualizadas || 0) > 0
                     ? `${home.nao_visualizadas} nova${home.nao_visualizadas > 1 ? 's' : ''}`
                     : 'Nenhuma nova'}
@@ -390,7 +362,7 @@ export default function AlunoHome() {
               </div>
               <button
                 onClick={() => setNotifAberto(false)}
-                className="h-8 w-8 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors"
+                className="h-8 w-8 flex items-center justify-center text-gray-400 hover:text-white border border-[var(--sf-border)] hover:border-[var(--sf-border-strong)] rounded-lg transition-colors"
               >
                 <X size={14} />
               </button>
@@ -399,8 +371,8 @@ export default function AlunoHome() {
             <div className="flex-1 overflow-y-auto p-3">
               {notificacoes.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 text-center">
-                  <Bell size={32} className="text-gray-700 mb-3" />
-                  <p className="text-gray-500 text-sm">Nada por aqui ainda.</p>
+                  <Bell size={32} className="text-[var(--sf-text-soft)] mb-3" />
+                  <p className="text-[var(--sf-text-muted)] text-sm">Nada por aqui ainda.</p>
                 </div>
               ) : (
                 <div className="flex flex-col gap-2">
@@ -419,25 +391,25 @@ export default function AlunoHome() {
                         key={n.name || i}
                         className={`relative px-3 py-2.5 rounded-xl border
                           ${n.visualizado
-                            ? 'bg-[#0d0d0f] border-[#1f1f24]'
-                            : 'bg-[#0d1535] border-[#2563eb]/50 shadow-[0_0_12px_rgba(37,99,235,0.15)]'
+                            ? 'bg-[var(--sf-surface)] border-[var(--sf-border)]'
+                            : 'bg-[var(--sf-surface-2)] border-[var(--sf-border-strong)] shadow-[0_0_12px_rgba(37,99,235,0.15)]'
                           }`}
                       >
                         <div className="flex items-start gap-2.5">
-                          <div className={`w-8 h-8 rounded-lg border border-[#2563eb]/30 bg-[#0a0a0c] flex items-center justify-center shrink-0 ${cor}`}>
+                          <div className={`w-8 h-8 rounded-lg border border-[var(--sf-border)] bg-[var(--sf-bg)] flex items-center justify-center shrink-0 ${cor}`}>
                             <Icon size={13} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-white text-xs font-bold leading-snug">{n.titulo}</p>
                             {n.descricao && (
-                              <p className="text-gray-400 text-[11px] leading-relaxed mt-0.5">{n.descricao}</p>
+                              <p className="text-[var(--sf-text-muted)] text-[11px] leading-relaxed mt-0.5">{n.descricao}</p>
                             )}
                             <div className="flex items-center justify-between mt-1.5">
-                              <span className="text-[#60a5fa] text-[10px] font-medium">{fmtRelativo(n.creation)}</span>
+                              <span className="text-[#60A5FA] text-[10px] font-medium">{fmtRelativo(n.creation)}</span>
                               {clicavel && (
                                 <button
                                   onClick={onClick}
-                                  className="text-[#60a5fa] text-[11px] font-bold flex items-center gap-0.5 hover:underline"
+                                  className="text-[#60A5FA] text-[11px] font-bold flex items-center gap-0.5 hover:underline"
                                 >
                                   Abrir <ChevronRight size={11} />
                                 </button>
