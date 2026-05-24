@@ -1159,7 +1159,7 @@ export default function TreinoExecucao() {
         </h1>
       </div>
 
-      <div className="px-4 pt-3 pb-2 sticky top-0 z-30 bg-[var(--sf-bg)]/90 backdrop-blur-md">
+      <div className="px-4 pt-3 pb-2 sticky top-0 z-50 bg-[var(--sf-bg)]/95 backdrop-blur-md">
         <CronometrosBar
           inicioMs={estado.inicio}
           agora={agora}
