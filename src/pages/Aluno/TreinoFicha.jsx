@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  ArrowLeft, Play, Eye, History, AlertCircle,
+  ArrowLeft, Play, Eye, History, AlertCircle, Activity, ChevronRight,
 } from 'lucide-react'
 import { Spinner } from '../../components/ui'
 import { buscarFichaTreino } from '../../api/treino'
 
-// Paleta azul-navy escuro pra alinhar com a estetica das telas atuais (Frappe).
-// Substituimos o gradient preto do AlunoCard por um tom azul profundo (#0d2042).
-const CARD = 'bg-[#0d2042] border border-[#1c3661] rounded-2xl'
-const CARD_DESTAQUE = 'bg-[#16306a] border border-[#2563eb]/60 rounded-2xl shadow-[0_0_24px_rgba(37,99,235,0.18)]'
-const LABEL = 'text-[#60a5fa] text-[10px] font-bold uppercase tracking-widest'
+// Padrao mobile glass — ver CLAUDE.md > Padrao Mobile.
+const CARD = 'sf-card'
+const CARD_DESTAQUE = 'sf-card sf-card--highlight'
+const LABEL = 'text-[#60A5FA] text-[11px] font-bold uppercase'
+const LABEL_STYLE = { letterSpacing: '0.18em' }
 
 const fmtDataExtenso = (d) => {
   if (!d) return ''
@@ -62,7 +62,7 @@ export default function TreinoFicha() {
 
   if (carregando) {
     return (
-      <div className="min-h-full bg-[#08152e] flex items-center justify-center">
+      <div className="min-h-full bg-[var(--sf-bg)] flex items-center justify-center">
         <Spinner />
       </div>
     )
@@ -70,11 +70,11 @@ export default function TreinoFicha() {
 
   if (erro) {
     return (
-      <div className="pb-8 bg-[#08152e] min-h-full">
+      <div className="pb-8 bg-[var(--sf-bg)] min-h-full">
         <div className="px-4 pt-4">
           <button
             onClick={() => navigate('/aluno/treinos')}
-            className="h-9 w-9 flex items-center justify-center rounded-xl border border-[#1c3661] text-gray-300 hover:text-white hover:border-[#2563eb] transition-colors"
+            className="h-9 w-9 flex items-center justify-center rounded-xl border border-[var(--sf-border)] text-gray-300 hover:text-white hover:border-[#2563EB] transition-colors"
             aria-label="Voltar"
           >
             <ArrowLeft size={15} />
@@ -82,7 +82,7 @@ export default function TreinoFicha() {
         </div>
         <div className="px-4 mt-4">
           <div className={`${CARD_DESTAQUE} px-4 py-5 flex items-start gap-3`}>
-            <AlertCircle size={18} className="text-[#60a5fa] shrink-0 mt-0.5" />
+            <AlertCircle size={18} className="text-[#60A5FA] shrink-0 mt-0.5" />
             <p className="text-gray-200 text-sm leading-relaxed">{erro}</p>
           </div>
         </div>
@@ -95,15 +95,16 @@ export default function TreinoFicha() {
   const {
     ficha, dias_da_semana = [], ultimo_treino,
     periodizacao = [], execucoes_por_treino = {},
+    aerobicos_total = 0,
   } = dados
 
   return (
-    <div className="pb-10 bg-[#08152e] min-h-full">
+    <div className="pb-10 bg-[var(--sf-bg)] min-h-full">
       {/* Header */}
-      <div className="px-4 pt-4 pb-4 flex items-center gap-3 border-b border-[#13294e]">
+      <div className="px-4 pt-4 pb-4 flex items-center gap-3 border-b border-[var(--sf-border)]">
         <button
           onClick={() => navigate('/aluno/treinos')}
-          className="h-9 w-9 flex items-center justify-center rounded-xl text-white hover:bg-[#13294e] transition-colors"
+          className="h-9 w-9 flex items-center justify-center rounded-xl text-white hover:bg-[var(--sf-surface-2)] transition-colors"
           aria-label="Voltar"
         >
           <ArrowLeft size={18} />
@@ -118,11 +119,11 @@ export default function TreinoFicha() {
         <div className={`${CARD} px-4 py-4`}>
           {ficha?.tipo_de_ciclo && (
             <>
-              <p className={LABEL}>Ciclo</p>
+              <p className={LABEL} style={LABEL_STYLE}>Ciclo</p>
               <p className="text-white text-sm mt-1">{ficha.tipo_de_ciclo}</p>
             </>
           )}
-          <p className={`${LABEL} ${ficha?.tipo_de_ciclo ? 'mt-3' : ''}`}>Periodo</p>
+          <p className={`${LABEL} ${ficha?.tipo_de_ciclo ? 'mt-3' : ''}`} style={LABEL_STYLE}>Periodo</p>
           <p className="text-white text-sm mt-1">
             {fmtDataExtenso(ficha?.data_de_inicio)} ate {fmtDataExtenso(ficha?.data_de_fim)}
           </p>
@@ -133,15 +134,15 @@ export default function TreinoFicha() {
       {ultimo_treino?.treino && (
         <div className="px-4 mt-3">
           <div className={`${CARD} px-4 py-3 flex items-center gap-3`}>
-            <div className="w-9 h-9 rounded-lg border border-[#1c3661] bg-[#0a1a35] flex items-center justify-center text-[#60a5fa] shrink-0">
+            <div className="w-9 h-9 rounded-lg border border-[var(--sf-border)] bg-[var(--sf-surface)] flex items-center justify-center text-[#60A5FA] shrink-0">
               <History size={14} />
             </div>
             <div className="min-w-0">
-              <p className={LABEL}>Ultimo treino</p>
+              <p className={LABEL} style={LABEL_STYLE}>Ultimo treino</p>
               <p className="text-white text-xs font-bold mt-0.5 truncate">
                 {ultimo_treino.treino_label || ultimo_treino.treino}
               </p>
-              <p className="text-[#8ba6c8] text-[11px] mt-0.5">{fmtDataHoraBR(ultimo_treino.data_e_hora_do_inicio)}</p>
+              <p className="text-[var(--sf-text-muted)] text-[11px] mt-0.5">{fmtDataHoraBR(ultimo_treino.data_e_hora_do_inicio)}</p>
             </div>
           </div>
         </div>
@@ -150,7 +151,7 @@ export default function TreinoFicha() {
       {/* Distribuicao semanal */}
       <div className="px-4 mt-4">
         <div className={`${CARD} px-4 py-4`}>
-          <p className={`${LABEL} mb-3`}>Distribuicao semanal</p>
+          <p className={`${LABEL} mb-3`} style={LABEL_STYLE}>Distribuicao semanal</p>
           <div className="flex flex-col gap-1">
             {dias_da_semana.map((d, i) => {
               const ehOff = !d.treino || d.treino === 'Off'
@@ -162,13 +163,13 @@ export default function TreinoFicha() {
                   key={i}
                   className={`flex items-center justify-between px-3 py-2.5 rounded-lg ${
                     ehHoje
-                      ? 'bg-[#0a2956] border border-[#2563eb] text-[#60a5fa]'
+                      ? 'bg-[var(--sf-surface-2)] border border-[#2563EB] text-[#60A5FA]'
                       : 'text-gray-300'
                   }`}
                 >
                   <span className={`text-sm ${ehHoje ? 'font-bold' : ''}`}>{d.dia_da_semana}</span>
                   <span className={`text-sm font-bold text-right ${
-                    ehHoje ? '' : ehOff ? 'text-[#8ba6c8]/60' : 'text-white'
+                    ehHoje ? '' : ehOff ? 'text-[var(--sf-text-muted)]/60' : 'text-white'
                   }`}>
                     {ehOff ? 'Off' : labelDe(d.treino)}
                   </span>
@@ -179,17 +180,38 @@ export default function TreinoFicha() {
         </div>
       </div>
 
+      {/* Aerobicos da semana */}
+      {aerobicos_total > 0 && (
+        <div className="px-4 mt-4">
+          <button
+            onClick={() => navigate(`/aluno/treinos/${fichaName}/aerobicos`)}
+            className={`${CARD} w-full px-4 py-4 flex items-center gap-3 text-left hover:bg-[var(--sf-surface-2)] transition-colors`}
+          >
+            <div className="w-11 h-11 rounded-xl border border-[var(--sf-border)] bg-[var(--sf-surface)] flex items-center justify-center text-[#60A5FA] shrink-0">
+              <Activity size={18} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={LABEL} style={LABEL_STYLE}>Aerobicos da semana</p>
+              <p className="text-white text-sm font-bold mt-0.5">
+                {aerobicos_total} {aerobicos_total === 1 ? 'exercicio' : 'exercicios'}
+              </p>
+            </div>
+            <ChevronRight size={18} className="text-[#60A5FA] shrink-0" />
+          </button>
+        </div>
+      )}
+
       {/* Periodizacao */}
       {periodizacao.length > 0 && (
         <div className="px-4 mt-4">
           <div className={`${CARD} px-4 py-4`}>
-            <p className={`${LABEL} mb-3`}>Periodizacao</p>
+            <p className={`${LABEL} mb-3`} style={LABEL_STYLE}>Periodizacao</p>
             <div>
-              <div className="grid grid-cols-4 gap-2 px-3 pb-2 border-b border-[#13294e]">
-                <span className="text-[#60a5fa] text-xs">Semana</span>
-                <span className="text-[#60a5fa] text-xs">Series</span>
-                <span className="text-[#60a5fa] text-xs">Reps</span>
-                <span className="text-[#60a5fa] text-xs">Descanso</span>
+              <div className="grid grid-cols-4 gap-2 px-3 pb-2 border-b border-[var(--sf-border)]">
+                <span className="text-[#60A5FA] text-xs">Semana</span>
+                <span className="text-[#60A5FA] text-xs">Series</span>
+                <span className="text-[#60A5FA] text-xs">Reps</span>
+                <span className="text-[#60A5FA] text-xs">Descanso</span>
               </div>
               <div className="mt-1.5 flex flex-col gap-1.5">
                 {periodizacao.map((p, i) => {
@@ -199,7 +221,7 @@ export default function TreinoFicha() {
                       key={i}
                       className={`grid grid-cols-4 gap-2 px-3 py-2.5 rounded-lg ${
                         ehAtual
-                          ? 'bg-[#0a2956] border border-[#2563eb] text-[#60a5fa]'
+                          ? 'bg-[var(--sf-surface-2)] border border-[#2563EB] text-[#60A5FA]'
                           : 'text-gray-300'
                       }`}
                     >
@@ -213,7 +235,7 @@ export default function TreinoFicha() {
               </div>
             </div>
             {periodizacao.find(p => p.atual)?.legenda && (
-              <p className="text-[#8ba6c8] text-[11px] mt-3 leading-relaxed">
+              <p className="text-[var(--sf-text-muted)] text-[11px] mt-3 leading-relaxed">
                 {periodizacao.find(p => p.atual).legenda}
               </p>
             )}
@@ -224,7 +246,7 @@ export default function TreinoFicha() {
       {/* Treinos disponiveis */}
       {treinosDisponiveis.length > 0 && (
         <div className="px-4 mt-6">
-          <p className={`${LABEL} mb-3 px-1`}>Treinos disponiveis</p>
+          <p className={`${LABEL} mb-3 px-1`} style={LABEL_STYLE}>Treinos disponiveis</p>
           <div className="flex flex-col gap-3">
             {treinosDisponiveis.map(tId => {
               const execs = execucoes_por_treino?.[tId] || 0
@@ -235,7 +257,7 @@ export default function TreinoFicha() {
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="min-w-0">
                       <p className="text-white text-base font-bold truncate">{labelDe(tId)}</p>
-                      <p className="text-[#8ba6c8] text-[11px] mt-0.5">{tId}</p>
+                      <p className="text-[var(--sf-text-muted)] text-[11px] mt-0.5">{tId}</p>
                     </div>
                     <span className="px-2 py-1 rounded-md bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold">
                       {execs}x
@@ -244,13 +266,13 @@ export default function TreinoFicha() {
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       onClick={() => navigate(`/aluno/treinos/${fichaName}/${encodeURIComponent(tId)}?modo=ver`)}
-                      className="h-9 rounded-lg border border-[#2563eb]/40 bg-[#0a1a35] text-[#60a5fa] text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-[#13294e] transition-colors"
+                      className="h-9 rounded-lg border border-[var(--sf-border-strong)] bg-[var(--sf-surface)] text-[#60A5FA] text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-[var(--sf-surface-2)] transition-colors"
                     >
                       <Eye size={13} /> Ver treino
                     </button>
                     <button
                       onClick={() => navigate(`/aluno/treinos/${fichaName}/${encodeURIComponent(tId)}`)}
-                      className="h-9 rounded-lg bg-[#2563eb] text-white text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-[#1d4ed8] transition-colors"
+                      className="h-9 rounded-lg bg-[#2563EB] text-white text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-[#1D4ED8] transition-colors"
                     >
                       <Play size={13} className="fill-white" /> Iniciar treino
                     </button>
@@ -266,7 +288,7 @@ export default function TreinoFicha() {
       {ficha?.orientacoes && (
         <div className="px-4 mt-6">
           <div className={`${CARD} px-4 py-4`}>
-            <p className={`${LABEL} mb-2`}>Orientacoes</p>
+            <p className={`${LABEL} mb-2`} style={LABEL_STYLE}>Orientacoes</p>
             <p className="text-gray-200 text-xs leading-relaxed whitespace-pre-wrap">
               {ficha.orientacoes}
             </p>
