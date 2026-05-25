@@ -39,6 +39,36 @@ export const verificarTreinoFinalizado = async (ficha, treino) => {
   return res.data?.message || { finalizado: false }
 }
 
+// Lista os aerobicos da ficha + estado da semana atual.
+// Retorna { semana_iso, aerobicos: [{name, exercicios, frequencia, instrucao,
+//   video, plataforma_do_video, frequencia_alvo, sessoes_marcadas,
+//   status ('pendente'|'concluido'|'opcional'), pct, marcacoes: [{name, label}]}] }
+// Reset automatico no backend toda segunda-feira (semana_iso muda).
+export const listarAerobicos = async (ficha) => {
+  const res = await client.get('/api/method/shapefy.api.aluno.aerobico_lista', {
+    params: { ficha },
+  })
+  return res.data?.message || { aerobicos: [], semana_iso: null }
+}
+
+// Marca uma sessao do aerobico. Retorna o estado atualizado:
+// { sessoes_marcadas, frequencia_alvo, status, pct, marcacoes }
+export const marcarAerobico = async (ficha, aerobico_id) => {
+  const res = await client.post('/api/method/shapefy.api.aluno.aerobico_marcar', {
+    ficha,
+    aerobico_id,
+  })
+  return res.data?.message || null
+}
+
+// Desmarca uma sessao. Sem marcacao_id usa LIFO (remove a ultima).
+export const desmarcarAerobico = async (ficha, aerobico_id, marcacao_id) => {
+  const payload = { ficha, aerobico_id }
+  if (marcacao_id) payload.marcacao_id = marcacao_id
+  const res = await client.post('/api/method/shapefy.api.aluno.aerobico_desmarcar', payload)
+  return res.data?.message || null
+}
+
 // Finaliza o treino e persiste no backend (cria Treino Realizado).
 // Payload:
 //   ficha, treino, inicio_ms, fim_ms, exercicios (objeto JSON serializado),

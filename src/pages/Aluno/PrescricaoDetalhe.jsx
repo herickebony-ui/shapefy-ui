@@ -93,7 +93,7 @@ export default function PrescricaoDetalhe() {
 
   const grupos = agruparPorMomento(prescricao.itens)
   const prof = prescricao.profissional || {}
-  const printUrl = `${FRAPPE_URL}/prescricao/${encodeURIComponent(prescricao.name)}?print=1`
+  const printUrl = `${FRAPPE_URL}/print/prescricao?name=${encodeURIComponent(prescricao.name)}`
 
   return (
     <div className="pb-8 bg-[var(--sf-bg)] min-h-full">

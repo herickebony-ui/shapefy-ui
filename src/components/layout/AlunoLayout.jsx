@@ -5,12 +5,7 @@ import { logoutAluno } from '../../api/aluno'
 
 export default function AlunoLayout() {
   const navigate = useNavigate()
-  const aluno = useAuthStore((s) => s.aluno)
   const clearAuth = useAuthStore((s) => s.clearAuth)
-
-  const nome = aluno?.nome_completo || 'Aluno'
-  const primeiraLetra = nome.charAt(0).toUpperCase()
-  const fotoAluno = aluno?.foto_url || null
 
   const handleLogout = async () => {
     await logoutAluno()
@@ -19,36 +14,16 @@ export default function AlunoLayout() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-[#0a0a0a] flex flex-col">
-      <header className="bg-[#29292e] border-b border-[#323238] px-4 py-3 flex items-center justify-between sticky top-0 z-30">
-        <div className="flex items-center gap-3 min-w-0">
-          <h1 className="text-white text-base font-bold tracking-tight">
-            Shape<span className="text-[#2563eb]">fy</span>
-          </h1>
-          <span className="text-gray-600">·</span>
-          <p className="text-gray-400 text-xs font-medium truncate">{nome}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {fotoAluno ? (
-            <img
-              src={fotoAluno}
-              alt={nome}
-              className="w-8 h-8 rounded-full object-cover border border-[#323238] flex-shrink-0"
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-[#2563eb] flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
-              {primeiraLetra}
-            </div>
-          )}
-          <button
-            onClick={handleLogout}
-            title="Sair"
-            className="h-9 w-9 flex items-center justify-center text-gray-400 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 rounded-lg transition-colors"
-          >
-            <LogOut size={15} />
-          </button>
-        </div>
-      </header>
+    <div className="min-h-[100dvh] bg-[var(--sf-bg)] flex flex-col relative">
+      {/* Logout flutuante — canto superior direito, sobre o conteudo. Sem barra fixa. */}
+      <button
+        onClick={handleLogout}
+        title="Sair"
+        className="fixed top-3 right-3 z-30 h-9 w-9 flex items-center justify-center rounded-full bg-black/40 backdrop-blur text-white/80 border border-white/15 hover:bg-black/60 hover:text-white transition-colors shadow-lg"
+        style={{ top: 'max(0.75rem, env(safe-area-inset-top))' }}
+      >
+        <LogOut size={14} />
+      </button>
 
       <main className="flex-1 overflow-y-auto">
         <Outlet />

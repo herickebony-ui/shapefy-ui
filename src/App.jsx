@@ -46,8 +46,14 @@ import AnamneseResposta from './pages/Aluno/AnamneseResposta'
 import TreinoLista from './pages/Aluno/TreinoLista'
 import TreinoFicha from './pages/Aluno/TreinoFicha'
 import TreinoExecucao from './pages/Aluno/TreinoExecucao'
+import AerobicoLista from './pages/Aluno/AerobicoLista'
 import PrescricaoListagemAluno from './pages/Aluno/PrescricaoListagem'
 import PrescricaoDetalheAluno from './pages/Aluno/PrescricaoDetalhe'
+import DietaListagemAluno from './pages/Aluno/DietaListagem'
+import DietaDetalheAluno from './pages/Aluno/DietaDetalhe'
+import PerfilAluno from './pages/Aluno/PerfilAluno'
+import PerfilEditar from './pages/Aluno/PerfilEditar'
+import FeedbacksProximos from './pages/Aluno/FeedbacksProximos'
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -105,13 +111,19 @@ function App() {
           }
         >
           <Route index element={<AlunoHome />} />
+          <Route path="feedbacks" element={<FeedbacksProximos />} />
           <Route path="feedbacks/:id" element={<FeedbackResposta />} />
           <Route path="anamneses/:id" element={<AnamneseResposta />} />
           <Route path="treinos" element={<TreinoLista />} />
           <Route path="treinos/:fichaName" element={<TreinoFicha />} />
+          <Route path="treinos/:fichaName/aerobicos" element={<AerobicoLista />} />
           <Route path="treinos/:fichaName/:treinoId" element={<TreinoExecucao />} />
           <Route path="prescricoes" element={<PrescricaoListagemAluno />} />
           <Route path="prescricoes/:name" element={<PrescricaoDetalheAluno />} />
+          <Route path="dietas" element={<DietaListagemAluno />} />
+          <Route path="dietas/:name" element={<DietaDetalheAluno />} />
+          <Route path="perfil" element={<PerfilAluno />} />
+          <Route path="perfil/editar" element={<PerfilEditar />} />
         </Route>
 
         <Route

@@ -88,6 +88,49 @@ export const responderAnamnese = async (name, perguntas) => {
   return res.data?.message || null
 }
 
+// Lista as dietas do aluno (ativas / atribuidas pelo profissional).
+// Backend retorna { dietas: [{name, nome_completo, date, final_date, strategy,
+// week_days, dias_info}] }. Se aluno nao tem modulo dieta, retorna [].
+export const listarDietasAluno = async () => {
+  const res = await client.get('/api/method/shapefy.api.aluno.dieta_lista')
+  return res.data?.message?.dietas || []
+}
+
+// Busca uma dieta especifica (com refeicoes/opcoes/grupos/substitutos ja
+// populados). Backend retorna { dieta: {...campos do header...},
+// meals: [{index, title, options: [{index, title, legend, groups: [{main,
+// subs}]}]}] }. Lanca PermissionError se aluno tentar acessar dieta de outro.
+export const buscarDietaAluno = async (name) => {
+  const res = await client.get('/api/method/shapefy.api.aluno.dieta_detalhe', { params: { name } })
+  return res.data?.message || null
+}
+
+// Perfil do aluno (read-only). Retorna { aluno: {...} } com campos filtrados:
+// dados de exibicao + treino/dieta (0/1 -> "acesso liberado") + foto_url
+// (absoluta) + profissional_nome (legivel). Esconde fields internos.
+// skipAuthRedirect: se 401, mostra modal em vez de deslogar — o erro pode ser
+// do endpoint nao estar deployado, nao da sessao do aluno.
+export const perfilAluno = async () => {
+  const res = await client.get('/api/method/shapefy.api.aluno.perfil', { skipAuthRedirect: true })
+  return res.data?.message?.aluno || null
+}
+
+// Metadados + valores pra montar o form de edicao. Retorna { aluno, meta }.
+// meta[]: {fieldname, fieldtype, label, options, reqd, read_only, description}.
+// Backend pula breaks/tipos nao-input e sobrescreve 'objetivo' (Link -> Select
+// com opcoes dinamicas de Objetivo Ficha).
+export const perfilEditarAluno = async () => {
+  const res = await client.get('/api/method/shapefy.api.aluno.perfil_editar', { skipAuthRedirect: true })
+  return res.data?.message || { aluno: {}, meta: [] }
+}
+
+// Salva alteracoes do perfil. Payload: data=[{fieldname, value}, ...].
+// Backend ignora AVOID_FIELDS silenciosamente e lanca erro se fieldname nao existe.
+export const salvarPerfilAluno = async (data) => {
+  const res = await client.post('/api/method/shapefy.api.aluno.perfil_salvar', { data }, { skipAuthRedirect: true })
+  return res.data?.message || null
+}
+
 // Upload de foto pelo aluno. Wrapper backend DEVE chamar upload_file com
 // is_private=0 (pública, pra render via <img src>) e optimize=0 (preserva
 // qualidade original — comparações visuais entre feedbacks exigem isso).

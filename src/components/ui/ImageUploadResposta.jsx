@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Camera, RotateCw, Trash2, Upload } from 'lucide-react'
+import { Image as ImageIcon, RotateCw, Trash2, Upload } from 'lucide-react'
 import useErrorModal from '../../hooks/useErrorModal'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
@@ -10,7 +10,12 @@ const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 // uploadFn(file)=>file_url: função obrigatória que faz o POST e retorna a URL.
 // onRotate(): opcional. Se passada, mostra botão de rotacionar.
 // label: texto opcional acima do drop zone.
-export default function ImageUploadResposta({ value, onChange, uploadFn, onRotate, label, disabled }) {
+// onMultipleSelected(files[]): opcional. Quando o aluno seleciona varias fotos
+//   de uma vez na galeria, dispara esse callback (em vez de usar a primeira).
+//   O orquestrador (form) abre um modal de distribuicao das fotos pelos slots.
+// O input usa `multiple` por padrao — em iOS isso forca o picker a ir direto na
+// galeria (sem opcao de camera), atendendo ao requisito de "so galeria".
+export default function ImageUploadResposta({ value, onChange, uploadFn, onRotate, label, disabled, onMultipleSelected }) {
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [rotating, setRotating] = useState(false)
@@ -47,17 +52,27 @@ export default function ImageUploadResposta({ value, onChange, uploadFn, onRotat
   }
 
   const handleInput = async (e) => {
-    const file = e.target.files?.[0]
+    const files = Array.from(e.target.files || [])
     e.target.value = ''
-    await enviar(file)
+    if (files.length === 0) return
+    if (files.length > 1 && onMultipleSelected) {
+      onMultipleSelected(files)
+      return
+    }
+    await enviar(files[0])
   }
 
   const handleDrop = async (e) => {
     e.preventDefault()
     setDragOver(false)
     if (uploading || disabled) return
-    const file = e.dataTransfer.files?.[0]
-    await enviar(file)
+    const files = Array.from(e.dataTransfer.files || [])
+    if (files.length === 0) return
+    if (files.length > 1 && onMultipleSelected) {
+      onMultipleSelected(files)
+      return
+    }
+    await enviar(files[0])
   }
 
   const handleRotate = async () => {
@@ -109,9 +124,9 @@ export default function ImageUploadResposta({ value, onChange, uploadFn, onRotat
           </>
         ) : (
           <div className="flex flex-col items-center gap-2 text-gray-500 px-4 text-center">
-            <Camera size={28} />
+            <ImageIcon size={28} />
             <span className="text-xs leading-tight">
-              {dragOver ? 'Solte aqui' : 'Toque ou arraste a foto'}
+              {dragOver ? 'Solte aqui' : 'Toque para escolher da galeria'}
             </span>
           </div>
         )}
@@ -150,7 +165,14 @@ export default function ImageUploadResposta({ value, onChange, uploadFn, onRotat
           </button>
         )}
       </div>
-      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleInput} />
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/jpg,image/webp,image/heic,image/heif"
+        multiple
+        className="hidden"
+        onChange={handleInput}
+      />
     </div>
   )
 }

@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Dumbbell, Apple, ClipboardList, Scale, MessageSquare,
-  Bell, Calendar, ChevronRight, LayoutGrid, X, Pill,
+  Bell, Calendar, ChevronRight, X, Pill, Repeat, User,
 } from 'lucide-react'
 import { Spinner } from '../../components/ui'
 import {
   GlassCard, ModuleCard, AlertCard, DataChip, SectionHeader,
 } from '../../components/aluno'
+import { proximidadeFeedback } from '../../components/aluno/proximidade'
 import useAuthStore from '../../store/authStore'
 import {
   homeAluno,
@@ -24,6 +25,7 @@ const ICON_POR_ID = {
   avaliacoes: Scale,
   feedback: MessageSquare,
   prescricoes: Pill,
+  perfil: User,
 }
 
 const InstagramIcon = (props) => (
@@ -42,7 +44,7 @@ function resolveCardLink(card, pendencias, flags) {
       return { reactPath: '/aluno/treinos' }
     case 'dieta':
       if (flags && flags.tem_dieta === false) return { disabled: true }
-      return { href: legado('/dieta_aluno'), externa: true }
+      return { reactPath: '/aluno/dietas' }
     case 'anamnese':
       return pendencias?.anamnese
         ? { reactPath: `/aluno/anamneses/${pendencias.anamnese}` }
@@ -55,12 +57,16 @@ function resolveCardLink(card, pendencias, flags) {
     }
     case 'feedback':
       if (pendencias?.feedback_agendado_formulario) {
-        return { href: legado(`/verificar_feedback?form=${encodeURIComponent(pendencias.feedback_agendado_formulario)}`), externa: true }
+        // Confirmacao antes de abrir — o /verificar_feedback CRIA um Feedback
+        // no backend ao carregar, entao o aluno precisa consentir.
+        return { agendadoForm: pendencias.feedback_agendado_formulario }
       }
       if (pendencias?.feedback) return { reactPath: `/aluno/feedbacks/${pendencias.feedback}` }
       return { disabled: true, hint: 'Nenhum feedback disponível no momento' }
     case 'prescricoes':
       return { reactPath: '/aluno/prescricoes' }
+    case 'perfil':
+      return { reactPath: '/aluno/perfil' }
     default:
       return { href: legado(card.url_legado || '/'), externa: true }
   }
@@ -201,6 +207,8 @@ export default function AlunoHome() {
   const [proximos, setProximos] = useState([])
   const [carregando, setCarregando] = useState(true)
   const [notifAberto, setNotifAberto] = useState(false)
+  // Confirmacao antes de abrir feedback agendado (que cria registro no backend)
+  const [confirmAgendado, setConfirmAgendado] = useState(null)
 
   useEffect(() => {
     let cancelado = false
@@ -228,10 +236,13 @@ export default function AlunoHome() {
   const pendencias = home?.pendencias || {}
   const flags = dadosAluno?.flags
   const notificacoes = home?.notificacoes || []
-  const cards = (home?.cards || []).filter(c => {
+  const cardsBackend = (home?.cards || []).filter(c => {
     if (c.id === 'anamnese' && !pendencias.anamnese) return false
     return true
   })
+  const cards = cardsBackend.some(c => c.id === 'perfil')
+    ? cardsBackend
+    : [...cardsBackend, { id: 'perfil', titulo: 'Meu Perfil' }]
 
   const hojeISO = new Date().toISOString().slice(0, 10)
   const proximosFuturos = proximos.filter(p => {
@@ -244,14 +255,21 @@ export default function AlunoHome() {
   const handleCardClick = (card) => () => {
     const link = resolveCardLink(card, pendencias, flags)
     if (link.disabled) return
+    if (link.agendadoForm) { setConfirmAgendado(link.agendadoForm); return }
     if (link.reactPath) navigate(link.reactPath)
     else if (link.href) window.open(link.href, '_blank', 'noopener')
   }
 
   const irPraPendencia = () => {
     if (pendencias.feedback) navigate(`/aluno/feedbacks/${pendencias.feedback}`)
-    else if (pendencias.feedback_agendado_formulario) window.open(`${FRAPPE_URL}/verificar_feedback?form=${encodeURIComponent(pendencias.feedback_agendado_formulario)}`, '_blank', 'noopener')
+    else if (pendencias.feedback_agendado_formulario) setConfirmAgendado(pendencias.feedback_agendado_formulario)
     else if (pendencias.anamnese) navigate(`/aluno/anamneses/${pendencias.anamnese}`)
+  }
+
+  const confirmarAbrirAgendado = () => {
+    if (!confirmAgendado) return
+    window.open(`${FRAPPE_URL}/verificar_feedback?form=${encodeURIComponent(confirmAgendado)}`, '_blank', 'noopener')
+    setConfirmAgendado(null)
   }
 
   const badgePorCard = (id) => {
@@ -286,52 +304,19 @@ export default function AlunoHome() {
         </div>
       )}
 
-      {proximosFuturos.length > 0 && (
-        <section className="px-4 mt-6">
-          <SectionHeader
-            icon={<Calendar size={15} />}
-            label="Próximos feedbacks"
-          />
-          <div className="flex flex-col gap-2">
-            {proximosFuturos.map((p, i) => {
-              const data = p.data_agendada || p.data || p.date
-              return (
-                <GlassCard
-                  key={p.name || i}
-                  as="div"
-                  className="px-4 py-3 flex items-center gap-4"
-                >
-                  <DataChip data={data} size="md" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white text-sm font-bold truncate">
-                      {p.titulo || p.formulario_titulo || 'Feedback'}
-                    </p>
-                    <p className="text-[var(--sf-text-soft)] text-xs mt-0.5">{fmtDataBR(data)}</p>
-                  </div>
-                  <ChevronRight size={18} className="text-[var(--sf-text-soft)] shrink-0" />
-                </GlassCard>
-              )
-            })}
-          </div>
-        </section>
-      )}
-
-      <section className="px-4 mt-6">
-        <SectionHeader
-          icon={<LayoutGrid size={15} />}
-          label="Meus módulos"
-        />
+      {/* Modulos PRIMEIRO, sem label de secao, grid compacto */}
+      <section className="px-4 mt-4">
         {carregando && cards.length === 0 ? (
           <div className="h-32 flex items-center justify-center"><Spinner /></div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2.5">
             {cards.map(card => {
               const link = resolveCardLink(card, pendencias, flags)
               const IconComp = ICON_POR_ID[card.id] || Dumbbell
               return (
                 <ModuleCard
                   key={card.id}
-                  icon={<IconComp size={18} strokeWidth={1.6} />}
+                  icon={<IconComp size={16} strokeWidth={1.6} />}
                   label={card.titulo}
                   badge={badgePorCard(card.id)}
                   onClick={handleCardClick(card)}
@@ -343,6 +328,70 @@ export default function AlunoHome() {
           </div>
         )}
       </section>
+
+      {proximosFuturos.length > 0 && (
+        <section className="px-4 mt-6">
+          <div className="flex items-center justify-between mb-2">
+            <SectionHeader
+              icon={<Calendar size={15} />}
+              label="Próximo feedback"
+            />
+            {proximosFuturos.length > 1 && (
+              <button
+                onClick={() => navigate('/aluno/feedbacks')}
+                className="flex items-center gap-1 text-[#60A5FA] text-xs font-bold hover:text-white transition-colors -mt-1"
+              >
+                Ver todos ({proximosFuturos.length})
+                <ChevronRight size={13} />
+              </button>
+            )}
+          </div>
+          {(() => {
+            const p = proximosFuturos[0]
+            const data = p.data_agendada || p.data || p.date
+            const { label, tone } = proximidadeFeedback(data)
+            const ehTroca = p.is_training === 1 || p.is_training === true
+            return (
+              <GlassCard as="div" className="px-3 py-2.5 flex items-center gap-3">
+                <DataChip data={data} size="sm" tone={tone} />
+                <div className="flex-1 min-w-0">
+                  {p.titulo && p.formulario_titulo && p.titulo !== p.formulario_titulo && (
+                    <p
+                      className="text-[#60A5FA] text-[9px] font-bold uppercase truncate"
+                      style={{ letterSpacing: '0.18em' }}
+                    >
+                      {p.formulario_titulo}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <p className="text-white text-xs font-bold truncate">
+                      {p.titulo || p.formulario_titulo || 'Feedback'}
+                    </p>
+                    {label && (
+                      <span
+                        className={`text-[9px] font-bold uppercase tracking-widest shrink-0
+                          ${tone === 'today' ? 'text-[#FCD34D]' : 'text-[#FBBF24]'}`}
+                      >
+                        {label}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    {!label && (
+                      <p className="text-[var(--sf-text-soft)] text-[10px]">{fmtDataBR(data)}</p>
+                    )}
+                    {ehTroca && (
+                      <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-widest text-violet-300">
+                        <Repeat size={9} /> Troca treino
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </GlassCard>
+            )
+          })()}
+        </section>
+      )}
 
       {notifAberto && (
         <>
@@ -425,6 +474,39 @@ export default function AlunoHome() {
             </div>
           </div>
         </>
+      )}
+
+      {confirmAgendado && (
+        <div
+          className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm p-3"
+          onClick={() => setConfirmAgendado(null)}
+        >
+          <div
+            className="w-full max-w-[400px] bg-[var(--sf-bg)] border border-[var(--sf-border-strong)] rounded-2xl shadow-[0_25px_50px_rgba(0,0,0,0.6)] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-4 py-4">
+              <p className="text-white text-sm font-bold">Iniciar feedback agendado?</p>
+              <p className="text-[var(--sf-text-muted)] text-xs mt-1.5 leading-relaxed">
+                Voce tem um feedback agendado pra hoje. Ao iniciar, o feedback sera registrado e voce sera direcionado para responder.
+              </p>
+            </div>
+            <div className="px-4 pb-4 flex items-center justify-end gap-2">
+              <button
+                onClick={() => setConfirmAgendado(null)}
+                className="h-9 px-4 rounded-lg border border-[var(--sf-border)] text-gray-300 text-xs font-bold hover:bg-[var(--sf-surface-2)] transition-colors"
+              >
+                Agora nao
+              </button>
+              <button
+                onClick={confirmarAbrirAgendado}
+                className="h-9 px-4 rounded-lg bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-bold transition-colors"
+              >
+                Iniciar feedback
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
