@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Printer, Pill } from 'lucide-react'
 import { Spinner, Button } from '../../components/ui'
-import { AlunoCard } from '../../components/aluno'
+import { GlassCard } from '../../components/aluno'
 import { listarPrescricoesAluno } from '../../api/aluno'
 import useErrorModal from '../../hooks/useErrorModal'
 
@@ -17,13 +17,17 @@ const fmtDataBR = (d) => {
 function InfoCell({ label, value }) {
   return (
     <div className="min-w-0">
-      <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">{label}</p>
+      <p
+        className="text-[#60A5FA] text-[10px] font-bold uppercase"
+        style={{ letterSpacing: '0.18em' }}
+      >
+        {label}
+      </p>
       <p className="text-white text-sm font-semibold mt-0.5 truncate">{value || '—'}</p>
     </div>
   )
 }
 
-// Agrupa itens por momento_de_uso preservando a ordem original.
 function agruparPorMomento(itens) {
   const grupos = []
   const indice = new Map()
@@ -72,7 +76,7 @@ export default function PrescricaoDetalhe() {
 
   if (carregando) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center bg-[#050507]">
+      <div className="min-h-[60vh] flex items-center justify-center bg-[var(--sf-bg)]">
         {errorModal.element}
         <Spinner />
       </div>
@@ -81,7 +85,7 @@ export default function PrescricaoDetalhe() {
 
   if (!prescricao) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center px-6 bg-[#050507]">
+      <div className="min-h-[60vh] flex items-center justify-center px-6 bg-[var(--sf-bg)]">
         {errorModal.element}
       </div>
     )
@@ -92,14 +96,14 @@ export default function PrescricaoDetalhe() {
   const printUrl = `${FRAPPE_URL}/prescricao/${encodeURIComponent(prescricao.name)}?print=1`
 
   return (
-    <div className="pb-8 bg-[#050507] min-h-full">
+    <div className="pb-8 bg-[var(--sf-bg)] min-h-full">
       {errorModal.element}
 
-      <div className="px-4 pt-4 pb-3 border-b border-[#1c1c22] bg-[#050507]/95 backdrop-blur-sm sticky top-0 z-10 flex items-center gap-3">
+      <div className="px-4 pt-4 pb-3 border-b border-[var(--sf-border)] bg-[var(--sf-bg)]/95 backdrop-blur-sm sticky top-0 z-10 flex items-center gap-3">
         <button
           onClick={() => navigate('/aluno/prescricoes')}
           title="Voltar"
-          className="h-9 w-9 flex items-center justify-center text-gray-400 hover:text-white border border-[#1f1f24] hover:border-[#2563eb] rounded-lg transition-colors shrink-0"
+          className="h-9 w-9 flex items-center justify-center text-gray-400 hover:text-white border border-[var(--sf-border)] hover:border-[var(--sf-border-strong)] rounded-lg transition-colors shrink-0"
         >
           <ArrowLeft size={16} />
         </button>
@@ -115,8 +119,7 @@ export default function PrescricaoDetalhe() {
       </div>
 
       <div className="px-3 pt-3 space-y-3">
-        {/* Card de cabeçalho com info do profissional + datas */}
-        <AlunoCard as="div" className="px-4 py-4">
+        <GlassCard as="div" className="px-4 py-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <InfoCell label="Profissional" value={prof.nome} />
             <InfoCell label="Data" value={fmtDataBR(prescricao.date)} />
@@ -127,32 +130,34 @@ export default function PrescricaoDetalhe() {
             <InfoCell label="Válida até" value={fmtDataBR(prescricao.data_fim)} />
           </div>
           {prescricao.aviar_para && (
-            <p className="text-gray-500 text-xs mt-3 pt-3 border-t border-[#1c1c22]">
+            <p className="text-[var(--sf-text-muted)] text-xs mt-3 pt-3 border-t border-[var(--sf-border)]">
               Aviar para: <span className="text-gray-300">{prescricao.aviar_para}</span>
             </p>
           )}
-        </AlunoCard>
+        </GlassCard>
 
-        {/* Itens agrupados por momento de uso */}
         {grupos.length > 0 && (
           <div className="space-y-3">
             {grupos.map(grupo => (
-              <AlunoCard key={grupo.momento} as="div" className="overflow-hidden">
-                <div className="border-l-2 border-[#2563eb] px-4 py-3 bg-[#2563eb]/[0.05]">
-                  <p className="text-[#60a5fa] text-xs font-bold uppercase tracking-widest">
+              <GlassCard key={grupo.momento} as="div">
+                <div className="border-l-2 border-[#2563EB] px-4 py-3 bg-[#2563EB]/[0.08]">
+                  <p
+                    className="text-[#60A5FA] text-xs font-bold uppercase"
+                    style={{ letterSpacing: '0.18em' }}
+                  >
                     {grupo.momento}
                   </p>
                 </div>
-                <div className="divide-y divide-[#1c1c22]">
+                <div className="divide-y divide-[var(--sf-border)]">
                   {grupo.itens.map((item, i) => (
                     <div key={i} className="px-4 py-3 flex gap-3">
-                      <Pill size={14} className="text-[#60a5fa] shrink-0 mt-0.5" />
+                      <Pill size={14} className="text-[#60A5FA] shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
                         <p className="text-white text-sm font-bold leading-snug">
                           {item.manipulated || 'Item'}
                         </p>
                         {item.description && (
-                          <p className="text-gray-400 text-xs leading-relaxed mt-1">
+                          <p className="text-[var(--sf-text-muted)] text-xs leading-relaxed mt-1">
                             {item.description}
                           </p>
                         )}
@@ -160,21 +165,23 @@ export default function PrescricaoDetalhe() {
                     </div>
                   ))}
                 </div>
-              </AlunoCard>
+              </GlassCard>
             ))}
           </div>
         )}
 
-        {/* Texto longo da prescrição (description) */}
         {prescricao.description && (
-          <AlunoCard as="div" className="px-4 py-4">
-            <p className="text-gray-300 text-xs font-bold uppercase tracking-widest mb-2">
+          <GlassCard as="div" className="px-4 py-4">
+            <p
+              className="text-[#60A5FA] text-xs font-bold uppercase mb-2"
+              style={{ letterSpacing: '0.18em' }}
+            >
               Orientações
             </p>
             <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">
               {prescricao.description}
             </p>
-          </AlunoCard>
+          </GlassCard>
         )}
       </div>
     </div>

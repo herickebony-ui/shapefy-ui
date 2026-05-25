@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Check, AlertCircle, ArrowLeft } from 'lucide-react'
-import { Button, Spinner } from '../../components/ui'
+import { Spinner } from '../../components/ui'
+import { ActionButton } from '../../components/aluno'
 import { FormularioRespostas, listarFaltantesObrigatorias } from '../../components/aluno/form'
 import { buscarFeedbackAluno, responderFeedback, uploadFotoAluno } from '../../api/aluno'
 import useErrorModal from '../../hooks/useErrorModal'
@@ -12,8 +13,6 @@ const fmtData = (d) => {
   return `${day}/${m}/${y}`
 }
 
-// Backend ocasionalmente duplica a child table de perguntas. Detecta e mantém
-// a metade com mais informação preenchida.
 function dedupePerguntas(perguntas) {
   if (!Array.isArray(perguntas) || perguntas.length < 2) return perguntas || []
   const primeira = perguntas[0]
@@ -89,7 +88,7 @@ export default function FeedbackResposta() {
 
   if (carregando) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="min-h-[60vh] flex items-center justify-center bg-[var(--sf-bg)]">
         {errorModal.element}
         <Spinner />
       </div>
@@ -98,44 +97,44 @@ export default function FeedbackResposta() {
 
   if (enviado) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center px-6 text-center">
-        <div className="w-16 h-16 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center mb-4">
-          <Check className="text-green-400" size={32} />
+      <div className="min-h-[60vh] flex flex-col items-center justify-center px-6 text-center bg-[var(--sf-bg)]">
+        <div className="w-16 h-16 rounded-full bg-[var(--sf-green)]/10 border border-[var(--sf-green)]/40 flex items-center justify-center mb-4 shadow-[0_0_24px_var(--sf-green-glow)]">
+          <Check className="text-[#22C55E]" size={32} />
         </div>
         <h2 className="text-white text-xl font-bold mb-2">Respostas enviadas!</h2>
-        <p className="text-gray-400 text-sm max-w-md mb-6">
+        <p className="text-[var(--sf-text-muted)] text-sm max-w-md mb-6">
           Obrigado por preencher. Seu profissional já recebeu as respostas e vai te dar retorno em breve.
         </p>
-        <Button variant="primary" onClick={() => navigate('/aluno')} icon={ArrowLeft}>
+        <ActionButton variant="primary" onClick={() => navigate('/aluno')} icon={ArrowLeft}>
           Voltar para o início
-        </Button>
+        </ActionButton>
       </div>
     )
   }
 
   if (!feedback) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center px-6">
+      <div className="min-h-[60vh] flex items-center justify-center px-6 bg-[var(--sf-bg)]">
         {errorModal.element}
       </div>
     )
   }
 
   return (
-    <div className="pb-32 bg-[#050507] min-h-full">
+    <div className="pb-32 bg-[var(--sf-bg)] min-h-full">
       {errorModal.element}
 
-      <div className="px-4 pt-4 pb-3 border-b border-[#1c1c22] bg-[#050507]/95 backdrop-blur-sm sticky top-0 z-10 flex items-start gap-3">
+      <div className="px-4 pt-4 pb-3 border-b border-[var(--sf-border)] bg-[var(--sf-bg)]/95 backdrop-blur-sm sticky top-0 z-10 flex items-start gap-3">
         <button
           onClick={() => navigate('/aluno')}
           title="Voltar"
-          className="h-9 w-9 flex items-center justify-center text-gray-400 hover:text-white border border-[#1f1f24] hover:border-[#2563eb] rounded-lg transition-colors shrink-0"
+          className="h-9 w-9 flex items-center justify-center text-gray-400 hover:text-white border border-[var(--sf-border)] hover:border-[var(--sf-border-strong)] rounded-lg transition-colors shrink-0"
         >
           <ArrowLeft size={16} />
         </button>
         <div className="flex-1 min-w-0">
           <h1 className="text-white text-base font-bold leading-tight truncate">{feedback.titulo || 'Feedback'}</h1>
-          <p className="text-gray-500 text-xs mt-1 truncate">
+          <p className="text-[var(--sf-text-muted)] text-xs mt-1 truncate">
             {fmtData(feedback.date)}
             {feedback.nome_completo ? ` · ${feedback.nome_completo}` : ''}
           </p>
@@ -150,22 +149,21 @@ export default function FeedbackResposta() {
         />
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-[#050507]/95 backdrop-blur-sm border-t border-[#1c1c22] px-4 py-3 z-20">
+      <div className="fixed bottom-0 left-0 right-0 bg-[var(--sf-bg)]/95 backdrop-blur-md border-t border-[var(--sf-border)] px-4 py-3 z-20">
         {erroValidacao && (
-          <div className="flex items-center gap-2 text-xs text-red-400 mb-2 px-1">
+          <div className="flex items-center gap-2 text-xs text-[var(--sf-red)] mb-2 px-1">
             <AlertCircle size={14} />
             <span>{erroValidacao}</span>
           </div>
         )}
-        <Button
+        <ActionButton
           variant="primary"
-          size="lg"
           fullWidth
           loading={enviando}
           onClick={handleEnviar}
         >
           Enviar respostas
-        </Button>
+        </ActionButton>
       </div>
     </div>
   )
