@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Wand2 } from 'lucide-react'
 import { Button, FormGroup, Input, Select } from '../../../components/ui'
 import { gerarDatasSerie } from './serie'
@@ -20,7 +20,7 @@ const DIAS_SEMANA_OPTS = [
  * inline (modo Lista do card de Calendário).
  */
 export default function PadronizarFormulario({
-  formularios, planEnd, feriasList,
+  formularios, planStart, planEnd, feriasList,
   onGerar,
   showFooter = true,
   compactPreview = false,
@@ -31,7 +31,7 @@ export default function PadronizarFormulario({
 
   const [modo, setModo] = useState('periodico')
   const [form, setForm] = useState({
-    data_inicio: new Date().toISOString().slice(0, 10),
+    data_inicio: planStart || new Date().toISOString().slice(0, 10),
     intervalo: 2,
     unidade: 'semanas',
     dia_semana: '',
@@ -42,6 +42,14 @@ export default function PadronizarFormulario({
     pular_feriados: true,
   })
   const [diasDoMes, setDiasDoMes] = useState([5, 20])
+
+  // Espelha a vigência do plano: ao mudar Início/Fim em cima, reflete aqui.
+  useEffect(() => {
+    if (planStart) setForm(p => ({ ...p, data_inicio: planStart }))
+  }, [planStart])
+  useEffect(() => {
+    if (planEnd) setForm(p => ({ ...p, data_fim: planEnd }))
+  }, [planEnd])
 
   const datasPreview = useMemo(() => gerarDatasSerie({
     data_inicio: form.data_inicio,

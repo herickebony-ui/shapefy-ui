@@ -93,7 +93,11 @@ export default function PrescricaoDetalhe() {
 
   const grupos = agruparPorMomento(prescricao.itens)
   const prof = prescricao.profissional || {}
-  const printUrl = `${FRAPPE_URL}/print/prescricao?name=${encodeURIComponent(prescricao.name)}`
+  const abrirPDF = () => {
+    const token = localStorage.getItem('aluno_token') || ''
+    const url = `${FRAPPE_URL}/print/prescricao?name=${encodeURIComponent(prescricao.name)}${token ? `&token=${encodeURIComponent(token)}` : ''}`
+    window.open(url, '_blank', 'noopener')
+  }
 
   return (
     <div className="pb-8 bg-[var(--sf-bg)] min-h-full">
@@ -112,7 +116,7 @@ export default function PrescricaoDetalhe() {
           variant="secondary"
           size="sm"
           icon={Printer}
-          onClick={() => window.open(printUrl, '_blank', 'noopener')}
+          onClick={abrirPDF}
         >
           Imprimir
         </Button>

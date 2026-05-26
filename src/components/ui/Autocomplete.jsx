@@ -24,6 +24,7 @@ export default function Autocomplete({
   compact = false,
   loadInitial,
   initialHeader,
+  selectOnFocus = false,
 }) {
   const [query, setQuery] = useState(value)
   const [results, setResults] = useState([])
@@ -220,7 +221,8 @@ export default function Autocomplete({
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           onBlur={() => setTimeout(() => setOpen(false), 200)}
-          onFocus={() => {
+          onFocus={(e) => {
+            if (selectOnFocus) e.target.select()
             computeDropdownPos()
             if (query.length >= 1 && results.length > 0) setOpen(true)
             else if (!query && loadInitial) carregarInicial()

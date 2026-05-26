@@ -40,7 +40,7 @@ import { listarContratos } from '../../api/contratosAluno'
 
 import {
   TEMPLATE_LS_KEY,
-  fmtDateBR, calcPlanEnd,
+  fmtDateBR, calcPlanEnd, MONTHS,
 } from './cronograma/utils'
 
 import Toast from './cronograma/Toast'
@@ -54,14 +54,15 @@ import ModalClonar from './cronograma/ModalClonar'
 import ModalGerarSerie from './cronograma/ModalGerarSerie'
 import PadronizarFormulario from './cronograma/PadronizarFormulario'
 import TipoBotao from './cronograma/TipoBotao'
-import { agruparPorCiclo } from './cronograma/serie'
+import { enriquecerComCiclo } from './cronograma/serie'
 import { todayISO } from './cronograma/utils'
 import useLongPress from '../../hooks/useLongPress'
 
 function LongPressRow({ onLongPress, className, children, ...rest }) {
-  const handlers = useLongPress(onLongPress, {
-    shouldHandle: (e) => !e.target.closest('select, input, textarea, button, a'),
-  })
+  // Right-click / long-press em qualquer parte da linha abre o MarcoZeroMenu.
+  // Não tem input/textarea/anchor nessa linha — exclusão era desnecessária e
+  // estava bloqueando o menu sobre TipoBotao, select de formulário e X.
+  const handlers = useLongPress(onLongPress)
   return (
     <div {...rest} {...handlers} className={className} style={{ WebkitTouchCallout: 'none' }}>
       {children}
@@ -125,6 +126,12 @@ export default function CronogramaFeedbacks() {
   // ─── Form férias ────────────────────────────────────────────────────────────
   const [novaFeria, setNovaFeria] = useState({ data_inicio: '', data_fim: '', descricao: '' })
   const [salvandoFeria, setSalvandoFeria] = useState(false)
+
+  // ─── Busca de aluno (Autocomplete) ──────────────────────────────────────────
+  // Célula única: o nome do aluno selecionado é o valor do input. Pra trocar,
+  // clica → foco seleciona tudo → digita pra substituir.
+  const [buscaAluno, setBuscaAluno] = useState('')
+  useEffect(() => { setBuscaAluno(aluno?.nome_completo || '') }, [aluno?.name, aluno?.nome_completo])
 
   // ═════════════════════════════════════════════════════════════════════════
   // Loaders
@@ -277,10 +284,11 @@ export default function CronogramaFeedbacks() {
     const encontros = dias.length
     let semanas = 0
     if (cicloAtual.length >= 2) {
+      // Total = duração geral entre 1ª e última data (sem +1 — espelho do legado)
       semanas = Math.round(
         (new Date(cicloAtual[cicloAtual.length - 1].date) - new Date(cicloAtual[0].date))
         / (7 * 86400000),
-      ) + 1 // inclusivo
+      )
     }
     return {
       encontros,
@@ -290,9 +298,10 @@ export default function CronogramaFeedbacks() {
     }
   }, [schedule.dates])
 
-  // CICLOS: cada grupo é uma ficha (Marco Zero ou Troca encerra). Helper retorna
-  // [{ label: '4 semanas' | 'Ciclo a definir', items: [...dates] }].
-  const grupos = useMemo(() => agruparPorCiclo(schedule.dates), [schedule.dates])
+  // CICLOS: forward-looking — cada Marco Zero/Troca recebe `cycleDurationText`
+  // representando a duração do ciclo que COMEÇA nele. Feedbacks comuns ficam
+  // sem badge (cycleDurationText = null). Última Troca sem próxima vira "Ciclo a definir".
+  const linhasCiclos = useMemo(() => enriquecerComCiclo(schedule.dates), [schedule.dates])
 
   // Formulários compatíveis com o plano da aluna (dieta/treino)
   const formulariosCompativeis = useMemo(() => {
@@ -416,33 +425,50 @@ export default function CronogramaFeedbacks() {
   }
 
   const handleSetMarcoZero = (dateStr, novoValor) => {
+    // Mantém formulario no estado local (Frappe exige mandatory).
+    // A UI já esconde o select pra is_start. O backend ignora o envio do feedback
+    // pra is_start mas o campo precisa estar preenchido.
     setSchedule(prev => ({
-      // Ponto de partida não dispara feedback — quando marca, limpa o formulário pra não persistir vínculo enganoso.
       dates: prev.dates.map(d => d.date === dateStr
-        ? { ...d, is_start: novoValor, formulario: novoValor ? '' : d.formulario }
+        ? { ...d, is_start: novoValor }
         : d,
       ),
     }))
     setMarcoZeroMenu(null)
   }
 
-  const handleToggleTraining = async (dateStr, novoVal) => {
+  // Cicla o tipo do agendamento: Feedback → Troca → Marco Zero → Feedback
+  const handleSetTipo = async (dateStr, novoEstado) => {
     const atual = schedule.dates.find(d => d.date === dateStr)
     if (!atual) return
+    const is_start = !!novoEstado.is_start
+    const is_training = !!novoEstado.is_training
     // Atualização otimista
     setSchedule(prev => ({
-      dates: prev.dates.map(d => d.date === dateStr ? { ...d, is_training: novoVal } : d),
+      dates: prev.dates.map(d => d.date === dateStr
+        ? { ...d, is_start, is_training }
+        : d
+      ),
     }))
     if (atual._name) {
       try {
-        await salvarAgendamento(atual._name, { is_training: novoVal })
-        showToast(novoVal ? 'Marcado como Troca' : 'Marcado como Feedback', 'success')
+        await salvarAgendamento(atual._name, {
+          is_start: is_start ? 1 : 0,
+          is_training: is_training ? 1 : 0,
+        })
+        const label = is_start ? 'Ponto de partida'
+                    : is_training ? 'Troca'
+                    : 'Feedback'
+        showToast(`Marcado como ${label}`, 'success')
       } catch (e) {
         console.error(e)
         showToast('Falha ao salvar', 'error')
         // Reverte
         setSchedule(prev => ({
-          dates: prev.dates.map(d => d.date === dateStr ? { ...d, is_training: !novoVal } : d),
+          dates: prev.dates.map(d => d.date === dateStr
+            ? { ...d, is_start: !!atual.is_start, is_training: !!atual.is_training }
+            : d
+          ),
         }))
       }
     }
@@ -554,14 +580,80 @@ export default function CronogramaFeedbacks() {
     const tplObj = templates.find(t => t.name === templateAtualId)
     const tpl = tplObj?.texto
             || (templateAtualId === TEMPLATE_PADRAO.name ? TEMPLATE_PADRAO.texto : templateAtualTexto)
-    const datasNotMarco = schedule.dates
-      .filter(d => !d.is_start)
-      .map(d => fmtDateBR(d.date))
-      .join('\n')
+
+    // Janela ativa: do ÚLTIMO Marco Zero pra frente (legado considera só o último).
+    // Se não tem nenhum Marco Zero, considera todas as datas mas sem header de Ciclo.
+    const sorted = [...schedule.dates].sort((a, b) => a.date.localeCompare(b.date))
+    let lastStartIdx = -1
+    for (let i = sorted.length - 1; i >= 0; i--) {
+      if (sorted[i].is_start) { lastStartIdx = i; break }
+    }
+    const janela = lastStartIdx >= 0 ? sorted.slice(lastStartIdx) : sorted
+
+    const semanasEntre = (a, b, inclusivo) => {
+      const r = Math.round((new Date(b) - new Date(a)) / (7 * 86400000))
+      return inclusivo ? r + 1 : r
+    }
+
+    // Calcula cycleDurationText pra cada Marco Zero/Troca da janela
+    const enriquecido = janela.map((item, idx) => {
+      const isStart = !!item.is_start
+      const isTraining = !!item.is_training
+      let cycleDurationText = null
+      if (isStart || isTraining) {
+        const proxTroca = janela.slice(idx + 1).find(x => x.is_training)
+        if (proxTroca) {
+          cycleDurationText = `${semanasEntre(item.date, proxTroca.date, isStart)} semanas`
+        } else {
+          cycleDurationText = 'Ciclo a definir'
+        }
+      }
+      return { ...item, cycleDurationText }
+    })
+
+    const totalDefined = enriquecido.filter(x =>
+      x.cycleDurationText && !x.cycleDurationText.includes('definir')
+    ).length
+
+    // Data no formato DD/MM/AA pra lista
+    const fmtBRShort = (iso) => {
+      const [y, m, d] = iso.split('-')
+      return `${d}/${m}/${y.slice(2)}`
+    }
+
+    // Monta linhas: cabeçalho do Marco Zero (sem data) + bullets pras outras datas
+    const linhas = []
+    let cicloN = 0
+    for (const item of enriquecido) {
+      if (item.is_start) {
+        cicloN++
+        linhas.push(`Ciclo ${cicloN}/${totalDefined} — ${item.cycleDurationText}`)
+      } else if (item.is_training) {
+        cicloN++
+        const suffix = item.cycleDurationText.includes('definir')
+          ? 'Ciclo a definir'
+          : `Ciclo ${cicloN}/${totalDefined} — ${item.cycleDurationText}`
+        linhas.push(`• ${fmtBRShort(item.date)} - ${suffix}`)
+      } else {
+        linhas.push(`• ${fmtBRShort(item.date)}`)
+      }
+    }
+    const lista_datas = linhas.join('\n')
+
+    // FIM_PLANO em DD/MES/AAAA (mês por extenso em maiúsculas)
+    let fim_plano = ''
+    if (planForm.plan_end) {
+      const [y, m, d] = planForm.plan_end.split('-')
+      fim_plano = `${d}/${MONTHS[Number(m) - 1].toUpperCase()}/${y}`
+    }
+
+    // {{NOME}} → primeiro nome em CAIXA ALTA
+    const primeiroNome = (aluno?.nome_completo || '').trim().split(/\s+/)[0]?.toUpperCase() || ''
+
     const txt = aplicarTemplate(tpl, {
-      nome: aluno?.nome_completo || '',
-      fim_plano: planForm.plan_end ? fmtDateBR(planForm.plan_end) : '',
-      lista_datas: datasNotMarco,
+      nome: primeiroNome,
+      fim_plano,
+      lista_datas,
       senha_acesso: aluno?.senha_de_acesso || '(não cadastrada)',
     })
     try {
@@ -768,16 +860,20 @@ export default function CronogramaFeedbacks() {
           {/* ─── Coluna esquerda ─────────────────────────────────────────── */}
           <div className="lg:col-span-5 space-y-4">
 
-            {/* Aluno: autocomplete pra selecionar/trocar inline */}
-            <div className="bg-[#29292e] border border-[#323238] rounded-xl p-4 space-y-2">
+            {/* Aluno: célula única — nome aparece no input; clica e digita pra trocar */}
+            <div className="bg-[#29292e] border border-[#323238] rounded-xl p-4 space-y-3">
               <div className="flex items-center gap-3">
                 {aluno
-                  ? <Avatar nome={aluno.nome_completo} size="sm" />
-                  : <div className="h-8 w-8 rounded-full bg-[#1a1a1a] border border-dashed border-[#323238] flex items-center justify-center shrink-0">
-                      <Search size={14} className="text-gray-500" />
-                    </div>}
+                  ? <Avatar nome={aluno.nome_completo} foto={aluno.foto} size="md" />
+                  : <div className="h-10 w-10 rounded-full bg-[#1a1a1a] border border-dashed border-[#323238] flex items-center justify-center shrink-0">
+                      <Search size={16} className="text-gray-500" />
+                    </div>
+                }
                 <div className="flex-1 min-w-0">
                   <Autocomplete
+                    value={buscaAluno}
+                    onChange={setBuscaAluno}
+                    selectOnFocus
                     searchFn={async (q) => {
                       if (!q || q.length < 2) return []
                       const res = await listarAlunos({ search: q, limit: 30 })
@@ -788,7 +884,10 @@ export default function CronogramaFeedbacks() {
                       return (res.list || []).filter(a => a.name !== aluno?.name)
                     }}
                     initialHeader="Últimos cadastrados"
-                    onSelect={(a) => a?.name && navigate(`/cronograma-feedbacks/aluno/${encodeURIComponent(a.name)}`)}
+                    onSelect={(a) => {
+                      setBuscaAluno(a?.nome_completo || '')
+                      if (a?.name) navigate(`/cronograma-feedbacks/aluno/${encodeURIComponent(a.name)}`)
+                    }}
                     renderItem={(a) => (
                       <div className="flex items-center gap-2.5 min-w-0">
                         <Avatar nome={a.nome_completo} foto={a.foto} size="sm" />
@@ -798,14 +897,16 @@ export default function CronogramaFeedbacks() {
                         </div>
                       </div>
                     )}
-                    placeholder={aluno ? aluno.nome_completo : 'Digite o nome do aluno...'}
+                    placeholder="Digite o nome do aluno..."
                     icon={Search}
-                    compact
                   />
+                  {aluno?.email && (
+                    <p className="text-gray-500 text-[11px] truncate mt-1.5 pl-1">{aluno.email}</p>
+                  )}
                 </div>
               </div>
               {aluno && planForm.plan_start && planForm.plan_end && (
-                <p className="text-gray-500 text-[11px] truncate pl-12">
+                <p className="text-gray-500 text-[11px] truncate">
                   Plano: {fmtDateBR(planForm.plan_start)} → {fmtDateBR(planForm.plan_end)} ({planForm.plan_duration} meses)
                 </p>
               )}
@@ -854,13 +955,14 @@ export default function CronogramaFeedbacks() {
                       <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 text-center">Ciclo</span>
                       <span />
                     </div>
-                    {grupos.map((grupo, gi) => grupo.items.map((d, idx) => {
-                      const ehUltimaDoGrupo = idx === grupo.items.length - 1
-                      // Intervalo em semanas até a linha anterior do MESMO grupo
-                      const prev = idx > 0 ? grupo.items[idx - 1] : null
+                    {linhasCiclos.map((d, idx) => {
+                      // Intervalo em semanas até a linha anterior (qualquer tipo)
+                      const prev = idx > 0 ? linhasCiclos[idx - 1] : null
                       const intervalo = prev
                         ? Math.round((new Date(d.date) - new Date(prev.date)) / (7 * 86400000))
                         : 0
+                      const cycleText = d.cycleDurationText
+                      const ehADefinir = cycleText && cycleText.includes('definir')
                       return (
                         <LongPressRow key={d.date}
                           onLongPress={(e) => {
@@ -872,7 +974,7 @@ export default function CronogramaFeedbacks() {
                           <span className="text-white font-medium text-xs">{fmtDateBR(d.date)}</span>
                           <span className="flex justify-center">
                             <TipoBotao item={d}
-                              onToggle={(_, v) => handleToggleTraining(d.date, v)}
+                              onCycle={(_, novoEstado) => handleSetTipo(d.date, novoEstado)}
                               variant="icon"
                               size="sm" />
                           </span>
@@ -898,13 +1000,13 @@ export default function CronogramaFeedbacks() {
                             {intervalo > 0 ? `${intervalo}s` : '—'}
                           </span>
                           <span className="text-center">
-                            {ehUltimaDoGrupo ? (
+                            {cycleText ? (
                               <span className={`inline-block text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
-                                grupo.label === 'Ciclo a definir'
-                                  ? 'bg-gray-500/10 text-gray-400 border-gray-500/30 italic'
+                                ehADefinir
+                                  ? 'bg-gray-500/10 text-gray-400 border-dashed border-gray-500/30 italic'
                                   : 'bg-purple-500/10 text-purple-300 border-purple-500/30'
                               }`}>
-                                {grupo.label}
+                                {cycleText}
                               </span>
                             ) : null}
                           </span>
@@ -915,7 +1017,7 @@ export default function CronogramaFeedbacks() {
                           </button>
                         </LongPressRow>
                       )
-                    }))}
+                    })}
 
                     {/* Total planejado */}
                     {schedule.dates.length > 0 && (
@@ -1085,6 +1187,7 @@ export default function CronogramaFeedbacks() {
                 /* Modo Lista: formulário "Padronizar Datas" inline */
                 <PadronizarFormulario
                   formularios={formularios}
+                  planStart={planForm.plan_start}
                   planEnd={planForm.plan_end}
                   feriasList={feriasList}
                   onGerar={handleGerarSerie}
@@ -1121,6 +1224,7 @@ export default function CronogramaFeedbacks() {
       {modalGerarSerie && (
         <ModalGerarSerie
           formularios={formularios}
+          planStart={planForm.plan_start}
           planEnd={planForm.plan_end}
           feriasList={feriasList}
           onGerar={handleGerarSerie}

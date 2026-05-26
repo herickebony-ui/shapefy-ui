@@ -102,49 +102,43 @@ export function gerarDatasSerie({
 }
 
 /**
- * Agrupa as datas em "ciclos" delimitados por Marco Zero/Trocas.
- * Cada Troca encerra o ciclo atual e abre o próximo. O label de cada grupo
- * descreve a ficha CONTIDA nele (ex: "4 semanas") — calculado pela distância
- * entre o início do grupo e a próxima Troca.
+ * Enriquece cada item da lista com `cycleDurationText`, forward-looking.
+ * O badge representa a duração do ciclo que COMEÇA neste marcador
+ * (espelho do legado FeedbackModule).
  *
- * @param {Array} dates  array de objetos com { date, is_start, is_training, ... }
- * @returns {Array<{ label: string, items: Array }>}
+ * Regras:
+ *   - is_start (Marco Zero)        → round(dias até próxima Troca / 7) + 1
+ *   - is_training (Troca)          → round(dias até próxima Troca / 7) sem +1
+ *   - próximo marcador é is_start  → "Até renovar"
+ *   - sem próximo marcador         → "Ciclo a definir"
+ *   - feedback comum               → cycleDurationText = null
+ *
+ * @param {Array} dates  array de { date, is_start, is_training, ... }
+ * @returns {Array} mesma lista ordenada por data + `cycleDurationText`
  */
-export function agruparPorCiclo(dates) {
+export function enriquecerComCiclo(dates) {
   if (!dates?.length) return []
   const sorted = [...dates].sort((a, b) => (a.date || '').localeCompare(b.date || ''))
-  const grupos = []
-  let atual = { label: 'Início', items: [] }
 
-  // Cálculo de semanas: contagem INCLUSIVA (sistema legado de referência).
-  // Ex: 28 dias entre Marco Zero e Troca = 5 semanas (não 4) porque conta
-  // a semana inicial + as completas.
-  const semanasInclusivo = (dataIni, dataFim) =>
-    Math.round((new Date(dataFim) - new Date(dataIni)) / (7 * 86400000)) + 1
+  const semanasEntre = (dataIni, dataFim, inclusivo) => {
+    const r = Math.round((new Date(dataFim) - new Date(dataIni)) / (7 * 86400000))
+    return inclusivo ? r + 1 : r
+  }
 
-  for (let i = 0; i < sorted.length; i++) {
-    const d = sorted[i]
-    atual.items.push(d)
-    if (d.is_training) {
-      grupos.push(atual)
-      const proxMarcoIdx = sorted.findIndex((x, j) => j > i && x.is_training)
-      let label = 'Ciclo a definir'
-      if (proxMarcoIdx !== -1) {
-        label = `${semanasInclusivo(d.date, sorted[proxMarcoIdx].date)} semanas`
+  return sorted.map((item, idx) => {
+    const isStart = !!item.is_start
+    const isTraining = !!item.is_training
+    let cycleDurationText = null
+    if (isStart || isTraining) {
+      const next = sorted.slice(idx + 1).find(x => x.is_training || x.is_start)
+      if (next && next.is_training) {
+        cycleDurationText = `${semanasEntre(item.date, next.date, isStart)} semanas`
+      } else if (next && next.is_start) {
+        cycleDurationText = 'Até renovar'
+      } else {
+        cycleDurationText = 'Ciclo a definir'
       }
-      atual = { label, items: [] }
     }
-  }
-  if (atual.items.length) grupos.push(atual)
-
-  // Ajusta o label do PRIMEIRO grupo: até a primeira Troca
-  if (grupos.length > 0) {
-    const primeiraTrocaIdx = sorted.findIndex(x => x.is_training)
-    if (primeiraTrocaIdx !== -1) {
-      grupos[0].label = `${semanasInclusivo(sorted[0].date, sorted[primeiraTrocaIdx].date)} semanas`
-    } else {
-      grupos[0].label = 'Ciclo a definir'
-    }
-  }
-  return grupos
+    return { ...item, cycleDurationText }
+  })
 }

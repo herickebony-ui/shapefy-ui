@@ -178,37 +178,32 @@ export const excluirAgendamentosDoAluno = async (alunoId) => {
  *
  * payloads = [{ formulario, data_agendada, dias_aviso, nota, is_start, status }]
  *
- * NOTA: o backend do Frappe faz dedupe por (aluno + data + formulario) implícito
- * via aluno.dia_semana_feedback / dia_mes_feedback. Mas como aqui é manual,
- * a estratégia mais simples é: se o agendamento existe (mesmo aluno+data+formulario),
- * atualiza; senão cria.
+ * Dedupe por DATA (aluno só pode ter 1 agendamento por dia). Se a data já
+ * existe, atualiza no lugar (incluindo formulario, caso o profissional troque).
+ * Datas que sumiram do novo array são excluídas.
  */
 export const sincronizarCronogramaDoAluno = async (alunoId, payloads) => {
   const existentes = await listarAgendamentosDoAluno(alunoId)
   const mapaExistentes = {}
-  existentes.forEach(e => {
-    const chave = `${e.data_agendada}__${e.formulario}`
-    mapaExistentes[chave] = e
-  })
+  existentes.forEach(e => { mapaExistentes[e.data_agendada] = e })
 
   const operacoes = { criados: [], atualizados: [], removidos: [] }
-  const chavesNovas = new Set()
+  const datasNovas = new Set()
 
-  // Cria ou atualiza
   for (const p of payloads) {
-    const chave = `${p.data_agendada}__${p.formulario}`
-    chavesNovas.add(chave)
-    if (mapaExistentes[chave]) {
-      // Já existe → atualiza só os campos mutáveis
-      await salvarAgendamento(mapaExistentes[chave].name, {
+    datasNovas.add(p.data_agendada)
+    if (mapaExistentes[p.data_agendada]) {
+      // Já existe → atualiza no lugar (inclui formulario p/ permitir troca)
+      await salvarAgendamento(mapaExistentes[p.data_agendada].name, {
+        formulario: p.formulario,
         dias_aviso: p.dias_aviso,
         observacao: p.observacao || '',
         nota: p.nota || '',
         is_start: p.is_start ? 1 : 0,
         is_training: p.is_training ? 1 : 0,
-        status: p.status || mapaExistentes[chave].status,
+        status: p.status || mapaExistentes[p.data_agendada].status,
       })
-      operacoes.atualizados.push(mapaExistentes[chave].name)
+      operacoes.atualizados.push(mapaExistentes[p.data_agendada].name)
     } else {
       // Novo → cria
       const novo = await criarAgendamento({
@@ -226,10 +221,8 @@ export const sincronizarCronogramaDoAluno = async (alunoId, payloads) => {
     }
   }
 
-  // Remove os que sumiram
   for (const ex of existentes) {
-    const chave = `${ex.data_agendada}__${ex.formulario}`
-    if (!chavesNovas.has(chave)) {
+    if (!datasNovas.has(ex.data_agendada)) {
       await excluirAgendamento(ex.name)
       operacoes.removidos.push(ex.name)
     }

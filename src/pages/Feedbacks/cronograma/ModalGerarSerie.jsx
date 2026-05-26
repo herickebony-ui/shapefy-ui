@@ -2,7 +2,7 @@ import { Modal, Button } from '../../../components/ui'
 import PadronizarFormulario from './PadronizarFormulario'
 
 export default function ModalGerarSerie({
-  formularios, planEnd, feriasList,
+  formularios, planStart, planEnd, feriasList,
   onGerar, onClose,
 }) {
   return (
@@ -13,6 +13,7 @@ export default function ModalGerarSerie({
       footer={<Button variant="ghost" onClick={onClose}>Cancelar</Button>}>
       <PadronizarFormulario
         formularios={formularios}
+        planStart={planStart}
         planEnd={planEnd}
         feriasList={feriasList}
         onGerar={(novas) => { onGerar(novas); onClose() }}
