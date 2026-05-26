@@ -8,7 +8,8 @@ import {
 } from '../../api/formularios'
 import { parseFrappeError } from '../../utils/frappeErrors'
 import useErrorModal from '../../hooks/useErrorModal'
-import { Button, Badge, Tabs, EmptyState, BotaoAjuda } from '../../components/ui'
+import { Button, Badge, Tabs, EmptyState, BotaoAjuda, BotaoTutoriais } from '../../components/ui'
+import { TUTORIAIS_FORMULARIOS } from '../../data/tutoriais'
 import ListPage from '../../components/templates/ListPage'
 
 const TABS = [
@@ -128,6 +129,7 @@ export default function FormularioListagem({ tipoFixo }) {
       subtitle={subtitle}
       actions={
         <>
+          <BotaoTutoriais videos={TUTORIAIS_FORMULARIOS} />
           <BotaoAjuda
             title={aba === 'anamnese' ? 'Formulários de Anamnese' : 'Formulários de Feedback'}
             subtitle="Guia rápido desta tela"

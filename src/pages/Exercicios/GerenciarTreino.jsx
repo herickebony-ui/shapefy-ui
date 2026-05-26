@@ -5,8 +5,9 @@ import {
 } from '../../api/fichas'
 import {
   Button, FormGroup, Input, Select, Modal, EmptyState, DataTable, Badge,
-  ImportExcelButton,
+  ImportExcelButton, BotaoTutoriais,
 } from '../../components/ui'
+import { TUTORIAIS_EXERCICIOS } from '../../data/tutoriais'
 import ListPage from '../../components/templates/ListPage'
 import ExplorarBibliotecaModal from '../../components/ExplorarBibliotecaModal'
 import { extractVideoId } from '../../utils/video'
@@ -462,6 +463,7 @@ export default function GerenciarTreino() {
         subtitle={`${exercicios.length} exercício${exercicios.length !== 1 ? 's' : ''} cadastrado${exercicios.length !== 1 ? 's' : ''}`}
         actions={
           <>
+            <BotaoTutoriais videos={TUTORIAIS_EXERCICIOS} />
             <Button variant="secondary" size="sm" icon={RefreshCw} onClick={carregar} loading={loading} />
             <Button variant="secondary" size="sm" icon={BookOpen} onClick={() => setShowBiblioteca(true)}>
               Explorar Biblioteca

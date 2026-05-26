@@ -11,7 +11,8 @@ import {
 } from '../../api/treinosRealizados'
 import { listarAlunos } from '../../api/alunos'
 import { listarFichas, buscarFicha } from '../../api/fichas'
-import { Spinner, EmptyState, Autocomplete } from '../../components/ui'
+import { Spinner, EmptyState, Autocomplete, BotaoTutoriais } from '../../components/ui'
+import { TUTORIAIS_TREINOS_PROGRESSAO } from '../../data/tutoriais'
 import ListPage from '../../components/templates/ListPage'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -297,6 +298,7 @@ export default function ProgressaoCargas() {
     <ListPage
       title="Progressão de Cargas"
       subtitle="Evolução de carga por exercício e aluno"
+      actions={<BotaoTutoriais videos={TUTORIAIS_TREINOS_PROGRESSAO} />}
     >
       <div className="p-4 md:p-6 space-y-4 max-w-7xl mx-auto pb-12">
         {/* Aluno */}

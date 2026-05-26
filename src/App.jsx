@@ -36,6 +36,7 @@ import PrescricaoDetalhe from './pages/Prescricoes/PrescricaoDetalhe'
 import FinanceiroListagem from './pages/Financeiro/FinanceiroListagem'
 import PlanosListagem from './pages/Financeiro/PlanosListagem'
 import CadastroPublico from './pages/Cadastro/CadastroPublico'
+import LandingpageRedirect from './pages/Landingpage/LandingpageRedirect'
 import MeuLinkCadastro from './pages/Cadastro/MeuLinkCadastro'
 import ModeloDietaListagem from './pages/Modelos/ModeloDietaListagem'
 import ModeloFichaListagem from './pages/Modelos/ModeloFichaListagem'
@@ -100,6 +101,7 @@ function App() {
         <Route path="/update-password" element={<UpdatePassword />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/cadastro/:slug" element={<CadastroPublico />} />
+        <Route path="/landingpage" element={<LandingpageRedirect />} />
 
         {/* Área do aluno (auth via X-Aluno-Token) */}
         <Route

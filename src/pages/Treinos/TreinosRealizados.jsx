@@ -11,7 +11,8 @@ import {
   salvarFeedbackProfissional, marcarEntregueTreino, excluirTreinoRealizado,
 } from '../../api/treinosRealizados'
 import { buscarFicha } from '../../api/fichas'
-import { Button, Badge, Spinner, Modal } from '../../components/ui'
+import { Button, Badge, Spinner, Modal, BotaoTutoriais } from '../../components/ui'
+import { TUTORIAIS_TREINOS_PROGRESSAO } from '../../data/tutoriais'
 import ListPage from '../../components/templates/ListPage'
 import useErrorModal from '../../hooks/useErrorModal'
 
@@ -727,6 +728,7 @@ export default function TreinosRealizados() {
       subtitle="Histórico de execução dos alunos"
       actions={
         <>
+          <BotaoTutoriais videos={TUTORIAIS_TREINOS_PROGRESSAO} />
           <Button variant="secondary" size="sm" icon={RefreshCw} onClick={() => carregar()} loading={loading} />
         </>
       }

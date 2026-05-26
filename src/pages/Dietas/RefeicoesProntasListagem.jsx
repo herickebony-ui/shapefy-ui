@@ -12,8 +12,9 @@ import {
 import useAuthStore from '../../store/authStore'
 import {
   Button, FormGroup, Input, Select, Modal, Spinner,
-  DataTable, Badge, Autocomplete,
+  DataTable, Badge, Autocomplete, BotaoTutoriais,
 } from '../../components/ui'
+import { TUTORIAIS_REFEICOES_PRONTAS } from '../../data/tutoriais'
 import ListPage from '../../components/templates/ListPage'
 import { UNIT_OPTIONS } from './DietaDetalhe'
 
@@ -749,6 +750,7 @@ export default function RefeicoesProntasListagem() {
         subtitle="Gerencie suas refeições prontas para uso nas dietas"
         actions={
           <>
+            <BotaoTutoriais videos={TUTORIAIS_REFEICOES_PRONTAS} />
             <Button variant="secondary" size="sm" icon={RefreshCw} onClick={() => carregar()} />
             <Button variant="primary" size="sm" icon={Plus} onClick={() => setModal('novo')}>
               Nova Refeição

@@ -9,8 +9,9 @@ import {
 
 import {
   Button, Modal, Tabs, FormGroup, Input,
-  Spinner, Avatar, Autocomplete, BotaoAjuda,
+  Spinner, Avatar, Autocomplete, BotaoAjuda, BotaoTutoriais,
 } from '../../components/ui'
+import { TUTORIAIS_CRONOGRAMA_FEEDBACKS } from '../../data/tutoriais'
 
 const TOPICOS_AJUDA_CRONOGRAMA = [
   { icon: Target,         title: 'Pra que serve esta tela', description: 'É onde você define quando o aluno recebe cada feedback. Você escolhe o aluno, define o ponto de partida da vigência e a frequência (semanal/quinzenal/mensal). O sistema agenda os envios automaticamente até o fim do plano.' },
@@ -683,6 +684,7 @@ export default function CronogramaFeedbacks() {
             <h1 className="text-lg md:text-2xl font-bold tracking-tight">Planejar Feedbacks do Aluno</h1>
             {aluno && <p className="text-gray-500 text-xs mt-1">{aluno.nome_completo}</p>}
           </div>
+          <BotaoTutoriais videos={TUTORIAIS_CRONOGRAMA_FEEDBACKS} />
           <BotaoAjuda
             title="Como funciona o Cronograma de Feedbacks"
             subtitle="Guia rápido desta tela"

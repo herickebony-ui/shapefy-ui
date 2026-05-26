@@ -6,8 +6,9 @@ import {
 } from '../../api/alimentos'
 import {
   Button, FormGroup, Input, Select, Modal, Spinner, EmptyState,
-  DataTable, Badge, ImportExcelButton,
+  DataTable, Badge, ImportExcelButton, BotaoTutoriais,
 } from '../../components/ui'
+import { TUTORIAIS_ALIMENTOS } from '../../data/tutoriais'
 import ListPage from '../../components/templates/ListPage'
 import ExplorarBibliotecaModal from '../../components/ExplorarBibliotecaModal'
 
@@ -419,6 +420,7 @@ export default function AlimentosListagem() {
         subtitle="Crie, edite e gerencie sua base de alimentos"
         actions={
           <>
+            <BotaoTutoriais videos={TUTORIAIS_ALIMENTOS} />
             <Button variant="secondary" size="sm" icon={RefreshCw} onClick={() => carregar()} />
             <Button variant="secondary" size="sm" icon={BookOpen} onClick={() => setShowBiblioteca(true)}>
               Explorar Biblioteca

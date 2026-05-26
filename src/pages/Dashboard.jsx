@@ -6,12 +6,14 @@ import { listarVinculosAluno, excluirVinculosExcluiveis } from '../api/alunoVinc
 import { parseFrappeError } from '../utils/frappeErrors'
 import {
   Button, Badge, DataTable, Spinner,
-  Modal, FormGroup, Input, Select,
+  Modal, FormGroup, Input, Select, BotaoTutoriais,
 } from '../components/ui'
+import { TUTORIAIS_MEUS_ALUNOS } from '../data/tutoriais'
 import ListPage from '../components/templates/ListPage'
 import OnboardingModal from '../components/OnboardingModal'
 import JornadaInicial from '../components/JornadaInicial'
 import useOnboardingStore from '../store/onboardingStore'
+import useErrorModal from '../hooks/useErrorModal'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 const PAGE_SIZE = 30
@@ -71,6 +73,8 @@ export default function Dashboard() {
   const [salvando, setSalvando] = useState(false)
   const [novoAluno, setNovoAluno] = useState({ nome_completo: '', email: '', telefone: '', sexo: '' })
 
+  const errorModal = useErrorModal()
+
   // Debounce busca
   useEffect(() => {
     clearTimeout(debounceRef.current)
@@ -121,20 +125,27 @@ export default function Dashboard() {
       })
       setAlunos(res.list)
     } catch (e) {
-      console.error(e)
+      errorModal.show(e, 'Listar alunos')
     } finally {
       setLoading(false)
     }
+    // errorModal é objeto novo a cada render — usá-lo como dep cria loop
+    // infinito. .show é useCallback interno (estável), então ignorar é seguro.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryBusca, filtroStatus, filtroSexo])
 
   useEffect(() => { carregar() }, [carregar])
 
   useEffect(() => {
-    buscarStatsAlunos().then(setStats).catch(console.error)
+    buscarStatsAlunos().then(setStats).catch(e => errorModal.show(e, 'Carregar estatísticas'))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const refreshCounts = useOnboardingStore(s => s.refreshCounts)
-  useEffect(() => { refreshCounts().catch(console.error) }, [refreshCounts])
+  useEffect(() => {
+    refreshCounts().catch(e => errorModal.show(e, 'Atualizar contadores'))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshCounts])
 
   const handleExcluir = async () => {
     if (!alunoExcluir || !vinculos?.podeExcluir) return
@@ -157,7 +168,7 @@ export default function Dashboard() {
       await excluirAluno(alunoExcluir.name)
       setAlunoExcluir(null)
       carregar()
-      buscarStatsAlunos().then(setStats).catch(() => {})
+      buscarStatsAlunos().then(setStats).catch(e => errorModal.show(e, 'Atualizar estatísticas'))
     } catch (e) {
       console.error(e)
       setErroExcluir(parseFrappeError(e) || 'Não foi possível excluir o aluno.')
@@ -175,7 +186,7 @@ export default function Dashboard() {
       await salvarAluno(alunoExcluir.name, { enabled: 0 })
       setAlunoExcluir(null)
       carregar()
-      buscarStatsAlunos().then(setStats).catch(() => {})
+      buscarStatsAlunos().then(setStats).catch(e => errorModal.show(e, 'Atualizar estatísticas'))
     } catch (e) {
       console.error(e)
       setErroExcluir(parseFrappeError(e) || 'Não foi possível desativar o aluno.')
@@ -194,10 +205,9 @@ export default function Dashboard() {
       setShowModal(false)
       setNovoAluno({ nome_completo: '', email: '', telefone: '', sexo: '' })
       carregar()
-      buscarStatsAlunos().then(setStats).catch(() => {})
+      buscarStatsAlunos().then(setStats).catch(e => errorModal.show(e, 'Atualizar estatísticas'))
     } catch (e) {
-      console.error(e)
-      alert('Erro ao cadastrar aluno.')
+      errorModal.show(e, 'Criar aluno')
     } finally {
       setSalvando(false)
     }
@@ -282,6 +292,7 @@ export default function Dashboard() {
         subtitle="Visão geral · clique num aluno para abrir o perfil completo"
         actions={
           <>
+            <BotaoTutoriais videos={TUTORIAIS_MEUS_ALUNOS} />
             <Button variant="secondary" size="sm" icon={RefreshCw} onClick={carregar} loading={loading} />
             <Button variant="secondary" size="sm" icon={Link2} onClick={() => navigate('/meu-link-cadastro')}>
               <span className="hidden sm:inline">Link de cadastro</span>
@@ -551,6 +562,7 @@ export default function Dashboard() {
           </div>
         </Modal>
       )}
+      {errorModal.element}
     </>
   )
 }
