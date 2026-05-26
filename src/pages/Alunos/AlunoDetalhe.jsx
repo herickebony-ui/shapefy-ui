@@ -93,7 +93,11 @@ export default function AlunoDetalhe() {
       .then(r => setAnamneses(r.list))
       .catch(e => errorModal.show(e, 'Listar anamneses'))
       .finally(() => setLoadingAnamneses(false))
-  }, [id, errorModal])
+    // errorModal é objeto novo a cada render — incluí-lo nas deps cria loop
+    // infinito (effect re-roda, fetch, setState, re-render, novo errorModal,
+    // effect re-roda…). .show é useCallback estável, então ignorar é seguro.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
 
   useEffect(() => {
     if (!id) return
@@ -121,7 +125,8 @@ export default function AlunoDetalhe() {
         .catch(e => errorModal.show(e, 'Listar avaliações'))
         .finally(() => setLoadingAvaliacoes(false))
     }
-  }, [abaAtiva, id, dietasCarregadas, fichasCarregadas, avaliacoesCarregadas, errorModal])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [abaAtiva, id, dietasCarregadas, fichasCarregadas, avaliacoesCarregadas])
 
   if (loadingAluno) {
     return (

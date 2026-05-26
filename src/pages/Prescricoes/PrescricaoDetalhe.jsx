@@ -214,7 +214,8 @@ function BancoModal({ onClose }) {
 
   useEffect(() => {
     listarManipulados().then(setLista).catch(e => errorModal.show(e, 'Listar manipulados')).finally(() => setLoading(false))
-  }, [errorModal])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleCriar = async () => {
     if (!novoNome.trim()) return
@@ -376,7 +377,8 @@ function MomentosModal({ onClose }) {
 
   useEffect(() => {
     listarMomentosDeUso().then(setLista).catch(e => errorModal.show(e, 'Listar momentos de uso')).finally(() => setLoading(false))
-  }, [errorModal])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleCriar = async () => {
     if (!novoNome.trim()) return
@@ -527,7 +529,10 @@ export default function PrescricaoDetalhe() {
       finally { setLoading(false) }
     }
     carregar()
-  }, [id, isNova, errorModal])
+    // errorModal é objeto novo a cada render — usar como dep cria loop.
+    // .show é useCallback estável, ignorar é seguro.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, isNova])
 
   // Auto-cadastra momentos digitados livremente que ainda não existem no catálogo.
   // Devolve a lista de items com `momento_de_uso` substituído pelo `name` válido.

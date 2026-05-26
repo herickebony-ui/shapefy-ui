@@ -414,7 +414,9 @@ function ModalNovaAnamnese({ alunoId, onClose, onCriada }) {
       .then(r => setFormularios(r.list))
       .catch(e => errorModal.show(e, 'Listar templates de anamnese'))
       .finally(() => setLoading(false))
-  }, [errorModal])
+    // errorModal é objeto novo a cada render — usar como dep cria loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleSelecionar = async (formulario) => {
     setVinculando(formulario.name)
@@ -588,7 +590,8 @@ export default function AlunoModal({ aluno: alunoBase, onClose }) {
     buscarAluno(id).then(setPerfilData).catch(e => errorModal.show(e, 'Carregar perfil')).finally(() => setLoadingPerfil(false))
     setLoadingAnamneses(true)
     listarAnamneses({ alunoId: id, limit: 50 }).then(r => setAnamneses(r.list)).catch(e => errorModal.show(e, 'Listar anamneses')).finally(() => setLoadingAnamneses(false))
-  }, [alunoBase, errorModal])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alunoBase])
 
   useEffect(() => {
     if (!alunoBase) return
@@ -612,7 +615,8 @@ export default function AlunoModal({ aluno: alunoBase, onClose }) {
         .catch(e => errorModal.show(e, 'Listar avaliações'))
         .finally(() => setLoadingAvaliacoes(false))
     }
-  }, [abaAtiva, alunoBase, errorModal, dietasCarregadas, fichasCarregadas, avaliacoesCarregadas])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [abaAtiva, alunoBase, dietasCarregadas, fichasCarregadas, avaliacoesCarregadas])
 
   if (!alunoBase) return null
 
