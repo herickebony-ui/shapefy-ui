@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Shapefy — A plataforma dos consultores que escalam</title>
+<title>Shapefy · A plataforma dos consultores que escalam</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=JetBrains+Mono:wght@400;500&family=Inter+Tight:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -31,7 +31,11 @@
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
-  html { scroll-behavior: smooth; }
+  html {
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
 
   body {
     background: var(--bg);
@@ -40,6 +44,7 @@
     font-weight: 400;
     line-height: 1.5;
     overflow-x: hidden;
+    max-width: 100vw;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -139,11 +144,6 @@
 
   .nav-login .nav-login-text-full { display: inline; }
   .nav-login .nav-login-text-short { display: none; }
-
-  @media (max-width: 900px) {
-    .nav-login .nav-login-text-full { display: none; }
-    .nav-login .nav-login-text-short { display: inline; }
-  }
 
   .nav-cta {
     background: var(--text);
@@ -617,12 +617,237 @@
     position: relative;
   }
 
+  /* ---------- TRIAL / GARANTIA ---------- */
+  .trial-section {
+    padding: 4rem 0 5rem;
+    position: relative;
+  }
+
+  .trial-card {
+    max-width: 720px;
+    margin: 0 auto;
+    background: linear-gradient(180deg, rgba(34, 197, 94, 0.12) 0%, var(--bg-card) 70%);
+    border: 1px solid rgba(34, 197, 94, 0.35);
+    border-radius: 24px;
+    padding: 3rem 2.5rem;
+    text-align: center;
+    box-shadow:
+      0 0 60px rgba(34, 197, 94, 0.15),
+      0 24px 60px rgba(0, 0, 0, 0.4);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .trial-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    height: 100%;
+    background: radial-gradient(ellipse, rgba(34, 197, 94, 0.2) 0%, transparent 60%);
+    filter: blur(40px);
+    pointer-events: none;
+  }
+
+  .trial-card > * { position: relative; z-index: 1; }
+
+  .trial-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #4ade80;
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid rgba(34, 197, 94, 0.45);
+    border-radius: 999px;
+    padding: 0.45rem 1rem;
+    margin-bottom: 1.5rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .trial-badge-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #4ade80;
+    box-shadow: 0 0 10px #4ade80;
+    animation: demoDotBlink 1.4s ease-in-out infinite;
+  }
+
+  .trial-title {
+    font-family: var(--display);
+    font-size: clamp(1.7rem, 3.5vw, 2.4rem);
+    font-weight: 400;
+    color: var(--text);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.25rem;
+  }
+
+  .trial-title .italic {
+    font-style: italic;
+    color: #86efac;
+  }
+
+  .trial-sub {
+    color: var(--text-muted);
+    font-size: 1rem;
+    line-height: 1.6;
+    max-width: 520px;
+    margin: 0 auto 2rem;
+  }
+
+  .trial-sub strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .trial-bullets {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem 2rem;
+    margin: 0 auto 2.25rem;
+    padding: 0;
+    max-width: 600px;
+  }
+
+  .trial-bullets li {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.92rem;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .trial-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: rgba(34, 197, 94, 0.18);
+    border: 1px solid rgba(34, 197, 94, 0.5);
+    color: #4ade80;
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  @media (max-width: 768px) {
+    .trial-card { padding: 2.5rem 1.5rem; }
+    .trial-bullets { flex-direction: column; align-items: flex-start; text-align: left; gap: 0.75rem; }
+  }
+
   /* ---------- PRICING ---------- */
+  .pricing-tier {
+    margin-top: 3rem;
+  }
+
+  /* O 2º tier precisa de mais respiro pra o badge "MAIS ESCOLHIDO"
+     do plano featured não colidir com a linha divisória acima. */
+  .pricing-tier + .pricing-tier {
+    margin-top: 5.5rem;
+  }
+
+  .pricing-tier-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-bottom: 2.5rem;
+  }
+
+  /* Grid que tem plano featured precisa de respiro extra acima
+     pra o badge "MAIS ESCOLHIDO" (que fica fora do card via top: -13px,
+     amplificado pelo scale(1.04) do .featured) nao colidir com a divisoria */
+  .pricing-grid:has(.plan.featured) {
+    padding-top: 1rem;
+  }
+
+  .pricing-tier-label {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .pricing-tier-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+    max-width: 80px;
+  }
+
   .pricing-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 1.5rem;
-    margin-top: 4rem;
+  }
+
+  /* Layout dos 5 planos:
+     Desktop: 3 em cima (Completo · Dieta Basic · Treino Basic), 2 embaixo centralizados (Dieta · Treino)
+     Mobile: pilha vertical na mesma ordem. */
+  .pricing-grid.pricing-grid-five {
+    grid-template-columns: repeat(6, 1fr);
+  }
+
+  .pricing-grid.pricing-grid-five > .plan {
+    grid-column: span 2;
+  }
+
+  /* Cards 4 e 5 (Dieta, Treino) centralizados na 2ª linha */
+  .pricing-grid.pricing-grid-five > :nth-child(4) {
+    grid-column: 2 / span 2;
+  }
+  .pricing-grid.pricing-grid-five > :nth-child(5) {
+    grid-column: 4 / span 2;
+  }
+
+  @media (max-width: 900px) {
+    .pricing-grid.pricing-grid-five {
+      grid-template-columns: 1fr;
+    }
+    .pricing-grid.pricing-grid-five > .plan,
+    .pricing-grid.pricing-grid-five > :nth-child(4),
+    .pricing-grid.pricing-grid-five > :nth-child(5) {
+      grid-column: auto;
+    }
+  }
+
+  .plan-aluno-limite {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.35), rgba(96, 165, 250, 0.2));
+    border: 1px solid rgba(96, 165, 250, 0.55);
+    border-radius: 999px;
+    padding: 0.35rem 0.85rem;
+    margin-bottom: 0.85rem;
+    width: fit-content;
+    box-shadow: 0 0 14px rgba(59, 130, 246, 0.3);
+    letter-spacing: 0.02em;
+  }
+
+  .plan-aluno-limite::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--accent-bright);
+    box-shadow: 0 0 6px var(--accent-bright);
   }
 
   .plan {
@@ -1078,8 +1303,23 @@
     background: #070a12;
   }
 
-  /* iPhone notch (hidden when real screenshot is used) */
-  .iphone-screen:has(img)::before {
+  .iphone-screen iframe {
+    border: 0;
+    display: block;
+    background: #05070D;
+    pointer-events: none;
+    /* O iphone-screen é pequeno (~190px). Renderizamos o iframe em 2x e
+       escalamos pra 50% — assim a viewport "pensa" que tem ~380px de largura
+       (mobile real) e o conteúdo nao fica esticado/quebrado. */
+    width: 200%;
+    height: 200%;
+    transform: scale(0.5);
+    transform-origin: top left;
+  }
+
+  /* iPhone notch — escondido tanto pra img quanto pra iframe */
+  .iphone-screen:has(img)::before,
+  .iphone-screen:has(iframe)::before {
     display: none;
   }
   .iphone-screen::before {
@@ -1226,9 +1466,10 @@
   .gallery-card img {
     width: 100%;
     aspect-ratio: 16 / 10;
-    object-fit: cover;
-    object-position: top left;
+    object-fit: contain;
+    object-position: center;
     display: block;
+    background: var(--bg);
     border-bottom: 1px solid var(--border);
   }
 
@@ -1354,6 +1595,194 @@
     color: var(--text-muted);
     font-size: 0.95rem;
     line-height: 1.6;
+  }
+
+  /* ---------- DEMO LIVE (iframe renderizado) ---------- */
+  .demo-live-section {
+    padding: 6rem 0 4rem;
+    text-align: center;
+    position: relative;
+  }
+
+  .demo-live-section::before {
+    content: '';
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60%;
+    max-width: 700px;
+    height: 700px;
+    background: radial-gradient(ellipse, rgba(59, 130, 246, 0.18) 0%, transparent 60%);
+    filter: blur(40px);
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .demo-live-section > .container { position: relative; z-index: 1; }
+
+  .demo-live-header {
+    max-width: 720px;
+    margin: 0 auto 3.5rem;
+  }
+
+  .demo-live-header .section-label {
+    justify-content: center;
+    margin-bottom: 1rem;
+  }
+
+  .demo-live-header h3 {
+    font-family: var(--display);
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    line-height: 1.15;
+  }
+
+  .demo-live-header h3 .italic {
+    font-style: italic;
+    color: var(--accent-bright);
+  }
+
+  .demo-live-header p {
+    color: var(--text-muted);
+    margin-top: 1rem;
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  .demo-phone {
+    width: 100%;
+    max-width: 440px;
+    margin: 0 auto;
+    aspect-ratio: 9 / 19;
+    background: #050505;
+    border-radius: 48px;
+    padding: 10px;
+    position: relative;
+    box-shadow:
+      0 60px 120px rgba(0, 0, 0, 0.6),
+      0 20px 50px rgba(0, 0, 0, 0.4),
+      0 0 100px rgba(59, 130, 246, 0.18),
+      0 0 0 1.5px rgba(255, 255, 255, 0.08),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    transition: transform 0.3s ease;
+  }
+
+  .demo-phone:hover {
+    transform: translateY(-4px) scale(1.01);
+  }
+
+  .demo-phone-pulse {
+    animation: demoPhonePulse 2.8s ease-in-out infinite;
+  }
+
+  @keyframes demoPhonePulse {
+    0%, 100% {
+      box-shadow:
+        0 60px 120px rgba(0, 0, 0, 0.6),
+        0 20px 50px rgba(0, 0, 0, 0.4),
+        0 0 100px rgba(59, 130, 246, 0.18),
+        0 0 0 1.5px rgba(255, 255, 255, 0.08),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    }
+    50% {
+      box-shadow:
+        0 60px 120px rgba(0, 0, 0, 0.6),
+        0 20px 50px rgba(0, 0, 0, 0.4),
+        0 0 140px rgba(59, 130, 246, 0.45),
+        0 0 0 1.5px rgba(96, 165, 250, 0.35),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    }
+  }
+
+  .demo-interact-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.4), rgba(248, 113, 113, 0.22));
+    border: 1px solid rgba(248, 113, 113, 0.6);
+    border-radius: 999px;
+    padding: 0.45rem 1rem;
+    margin: 0 auto 1.25rem;
+    width: fit-content;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.35);
+    animation: demoBadgePulse 2.2s ease-in-out infinite;
+    letter-spacing: 0.02em;
+  }
+
+  @keyframes demoBadgePulse {
+    0%, 100% { transform: translateY(0); box-shadow: 0 0 20px rgba(239, 68, 68, 0.35); }
+    50%      { transform: translateY(-2px); box-shadow: 0 0 30px rgba(239, 68, 68, 0.6); }
+  }
+
+  .demo-interact-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #fca5a5;
+    box-shadow: 0 0 8px #ef4444;
+    animation: demoDotBlink 1.2s ease-in-out infinite;
+  }
+
+  @keyframes demoDotBlink {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.55; transform: scale(0.85); }
+  }
+
+  .demo-phone::before {
+    content: '';
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 32%;
+    height: 22px;
+    background: #000;
+    border-radius: 999px;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  .demo-phone-screen {
+    width: 100%;
+    height: 100%;
+    border-radius: 40px;
+    overflow: hidden;
+    position: relative;
+    background: #05070D;
+  }
+
+  .demo-phone-screen iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+  }
+
+  .demo-live-cta {
+    margin-top: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .demo-live-note {
+    margin-top: 1.25rem;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    font-family: var(--mono);
+  }
+
+  @media (max-width: 768px) {
+    .demo-phone { max-width: 360px; }
+    .demo-live-section { padding: 4rem 0 3rem; }
   }
 
   /* ---------- DESKTOP MINI FRAME ---------- */
@@ -1582,11 +2011,8 @@
               <path d="M5 12h14M13 5l7 7-7 7"/>
             </svg>
           </a>
-          <a href="#produto" class="btn-ghost">Ver demonstração</a>
+          <a href="#demo" class="btn-ghost">Ver demonstração</a>
         </div>
-        <p class="hero-login">
-          Já é cliente? <a href="https://shapefyapp.com/login">Entrar na minha conta →</a>
-        </p>
       </div>
 
       <!-- MOCKUP: MacBook + iPhone -->
@@ -1594,7 +2020,7 @@
         <div class="macbook">
           <div class="macbook-screen">
             <div class="macbook-display">
-              <img src="assets/hero-desktop.png" alt="Shapefy — Comparativo de volume de treino por grupo muscular">
+              <img src="assets/hero-desktop.png" alt="Shapefy · Comparativo de volume de treino por grupo muscular">
             </div>
           </div>
           <div class="macbook-base"></div>
@@ -1602,7 +2028,7 @@
 
         <div class="iphone">
           <div class="iphone-screen">
-            <img src="assets/hero-mobile.png" alt="Shapefy — App do aluno">
+            <img src="assets/FichaCelular.jpg" alt="Shapefy · Ficha de treino do aluno no celular">
           </div>
         </div>
 
@@ -1625,13 +2051,53 @@
       </div>
       <div class="stat">
         <div class="stat-value">iOS + Android</div>
-        <div class="stat-label">App nativo — aluno e profissional</div>
+        <div class="stat-label">App nativo · aluno e profissional</div>
       </div>
       <div class="stat">
         <div class="stat-value">24/7</div>
         <div class="stat-label">Acesso para seus alunos</div>
       </div>
     </div>
+  </div>
+</section>
+
+<!-- DEMO AO VIVO — lâmina própria, ANTES da seção do produto -->
+<section class="demo-live-section" id="demo">
+  <div class="container">
+    <div class="demo-live-header">
+      <div class="section-label">Demonstração ao vivo</div>
+      <h3>Veja o app <span class="italic">funcionando</span> agora.</h3>
+      <p>Toque no celular abaixo e <strong>navegue como seu aluno</strong>. Treino, dieta, prescrições, tudo real e renderizado em tempo real.</p>
+    </div>
+
+    <!-- Badge convidando a interagir -->
+    <div class="demo-interact-badge">
+      <span class="demo-interact-dot"></span>
+      <span>Toque pra navegar</span>
+    </div>
+
+    <div class="demo-phone demo-phone-pulse">
+      <div class="demo-phone-screen">
+        <iframe
+          src="/demo/aluno"
+          title="Demonstração interativa do app do aluno"
+          loading="lazy"
+          allow="autoplay"
+        ></iframe>
+      </div>
+    </div>
+
+    <div class="demo-live-cta">
+      <a href="#planos" class="btn-primary">
+        Começar agora
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M5 12h14M13 5l7 7-7 7"/>
+        </svg>
+      </a>
+      <a href="https://shapefyapp.com/login" class="btn-ghost">Já sou cliente</a>
+    </div>
+
+    <p class="demo-live-note">Interativo · clique e explore como seu aluno</p>
   </div>
 </section>
 
@@ -1688,51 +2154,23 @@
       </div>
     </div>
 
-    <!-- EXECUTION VIDEO CARD -->
-    <div class="execution-showcase">
-      <div class="mobile-frame">
-        <div class="mobile-screen">
-          <img src="assets/execution.png" alt="Vídeo de execução do exercício no app do aluno">
-        </div>
-      </div>
-      <div class="execution-showcase-info">
-        <div class="gallery-caption-tag">Vídeo de execução</div>
-        <h4>O aluno sabe exatamente como executar cada movimento</h4>
-        <p>Cadastre seus próprios vídeos ou use o banco de exercícios do sistema. Um clique em "Ver execução" e o aluno vê a técnica correta — sem sair do treino.</p>
-      </div>
-    </div>
-
-    <!-- GALLERY MOBILE: telas em mockup de celular -->
     <div class="gallery-mobile-section">
       <div class="gallery-mobile-header">
         <div class="section-label" style="justify-content: center;">No app do aluno</div>
         <h3>A experiência que o seu aluno vai ter na mão.</h3>
       </div>
 
-      <div class="gallery-mobile-grid">
+      <div class="gallery-mobile-grid" style="grid-template-columns: 1fr;">
         <div class="mobile-card">
           <div class="mobile-frame">
             <div class="mobile-screen">
-              <img src="assets/gallery-mobile-1-dieta.png" alt="Tela de dieta do aplicativo">
+              <img src="assets/Dieta.jpg" alt="Tela de dieta do aplicativo">
             </div>
           </div>
           <div class="mobile-card-info">
             <div class="gallery-caption-tag">Dieta no app</div>
             <h4>Dieta completa com exportação em PDF</h4>
             <p>O aluno acessa o plano alimentar dele, vê substituições por refeição e exporta em PDF quando quiser imprimir ou levar pro mercado.</p>
-          </div>
-        </div>
-
-        <div class="mobile-card">
-          <div class="mobile-frame">
-            <div class="mobile-screen">
-              <img src="assets/gallery-desktop-1-ficha.png" alt="Plano alimentar no app do aluno">
-            </div>
-          </div>
-          <div class="mobile-card-info">
-            <div class="gallery-caption-tag">Dieta no app</div>
-            <h4>Plano alimentar completo na mão do aluno</h4>
-            <p>O aluno acessa o plano alimentar com orientações, refeições e substituições direto pelo app — sem precisar de PDF ou mensagem no WhatsApp.</p>
           </div>
         </div>
       </div>
@@ -1793,7 +2231,7 @@
           </svg>
         </div>
         <h3>Comparativo visual corporal</h3>
-        <p>Fotos de frente, lado e costas lado a lado, com zoom, rotação e alinhamento. Evolução visual que o aluno vê — e que fecha contrato.</p>
+        <p>Fotos de frente, lado e costas lado a lado, com zoom, rotação e alinhamento. Evolução visual que o aluno vê e que fecha contrato.</p>
       </div>
 
       <div class="feature">
@@ -1817,7 +2255,7 @@
           </svg>
         </div>
         <h3>Formulários personalizados</h3>
-        <p>Crie formulários de anamnese e feedback do zero, adaptados por plano. Perguntas fechadas, abertas, com fotos, escolha múltipla — você define o formato.</p>
+        <p>Crie formulários de anamnese e feedback do zero, adaptados por plano. Perguntas fechadas, abertas, com fotos, escolha múltipla. Você define o formato.</p>
       </div>
 
       <div class="feature">
@@ -1829,7 +2267,7 @@
           </svg>
         </div>
         <h3>App nativo iOS e Android</h3>
-        <p>O aluno baixa o app direto da App Store ou Play Store. O profissional também gerencia a consultoria pelo celular. Push de notificação, acesso offline e experiência nativa — não é site maquiado.</p>
+        <p>O aluno baixa o app direto da App Store ou Play Store. O profissional também gerencia a consultoria pelo celular. Push de notificação, acesso offline e experiência nativa, não é site maquiado.</p>
       </div>
 
       <div class="feature">
@@ -1853,7 +2291,7 @@
           </svg>
         </div>
         <h3>Vídeo de execução em cada exercício</h3>
-        <p>O profissional pode cadastrar os próprios vídeos ou usar o banco de exercícios disponível no sistema. O aluno clica em "Ver execução" e vê como fazer — sem sair do treino.</p>
+        <p>O profissional pode cadastrar os próprios vídeos ou usar o banco de exercícios disponível no sistema. O aluno clica em "Ver execução" e vê como fazer, sem sair do treino.</p>
       </div>
 
       <div class="feature">
@@ -1864,7 +2302,7 @@
           </svg>
         </div>
         <h3>Feedbacks agendados e automáticos</h3>
-        <p>Crie a automação uma vez e os feedbacks são disparados automaticamente para o aluno no prazo certo. Você define a frequência — o sistema executa.</p>
+        <p>Crie a automação uma vez e os feedbacks são disparados automaticamente para o aluno no prazo certo. Você define a frequência e o sistema executa.</p>
       </div>
     </div>
   </div>
@@ -1888,12 +2326,12 @@
       <div class="step">
         <div class="step-num">02</div>
         <h4>Cadastre seus alunos</h4>
-        <p>Os alunos acessam o app direto da App Store ou Play Store. Monte fichas, dietas e prescrições — eles recebem tudo pelo celular automaticamente.</p>
+        <p>Os alunos acessam o app direto da App Store ou Play Store. Monte fichas, dietas e prescrições. Eles recebem tudo pelo celular automaticamente.</p>
       </div>
       <div class="step">
         <div class="step-num">03</div>
         <h4>Acompanhe a evolução</h4>
-        <p>Feedbacks, fotos, cargas e volume de treino em um só painel. Você entrega mais em menos tempo — e cobra mais por isso.</p>
+        <p>Feedbacks, fotos, cargas e volume de treino em um só painel. Você entrega mais em menos tempo e cobra mais por isso.</p>
       </div>
     </div>
 
@@ -1925,28 +2363,9 @@
       </button>
     </div>
 
-    <div class="pricing-grid" id="pricing-grid">
-      <!-- Plano Dieta -->
-      <div class="plan" data-plan-type="dieta">
-        <div class="plan-name">Dieta</div>
-        <div class="plan-desc">Pra nutricionistas e quem só atende alimentação</div>
-        <div class="plan-price-wrap">
-          <div class="plan-price mensal-price">R$ 69,90</div>
-          <div class="plan-price anual-price" style="display:none;">R$ 719,90</div>
-          <div class="plan-price-sub mensal-price">/mês</div>
-          <div class="plan-price-sub anual-price" style="display:none;">/ano · equivale a R$ 59,99/mês</div>
-        </div>
-        <ul>
-          <li>Montagem de dietas</li>
-          <li>Cálculo automático de macros em g/kg</li>
-          <li>Banco de alimentos e refeições completo</li>
-          <li>Formulários personalizados</li>
-          <li>App pra o seu aluno</li>
-        </ul>
-        <a href="https://shapefy.online/subscription" class="plan-btn" data-plan-cta>Assinar Dieta</a>
-      </div>
-
-      <!-- Plano Completo (destaque) -->
+    <!-- Planos: ordem Completo → Dieta Basic → Treino Basic → Dieta → Treino -->
+    <div class="pricing-grid pricing-grid-five" id="pricing-grid">
+      <!-- 1. Completo (destaque · Mais Escolhido) -->
       <div class="plan featured" data-plan-type="completo">
         <div class="plan-name">Completo</div>
         <div class="plan-desc">Pra quem atende dieta e treino juntos</div>
@@ -1970,7 +2389,65 @@
         <a href="https://shapefy.online/subscription" class="plan-btn" data-plan-cta>Assinar Completo</a>
       </div>
 
-      <!-- Plano Treino -->
+      <!-- 2. Dieta Basic -->
+      <div class="plan" data-plan-type="dieta-basic" data-mensal-only>
+        <div class="plan-aluno-limite">Até 10 alunos</div>
+        <div class="plan-name">Dieta Basic</div>
+        <div class="plan-desc">Pra começar a atender alimentação com até 10 alunos</div>
+        <div class="plan-price-wrap">
+          <div class="plan-price mensal-price">R$ 39,90</div>
+          <div class="plan-price-sub mensal-price">/mês</div>
+        </div>
+        <ul>
+          <li>Montagem de dietas</li>
+          <li>Cálculo automático de macros em g/kg</li>
+          <li>Banco de alimentos e refeições</li>
+          <li>Formulários personalizados</li>
+          <li>App pra o seu aluno</li>
+        </ul>
+        <a href="https://shapefy.online/subscription" class="plan-btn" data-plan-cta>Assinar Dieta Basic</a>
+      </div>
+
+      <!-- 3. Treino Basic -->
+      <div class="plan" data-plan-type="treino-basic" data-mensal-only>
+        <div class="plan-aluno-limite">Até 10 alunos</div>
+        <div class="plan-name">Treino Basic</div>
+        <div class="plan-desc">Pra começar a atender treino com até 10 alunos</div>
+        <div class="plan-price-wrap">
+          <div class="plan-price mensal-price">R$ 39,90</div>
+          <div class="plan-price-sub mensal-price">/mês</div>
+        </div>
+        <ul>
+          <li>Fichas com cálculo de volume automático</li>
+          <li>Banco de exercícios e vídeos de execução</li>
+          <li>Registro e histórico de cargas no app</li>
+          <li>Formulários personalizados</li>
+          <li>App pra o seu aluno (iOS e Android)</li>
+        </ul>
+        <a href="https://shapefy.online/subscription" class="plan-btn" data-plan-cta>Assinar Treino Basic</a>
+      </div>
+
+      <!-- 4. Dieta -->
+      <div class="plan" data-plan-type="dieta">
+        <div class="plan-name">Dieta</div>
+        <div class="plan-desc">Pra nutricionistas e quem só atende alimentação</div>
+        <div class="plan-price-wrap">
+          <div class="plan-price mensal-price">R$ 69,90</div>
+          <div class="plan-price anual-price" style="display:none;">R$ 719,90</div>
+          <div class="plan-price-sub mensal-price">/mês</div>
+          <div class="plan-price-sub anual-price" style="display:none;">/ano · equivale a R$ 59,99/mês</div>
+        </div>
+        <ul>
+          <li>Montagem de dietas</li>
+          <li>Cálculo automático de macros em g/kg</li>
+          <li>Banco de alimentos e refeições completo</li>
+          <li>Formulários personalizados</li>
+          <li>App pra o seu aluno</li>
+        </ul>
+        <a href="https://shapefy.online/subscription" class="plan-btn" data-plan-cta>Assinar Dieta</a>
+      </div>
+
+      <!-- 5. Treino -->
       <div class="plan" data-plan-type="treino">
         <div class="plan-name">Treino</div>
         <div class="plan-desc">Pra personal trainers e preparadores</div>
@@ -1994,13 +2471,51 @@
   </div>
 </section>
 
+<!-- TRIAL · GARANTIA -->
+<section class="trial-section">
+  <div class="container">
+    <div class="trial-card">
+      <div class="trial-badge">
+        <span class="trial-badge-dot"></span>
+        7 dias grátis
+      </div>
+      <h2 class="trial-title">Teste sem compromisso.<br><span class="italic">Cancele antes de vencer.</span></h2>
+      <p class="trial-sub">
+        Você experimenta o Shapefy completo por 7 dias. Se não fizer sentido pra você, cancela com 1 clique antes do fim do período. <strong>Zero cobrança, zero burocracia</strong>.
+      </p>
+
+      <ul class="trial-bullets">
+        <li>
+          <span class="trial-check">✓</span>
+          Cancele a qualquer momento
+        </li>
+        <li>
+          <span class="trial-check">✓</span>
+          Sem multa, sem fidelidade
+        </li>
+        <li>
+          <span class="trial-check">✓</span>
+          Seu trabalho fica salvo se voltar depois
+        </li>
+      </ul>
+
+      <a href="https://shapefy.online/checkout?subscription_plan=PLANO%20COMPLETO%20MENSAL" class="btn-primary">
+        Começar meus 7 dias grátis
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M5 12h14M13 5l7 7-7 7"/>
+        </svg>
+      </a>
+    </div>
+  </div>
+</section>
+
 <!-- FINAL CTA -->
 <section class="final-cta" id="contato">
   <div class="container">
     <div class="section-label" style="justify-content: center;">Pronto?</div>
     <h2>Sua consultoria merece uma <span class="italic">plataforma à altura.</span></h2>
     <p class="section-intro">
-      Chega de planilha, PDF solto e processo quebrado. Teste o Shapefy por 14 dias, sem cartão.
+      Chega de planilha, PDF solto e processo quebrado.
     </p>
     <div class="hero-ctas">
       <a href="#" class="btn-primary">
@@ -2033,6 +2548,8 @@
     const options = document.querySelectorAll('.billing-option');
     const mensalEls = document.querySelectorAll('.mensal-price');
     const anualEls = document.querySelectorAll('.anual-price');
+    // Planos individuais que só tem opcao mensal (ex: Dieta Basic, Treino Basic)
+    const mensalOnlyPlans = document.querySelectorAll('.plan[data-mensal-only]');
 
     options.forEach(opt => {
       opt.addEventListener('click', () => {
@@ -2043,9 +2560,11 @@
         if (billing === 'anual') {
           mensalEls.forEach(el => el.style.display = 'none');
           anualEls.forEach(el => el.style.display = '');
+          mensalOnlyPlans.forEach(el => el.style.display = 'none');
         } else {
           mensalEls.forEach(el => el.style.display = '');
           anualEls.forEach(el => el.style.display = 'none');
+          mensalOnlyPlans.forEach(el => el.style.display = '');
         }
       });
     });
@@ -2057,9 +2576,14 @@
     const PLANS_ENDPOINT = SHAPEFY_BASE + '/api/method/shapefy.api_shapefy.get_public_plans';
 
     function classifyPlan(plan) {
+      // Plano Basic se tiver aluno_limite <= 10 ou se o nome contiver "basic"
+      const isBasic = (plan.aluno_limite && plan.aluno_limite <= 10)
+        || /basic/i.test(plan.name || '')
+        || /basic/i.test(plan.plan_name || '');
+
       if (plan.dieta && plan.treino) return 'completo';
-      if (plan.dieta) return 'dieta';
-      if (plan.treino) return 'treino';
+      if (plan.dieta) return isBasic ? 'dieta-basic' : 'dieta';
+      if (plan.treino) return isBasic ? 'treino-basic' : 'treino';
       return null;
     }
 
@@ -2092,7 +2616,7 @@
         }
       });
 
-      ['dieta', 'completo', 'treino'].forEach(type => {
+      ['dieta-basic', 'treino-basic', 'dieta', 'completo', 'treino'].forEach(type => {
         const card = document.querySelector('.plan[data-plan-type="' + type + '"]');
         if (!card) return;
 

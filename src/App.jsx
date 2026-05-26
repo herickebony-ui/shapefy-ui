@@ -37,6 +37,7 @@ import FinanceiroListagem from './pages/Financeiro/FinanceiroListagem'
 import PlanosListagem from './pages/Financeiro/PlanosListagem'
 import CadastroPublico from './pages/Cadastro/CadastroPublico'
 import LandingpageRedirect from './pages/Landingpage/LandingpageRedirect'
+import DemoAluno from './pages/Demo/DemoAluno'
 import MeuLinkCadastro from './pages/Cadastro/MeuLinkCadastro'
 import ModeloDietaListagem from './pages/Modelos/ModeloDietaListagem'
 import ModeloFichaListagem from './pages/Modelos/ModeloFichaListagem'
@@ -102,6 +103,7 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/cadastro/:slug" element={<CadastroPublico />} />
         <Route path="/landingpage" element={<LandingpageRedirect />} />
+        <Route path="/demo/aluno" element={<DemoAluno />} />
 
         {/* Área do aluno (auth via X-Aluno-Token) */}
         <Route

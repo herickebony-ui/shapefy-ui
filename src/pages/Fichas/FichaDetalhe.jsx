@@ -5,7 +5,7 @@ import {
   ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Save,
   Plus, X, Trash2, Copy, Info, Loader, Check,
   Zap, Bookmark,
-  Link2, ListOrdered,
+  Link2, ListOrdered, Play,
 } from 'lucide-react'
 import {
   listarFichas, buscarFicha, criarFicha, salvarFicha,
@@ -99,6 +99,36 @@ const extractVideoInfo = (input) => {
     }
   } catch { }
   return null
+}
+
+// ─── VideoPreviewModal ───────────────────────────────────────────────────────
+// Modalzinho pra profissional visualizar o vídeo do exercício direto da montagem
+// da ficha — sem precisar abrir o modal de Detalhes inteiro.
+
+const getEmbedUrl = (id, platform) => {
+  const plat = String(platform || '').toLowerCase()
+  if (plat.includes('vimeo')) return `https://player.vimeo.com/video/${id}?autoplay=1`
+  if (plat.includes('drive')) return `https://drive.google.com/file/d/${id}/preview`
+  return `https://www.youtube.com/embed/${id}?rel=0&autoplay=1&modestbranding=1`
+}
+
+const VideoPreviewModal = ({ video, onClose }) => {
+  if (!video?.id) return null
+  return (
+    <Modal isOpen onClose={onClose} title={video.titulo || 'Pré-visualização do exercício'} size="lg">
+      <div className="p-3">
+        <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-[#323238] bg-black">
+          <iframe
+            src={getEmbedUrl(video.id, video.platform)}
+            title={video.titulo || 'Exercício'}
+            allow="autoplay; encrypted-media; picture-in-picture"
+            allowFullScreen
+            className="w-full h-full"
+          />
+        </div>
+      </div>
+    </Modal>
+  )
 }
 
 // ─── GRUPOS_CONFIG ────────────────────────────────────────────────────────────
@@ -564,7 +594,7 @@ const InputSug = ({ value, onChange, doctype, campo, className = '', extra = nul
 // Input de tabela com dropdown local — h-7, bg visível, estilo consistente com
 // os outros inputs da tabela (exceção documentada: não usa Autocomplete DS).
 
-const SearchableCombo = ({ value, onChange, options = [], placeholder = '' }) => {
+const SearchableCombo = ({ value, onChange, options = [], placeholder = '', getOptionMeta, onPreviewVideo }) => {
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState(value)
   const [rect, setRect] = useState(null)
@@ -574,8 +604,15 @@ const SearchableCombo = ({ value, onChange, options = [], placeholder = '' }) =>
 
   const filtered = useMemo(() => {
     if (!q) return options.slice(0, 40)
-    const n = normalizar(q)
-    return options.filter(o => normalizar(o).includes(n)).slice(0, 40)
+    // Pesquisa com coringa: tokeniza por espaços, `*` ou `%`. Cada token precisa
+    // aparecer no nome em qualquer ordem (AND). Ex: "%ros%hal" → ["ros","hal"]
+    // casa com "Rosca com halteres". "puxa pega" → casa com "Puxada pegada...".
+    const tokens = normalizar(q).split(/[\s*%]+/).filter(Boolean)
+    if (!tokens.length) return options.slice(0, 40)
+    return options.filter(o => {
+      const n = normalizar(o)
+      return tokens.every(t => n.includes(t))
+    }).slice(0, 40)
   }, [q, options])
 
   const openDropdown = () => {
@@ -607,12 +644,27 @@ const SearchableCombo = ({ value, onChange, options = [], placeholder = '' }) =>
       {open && filtered.length > 0 && rect && createPortal(
         <div style={{ position: 'fixed', top: rect.bottom + 2, left: rect.left, width: rect.width, zIndex: 9999 }}
           className="bg-[#1a1a1a] border border-[#323238] rounded shadow-xl max-h-48 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {filtered.map((o, i) => (
-            <button key={i} onMouseDown={() => { onChange(o); setQ(o); setOpen(false) }}
-              className="w-full text-left px-3 py-1.5 text-xs text-gray-200 hover:bg-[#323238] transition-colors truncate block">
-              {o}
-            </button>
-          ))}
+          {filtered.map((o, i) => {
+            const meta = getOptionMeta?.(o)
+            const hasVideo = !!meta?.id && !!onPreviewVideo
+            return (
+              <div key={i} className="flex items-center hover:bg-[#323238] transition-colors group/opt">
+                <button onMouseDown={() => { onChange(o); setQ(o); setOpen(false) }}
+                  className="flex-1 text-left px-3 py-1.5 text-xs text-gray-200 truncate min-w-0">
+                  {o}
+                </button>
+                {hasVideo && (
+                  <button
+                    onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onPreviewVideo({ ...meta, titulo: o }) }}
+                    title="Visualizar exercício"
+                    className="h-7 w-7 mr-1 flex items-center justify-center text-blue-400 hover:text-white hover:bg-[#2563eb] rounded transition-colors shrink-0"
+                  >
+                    <Play size={11} />
+                  </button>
+                )}
+              </div>
+            )
+          })}
         </div>,
         document.body
       )}
@@ -1089,6 +1141,14 @@ const GRUPOS_BASE = [
 
 const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, intensidadeMap = {}, mapaDetalhes = {}, gruposBase = GRUPOS_BASE }) => {
   const [detalheIdx, setDetalheIdx] = useState(null)
+  const [videoPreview, setVideoPreview] = useState(null)
+
+  // Resolve { id, platform, titulo } a partir do nome do exercício.
+  const getOptionMeta = useCallback((nome) => {
+    const info = mapaDetalhes[nome]
+    if (!info?.video) return null
+    return { id: info.video, platform: info['plataforma_do_vídeo'] || 'YouTube', titulo: nome }
+  }, [mapaDetalhes])
 
   // Mescla grupos do Frappe + grupos já na planilha (preserva grupos de fichas antigas)
   const grupos = useMemo(() => {
@@ -1161,41 +1221,49 @@ const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, inten
         />
       )}
 
+      {videoPreview && (
+        <VideoPreviewModal video={videoPreview} onClose={() => setVideoPreview(null)} />
+      )}
+
       <div className="rounded-xl border border-[#323238] bg-[#1a1a1a] overflow-hidden">
-        <table className="w-full text-sm min-w-[700px]">
-          <thead>
-            <tr className="text-gray-500 text-[10px] uppercase tracking-wider border-b border-[#323238] bg-[#19191d]">
-              <th className="w-[3px] p-0" />
-              <th className="w-8 py-2.5 px-2" />
-              <th className="text-left py-2.5 px-2 w-36">Grupo Muscular</th>
-              <th className="text-left py-2.5 px-2 w-56">Exercício</th>
-              <th className="text-center py-2.5 px-2 w-[88px]">Séries</th>
-              <th className="text-center py-2.5 px-2 w-24">Reps</th>
-              <th className="text-center py-2.5 px-2 w-24">Descanso</th>
-              <th className="text-left py-2.5 px-2">Instruções</th>
-              <th className="text-right py-2.5 px-2 w-32">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {exercicios.map((ex, i) => {
-              const { isPart, position } = combinadosMap[i]
-              return (
-                <ExRow key={ex._id || i}
-                  ex={ex} i={i} total={exercicios.length}
-                  isPart={isPart} position={position}
-                  onChange={e => { const arr = [...exercicios]; arr[i] = e; onChange(arr) }}
-                  onMove={dir => move(i, dir)}
-                  onDup={() => dupe(i)}
-                  onRemove={() => remove(i)}
-                  onOpenDetails={() => setDetalheIdx(i)}
-                  grupos={grupos}
-                  opcoesExercicio={exerciciosDoGrupo(ex.grupo_muscular, ex.exercicio)}
-                  upd={(f, v) => upd(i, f, v)}
-                />
-              )
-            })}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[700px]">
+            <thead>
+              <tr className="text-gray-500 text-[10px] uppercase tracking-wider border-b border-[#323238] bg-[#19191d]">
+                <th className="w-[3px] p-0" />
+                <th className="w-8 py-2.5 px-2" />
+                <th className="text-left py-2.5 px-2 w-32">Grupo Muscular</th>
+                <th className="text-left py-2.5 px-2 w-64">Exercício</th>
+                <th className="text-center py-2.5 px-2 w-[88px]">Séries</th>
+                <th className="text-center py-2.5 px-2 w-24">Reps</th>
+                <th className="text-center py-2.5 px-2 w-24">Descanso</th>
+                <th className="text-left py-2.5 px-2">Instruções</th>
+                <th className="text-right py-2.5 px-2 w-32">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {exercicios.map((ex, i) => {
+                const { isPart, position } = combinadosMap[i]
+                return (
+                  <ExRow key={ex._id || i}
+                    ex={ex} i={i} total={exercicios.length}
+                    isPart={isPart} position={position}
+                    onChange={e => { const arr = [...exercicios]; arr[i] = e; onChange(arr) }}
+                    onMove={dir => move(i, dir)}
+                    onDup={() => dupe(i)}
+                    onRemove={() => remove(i)}
+                    onOpenDetails={() => setDetalheIdx(i)}
+                    grupos={grupos}
+                    opcoesExercicio={exerciciosDoGrupo(ex.grupo_muscular, ex.exercicio)}
+                    upd={(f, v) => upd(i, f, v)}
+                    getOptionMeta={getOptionMeta}
+                    onPreviewVideo={setVideoPreview}
+                  />
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <button onClick={addRow}
@@ -1208,7 +1276,7 @@ const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, inten
 
 // ─── ExRow — linha de exercício com novo visual ───────────────────────────────
 
-const ExRow = ({ ex, i, total, isPart, position, onChange, onMove, onDup, onRemove, onOpenDetails, grupos, opcoesExercicio, upd }) => {
+const ExRow = ({ ex, i, total, isPart, position, onChange, onMove, onDup, onRemove, onOpenDetails, grupos, opcoesExercicio, upd, getOptionMeta, onPreviewVideo }) => {
   const [comboOpen, setComboOpen] = useState(false)
   const [seriesOpen, setSeriesOpen] = useState(false)
   const comboBtnRef = useRef(null)
@@ -1240,7 +1308,27 @@ const ExRow = ({ ex, i, total, isPart, position, onChange, onMove, onDup, onRemo
       </td>
       {/* Exercício */}
       <td className="px-2 py-1 align-middle">
-        <SearchableCombo value={ex.exercicio || ''} onChange={v => upd('exercicio', v)} options={opcoesExercicio} placeholder="Buscar exercício..." />
+        <div className="flex items-center gap-1">
+          <div className="flex-1 min-w-0">
+            <SearchableCombo
+              value={ex.exercicio || ''}
+              onChange={v => upd('exercicio', v)}
+              options={opcoesExercicio}
+              placeholder="Buscar exercício..."
+              getOptionMeta={getOptionMeta}
+              onPreviewVideo={onPreviewVideo}
+            />
+          </div>
+          {ex.video && onPreviewVideo && (
+            <button
+              onClick={() => onPreviewVideo({ id: ex.video, platform: ex['plataforma_do_vídeo'] || 'YouTube', titulo: ex.exercicio })}
+              title="Visualizar vídeo"
+              className="h-7 w-6 flex items-center justify-center text-blue-400 hover:text-white hover:bg-[#2563eb] rounded transition-colors shrink-0"
+            >
+              <Play size={11} />
+            </button>
+          )}
+        </div>
       </td>
       {/* Séries + botão nomear */}
       <td className="px-2 py-1 align-middle">
