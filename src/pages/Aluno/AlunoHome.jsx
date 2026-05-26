@@ -56,13 +56,9 @@ function resolveCardLink(card, pendencias, flags) {
         : { href: legado('/avaliacao-da-composicao-corporal'), externa: true }
     }
     case 'feedback':
-      if (pendencias?.feedback_agendado_formulario) {
-        // Confirmacao antes de abrir — o /verificar_feedback CRIA um Feedback
-        // no backend ao carregar, entao o aluno precisa consentir.
-        return { agendadoForm: pendencias.feedback_agendado_formulario }
-      }
       if (pendencias?.feedback) return { reactPath: `/aluno/feedbacks/${pendencias.feedback}` }
-      return { disabled: true, hint: 'Nenhum feedback disponível no momento' }
+      // Sem Feedback Enviado: só exibe status (backend não cria mais Feedback).
+      return { mostrarStatusFeedback: true }
     case 'prescricoes':
       return { reactPath: '/aluno/prescricoes' }
     case 'perfil':
@@ -207,8 +203,8 @@ export default function AlunoHome() {
   const [proximos, setProximos] = useState([])
   const [carregando, setCarregando] = useState(true)
   const [notifAberto, setNotifAberto] = useState(false)
-  // Confirmacao antes de abrir feedback agendado (que cria registro no backend)
-  const [confirmAgendado, setConfirmAgendado] = useState(null)
+  // Modal informativo de status do próximo feedback (sem ação de criar registro).
+  const [mostrarStatusFeedback, setMostrarStatusFeedback] = useState(false)
 
   useEffect(() => {
     let cancelado = false
@@ -255,21 +251,15 @@ export default function AlunoHome() {
   const handleCardClick = (card) => () => {
     const link = resolveCardLink(card, pendencias, flags)
     if (link.disabled) return
-    if (link.agendadoForm) { setConfirmAgendado(link.agendadoForm); return }
+    if (link.mostrarStatusFeedback) { setMostrarStatusFeedback(true); return }
     if (link.reactPath) navigate(link.reactPath)
     else if (link.href) window.open(link.href, '_blank', 'noopener')
   }
 
   const irPraPendencia = () => {
     if (pendencias.feedback) navigate(`/aluno/feedbacks/${pendencias.feedback}`)
-    else if (pendencias.feedback_agendado_formulario) setConfirmAgendado(pendencias.feedback_agendado_formulario)
+    else if (pendencias.feedback_agendado_formulario) setMostrarStatusFeedback(true)
     else if (pendencias.anamnese) navigate(`/aluno/anamneses/${pendencias.anamnese}`)
-  }
-
-  const confirmarAbrirAgendado = () => {
-    if (!confirmAgendado) return
-    window.open(`${FRAPPE_URL}/verificar_feedback?form=${encodeURIComponent(confirmAgendado)}`, '_blank', 'noopener')
-    setConfirmAgendado(null)
   }
 
   const badgePorCard = (id) => {
@@ -432,6 +422,14 @@ export default function AlunoHome() {
                     const onClick = () => {
                       if (!n.url) return
                       setNotifAberto(false)
+                      // Notificação de feedback agendado: só abre se houver Feedback
+                      // status=Enviado. Caso contrário, mostra modal informativo
+                      // (não chamar mais /verificar_feedback do legado).
+                      if (n.url.includes('/verificar_feedback')) {
+                        if (pendencias.feedback) navigate(`/aluno/feedbacks/${pendencias.feedback}`)
+                        else setMostrarStatusFeedback(true)
+                        return
+                      }
                       if (externa) window.open(n.url, '_blank', 'noopener')
                       else navigate(n.url.replace(window.location.origin, ''))
                     }
@@ -476,33 +474,29 @@ export default function AlunoHome() {
         </>
       )}
 
-      {confirmAgendado && (
+      {mostrarStatusFeedback && (
         <div
           className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm p-3"
-          onClick={() => setConfirmAgendado(null)}
+          onClick={() => setMostrarStatusFeedback(false)}
         >
           <div
             className="w-full max-w-[400px] bg-[var(--sf-bg)] border border-[var(--sf-border-strong)] rounded-2xl shadow-[0_25px_50px_rgba(0,0,0,0.6)] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-4 py-4">
-              <p className="text-white text-sm font-bold">Iniciar feedback agendado?</p>
+              <p className="text-white text-sm font-bold">Próximo feedback</p>
               <p className="text-[var(--sf-text-muted)] text-xs mt-1.5 leading-relaxed">
-                Voce tem um feedback agendado pra hoje. Ao iniciar, o feedback sera registrado e voce sera direcionado para responder.
+                {proximosFuturos[0]?.data_agendada
+                  ? `Seu feedback está agendado para ${fmtDataBR(proximosFuturos[0].data_agendada)}.`
+                  : 'Você não tem feedback agendado.'}
               </p>
             </div>
-            <div className="px-4 pb-4 flex items-center justify-end gap-2">
+            <div className="px-4 pb-4 flex items-center justify-end">
               <button
-                onClick={() => setConfirmAgendado(null)}
-                className="h-9 px-4 rounded-lg border border-[var(--sf-border)] text-gray-300 text-xs font-bold hover:bg-[var(--sf-surface-2)] transition-colors"
-              >
-                Agora nao
-              </button>
-              <button
-                onClick={confirmarAbrirAgendado}
+                onClick={() => setMostrarStatusFeedback(false)}
                 className="h-9 px-4 rounded-lg bg-[#2563EB] hover:bg-[#1d4ed8] text-white text-xs font-bold transition-colors"
               >
-                Iniciar feedback
+                Fechar
               </button>
             </div>
           </div>

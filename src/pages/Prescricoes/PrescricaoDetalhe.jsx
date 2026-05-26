@@ -213,8 +213,8 @@ function BancoModal({ onClose }) {
   const errorModal = useErrorModal()
 
   useEffect(() => {
-    listarManipulados().then(setLista).catch(console.error).finally(() => setLoading(false))
-  }, [])
+    listarManipulados().then(setLista).catch(e => errorModal.show(e, 'Listar manipulados')).finally(() => setLoading(false))
+  }, [errorModal])
 
   const handleCriar = async () => {
     if (!novoNome.trim()) return
@@ -375,8 +375,8 @@ function MomentosModal({ onClose }) {
   const errorModal = useErrorModal()
 
   useEffect(() => {
-    listarMomentosDeUso().then(setLista).catch(console.error).finally(() => setLoading(false))
-  }, [])
+    listarMomentosDeUso().then(setLista).catch(e => errorModal.show(e, 'Listar momentos de uso')).finally(() => setLoading(false))
+  }, [errorModal])
 
   const handleCriar = async () => {
     if (!novoNome.trim()) return
@@ -523,11 +523,11 @@ export default function PrescricaoDetalhe() {
           description: item.description || '',
           momento_de_uso: item.momento_de_uso || '',
         })))
-      } catch (e) { console.error(e) }
+      } catch (e) { errorModal.show(e, 'Carregar prescrição') }
       finally { setLoading(false) }
     }
     carregar()
-  }, [id])
+  }, [id, isNova, errorModal])
 
   // Auto-cadastra momentos digitados livremente que ainda não existem no catálogo.
   // Devolve a lista de items com `momento_de_uso` substituído pelo `name` válido.

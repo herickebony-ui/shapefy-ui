@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, ChevronRight, BarChart2, ToggleLeft, ToggleRight, Copy, Check, Trash2, Plus, FileText } from 'lucide-react'
+import { ArrowLeft, ChevronRight, BarChart2, ToggleLeft, ToggleRight, Trash2, Plus, FileText } from 'lucide-react'
 import { buscarAluno, salvarAluno } from '../../api/alunos'
 import { listarDietas, normalizarAlturaCm } from '../../api/dietas'
 import { listarFichas } from '../../api/fichas'
@@ -82,46 +82,6 @@ function ToggleField({ label, descricao, value, onChange }) {
   )
 }
 
-function LinkCadastroField({ preenchido, alunoId }) {
-  const [copiado, setCopiado] = useState(false)
-  const copiarLink = async () => {
-    const url = `${FRAPPE_URL}/preencher_aluno?name=${alunoId}`
-    try {
-      await navigator.clipboard.writeText(url)
-      setCopiado(true)
-      setTimeout(() => setCopiado(false), 2000)
-    } catch {
-      alert(`Link gerado:\n${url}`)
-    }
-  }
-  return (
-    <div className="flex items-center justify-between py-2.5 border-b border-[#323238]/50">
-      <div>
-        <p className="text-white text-xs font-medium">Link de cadastro</p>
-        <p className="text-gray-600 text-[10px] mt-0.5">
-          {preenchido ? 'Aluno já preencheu o próprio cadastro' : 'Aguardando o aluno preencher'}
-        </p>
-      </div>
-      <div className="flex items-center gap-2">
-        <span className={`text-xs font-bold px-2.5 py-1 rounded-lg border ${
-          preenchido ? 'text-green-400 border-green-500/30 bg-green-500/10' : 'text-yellow-500 border-yellow-500/30 bg-yellow-500/10'
-        }`}>
-          {preenchido ? 'Cadastrado' : 'Aguardando'}
-        </span>
-        {!preenchido && (
-          <button
-            onClick={copiarLink}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#323238] hover:border-gray-500 text-gray-400 hover:text-white text-xs font-bold transition-all"
-          >
-            {copiado ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
-            {copiado ? 'Copiado!' : 'Copiar link'}
-          </button>
-        )}
-      </div>
-    </div>
-  )
-}
-
 // ─── Tab Perfil ───────────────────────────────────────────────────────────────
 
 function parseEndereco(raw) {
@@ -159,7 +119,6 @@ export function TabPerfil({ aluno: inicial, alunoId, onSaved }) {
     medicamento: inicial.medicamento || '',
     orientacoes_globais: inicial.orientacoes_globais || '',
     enabled: !!inicial.enabled,
-    link_de_cadastro: !!inicial.link_de_cadastro,
     dieta: !!inicial.dieta,
     treino: !!inicial.treino,
     ja_usou_o_aplicativo: !!inicial.ja_usou_o_aplicativo,
@@ -202,7 +161,7 @@ export function TabPerfil({ aluno: inicial, alunoId, onSaved }) {
   const salvar = async () => {
     setSalvando(true)
     try {
-      const { ja_usou_o_aplicativo: _a, link_de_cadastro: _b, ...payload } = form
+      const { ja_usou_o_aplicativo: _a, ...payload } = form
       const atualizado = await salvarAluno(alunoId, {
         ...payload,
         'endereço': formatarEndereco(address),
@@ -311,7 +270,6 @@ export function TabPerfil({ aluno: inicial, alunoId, onSaved }) {
       <SecaoPerfil titulo="Status e Configurações" />
       <div className="bg-[#1a1a1a] rounded-lg border border-[#323238] px-4 py-2">
         <ToggleField label="Aluno ativo" descricao="Desativar oculta o aluno das listagens" value={form.enabled} onChange={toggle('enabled')} />
-        <LinkCadastroField preenchido={form.link_de_cadastro} alunoId={alunoId} />
         <ToggleField label="Possui dieta" value={form.dieta} onChange={toggle('dieta')} />
         <ToggleField label="Possui treino" value={form.treino} onChange={toggle('treino')} />
         <div className="flex items-center justify-between py-2.5">
@@ -454,9 +412,9 @@ function ModalNovaAnamnese({ alunoId, onClose, onCriada }) {
   useEffect(() => {
     listarFormularios()
       .then(r => setFormularios(r.list))
-      .catch(console.error)
+      .catch(e => errorModal.show(e, 'Listar templates de anamnese'))
       .finally(() => setLoading(false))
-  }, [])
+  }, [errorModal])
 
   const handleSelecionar = async (formulario) => {
     setVinculando(formulario.name)
@@ -518,7 +476,7 @@ export function TabAnamnese({ anamneses: inicial, loading, alunoId, onRecarregar
   const abrirAnamnese = async (item) => {
     setLoadingDetalhe(true)
     try { setDetalhe(await buscarAnamnese(item.name)) }
-    catch (e) { console.error(e) }
+    catch (e) { errorModal.show(e, 'Abrir anamnese') }
     finally { setLoadingDetalhe(false) }
   }
 
@@ -621,26 +579,27 @@ export default function AlunoModal({ aluno: alunoBase, onClose }) {
   const [avaliacoes, setAvaliacoes] = useState([])
   const [loadingAvaliacoes, setLoadingAvaliacoes] = useState(false)
   const [avaliacoesCarregadas, setAvaliacoesCarregadas] = useState(false)
+  const errorModal = useErrorModal()
 
   useEffect(() => {
     if (!alunoBase) return
     const id = alunoBase.name
     setLoadingPerfil(true)
-    buscarAluno(id).then(setPerfilData).catch(console.error).finally(() => setLoadingPerfil(false))
+    buscarAluno(id).then(setPerfilData).catch(e => errorModal.show(e, 'Carregar perfil')).finally(() => setLoadingPerfil(false))
     setLoadingAnamneses(true)
-    listarAnamneses({ alunoId: id, limit: 50 }).then(r => setAnamneses(r.list)).catch(console.error).finally(() => setLoadingAnamneses(false))
-  }, [alunoBase])
+    listarAnamneses({ alunoId: id, limit: 50 }).then(r => setAnamneses(r.list)).catch(e => errorModal.show(e, 'Listar anamneses')).finally(() => setLoadingAnamneses(false))
+  }, [alunoBase, errorModal])
 
   useEffect(() => {
     if (!alunoBase) return
     const id = alunoBase.name
     if (abaAtiva === 'dietas' && !dietasCarregadas) {
       setLoadingDietas(true)
-      listarDietas({ alunoId: id, limit: 50 }).then(r => { setDietas(r.list); setDietasCarregadas(true) }).catch(console.error).finally(() => setLoadingDietas(false))
+      listarDietas({ alunoId: id, limit: 50 }).then(r => { setDietas(r.list); setDietasCarregadas(true) }).catch(e => errorModal.show(e, 'Listar dietas')).finally(() => setLoadingDietas(false))
     }
     if (abaAtiva === 'treinos' && !fichasCarregadas) {
       setLoadingFichas(true)
-      listarFichas({ aluno: id, limit: 50 }).then(r => { setFichas(r.list); setFichasCarregadas(true) }).catch(console.error).finally(() => setLoadingFichas(false))
+      listarFichas({ aluno: id, limit: 50 }).then(r => { setFichas(r.list); setFichasCarregadas(true) }).catch(e => errorModal.show(e, 'Listar fichas')).finally(() => setLoadingFichas(false))
     }
     if (abaAtiva === 'composicao' && !avaliacoesCarregadas) {
       setLoadingAvaliacoes(true)
@@ -650,15 +609,16 @@ export default function AlunoModal({ aluno: alunoBase, onClose }) {
           setAvaliacoes([...list].sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))))
           setAvaliacoesCarregadas(true)
         })
-        .catch(console.error)
+        .catch(e => errorModal.show(e, 'Listar avaliações'))
         .finally(() => setLoadingAvaliacoes(false))
     }
-  }, [abaAtiva, alunoBase])
+  }, [abaAtiva, alunoBase, errorModal, dietasCarregadas, fichasCarregadas, avaliacoesCarregadas])
 
   if (!alunoBase) return null
 
   return (
     <Modal isOpen onClose={onClose} title={alunoBase.nome_completo} subtitle={alunoBase.email} size="xl">
+      {errorModal.element}
       <div className="flex flex-col">
         <Tabs
           tabs={[
@@ -723,7 +683,7 @@ export default function AlunoModal({ aluno: alunoBase, onClose }) {
                 setLoadingAnamneses(true)
                 listarAnamneses({ alunoId: alunoBase.name, limit: 50 })
                   .then(r => setAnamneses(r.list))
-                  .catch(console.error)
+                  .catch(e => errorModal.show(e, 'Recarregar anamneses'))
                   .finally(() => setLoadingAnamneses(false))
               }}
             />

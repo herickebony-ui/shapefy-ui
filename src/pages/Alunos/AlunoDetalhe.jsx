@@ -20,6 +20,7 @@ import {
   Button, Badge, Tabs, Spinner, EmptyState,
 } from '../../components/ui'
 import { TabPerfil, TabAnamnese, TabLista } from './AlunoModal'
+import useErrorModal from '../../hooks/useErrorModal'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 
@@ -73,6 +74,7 @@ export default function AlunoDetalhe() {
   const [avaliacoes, setAvaliacoes] = useState([])
   const [loadingAvaliacoes, setLoadingAvaliacoes] = useState(false)
   const [avaliacoesCarregadas, setAvaliacoesCarregadas] = useState(false)
+  const errorModal = useErrorModal()
 
   useEffect(() => {
     if (!id) return
@@ -83,15 +85,15 @@ export default function AlunoDetalhe() {
         if (!a) setErroAluno('Aluno não encontrado ou sem permissão')
         setAluno(a)
       })
-      .catch(e => { console.error(e); setErroAluno('Erro ao carregar aluno') })
+      .catch(e => { errorModal.show(e, 'Carregar aluno'); setErroAluno('Erro ao carregar aluno') })
       .finally(() => setLoadingAluno(false))
 
     setLoadingAnamneses(true)
     listarAnamneses({ alunoId: id, limit: 50 })
       .then(r => setAnamneses(r.list))
-      .catch(console.error)
+      .catch(e => errorModal.show(e, 'Listar anamneses'))
       .finally(() => setLoadingAnamneses(false))
-  }, [id])
+  }, [id, errorModal])
 
   useEffect(() => {
     if (!id) return
@@ -99,14 +101,14 @@ export default function AlunoDetalhe() {
       setLoadingDietas(true)
       listarDietas({ alunoId: id, limit: 50 })
         .then(r => { setDietas(r.list); setDietasCarregadas(true) })
-        .catch(console.error)
+        .catch(e => errorModal.show(e, 'Listar dietas'))
         .finally(() => setLoadingDietas(false))
     }
     if (abaAtiva === 'treinos' && !fichasCarregadas) {
       setLoadingFichas(true)
       listarFichas({ aluno: id, limit: 50 })
         .then(r => { setFichas(r.list); setFichasCarregadas(true) })
-        .catch(console.error)
+        .catch(e => errorModal.show(e, 'Listar fichas'))
         .finally(() => setLoadingFichas(false))
     }
     if (abaAtiva === 'composicao' && !avaliacoesCarregadas) {
@@ -116,10 +118,10 @@ export default function AlunoDetalhe() {
           setAvaliacoes([...list].sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))))
           setAvaliacoesCarregadas(true)
         })
-        .catch(console.error)
+        .catch(e => errorModal.show(e, 'Listar avaliações'))
         .finally(() => setLoadingAvaliacoes(false))
     }
-  }, [abaAtiva, id, dietasCarregadas, fichasCarregadas, avaliacoesCarregadas])
+  }, [abaAtiva, id, dietasCarregadas, fichasCarregadas, avaliacoesCarregadas, errorModal])
 
   if (loadingAluno) {
     return (
@@ -160,6 +162,7 @@ export default function AlunoDetalhe() {
 
   return (
     <div className="text-white">
+      {errorModal.element}
       {/* Header sticky */}
       <div className="sticky top-0 z-40 bg-[#1a1a1a]/95 backdrop-blur border-b border-[#323238]">
         <div className="max-w-screen-xl mx-auto px-4 md:px-8 py-3">
@@ -322,7 +325,7 @@ export default function AlunoDetalhe() {
               setLoadingAnamneses(true)
               listarAnamneses({ alunoId: id, limit: 50 })
                 .then(r => setAnamneses(r.list))
-                .catch(console.error)
+                .catch(e => errorModal.show(e, 'Recarregar anamneses'))
                 .finally(() => setLoadingAnamneses(false))
             }}
           />
