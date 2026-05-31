@@ -335,7 +335,7 @@ export default function Dashboard() {
             columns={columns}
             rows={alunos}
             rowKey="name"
-            onRowClick={(row) => navigate(`/alunos/${encodeURIComponent(row.name)}`)}
+            rowHref={(row) => `/alunos/${encodeURIComponent(row.name)}`}
             page={page}
             pageSize={pageSize}
             onPage={setPage}

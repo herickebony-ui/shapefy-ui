@@ -1,5 +1,7 @@
 import { useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Pagination from './Pagination'
+import { maybeOpenNewTab } from '../../utils/navigation'
 
 /**
  * DataTable — tabela padronizada com linhas alternadas, hover e paginação.
@@ -7,6 +9,9 @@ import Pagination from './Pagination'
  * columns: [{ label, headerClass?, cellClass?, render(row) }]
  * rows: array completo (filtrado) — o componente faz o slice internamente
  * onRowClick(row): handler de clique na linha (opcional)
+ * rowHref(row) => string: URL da linha (opcional). Cmd/Ctrl+Click ou botão-do-meio abrem
+ *   essa URL em nova aba. No clique normal: usa onRowClick se houver (preservando state de
+ *   navegação), senão navega para a URL.
  * page, pageSize, onPage, onPageSize: paginação controlada pelo pai
  * mobileCard(row, onRowClick): função opcional que renderiza um card mobile.
  *   Se passada, em <768px usa cards empilhados; em ≥768px usa tabela.
@@ -16,6 +21,7 @@ export default function DataTable({
   columns,
   rows,
   onRowClick,
+  rowHref,
   page = 1,
   pageSize = 20,
   onPage,
@@ -23,10 +29,27 @@ export default function DataTable({
   rowKey = 'name',
   mobileCard,
 }) {
+  const navigate = useNavigate()
   const paged = useMemo(() => {
     const start = (page - 1) * pageSize
     return rows.slice(start, start + pageSize)
   }, [rows, page, pageSize])
+
+  const clickable = onRowClick || rowHref
+  const rowHandlers = (row) => {
+    const href = rowHref?.(row)
+    if (href) {
+      return {
+        onClick: (e) => {
+          if (maybeOpenNewTab(e, href)) return
+          if (onRowClick) onRowClick(row)
+          else navigate(href)
+        },
+        onAuxClick: (e) => { if (e.button === 1) maybeOpenNewTab(e, href) },
+      }
+    }
+    return onRowClick ? { onClick: () => onRowClick(row) } : {}
+  }
 
   return (
     <div className="border border-[#323238] rounded-lg overflow-hidden">
@@ -35,8 +58,8 @@ export default function DataTable({
           {paged.map((row, i) => (
             <div
               key={row[rowKey] ?? i}
-              onClick={onRowClick ? () => onRowClick(row) : undefined}
-              className={`${i % 2 === 0 ? 'bg-[#1a1a1a]' : 'bg-[#1e1e22]'} ${onRowClick ? 'cursor-pointer active:bg-[#202024]' : ''}`}
+              {...rowHandlers(row)}
+              className={`${i % 2 === 0 ? 'bg-[#1a1a1a]' : 'bg-[#1e1e22]'} ${clickable ? 'cursor-pointer active:bg-[#202024]' : ''}`}
             >
               {mobileCard(row, onRowClick)}
             </div>
@@ -62,9 +85,9 @@ export default function DataTable({
             {paged.map((row, i) => (
               <tr
                 key={row[rowKey] ?? i}
-                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                {...rowHandlers(row)}
                 className={`border-b border-[#323238] transition-colors group last:border-0
-                  ${onRowClick ? 'cursor-pointer hover:bg-[#202024]' : ''}
+                  ${clickable ? 'cursor-pointer hover:bg-[#202024]' : ''}
                   ${i % 2 === 0 ? 'bg-[#1a1a1a]' : 'bg-[#1e1e22]'}`}
               >
                 {columns.map((col, j) => (

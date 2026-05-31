@@ -11,6 +11,7 @@ import useErrorModal from '../../hooks/useErrorModal'
 import { Button, Badge, Tabs, EmptyState, BotaoAjuda, BotaoTutoriais } from '../../components/ui'
 import { TUTORIAIS_FORMULARIOS } from '../../data/tutoriais'
 import ListPage from '../../components/templates/ListPage'
+import { openOrNavigate, maybeOpenNewTab } from '../../utils/navigation'
 
 const TABS = [
   { id: 'anamnese', label: 'Anamnese' },
@@ -177,11 +178,14 @@ export default function FormularioListagem({ tipoFixo }) {
       )}
       {!loading && lista.length > 0 && (
         <div className="bg-[#29292e] rounded-lg border border-[#323238] divide-y divide-[#323238]/50 mx-4 mb-4">
-          {lista.map((item) => (
+          {lista.map((item) => {
+            const href = `/criar-formularios/${aba}/${item.name}`
+            return (
             <div
               key={item.name}
               className="flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors cursor-pointer"
-              onClick={() => navigate(`/criar-formularios/${aba}/${item.name}`)}
+              onClick={(e) => openOrNavigate(e, href, navigate)}
+              onAuxClick={(e) => { if (e.button === 1) maybeOpenNewTab(e, href) }}
             >
               <div className="min-w-0 flex-1">
                 <p className="text-white text-sm font-medium truncate">{item.titulo || item.name}</p>
@@ -195,7 +199,8 @@ export default function FormularioListagem({ tipoFixo }) {
               </div>
               <div className="flex items-center gap-2 shrink-0" onClick={e => e.stopPropagation()}>
                 <button
-                  onClick={() => navigate(`/criar-formularios/${aba}/${item.name}`)}
+                  onClick={(e) => openOrNavigate(e, href, navigate)}
+                  onAuxClick={(e) => { if (e.button === 1) maybeOpenNewTab(e, href) }}
                   title="Editar"
                   className="h-7 w-7 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors"
                 >
@@ -219,7 +224,8 @@ export default function FormularioListagem({ tipoFixo }) {
                 </button>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
       {errorModal.element}

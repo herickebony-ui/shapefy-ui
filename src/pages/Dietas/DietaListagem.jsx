@@ -12,6 +12,7 @@ import { ModalDuplicarDieta } from './DietaDetalhe'
 import ModalEscolherModelo from '../Modelos/ModalEscolherModelo'
 import { Button, FormGroup, Input, Autocomplete, Modal, EmptyState, Pagination, DataTable } from '../../components/ui'
 import { buscarSmart } from '../../utils/strings'
+import { openOrNavigate } from '../../utils/navigation'
 import useErrorModal from '../../hooks/useErrorModal'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -78,11 +79,13 @@ const StatusBadge = ({ dieta }) => {
 
 // ─── Card (grade) ─────────────────────────────────────────────────────────────
 
-const CardDieta = ({ dieta, onClick }) => {
+const CardDieta = ({ dieta, href }) => {
   const s = getStrategyStyle(dieta.strategy)
+  const navigate = useNavigate()
   return (
     <button
-      onClick={() => onClick(dieta.name)}
+      onClick={(e) => openOrNavigate(e, href, navigate)}
+      onAuxClick={(e) => { if (e.button === 1) openOrNavigate(e, href, navigate) }}
       className={`group w-full text-left bg-[#29292e] border ${s.border} ${s.glow} rounded-lg p-5 transition-all duration-200 hover:bg-[#2f2f35] hover:scale-[1.015] hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-[#2563eb]/50`}
     >
       <div className="flex items-start justify-between gap-3 mb-4">
@@ -695,7 +698,7 @@ export default function DietaListagem() {
         ) : view === 'grid' ? (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {dietasPaginadas.map(d => <CardDieta key={d.name} dieta={d} onClick={(id) => navigate(`/dietas/${id}`)} />)}
+              {dietasPaginadas.map(d => <CardDieta key={d.name} dieta={d} href={`/dietas/${d.name}`} />)}
             </div>
             <div className="mt-4">
               <Pagination page={page} pageSize={pageSize} total={dietasFiltradas.length} onPage={setPage} onPageSize={(s) => { setPageSize(s); setPage(1) }} />
@@ -708,7 +711,7 @@ export default function DietaListagem() {
             pageSize={pageSize}
             onPage={setPage}
             onPageSize={(s) => { setPageSize(s); setPage(1) }}
-            onRowClick={(d) => navigate(`/dietas/${d.name}`)}
+            rowHref={(d) => `/dietas/${d.name}`}
             columns={[
               {
                 label: 'Paciente',

@@ -27,7 +27,7 @@ const TOPICOS_AJUDA_CRONOGRAMA = [
 
 import {
   listarAgendamentosDoAluno, sincronizarCronogramaDoAluno,
-  clonarCronograma, salvarAgendamento,
+  clonarCronograma, salvarAgendamento, ehRespondido,
 } from '../../api/cronogramaFeedbacks'
 import { listarFerias, criarFerias, excluirFerias } from '../../api/ferias'
 import {
@@ -519,10 +519,20 @@ export default function CronogramaFeedbacks() {
   }
 
   const handleLimparCronograma = () => {
-    if (!window.confirm('Remover todas as datas (mantém vigência)?')) return
-    setSchedule({ dates: [] })
+    // Preserva o histórico: só limpa as datas pendentes (não respondidas).
+    const respondidas = schedule.dates.filter(ehRespondido)
+    const pendentes = schedule.dates.length - respondidas.length
+    if (pendentes === 0) {
+      showToast('Não há datas pendentes para limpar', 'info')
+      return
+    }
+    const msg = respondidas.length > 0
+      ? `Remover ${pendentes} data(s) pendente(s)? As ${respondidas.length} já respondida(s) são mantidas.`
+      : 'Remover todas as datas pendentes (mantém vigência)?'
+    if (!window.confirm(msg)) return
+    setSchedule({ dates: respondidas })
     setMaisMenuAberto(false)
-    showToast('Datas limpas (clique Salvar pra persistir)', 'info')
+    showToast('Datas pendentes limpas (clique Salvar pra persistir)', 'info')
   }
 
   // Renovação preservando histórico: zera vigência mas mantém todas as datas.
@@ -542,20 +552,36 @@ export default function CronogramaFeedbacks() {
   }
 
   const handleGerarSerie = (datas) => {
-    // Data automática SUBSTITUI o cronograma (são dois modos alternativos:
-    // ou planeja manual no calendário, ou gera automaticamente). Se já há
-    // datas, pede confirmação.
-    if (schedule.dates.length > 0) {
+    // Data automática SUBSTITUI o cronograma pendente (são dois modos
+    // alternativos: ou planeja manual no calendário, ou gera automaticamente).
+    // O histórico (respondidas) é sempre mantido. Se já há pendentes, confirma.
+    const respondidas = schedule.dates.filter(ehRespondido)
+    const pendentes = schedule.dates.length - respondidas.length
+    if (pendentes > 0) {
       if (!window.confirm(
-        `Substituir ${schedule.dates.length} data(s) atual(is) por ${datas.length} data(s) gerada(s)?\n\n`
-        + 'A geração automática é uma forma alternativa de planejar — substitui o cronograma atual.',
+        `Substituir ${pendentes} data(s) pendente(s) por ${datas.length} data(s) gerada(s)?\n\n`
+        + 'As datas já respondidas são mantidas. A geração automática é uma forma '
+        + 'alternativa de planejar — substitui o cronograma pendente atual.',
       )) return
     }
+    // Não gera em cima de uma data já respondida (preserva o histórico)
+    const datasRespondidas = new Set(respondidas.map(d => d.date))
+    const novas = datas.filter(d => !datasRespondidas.has(d.date))
+    // Avisa quantas caem fora da vigência (mas mantém — escolha do profissional)
+    const { plan_start: ps, plan_end: pe } = planForm
+    const foraVigencia = (ps && pe)
+      ? novas.filter(d => d.date < ps || d.date > pe).length
+      : 0
     setSchedule({
-      dates: [...datas].sort((a, b) => a.date.localeCompare(b.date)),
+      dates: [...respondidas, ...novas].sort((a, b) => a.date.localeCompare(b.date)),
     })
     setModalGerarSerie(false)
-    showToast(`${datas.length} datas geradas (clique Salvar pra persistir)`, 'success')
+    showToast(
+      foraVigencia > 0
+        ? `${novas.length} datas geradas · ${foraVigencia} fora da vigência (clique Salvar)`
+        : `${novas.length} datas geradas (clique Salvar pra persistir)`,
+      foraVigencia > 0 ? 'warning' : 'success',
+    )
   }
 
   const handleClonar = async (origemId) => {

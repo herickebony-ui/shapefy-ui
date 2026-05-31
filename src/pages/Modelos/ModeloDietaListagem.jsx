@@ -416,7 +416,7 @@ export default function ModeloDietaListagem() {
             pageSize={pageSize}
             onPage={setPage}
             onPageSize={(s) => { setPageSize(s); setPage(1) }}
-            onRowClick={(m) => navigate(`/modelos/dietas/${m.name}`)}
+            rowHref={(m) => `/modelos/dietas/${m.name}`}
             rowKey="name"
           />
         )}

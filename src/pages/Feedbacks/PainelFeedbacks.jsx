@@ -96,6 +96,8 @@ export default function PainelFeedbacks() {
   const [filtroPeriodo, setFiltroPeriodo] = useState('esta_semana')
   const [filtroTipo, setFiltroTipo] = useState('') // '', 'feedback', 'troca'
   const [semanaOffset, setSemanaOffset] = useState(0)
+  const [intervaloInicio, setIntervaloInicio] = useState('')
+  const [intervaloFim, setIntervaloFim] = useState('')
 
   // ─── Modais ─────────────────────────────────────────────────────────────────
   const [modalPendencia, setModalPendencia] = useState(null) // { titulo, descricao, alunos, icon, color }
@@ -199,22 +201,14 @@ export default function PainelFeedbacks() {
     })
   }, [agendamentos, alunosPorId])
 
-  // Stats — sempre na semana atual (não muda quando filtroPeriodo muda)
+  // Stats fixas dos atalhos (não acompanham o filtro de período)
   const stats = useMemo(() => {
-    const semanaAtual = rangeSemana(0)
-    const naSemana = agendamentosHidratados.filter(a =>
-      !a.is_start &&
-      a.data_agendada >= semanaAtual.inicio &&
-      a.data_agendada <= semanaAtual.fim,
-    )
     return {
-      totalSemana: naSemana.length,
       hoje: agendamentosHidratados.filter(a =>
         !a.is_start &&
         a.data_agendada === hojeISO &&
         a.status !== 'Respondido' && a.status !== 'Concluido',
       ).length,
-      trocas: naSemana.filter(a => a.is_training).length,
       atrasados: agendamentosHidratados.filter(a =>
         !a.is_start &&
         a.data_agendada < hojeISO &&
@@ -222,6 +216,49 @@ export default function PainelFeedbacks() {
       ).length,
     }
   }, [agendamentosHidratados, hojeISO])
+
+  // Resumo do período ativo — alimenta os cards (total e trocas acompanham o filtro de período).
+  const resumoPeriodo = useMemo(() => {
+    const base = agendamentosHidratados.filter(a => !a.is_start)
+    const meta = (() => {
+      switch (filtroPeriodo) {
+        case 'proxima_semana': {
+          const px = rangeSemana(1)
+          return { periodo: 'proxima_semana', label: 'Próxima semana', color: 'blue',
+            pred: a => a.data_agendada >= px.inicio && a.data_agendada <= px.fim }
+        }
+        case 'hoje':
+          return { periodo: 'hoje', label: 'Apenas hoje', color: 'orange',
+            pred: a => a.data_agendada === hojeISO }
+        case 'mes': {
+          const m = rangeMes()
+          return { periodo: 'mes', label: 'Este mês', color: 'blue',
+            pred: a => a.data_agendada >= m.inicio && a.data_agendada <= m.fim }
+        }
+        case 'intervalo':
+          return { periodo: 'intervalo', label: 'No período', color: 'blue',
+            pred: a => (!intervaloInicio || a.data_agendada >= intervaloInicio) &&
+              (!intervaloFim || a.data_agendada <= intervaloFim) }
+        case 'atrasados':
+          return { periodo: 'atrasados', label: 'Atrasados', color: 'red',
+            pred: a => a.data_agendada < hojeISO && a.status !== 'Respondido' && a.status !== 'Concluido' }
+        case 'todos':
+          return { periodo: 'todos', label: 'Todos', color: 'blue', pred: () => true }
+        case 'esta_semana':
+        default:
+          return { periodo: 'esta_semana', label: 'Esta semana', color: 'blue',
+            pred: a => a.data_agendada >= semana.inicio && a.data_agendada <= semana.fim }
+      }
+    })()
+    const noPeriodo = base.filter(meta.pred)
+    return {
+      periodo: meta.periodo,
+      label: meta.label,
+      color: meta.color,
+      value: noPeriodo.length,
+      trocas: noPeriodo.filter(a => a.is_training).length,
+    }
+  }, [agendamentosHidratados, filtroPeriodo, semana, hojeISO, intervaloInicio, intervaloFim])
 
   // Pendências de planejamento — foco em alunos (não em agendamentos).
   // Vigentes sem cronograma = plano rodando hoje mas sem nenhum feedback agendado.
@@ -283,11 +320,17 @@ export default function PainelFeedbacks() {
 
     if (filtroPeriodo === 'esta_semana') {
       lista = lista.filter(a => a.data_agendada >= semana.inicio && a.data_agendada <= semana.fim)
+    } else if (filtroPeriodo === 'proxima_semana') {
+      const px = rangeSemana(1)
+      lista = lista.filter(a => a.data_agendada >= px.inicio && a.data_agendada <= px.fim)
     } else if (filtroPeriodo === 'hoje') {
       lista = lista.filter(a => a.data_agendada === hojeISO)
     } else if (filtroPeriodo === 'mes') {
       const m = rangeMes()
       lista = lista.filter(a => a.data_agendada >= m.inicio && a.data_agendada <= m.fim)
+    } else if (filtroPeriodo === 'intervalo') {
+      if (intervaloInicio) lista = lista.filter(a => a.data_agendada >= intervaloInicio)
+      if (intervaloFim) lista = lista.filter(a => a.data_agendada <= intervaloFim)
     } else if (filtroPeriodo === 'atrasados') {
       lista = lista.filter(a =>
         a.data_agendada < hojeISO &&
@@ -311,7 +354,7 @@ export default function PainelFeedbacks() {
       if (dateCmp !== 0) return dateCmp
       return (a._alunoNome || '').localeCompare(b._alunoNome || '')
     })
-  }, [agendamentosHidratados, filtroPeriodo, filtroTipo, queryBusca, semana, hojeISO])
+  }, [agendamentosHidratados, filtroPeriodo, filtroTipo, queryBusca, semana, hojeISO, intervaloInicio, intervaloFim])
 
   // ═════════════════════════════════════════════════════════════════════════
   // Handlers
@@ -483,9 +526,20 @@ export default function PainelFeedbacks() {
   // ═════════════════════════════════════════════════════════════════════════
   // Subtitle dinâmico
   // ═════════════════════════════════════════════════════════════════════════
-  const subtitle = filtroPeriodo === 'esta_semana'
-    ? `Semana ${semana.numeroSemana} (${semana.label})`
-    : 'Operação diária e cobrança de feedbacks'
+  const subtitle = (() => {
+    if (filtroPeriodo === 'esta_semana') return `Semana ${semana.numeroSemana} (${semana.label})`
+    if (filtroPeriodo === 'proxima_semana') {
+      const px = rangeSemana(1)
+      return `Próxima semana — Semana ${px.numeroSemana} (${px.label})`
+    }
+    if (filtroPeriodo === 'intervalo') {
+      if (intervaloInicio && intervaloFim) return `${fmtDateBR(intervaloInicio)} → ${fmtDateBR(intervaloFim)}`
+      if (intervaloInicio) return `A partir de ${fmtDateBR(intervaloInicio)}`
+      if (intervaloFim) return `Até ${fmtDateBR(intervaloFim)}`
+      return 'Selecione um intervalo de datas'
+    }
+    return 'Operação diária e cobrança de feedbacks'
+  })()
 
   return (
     <>
@@ -533,11 +587,13 @@ export default function PainelFeedbacks() {
               if (v !== 'esta_semana') setSemanaOffset(0)
             },
             options: [
-              { value: 'esta_semana', label: 'Esta semana' },
-              { value: 'hoje',        label: 'Apenas hoje' },
-              { value: 'mes',         label: 'Este mês' },
-              { value: 'atrasados',   label: 'Atrasados acumulados' },
-              { value: 'todos',       label: 'Todos' },
+              { value: 'esta_semana',    label: 'Esta semana' },
+              { value: 'proxima_semana', label: 'Próxima semana' },
+              { value: 'hoje',           label: 'Apenas hoje' },
+              { value: 'mes',            label: 'Este mês' },
+              { value: 'intervalo',      label: 'Período personalizado' },
+              { value: 'atrasados',      label: 'Atrasados acumulados' },
+              { value: 'todos',          label: 'Todos' },
             ],
           },
           {
@@ -552,6 +608,40 @@ export default function PainelFeedbacks() {
         ]}
         loading={loading}
       >
+        {/* Seletor de intervalo personalizado — só aparece no período "Período personalizado" */}
+        {filtroPeriodo === 'intervalo' && (
+          <div className="flex flex-col sm:flex-row sm:items-end gap-3 mb-4 p-3 bg-[#1a1a1a] border border-[#323238] rounded-xl">
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-gray-400 mb-1">De</label>
+              <input
+                type="date"
+                value={intervaloInicio}
+                max={intervaloFim || undefined}
+                onChange={(e) => setIntervaloInicio(e.target.value)}
+                className="w-full h-10 px-3 bg-[#29292e] border border-[#323238] text-white rounded-lg text-sm outline-none focus:border-[#2563eb]/60 [color-scheme:dark]"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-gray-400 mb-1">Até</label>
+              <input
+                type="date"
+                value={intervaloFim}
+                min={intervaloInicio || undefined}
+                onChange={(e) => setIntervaloFim(e.target.value)}
+                className="w-full h-10 px-3 bg-[#29292e] border border-[#323238] text-white rounded-lg text-sm outline-none focus:border-[#2563eb]/60 [color-scheme:dark]"
+              />
+            </div>
+            {(intervaloInicio || intervaloFim) && (
+              <Button
+                variant="ghost" size="sm"
+                onClick={() => { setIntervaloInicio(''); setIntervaloFim('') }}
+              >
+                Limpar
+              </Button>
+            )}
+          </div>
+        )}
+
         {/* Pendências de planejamento — só aparece se há pelo menos uma pendência */}
         {(pendencias.vigentesSemCronograma.length > 0
           || pendencias.pagosNaoIniciados.length > 0
@@ -624,10 +714,13 @@ export default function PainelFeedbacks() {
         {/* Cards clicáveis acima da tabela — sempre visíveis */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           <CardClicavel
-            label="Esta semana" value={stats.totalSemana} unit="alunos"
-            color="blue"
-            ativo={filtroPeriodo === 'esta_semana' && semanaOffset === 0}
-            onClick={() => { setFiltroPeriodo('esta_semana'); setSemanaOffset(0) }}
+            label={resumoPeriodo.label} value={resumoPeriodo.value} unit="alunos"
+            color={resumoPeriodo.color}
+            ativo
+            onClick={() => {
+              setFiltroPeriodo(resumoPeriodo.periodo)
+              if (resumoPeriodo.periodo === 'esta_semana') setSemanaOffset(0)
+            }}
           />
           <CardClicavel
             label="Para hoje" value={stats.hoje} unit="aguard."
@@ -636,7 +729,7 @@ export default function PainelFeedbacks() {
             onClick={() => setFiltroPeriodo('hoje')}
           />
           <CardClicavel
-            label="Trocas (sem.)" value={stats.trocas} unit="trocas"
+            label="Trocas" value={resumoPeriodo.trocas} unit="trocas"
             color="purple"
             ativo={filtroTipo === 'troca'}
             onClick={() => setFiltroTipo(filtroTipo === 'troca' ? '' : 'troca')}

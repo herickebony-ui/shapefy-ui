@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
+import { maybeOpenNewTab } from '../../utils/navigation'
 import {
   ArrowLeft, RefreshCw, ChevronLeft, ChevronRight,
   Dumbbell, Activity, Clock, MessageSquare, LineChart,
@@ -385,10 +386,10 @@ function DetalheView({ treinoBase, listaFiltrada, onVoltar, onEntregueAtualizado
     }
 
     try {
-      const [doc, ficha] = await Promise.all([
-        buscarTreinoCached(treino.name),
-        buscarFichaCached(treino.ficha),
-      ])
+      // treino.ficha vem do row da lista; quando aberto direto pela URL (nova aba),
+      // o row pode não ter `ficha`, então usa o campo do próprio doc como fallback.
+      const doc = await buscarTreinoCached(treino.name)
+      const ficha = await buscarFichaCached(treino.ficha || doc.ficha)
       setDetalhe(doc)
       setFeedback(doc.feedback_do_profissional || '')
       if (ficha) {
@@ -639,7 +640,9 @@ const STATUS_OPTS = [
 ]
 
 export default function TreinosRealizados() {
-  const [view, setView] = useState('lista') // 'lista' | 'detalhe' | 'progressao'
+  const { id: rotaId } = useParams()
+  const navigate = useNavigate()
+  const [view, setView] = useState(rotaId ? 'detalhe' : 'lista') // 'lista' | 'detalhe' | 'progressao'
   const [lista, setLista] = useState([])
   const [loading, setLoading] = useState(false)
   const [busca, setBusca] = useState('')
@@ -650,7 +653,7 @@ export default function TreinosRealizados() {
   const [filtroDataFim, setFiltroDataFim] = useState('')
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
-  const [treinoAberto, setTreinoAberto] = useState(null)
+  const [treinoAberto, setTreinoAberto] = useState(rotaId ? { name: rotaId } : null)
   const [modalExcluir, setModalExcluir] = useState(null) // treino a confirmar
   const [excluindo, setExcluindo] = useState(false)
   const errorModal = useErrorModal()
@@ -713,7 +716,7 @@ export default function TreinosRealizados() {
         <DetalheView
           treinoBase={treinoAberto}
           listaFiltrada={listaFiltrada}
-          onVoltar={() => { setView('lista'); setTreinoAberto(null) }}
+          onVoltar={() => { setView('lista'); setTreinoAberto(null); if (rotaId) navigate('/treinos') }}
           onEntregueAtualizado={(id, entregue) => {
             setLista(prev => prev.map(t => t.name === id ? { ...t, entregue } : t))
           }}
@@ -795,7 +798,8 @@ export default function TreinosRealizados() {
               {listaFiltrada.map(t => (
                 <tr
                   key={t.name}
-                  onClick={() => { setTreinoAberto(t); setView('detalhe') }}
+                  onClick={(e) => { if (maybeOpenNewTab(e, `/treinos/${encodeURIComponent(t.name)}`)) return; setTreinoAberto(t); setView('detalhe') }}
+                  onAuxClick={(e) => { if (e.button === 1) maybeOpenNewTab(e, `/treinos/${encodeURIComponent(t.name)}`) }}
                   className="hover:bg-white/5 transition-colors cursor-pointer group"
                 >
                   <td className="px-4 py-3">
@@ -868,7 +872,7 @@ export default function TreinosRealizados() {
                       <ChevronRight
                         size={14}
                         className="text-gray-600 group-hover:text-white transition-colors cursor-pointer"
-                        onClick={() => { setTreinoAberto(t); setView('detalhe') }}
+                        onClick={(e) => { if (maybeOpenNewTab(e, `/treinos/${encodeURIComponent(t.name)}`)) return; setTreinoAberto(t); setView('detalhe') }}
                       />
                     </div>
                   </td>

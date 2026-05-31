@@ -74,6 +74,28 @@ export const listarFeedbacks = async ({ busca = '', status = '', dataInicio = ''
   return { list, hasMore: list.length === limit }
 }
 
+// Feedbacks efetivamente respondidos de um aluno (Respondido + Finalizado),
+// ordenados por data_resposta desc. Usado pela comparação "últimos N".
+export const listarFeedbacksDoAluno = async (alunoId, { statuses = ['Respondido', 'Finalizado'], limit = 50 } = {}) => {
+  const profissional = profissionalLogado()
+  const params = {
+    fields: JSON.stringify(['name', 'formulario', 'titulo', 'aluno', 'nome_completo', 'profissional', 'date', 'status', 'email', 'modified', 'creation', 'data_resposta']),
+    filters: JSON.stringify([
+      ['profissional', 'in', [profissional, '']],
+      ['aluno', '=', alunoId],
+      ['status', 'in', statuses],
+    ]),
+    limit,
+    order_by: 'modified desc',
+  }
+  const res = await client.get('/api/resource/Feedback', { params })
+  return (res.data.data || []).slice().sort((a, b) => {
+    const da = a.data_resposta || a.modified || ''
+    const db = b.data_resposta || b.modified || ''
+    return db.localeCompare(da)
+  })
+}
+
 export const listarFormularios = async () => {
   const profissional = profissionalLogado()
   const params = {

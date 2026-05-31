@@ -173,37 +173,55 @@ export const excluirAgendamentosDoAluno = async (alunoId) => {
 }
 
 /**
- * Sincroniza o cronograma do aluno: dado um array novo de datas, apaga os
- * antigos e cria os novos. Usado no botão "Salvar Alterações" da tela.
+ * Um agendamento é "respondido" (histórico) quando já tem resposta registrada
+ * ou status final. Esses NUNCA podem ser apagados nem sobrescritos pelo sync —
+ * preservam o histórico do aluno entre renovações de ciclo.
+ */
+export const ehRespondido = (ag) =>
+  !!ag?.respondido_em || ag?.status === 'Respondido' || ag?.status === 'Concluido'
+
+/**
+ * Sincroniza o cronograma do aluno: dado um array novo de datas, atualiza/cria
+ * as pendentes e apaga as pendentes que sumiram. Usado no botão "Salvar".
  *
  * payloads = [{ formulario, data_agendada, dias_aviso, nota, is_start, status }]
  *
  * Dedupe por DATA (aluno só pode ter 1 agendamento por dia). Se a data já
  * existe, atualiza no lugar (incluindo formulario, caso o profissional troque).
- * Datas que sumiram do novo array são excluídas.
+ * Datas pendentes que sumiram do novo array são excluídas.
+ *
+ * HISTÓRICO PRESERVADO: agendamentos respondidos (ehRespondido) nunca são
+ * apagados nem sobrescritos, mesmo que sumam do array ou coincidam com uma
+ * data gerada.
  */
 export const sincronizarCronogramaDoAluno = async (alunoId, payloads) => {
   const existentes = await listarAgendamentosDoAluno(alunoId)
   const mapaExistentes = {}
   existentes.forEach(e => { mapaExistentes[e.data_agendada] = e })
 
-  const operacoes = { criados: [], atualizados: [], removidos: [] }
+  const operacoes = { criados: [], atualizados: [], removidos: [], preservados: [] }
   const datasNovas = new Set()
 
   for (const p of payloads) {
     datasNovas.add(p.data_agendada)
-    if (mapaExistentes[p.data_agendada]) {
-      // Já existe → atualiza no lugar (inclui formulario p/ permitir troca)
-      await salvarAgendamento(mapaExistentes[p.data_agendada].name, {
+    const ex = mapaExistentes[p.data_agendada]
+    if (ex) {
+      // Respondido → preserva intacto (não sobrescreve status/resposta)
+      if (ehRespondido(ex)) {
+        operacoes.preservados.push(ex.name)
+        continue
+      }
+      // Pendente já existe → atualiza no lugar (inclui formulario p/ permitir troca)
+      await salvarAgendamento(ex.name, {
         formulario: p.formulario,
         dias_aviso: p.dias_aviso,
         observacao: p.observacao || '',
         nota: p.nota || '',
         is_start: p.is_start ? 1 : 0,
         is_training: p.is_training ? 1 : 0,
-        status: p.status || mapaExistentes[p.data_agendada].status,
+        status: p.status || ex.status,
       })
-      operacoes.atualizados.push(mapaExistentes[p.data_agendada].name)
+      operacoes.atualizados.push(ex.name)
     } else {
       // Novo → cria
       const novo = await criarAgendamento({
@@ -223,6 +241,11 @@ export const sincronizarCronogramaDoAluno = async (alunoId, payloads) => {
 
   for (const ex of existentes) {
     if (!datasNovas.has(ex.data_agendada)) {
+      // Respondido → nunca apaga (histórico)
+      if (ehRespondido(ex)) {
+        operacoes.preservados.push(ex.name)
+        continue
+      }
       await excluirAgendamento(ex.name)
       operacoes.removidos.push(ex.name)
     }

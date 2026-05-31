@@ -317,7 +317,7 @@ export default function PrescricaoListagem() {
               columns={columns}
               rows={lista}
               rowKey="name"
-              onRowClick={(row) => navigate(`/prescricoes/${encodeURIComponent(row.name)}`)}
+              rowHref={(row) => `/prescricoes/${encodeURIComponent(row.name)}`}
             />
             {hasMore && (
               <div className="flex justify-center py-4">

@@ -410,7 +410,7 @@ export default function ModeloFichaListagem() {
             pageSize={pageSize}
             onPage={setPage}
             onPageSize={(s) => { setPageSize(s); setPage(1) }}
-            onRowClick={(m) => navigate(`/modelos/fichas/${m.name}`)}
+            rowHref={(m) => `/modelos/fichas/${m.name}`}
             rowKey="name"
           />
         )}

@@ -162,10 +162,12 @@ function App() {
           <Route path="alongamentos" element={<ModuleRoute modulo="treino"><GerenciarAlongamentos /></ModuleRoute>} />
           <Route path="aerobicos" element={<ModuleRoute modulo="treino"><GerenciarAerobicos /></ModuleRoute>} />
           <Route path="treinos" element={<ModuleRoute modulo="treino"><TreinosRealizados /></ModuleRoute>} />
+          <Route path="treinos/:id" element={<ModuleRoute modulo="treino"><TreinosRealizados /></ModuleRoute>} />
           <Route path="progressao-cargas" element={<ModuleRoute modulo="treino"><ProgressaoCargas /></ModuleRoute>} />
 
           {/* feedback (acesso liberado para todos) */}
           <Route path="feedbacks" element={<FeedbackListagem />} />
+          <Route path="feedbacks/compare" element={<FeedbackListagem />} />
           <Route path="feedbacks/:id" element={<FeedbackDetalhe />} />
           <Route path="painel-feedbacks" element={<PainelFeedbacks />} />
           <Route path="cronograma-feedbacks" element={<CronogramaFeedbacks />} />
@@ -173,6 +175,7 @@ function App() {
 
           {/* sem restrição */}
           <Route path="avaliacoes" element={<AvaliacaoListagem />} />
+          <Route path="avaliacoes/compare" element={<AvaliacaoListagem />} />
           <Route path="avaliacoes/nova" element={<AvaliacaoForm />} />
           <Route path="avaliacoes/:id/editar" element={<AvaliacaoForm />} />
           <Route path="banco-textos" element={<BancoTextos />} />

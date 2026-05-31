@@ -82,6 +82,9 @@ export default function MesGrid({
               bg = 'bg-[#2563eb] text-white'
               extra = 'shadow-[0_0_12px_rgba(37,99,235,0.4)]'
             }
+            // Agendada fora da vigência → marca em âmbar (visível, mas sinalizada)
+            const foraVigencia = planStart && planEnd && (iso < planStart || iso > planEnd)
+            if (foraVigencia && !isDone) ring = 'ring-2 ring-amber-500/70'
           }
 
           if (isHoje) extra += ' shadow-[inset_0_0_0_2px_rgba(252,211,77,0.9)]'

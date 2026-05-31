@@ -1,4 +1,4 @@
-import { Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import {
   Users, Home, BarChart2, Dumbbell, ClipboardList,
   MessageSquare, Activity, FileText, LogOut, ListChecks,
@@ -158,9 +158,10 @@ export default function AppLayout() {
             const Icon = item.icon
 
             return (
-              <button
+              <Link
                 key={item.id}
-                onClick={() => { navigate(item.path); if (window.innerWidth < 768) setExpanded(false) }}
+                to={item.path}
+                onClick={() => { if (window.innerWidth < 768) setExpanded(false) }}
                 title={!expanded ? item.label : ''}
                 className={`w-full flex items-center rounded-xl transition-all text-sm font-medium text-left
                   ${expanded ? 'gap-3 px-4 py-2.5' : 'justify-center py-2.5'}
@@ -172,7 +173,7 @@ export default function AppLayout() {
               >
                 <Icon size={18} className="flex-shrink-0" />
                 {expanded && <span className="truncate">{item.label}</span>}
-              </button>
+              </Link>
             )
           })}
         </nav>

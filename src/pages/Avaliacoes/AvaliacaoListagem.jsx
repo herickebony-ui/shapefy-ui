@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft, Plus, RefreshCw, Trash2, FileDown, Check,
   Filter, GitCompare, X as XIcon, BarChart2, CheckSquare, Square, Edit,
@@ -73,8 +73,10 @@ function ChartTip({ active, payload, label }) {
 export default function AvaliacaoListagem() {
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams] = useSearchParams()
   const errorModal = useErrorModal()
-  const [view, setView] = useState('list')
+  const compareAluno = searchParams.get('compare')
+  const [view, setView] = useState(compareAluno ? 'compare' : 'list')
 
   // ─── List state ─────────────────────────────────────────────────────────────
   const [avaliacoes, setAvaliacoes] = useState([])
@@ -91,7 +93,7 @@ export default function AvaliacaoListagem() {
   // ─── Compare state ───────────────────────────────────────────────────────────
   const [alunoAtivo, setAlunoAtivo] = useState(null)
   const [historico, setHistorico] = useState([])
-  const [loadingHistorico, setLoadingHistorico] = useState(false)
+  const [loadingHistorico, setLoadingHistorico] = useState(!!compareAluno)
   const [visibleAvNames, setVisibleAvNames] = useState(null)
   const [selectedFormulas, setSelectedFormulas] = useState(new Set(['jp7_body_fat']))
   const [showFormulasDrop, setShowFormulasDrop] = useState(false)
@@ -155,6 +157,14 @@ export default function AvaliacaoListagem() {
     if (a?.aluno) {
       abrirCompare({ aluno: a.aluno, nome_completo: a.nome_completo })
       window.history.replaceState({}, '')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // ─── Auto-abrir comparação pela URL (/avaliacoes/compare?aluno=...) — Cmd+Click ──
+  useEffect(() => {
+    if (compareAluno) {
+      abrirCompare({ aluno: compareAluno, nome_completo: searchParams.get('nome') || '' })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -545,6 +555,7 @@ export default function AvaliacaoListagem() {
               rows={filtered}
               rowKey="name"
               onRowClick={(row) => abrirCompare(row)}
+              rowHref={(row) => `/avaliacoes/compare?aluno=${encodeURIComponent(row.aluno)}&nome=${encodeURIComponent(row.nome_completo || '')}`}
               page={page}
               pageSize={50}
               onPage={setPage}
@@ -792,7 +803,7 @@ export default function AvaliacaoListagem() {
 
       {/* Header */}
       <div className="flex flex-wrap items-start gap-3">
-        <button onClick={() => setView('list')} className="p-2 text-gray-400 hover:text-white hover:bg-[#323238] rounded-lg transition-colors">
+        <button onClick={() => { setView('list'); if (compareAluno) navigate('/avaliacoes', { replace: true }) }} className="p-2 text-gray-400 hover:text-white hover:bg-[#323238] rounded-lg transition-colors">
           <ArrowLeft size={20} />
         </button>
         <div className="flex-1 min-w-0">

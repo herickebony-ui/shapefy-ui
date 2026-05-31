@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { maybeOpenNewTab } from '../../utils/navigation'
 import { RefreshCw, Search, Columns, CheckCircle, Star, X, ArrowLeft, Link2, Trash2, AlertTriangle, Copy, Check } from 'lucide-react'
 import {
-  listarFeedbacks, listarFormularios, buscarFeedback,
+  listarFeedbacks, listarFormularios, buscarFeedback, listarFeedbacksDoAluno,
   salvarStatusFeedback, rotarImagemFeedback, trocarFotosFeedback, excluirFeedback,
 } from '../../api/feedbacks'
 import useErrorModal from '../../hooks/useErrorModal'
@@ -35,7 +36,12 @@ const normalizar = (t) =>
 // ─── View: Comparação ────────────────────────────────────────────────────────
 
 function ViewComparacao({ dados, imgSrcs, onVoltar, onRotate, modoTrocarFoto, setModoTrocarFoto, fotosSelecionadas, setFotosSelecionadas, salvandoTroca, onConfirmarTroca }) {
-  const base = dados[0]?.perguntas_e_respostas || []
+  // `dados` vem ordenado ascendente (mais antigo → mais recente), então o último
+  // é o feedback mais recente. As perguntas de referência (coluna esquerda)
+  // seguem o formulário mais recente; respostas são casadas por índice de posição.
+  const referencia = dados.length ? dados[dados.length - 1] : null
+  const base = referencia?.perguntas_e_respostas || []
+  const formulariosDistintos = new Set(dados.map(d => d.formulario).filter(Boolean)).size > 1
   const [copiado, setCopiado] = useState(false)
 
   const handleCopiarRespostas = async () => {
@@ -104,9 +110,19 @@ function ViewComparacao({ dados, imgSrcs, onVoltar, onRotate, modoTrocarFoto, se
       <div className="flex-1 overflow-auto p-4 md:p-6">
         <div className="max-w-7xl mx-auto">
           <div className="bg-[#29292e] px-4 py-3 rounded-lg border border-[#323238] mb-4">
-            <h1 className="text-sm font-bold text-white">{dados[0]?.nome_completo}</h1>
-            <p className="text-[10px] text-gray-500 mt-0.5">{dados[0]?.titulo}</p>
+            <h1 className="text-sm font-bold text-white">{referencia?.nome_completo}</h1>
+            <p className="text-[10px] text-gray-500 mt-0.5">{referencia?.titulo}</p>
           </div>
+
+          {formulariosDistintos && (
+            <div className="mb-4 flex items-start gap-2.5 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs">
+              <AlertTriangle size={14} className="shrink-0 mt-0.5 text-amber-400" />
+              <span className="leading-relaxed">
+                Você está comparando feedbacks de <strong>formulários diferentes</strong>. As perguntas da coluna à esquerda seguem o formulário mais recente
+                {referencia?.titulo ? <> (<span className="font-semibold text-amber-100">{referencia.titulo}</span>)</> : null}; respostas de outros formulários podem não alinhar.
+              </span>
+            </div>
+          )}
 
           <div className="bg-[#1a1a1a] rounded-lg border border-[#323238] overflow-x-auto">
             <table className="w-full text-left border-collapse table-fixed">
@@ -117,7 +133,7 @@ function ViewComparacao({ dados, imgSrcs, onVoltar, onRotate, modoTrocarFoto, se
                   </th>
                   {dados.map((fb, i) => (
                     <th key={i} className="p-2 md:p-3 text-[10px] font-bold text-white uppercase tracking-wider text-center min-w-[160px] md:min-w-[220px]">
-                      {fmtData(fb.date || (fb.modified || '').split(' ')[0])}
+                      {fmtData((fb.data_resposta || fb.modified || '').split(' ')[0])}
                     </th>
                   ))}
                 </tr>
@@ -229,6 +245,7 @@ function ViewComparacao({ dados, imgSrcs, onVoltar, onRotate, modoTrocarFoto, se
 export default function FeedbackListagem() {
   const errorModal = useErrorModal()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   const [feedbacks, setFeedbacks] = useState([])
   const [formularios, setFormularios] = useState([])
@@ -320,7 +337,7 @@ export default function FeedbackListagem() {
     try {
       const resultados = await Promise.all(lista.map(fb => buscarFeedback(fb.name)))
       const dados = resultados.filter(Boolean)
-      dados.sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+      dados.sort((a, b) => (a.data_resposta || a.modified || '').localeCompare(b.data_resposta || b.modified || ''))
       setDadosComparacao(dados)
     } catch (e) {
       console.error(e)
@@ -331,17 +348,35 @@ export default function FeedbackListagem() {
   }
 
   const compararUltimos3 = async (fb) => {
-    const doAluno = feedbacks
-      .filter(f => f.nome_completo === fb.nome_completo)
-      .sort((a, b) => (b.modified || '').localeCompare(a.modified || ''))
-      .slice(0, 3)
-    if (doAluno.length < 2) {
-      alert('Este aluno tem menos de 2 feedbacks para comparar.')
-      return
+    setLoadingComparacao(true)
+    setView('compare')
+    try {
+      const respondidos = await listarFeedbacksDoAluno(fb.aluno)
+      const ultimos = respondidos.slice(0, 3)
+      if (ultimos.length < 2) {
+        setView('list')
+        alert('Este aluno tem menos de 2 feedbacks respondidos para comparar.')
+        return
+      }
+      setSelecionados(ultimos)
+      const resultados = await Promise.all(ultimos.map(f => buscarFeedback(f.name)))
+      const dados = resultados.filter(Boolean)
+      dados.sort((a, b) => (a.data_resposta || a.modified || '').localeCompare(b.data_resposta || b.modified || ''))
+      setDadosComparacao(dados)
+    } catch (e) {
+      console.error(e)
+      setView('list')
+    } finally {
+      setLoadingComparacao(false)
     }
-    setSelecionados(doAluno)
-    await iniciarComparacao(doAluno)
   }
+
+  // Abre a comparação direto pela URL (/feedbacks/compare?aluno=...) — usado pelo Cmd+Click.
+  useEffect(() => {
+    const aluno = searchParams.get('aluno')
+    if (aluno) compararUltimos3({ aluno })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const confirmarTroca = async () => {
     const [f1, f2] = fotosSelecionadas
@@ -410,7 +445,10 @@ export default function FeedbackListagem() {
       <ViewComparacao
         dados={dadosComparacao}
         imgSrcs={imgSrcs}
-        onVoltar={() => { setView('list'); setModoComparar(false); setSelecionados([]) }}
+        onVoltar={() => {
+          setView('list'); setModoComparar(false); setSelecionados([])
+          if (searchParams.get('aluno')) navigate('/feedbacks', { replace: true })
+        }}
         onRotate={handleRotate}
         modoTrocarFoto={modoTrocarFoto}
         setModoTrocarFoto={setModoTrocarFoto}
@@ -446,8 +484,9 @@ export default function FeedbackListagem() {
       render: (row) => (
         <div className="flex items-center justify-center gap-1.5" onClick={e => e.stopPropagation()}>
           <button
-            onClick={() => compararUltimos3(row)}
-            title="Comparar últimos 3"
+            onClick={(e) => { if (maybeOpenNewTab(e, `/feedbacks/compare?aluno=${encodeURIComponent(row.aluno)}`)) return; compararUltimos3(row) }}
+            onAuxClick={(e) => { if (e.button === 1) maybeOpenNewTab(e, `/feedbacks/compare?aluno=${encodeURIComponent(row.aluno)}`) }}
+            title="Comparar últimos 3 (Cmd/Ctrl+clique: nova aba)"
             className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors relative group"
           >
             <Columns size={12} />
@@ -613,6 +652,7 @@ export default function FeedbackListagem() {
             pageSize={busca ? feedbacksFiltrados.length : PAGE_SIZE}
             onPage={busca ? undefined : setPage}
             onRowClick={(row) => navigate(`/feedbacks/${row.name}`, { state: { feedbacksFiltrados: feedbacksFiltrados } })}
+            rowHref={(row) => `/feedbacks/${row.name}`}
           />
         )}
       </ListPage>
