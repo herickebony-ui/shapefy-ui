@@ -8,7 +8,7 @@ import { Spinner } from '../../components/ui'
 import {
   GlassCard, SectionHeader, SemaphoreBar, Collapsible, EvolutionChart, Photo, ActionButton,
 } from '../../components/aluno'
-import { compararAvaliacoesAluno } from '../../api/avaliacoesAluno'
+import { listarAvaliacoesAluno, compararAvaliacoesAluno } from '../../api/avaliacoesAluno'
 import useErrorModal from '../../hooks/useErrorModal'
 
 // Cor do texto conforme a classe semântica do backend (good/bad/warn/neutral/low).
@@ -180,9 +180,18 @@ export default function AvaliacaoComparar() {
   useEffect(() => {
     let cancelado = false
     setCarregando(true)
-    compararAvaliacoesAluno(names)
-      .then(res => { if (!cancelado) setData(res) })
-      .catch(err => !cancelado && errorModalRef.current.show(err, 'Comparação'))
+    ;(async () => {
+      // Sem names na URL → cai automaticamente nas 3 avaliações mais recentes.
+      let nomes = names
+      if (!nomes) {
+        const lista = await listarAvaliacoesAluno()
+        nomes = lista.slice(0, 3).map(a => a.name).join(',')
+      }
+      if (!nomes) { if (!cancelado) setData(null); return }
+      const res = await compararAvaliacoesAluno(nomes)
+      if (!cancelado) setData(res)
+    })()
+      .catch(err => !cancelado && errorModalRef.current.show(err, 'Avaliações'))
       .finally(() => !cancelado && setCarregando(false))
     return () => { cancelado = true }
   }, [names])
@@ -222,13 +231,13 @@ export default function AvaliacaoComparar() {
 
       <div className="px-4 pt-4 pb-3 border-b border-[var(--sf-border)] bg-[var(--sf-bg)]/95 backdrop-blur-sm sticky top-0 z-10 flex items-center gap-3">
         <button
-          onClick={() => navigate('/aluno/avaliacoes')}
+          onClick={() => navigate('/aluno')}
           title="Voltar"
           className="h-9 w-9 flex items-center justify-center text-gray-400 hover:text-white border border-[var(--sf-border)] hover:border-[var(--sf-border-strong)] rounded-lg transition-colors shrink-0"
         >
           <ArrowLeft size={16} />
         </button>
-        <h1 className="text-white text-base font-bold flex-1">Comparação</h1>
+        <h1 className="text-white text-base font-bold flex-1">Composição corporal</h1>
       </div>
 
       {carregando ? (
@@ -236,7 +245,8 @@ export default function AvaliacaoComparar() {
       ) : !data ? (
         <div className="px-4 pt-6">
           <GlassCard as="div" className="px-4 py-8 text-center">
-            <p className="text-[var(--sf-text-muted)] text-sm">Não foi possível carregar a comparação.</p>
+            <p className="text-[var(--sf-text-muted)] text-sm">Nenhuma avaliação cadastrada ainda.</p>
+            <p className="text-[var(--sf-text-soft)] text-xs mt-1">Seu profissional registra as avaliações no painel.</p>
           </GlassCard>
         </div>
       ) : (
