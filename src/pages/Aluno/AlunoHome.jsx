@@ -49,12 +49,8 @@ function resolveCardLink(card, pendencias, flags) {
       return pendencias?.anamnese
         ? { reactPath: `/aluno/anamneses/${pendencias.anamnese}` }
         : { href: legado('/anamnese'), externa: true }
-    case 'avaliacoes': {
-      const recentes = pendencias?.avaliacoes_recentes || []
-      return recentes.length > 0
-        ? { href: legado(`/compare?names=${recentes.map(encodeURIComponent).join(',')}`), externa: true }
-        : { href: legado('/avaliacao-da-composicao-corporal'), externa: true }
-    }
+    case 'avaliacoes':
+      return { reactPath: '/aluno/avaliacoes' }
     case 'feedback':
       if (pendencias?.feedback) return { reactPath: `/aluno/feedbacks/${pendencias.feedback}` }
       // Sem Feedback Enviado: só exibe status (backend não cria mais Feedback).

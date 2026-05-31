@@ -53,6 +53,9 @@ import PrescricaoListagemAluno from './pages/Aluno/PrescricaoListagem'
 import PrescricaoDetalheAluno from './pages/Aluno/PrescricaoDetalhe'
 import DietaListagemAluno from './pages/Aluno/DietaListagem'
 import DietaDetalheAluno from './pages/Aluno/DietaDetalhe'
+import AvaliacaoListagemAluno from './pages/Aluno/AvaliacaoListagem'
+import AvaliacaoDetalheAluno from './pages/Aluno/AvaliacaoDetalhe'
+import AvaliacaoCompararAluno from './pages/Aluno/AvaliacaoComparar'
 import PerfilAluno from './pages/Aluno/PerfilAluno'
 import PerfilEditar from './pages/Aluno/PerfilEditar'
 import FeedbacksProximos from './pages/Aluno/FeedbacksProximos'
@@ -126,6 +129,9 @@ function App() {
           <Route path="prescricoes/:name" element={<PrescricaoDetalheAluno />} />
           <Route path="dietas" element={<DietaListagemAluno />} />
           <Route path="dietas/:name" element={<DietaDetalheAluno />} />
+          <Route path="avaliacoes" element={<AvaliacaoListagemAluno />} />
+          <Route path="avaliacoes/comparar" element={<AvaliacaoCompararAluno />} />
+          <Route path="avaliacoes/:name" element={<AvaliacaoDetalheAluno />} />
           <Route path="perfil" element={<PerfilAluno />} />
           <Route path="perfil/editar" element={<PerfilEditar />} />
         </Route>
