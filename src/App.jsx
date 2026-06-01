@@ -191,7 +191,6 @@ function App() {
           <Route path="criar-formularios" element={<Navigate to="/formularios/anamnese" replace />} />
           <Route path="criar-formularios/:tipo/:id" element={<FormularioBuilder />} />
           <Route path="conjuntos-fotos" element={<ConjuntoListagem />} />
-          <Route path="conjuntos-fotos/novo" element={<ConjuntoBuilder />} />
           <Route path="conjuntos-fotos/:id" element={<ConjuntoBuilder />} />
           <Route path="suporte" element={<Suporte />} />
           <Route path="me" element={<UsuarioHub />} />

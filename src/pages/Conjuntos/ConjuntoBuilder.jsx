@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Plus, Trash2, ChevronUp, ChevronDown, Save, ArrowLeft, Images } from 'lucide-react'
+import { Plus, Trash2, ChevronUp, ChevronDown, Save, ArrowLeft, Copy } from 'lucide-react'
 import { criarConjunto, salvarConjunto, buscarConjunto } from '../../api/conjuntos'
 import { Button, FormGroup, Input, Spinner } from '../../components/ui'
 import useErrorModal from '../../hooks/useErrorModal'
@@ -46,6 +46,15 @@ export default function ConjuntoBuilder() {
 
   const addSlot = () => setSlots((p) => [...p, slotVazio()])
   const removeSlot = (idx) => setSlots((p) => p.filter((_, i) => i !== idx))
+  const duplicarSlot = (idx) =>
+    setSlots((p) => {
+      const arr = [...p]
+      const orig = arr[idx]
+      if (!orig) return p
+      // slot_id NOVO (vazio) — cada ângulo é único; o backend gera um id próprio.
+      arr.splice(idx + 1, 0, { ...orig, _id: gerarId(), slot_id: '' })
+      return arr
+    })
   const updateSlot = (idx, campo, valor) =>
     setSlots((p) => p.map((s, i) => (i === idx ? { ...s, [campo]: valor } : s)))
   const moverCima = (idx) =>
@@ -144,6 +153,7 @@ export default function ConjuntoBuilder() {
               <div className="flex items-center gap-1 ml-auto">
                 <button onClick={() => moverCima(idx)} disabled={idx === 0} className="h-6 w-6 flex items-center justify-center text-gray-500 hover:text-white border border-[#323238] rounded transition-colors disabled:opacity-30"><ChevronUp size={11} /></button>
                 <button onClick={() => moverBaixo(idx)} disabled={idx === slots.length - 1} className="h-6 w-6 flex items-center justify-center text-gray-500 hover:text-white border border-[#323238] rounded transition-colors disabled:opacity-30"><ChevronDown size={11} /></button>
+                <button onClick={() => duplicarSlot(idx)} title="Duplicar slot abaixo" className="h-6 w-6 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded transition-colors"><Copy size={11} /></button>
                 <button onClick={() => removeSlot(idx)} className="h-6 w-6 flex items-center justify-center text-[#2563eb] hover:text-white border border-[#2563eb]/30 hover:bg-[#2563eb] rounded transition-colors"><Trash2 size={11} /></button>
               </div>
             </div>
