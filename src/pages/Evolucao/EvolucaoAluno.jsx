@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, TrendingUp, Images } from 'lucide-react'
 import { Spinner } from '../../components/ui'
-import { listarRegistrosPorAluno } from '../../api/evolucao'
+import { listarRegistrosPorAluno, buscarRegistro } from '../../api/evolucao'
 import useErrorModal from '../../hooks/useErrorModal'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
@@ -122,15 +122,28 @@ export default function EvolucaoAluno() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [registros, setRegistros] = useState([])
+  const [registrosFotos, setRegistrosFotos] = useState([]) // docs completos (com fotos) das últimas datas
   const [loading, setLoading] = useState(true)
   const errorModal = useErrorModal()
 
   useEffect(() => {
     let cancelado = false
-    listarRegistrosPorAluno(id)
-      .then((data) => !cancelado && setRegistros(data))
-      .catch((e) => !cancelado && errorModal.show(e, 'Carregar evolução'))
-      .finally(() => !cancelado && setLoading(false))
+    const carregar = async () => {
+      try {
+        const data = await listarRegistrosPorAluno(id)
+        if (cancelado) return
+        setRegistros(data)
+        // A listagem não traz child tables (fotos) — busca o doc completo das últimas N datas.
+        const ultimos = data.slice(-MAX_COLS)
+        const completos = await Promise.all(ultimos.map((r) => buscarRegistro(r.name).catch(() => null)))
+        if (!cancelado) setRegistrosFotos(completos.filter(Boolean))
+      } catch (e) {
+        if (!cancelado) errorModal.show(e, 'Carregar evolução')
+      } finally {
+        if (!cancelado) setLoading(false)
+      }
+    }
+    carregar()
     return () => { cancelado = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
@@ -165,7 +178,7 @@ export default function EvolucaoAluno() {
 
           <div className="bg-[#1a1a1a] rounded-xl border border-[#323238] p-4">
             <h2 className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3"><Images size={13} /> Comparação de fotos (últimas {MAX_COLS} datas)</h2>
-            <MatrizFotos registros={registros} />
+            <MatrizFotos registros={registrosFotos} />
           </div>
         </>
       )}
