@@ -27,6 +27,7 @@ import FormularioListagem from './pages/Formularios/FormularioListagem'
 import FormularioBuilder from './pages/Formularios/FormularioBuilder'
 import ConjuntoListagem from './pages/Conjuntos/ConjuntoListagem'
 import ConjuntoBuilder from './pages/Conjuntos/ConjuntoBuilder'
+import PendenciasEvolucao from './pages/Evolucao/PendenciasEvolucao'
 import Suporte from './pages/Suporte/Suporte'
 import UsuarioHub from './pages/Usuario/UsuarioHub'
 import PerfilProfissional from './pages/Perfil/PerfilProfissional'
@@ -192,6 +193,7 @@ function App() {
           <Route path="criar-formularios/:tipo/:id" element={<FormularioBuilder />} />
           <Route path="conjuntos-fotos" element={<ConjuntoListagem />} />
           <Route path="conjuntos-fotos/:id" element={<ConjuntoBuilder />} />
+          <Route path="pendencias-evolucao" element={<PendenciasEvolucao />} />
           <Route path="suporte" element={<Suporte />} />
           <Route path="me" element={<UsuarioHub />} />
           <Route path="perfil" element={<PerfilProfissional />} />

@@ -42,3 +42,9 @@ export const pesoAtualAluno = async () => {
   const res = await client.get('/api/method/shapefy.api.aluno.peso_atual')
   return res.data?.message?.peso ?? null
 }
+
+// Pendências de migração: Registros de feedback sem peso (valor cru não interpretado).
+export const listarPendenciasPeso = async () => {
+  const res = await client.get('/api/method/shapefy.evolucao.api.pendencias_peso')
+  return res.data?.message || []
+}
