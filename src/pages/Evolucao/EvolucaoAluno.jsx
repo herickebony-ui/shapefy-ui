@@ -60,8 +60,13 @@ function GraficoPeso({ pontos }) {
             <polyline points={poly} fill="none" stroke="#2563eb" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
           </svg>
           {coords.map((c, i) => (
-            <div key={i} className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: `${c.x}%`, top: `${c.y}%` }}>
-              <div className={`rounded-full bg-[#3B82F6] border-2 border-[#1a1a1a] ${denso ? 'h-1.5 w-1.5' : 'h-2 w-2'}`} />
+            <div
+              key={i}
+              title={`${fmtData(c.data)} · ${numBR(c.peso)} kg`}
+              className="absolute -translate-x-1/2 -translate-y-1/2 cursor-help"
+              style={{ left: `${c.x}%`, top: `${c.y}%` }}
+            >
+              <div className={`rounded-full bg-[#3B82F6] border-2 border-[#1a1a1a] transition-transform hover:scale-150 ${denso ? 'h-1.5 w-1.5' : 'h-2 w-2'}`} />
               {notavel(i) && (
                 <span className="absolute left-1/2 -translate-x-1/2 bottom-3 text-[9px] font-bold text-white whitespace-nowrap">{numBR(c.peso)}</span>
               )}
@@ -196,7 +201,7 @@ export default function EvolucaoAluno() {
           <div className="bg-[#1a1a1a] rounded-xl border border-[#323238] p-4">
             <div className="flex items-center justify-between mb-3">
               <h2 className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider"><TrendingUp size={13} /> Peso ao longo do tempo</h2>
-              <Button variant="ghost" size="xs" icon={Pencil} onClick={() => setMostrarEdicao((v) => !v)}>{mostrarEdicao ? 'Ocultar' : 'Editar pesos'}</Button>
+              <Button variant="ghost" size="xs" icon={Pencil} onClick={() => setMostrarEdicao((v) => !v)}>{mostrarEdicao ? 'Ocultar' : 'Ver / editar pesos'}</Button>
             </div>
             <GraficoPeso pontos={pontosPeso} />
 
