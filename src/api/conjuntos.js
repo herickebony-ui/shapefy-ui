@@ -42,3 +42,14 @@ export const salvarConjunto = async (id, payload) => {
 export const excluirConjunto = async (id) => {
   await client.delete(`/api/resource/${DOCTYPE}/${encodeURIComponent(id)}`)
 }
+
+// Conjunto padrão do profissional (usado automaticamente nos feedbacks).
+export const conjuntoPadraoAtual = async () => {
+  const res = await client.get('/api/method/shapefy.evolucao.api.conjunto_padrao_atual')
+  return res.data?.message?.conjunto_fotos_padrao || null
+}
+
+export const definirConjuntoPadrao = async (name) => {
+  const res = await client.post('/api/method/shapefy.evolucao.api.definir_conjunto_padrao', { conjunto: name || '' })
+  return res.data?.message?.conjunto_fotos_padrao || null
+}
