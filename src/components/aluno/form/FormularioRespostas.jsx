@@ -226,7 +226,7 @@ function DistribuirFotosModal({ aberto, files, campos, onConfirm, onClose }) {
 // perguntas: array de { pergunta, tipo, opcoes, reqd, conteudo_html, resposta }
 // onChange: (idx, valor) => void
 // uploadFn: usado pelos campos do tipo Anexar Imagem
-export default function FormularioRespostas({ perguntas, onChange, uploadFn }) {
+export default function FormularioRespostas({ perguntas, onChange, uploadFn, filtrarIdx }) {
   const [bulkFiles, setBulkFiles] = useState(null)
 
   const camposImagem = perguntas
@@ -262,6 +262,8 @@ export default function FormularioRespostas({ perguntas, onChange, uploadFn }) {
     <>
       <div className="flex flex-col gap-2.5">
         {perguntas.map((item, idx) => {
+          // Wizard: renderiza só os índices do passo atual (preserva idx original no onChange).
+          if (filtrarIdx && !filtrarIdx.has(idx)) return null
           if (isSecao(item.tipo)) {
             return <SecaoDivider key={idx} titulo={item.pergunta} />
           }

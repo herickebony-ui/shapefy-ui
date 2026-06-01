@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Check, AlertCircle, ArrowLeft } from 'lucide-react'
 import { Spinner } from '../../components/ui'
@@ -27,6 +27,10 @@ function dedupePerguntas(perguntas) {
   return score(b) > score(a) ? b : a
 }
 
+const isImagem = (t) => t === 'Anexar Imagem' || t === 'Attach Image'
+const isPesoQ = (it) =>
+  ['Texto Curto', 'Número', 'Numero', 'Int'].includes(it.tipo) && /peso/i.test(it.pergunta || '')
+
 export default function FeedbackResposta() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -40,6 +44,7 @@ export default function FeedbackResposta() {
   const [enviando, setEnviando] = useState(false)
   const [enviado, setEnviado] = useState(false)
   const [erroValidacao, setErroValidacao] = useState('')
+  const [passo, setPasso] = useState(0)
 
   useEffect(() => {
     let cancelado = false
@@ -66,12 +71,56 @@ export default function FeedbackResposta() {
   const setResposta = (idx, valor) =>
     setRespostas(prev => prev.map((p, i) => i === idx ? { ...p, resposta: valor } : p))
 
+  // Particiona as perguntas em passos: Fotos → Peso → Perguntas (qualitativas).
+  const passos = useMemo(() => {
+    const fotos = [], peso = [], qual = []
+    respostas.forEach((it, idx) => {
+      if (isImagem(it.tipo)) fotos.push(idx)
+      else if (isPesoQ(it)) peso.push(idx)
+      else qual.push(idx)
+    })
+    const arr = []
+    if (fotos.length) arr.push({ id: 'fotos', label: 'Fotos', idxs: new Set(fotos) })
+    if (peso.length) arr.push({ id: 'peso', label: 'Peso', idxs: new Set(peso) })
+    if (qual.length) arr.push({ id: 'perguntas', label: 'Perguntas', idxs: new Set(qual) })
+    return arr
+  }, [respostas])
+
+  const stepAtual = passos[passo]
+  const isUltimo = passo >= passos.length - 1
+
+  const faltantesDoPasso = () =>
+    stepAtual ? listarFaltantesObrigatorias(respostas).filter(f => stepAtual.idxs.has(f.idx)) : []
+
+  const focarFaltante = (faltam) => {
+    if (!faltam[0]) return
+    document.querySelector(`[data-pergunta-idx="${faltam[0].idx}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  const avancar = () => {
+    const faltam = faltantesDoPasso()
+    if (faltam.length > 0) {
+      setErroValidacao(`Faltam ${faltam.length} ${faltam.length === 1 ? 'pergunta obrigatória' : 'perguntas obrigatórias'} neste passo.`)
+      focarFaltante(faltam)
+      return
+    }
+    setErroValidacao('')
+    setPasso(p => Math.min(p + 1, passos.length - 1))
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const voltar = () => {
+    setErroValidacao('')
+    setPasso(p => Math.max(p - 1, 0))
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   const handleEnviar = async () => {
     const faltam = listarFaltantesObrigatorias(respostas)
     if (faltam.length > 0) {
+      const passoComFalta = passos.findIndex(s => s.idxs.has(faltam[0].idx))
+      if (passoComFalta >= 0 && passoComFalta !== passo) setPasso(passoComFalta)
       setErroValidacao(`Faltam ${faltam.length} ${faltam.length === 1 ? 'pergunta obrigatória' : 'perguntas obrigatórias'} sem resposta.`)
-      document.querySelector(`[data-pergunta-idx="${faltam[0].idx}"]`)
-        ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
     setErroValidacao('')
@@ -141,11 +190,26 @@ export default function FeedbackResposta() {
         </div>
       </div>
 
+      {/* Barra de progresso do wizard */}
+      {passos.length > 1 && (
+        <div className="px-4 pt-3 pb-2">
+          <div className="flex items-center gap-1.5">
+            {passos.map((s, i) => (
+              <div key={s.id} className={`h-1.5 flex-1 rounded-full transition-colors ${i <= passo ? 'bg-[var(--sf-blue)]' : 'bg-[var(--sf-border)]'}`} />
+            ))}
+          </div>
+          <p className="text-[var(--sf-text-muted)] text-[11px] mt-2 font-semibold uppercase tracking-wider">
+            Passo {passo + 1} de {passos.length} · {stepAtual?.label}
+          </p>
+        </div>
+      )}
+
       <div className="px-3 pt-3">
         <FormularioRespostas
           perguntas={respostas}
           onChange={setResposta}
           uploadFn={uploadFotoAluno}
+          filtrarIdx={stepAtual?.idxs}
         />
       </div>
 
@@ -156,14 +220,24 @@ export default function FeedbackResposta() {
             <span>{erroValidacao}</span>
           </div>
         )}
-        <ActionButton
-          variant="primary"
-          fullWidth
-          loading={enviando}
-          onClick={handleEnviar}
-        >
-          Enviar respostas
-        </ActionButton>
+        <div className="flex gap-2">
+          {passo > 0 && (
+            <div className="shrink-0">
+              <ActionButton variant="ghost" onClick={voltar}>Voltar</ActionButton>
+            </div>
+          )}
+          <div className="flex-1">
+            {isUltimo ? (
+              <ActionButton variant="primary" fullWidth loading={enviando} onClick={handleEnviar}>
+                Enviar respostas
+              </ActionButton>
+            ) : (
+              <ActionButton variant="primary" fullWidth onClick={avancar}>
+                Próximo
+              </ActionButton>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )
