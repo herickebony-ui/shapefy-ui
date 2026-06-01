@@ -28,6 +28,7 @@ import FormularioBuilder from './pages/Formularios/FormularioBuilder'
 import ConjuntoListagem from './pages/Conjuntos/ConjuntoListagem'
 import ConjuntoBuilder from './pages/Conjuntos/ConjuntoBuilder'
 import PendenciasEvolucao from './pages/Evolucao/PendenciasEvolucao'
+import EvolucaoAluno from './pages/Evolucao/EvolucaoAluno'
 import Suporte from './pages/Suporte/Suporte'
 import UsuarioHub from './pages/Usuario/UsuarioHub'
 import PerfilProfissional from './pages/Perfil/PerfilProfissional'
@@ -151,6 +152,7 @@ function App() {
           {/* anamnese — feature universal, sem gate de módulo */}
           <Route path="anamneses" element={<AnamneseListagem />} />
           <Route path="alunos/:id" element={<AlunoDetalhe />} />
+          <Route path="alunos/:id/evolucao" element={<EvolucaoAluno />} />
           <Route path="alunos" element={<Navigate to="/anamneses" replace />} />
 
           {/* dieta */}

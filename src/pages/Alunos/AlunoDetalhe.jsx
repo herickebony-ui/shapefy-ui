@@ -254,6 +254,13 @@ export default function AlunoDetalhe() {
                 >
                   <Calendar size={14} />
                 </button>
+                <button
+                  onClick={() => navigate(`/alunos/${encodeURIComponent(id)}/evolucao`)}
+                  title="Evolução (peso e fotos)"
+                  className="h-9 w-9 flex items-center justify-center text-[#2563eb] hover:text-white hover:bg-[#2563eb] border border-[#323238] hover:border-[#2563eb] rounded-lg transition-colors"
+                >
+                  <BarChart2 size={14} />
+                </button>
               </div>
             </div>
           </div>
