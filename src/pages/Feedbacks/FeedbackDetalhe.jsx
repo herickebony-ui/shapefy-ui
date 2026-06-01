@@ -271,7 +271,7 @@ export default function FeedbackDetalhe() {
                 </div>
               )}
               {registro.fotos?.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-4">
                   {registro.fotos.map((f, i) => (
                     <div key={i}>
                       <p className="text-[#93C5FD] text-[10px] font-bold uppercase tracking-wider mb-1 truncate" title={f.rotulo}>{f.rotulo}</p>
