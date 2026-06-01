@@ -4,6 +4,7 @@ import { Check, AlertCircle, ArrowLeft } from 'lucide-react'
 import { Spinner } from '../../components/ui'
 import { ActionButton } from '../../components/aluno'
 import { FormularioRespostas, listarFaltantesObrigatorias } from '../../components/aluno/form'
+import CampoImagem from '../../components/aluno/form/CampoImagem'
 import { buscarFeedbackAluno, responderFeedback, uploadFotoAluno } from '../../api/aluno'
 import useErrorModal from '../../hooks/useErrorModal'
 
@@ -40,6 +41,8 @@ export default function FeedbackResposta() {
 
   const [feedback, setFeedback] = useState(null)
   const [respostas, setRespostas] = useState([])
+  const [fotosSlots, setFotosSlots] = useState({}) // {slot_id: url} — fluxo com conjunto
+  const [pesoVal, setPesoVal] = useState('')
   const [carregando, setCarregando] = useState(true)
   const [enviando, setEnviando] = useState(false)
   const [enviado, setEnviado] = useState(false)
@@ -71,37 +74,57 @@ export default function FeedbackResposta() {
   const setResposta = (idx, valor) =>
     setRespostas(prev => prev.map((p, i) => i === idx ? { ...p, resposta: valor } : p))
 
-  // Particiona as perguntas em passos: Fotos → Peso → Perguntas (qualitativas).
-  const passos = useMemo(() => {
+  const novoFluxo = !!feedback?.conjunto_fotos
+  const conjuntoSlots = feedback?.conjunto_slots || []
+  const incluirPeso = feedback?.incluir_peso === 1
+
+  // Partição das perguntas por tipo.
+  const particao = useMemo(() => {
     const fotos = [], peso = [], qual = []
     respostas.forEach((it, idx) => {
       if (isImagem(it.tipo)) fotos.push(idx)
       else if (isPesoQ(it)) peso.push(idx)
       else qual.push(idx)
     })
-    const arr = []
-    if (fotos.length) arr.push({ id: 'fotos', label: 'Fotos', idxs: new Set(fotos) })
-    if (peso.length) arr.push({ id: 'peso', label: 'Peso', idxs: new Set(peso) })
-    if (qual.length) arr.push({ id: 'perguntas', label: 'Perguntas', idxs: new Set(qual) })
-    return arr
+    return { fotos, peso, qual }
   }, [respostas])
+
+  // Passos do wizard. Com conjunto: Fotos(slots) → Peso(input) → Perguntas(qualit.).
+  // Sem conjunto: Fotos(perguntas-foto) → Peso(pergunta-peso) → Perguntas.
+  const passos = useMemo(() => {
+    const arr = []
+    if (novoFluxo) {
+      if (conjuntoSlots.length) arr.push({ id: 'fotos', label: 'Fotos', tipo: 'slots' })
+      if (incluirPeso) arr.push({ id: 'peso', label: 'Peso', tipo: 'peso' })
+      arr.push({ id: 'perguntas', label: 'Perguntas', tipo: 'form', idxs: new Set(particao.qual) })
+    } else {
+      if (particao.fotos.length) arr.push({ id: 'fotos', label: 'Fotos', tipo: 'form', idxs: new Set(particao.fotos) })
+      if (particao.peso.length) arr.push({ id: 'peso', label: 'Peso', tipo: 'form', idxs: new Set(particao.peso) })
+      if (particao.qual.length) arr.push({ id: 'perguntas', label: 'Perguntas', tipo: 'form', idxs: new Set(particao.qual) })
+    }
+    return arr
+  }, [novoFluxo, conjuntoSlots, incluirPeso, particao])
 
   const stepAtual = passos[passo]
   const isUltimo = passo >= passos.length - 1
 
-  const faltantesDoPasso = () =>
-    stepAtual ? listarFaltantesObrigatorias(respostas).filter(f => stepAtual.idxs.has(f.idx)) : []
-
-  const focarFaltante = (faltam) => {
-    if (!faltam[0]) return
-    document.querySelector(`[data-pergunta-idx="${faltam[0].idx}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  const faltantesDoPasso = () => {
+    if (!stepAtual) return []
+    if (stepAtual.tipo === 'form') {
+      return listarFaltantesObrigatorias(respostas)
+        .filter(f => stepAtual.idxs.has(f.idx))
+        .map(f => f.pergunta || 'pergunta')
+    }
+    if (stepAtual.tipo === 'slots') {
+      return conjuntoSlots.filter(s => s.obrigatorio && !fotosSlots[s.slot_id]).map(s => s.rotulo)
+    }
+    return [] // peso é opcional
   }
 
   const avancar = () => {
     const faltam = faltantesDoPasso()
     if (faltam.length > 0) {
-      setErroValidacao(`Faltam ${faltam.length} ${faltam.length === 1 ? 'pergunta obrigatória' : 'perguntas obrigatórias'} neste passo.`)
-      focarFaltante(faltam)
+      setErroValidacao(`Faltam ${faltam.length} ${faltam.length === 1 ? 'item obrigatório' : 'itens obrigatórios'} neste passo.`)
       return
     }
     setErroValidacao('')
@@ -116,17 +139,40 @@ export default function FeedbackResposta() {
   }
 
   const handleEnviar = async () => {
-    const faltam = listarFaltantesObrigatorias(respostas)
-    if (faltam.length > 0) {
-      const passoComFalta = passos.findIndex(s => s.idxs.has(faltam[0].idx))
-      if (passoComFalta >= 0 && passoComFalta !== passo) setPasso(passoComFalta)
-      setErroValidacao(`Faltam ${faltam.length} ${faltam.length === 1 ? 'pergunta obrigatória' : 'perguntas obrigatórias'} sem resposta.`)
+    // Obrigatórias dos passos de formulário (no fluxo com conjunto, só as qualitativas).
+    const idxsForm = novoFluxo
+      ? new Set(particao.qual)
+      : new Set([...particao.fotos, ...particao.peso, ...particao.qual])
+    const faltamForm = listarFaltantesObrigatorias(respostas).filter(f => idxsForm.has(f.idx))
+    const slotsFaltando = novoFluxo
+      ? conjuntoSlots.filter(s => s.obrigatorio && !fotosSlots[s.slot_id])
+      : []
+
+    if (faltamForm.length > 0 || slotsFaltando.length > 0) {
+      // pula pro passo da primeira falta
+      if (slotsFaltando.length > 0) {
+        const i = passos.findIndex(s => s.tipo === 'slots')
+        if (i >= 0) setPasso(i)
+      } else {
+        const i = passos.findIndex(s => s.tipo === 'form' && s.idxs?.has(faltamForm[0].idx))
+        if (i >= 0) setPasso(i)
+      }
+      const total = faltamForm.length + slotsFaltando.length
+      setErroValidacao(`Faltam ${total} ${total === 1 ? 'item obrigatório' : 'itens obrigatórios'}.`)
       return
     }
+
     setErroValidacao('')
     setEnviando(true)
     try {
-      await responderFeedback(feedback.name, respostas)
+      let extra = {}
+      if (novoFluxo) {
+        const fotos = conjuntoSlots
+          .map(s => ({ slot_id: s.slot_id, rotulo: s.rotulo, ordem: s.ordem, url: fotosSlots[s.slot_id] || '' }))
+          .filter(f => f.url)
+        extra = { fotos, peso: pesoVal.trim() || null }
+      }
+      await responderFeedback(feedback.name, respostas, extra)
       setEnviado(true)
     } catch (err) {
       errorModal.show(err, 'Enviar respostas')
@@ -184,13 +230,12 @@ export default function FeedbackResposta() {
         <div className="flex-1 min-w-0">
           <h1 className="text-white text-base font-bold leading-tight truncate">{feedback.titulo || 'Feedback'}</h1>
           <p className="text-[var(--sf-text-muted)] text-xs mt-1 truncate">
-            {fmtData(feedback.date)}
+            {fmtData(feedback.data)}
             {feedback.nome_completo ? ` · ${feedback.nome_completo}` : ''}
           </p>
         </div>
       </div>
 
-      {/* Barra de progresso do wizard */}
       {passos.length > 1 && (
         <div className="px-4 pt-3 pb-2">
           <div className="flex items-center gap-1.5">
@@ -205,12 +250,46 @@ export default function FeedbackResposta() {
       )}
 
       <div className="px-3 pt-3">
-        <FormularioRespostas
-          perguntas={respostas}
-          onChange={setResposta}
-          uploadFn={uploadFotoAluno}
-          filtrarIdx={stepAtual?.idxs}
-        />
+        {stepAtual?.tipo === 'slots' && (
+          <div className="grid grid-cols-2 gap-3">
+            {conjuntoSlots.map(s => (
+              <div key={s.slot_id}>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--sf-text-muted)] mb-1">
+                  {s.rotulo}{s.obrigatorio ? <span className="text-[var(--sf-red)]"> *</span> : null}
+                </p>
+                <CampoImagem
+                  value={fotosSlots[s.slot_id] || ''}
+                  onChange={(url) => setFotosSlots(prev => ({ ...prev, [s.slot_id]: url || '' }))}
+                  uploadFn={uploadFotoAluno}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {stepAtual?.tipo === 'peso' && (
+          <div className="px-1 pt-2">
+            <p className="text-white text-sm font-semibold mb-1">Qual seu peso atual?</p>
+            <p className="text-[var(--sf-text-muted)] text-xs mb-3">Em kg. Se não tiver se pesado, pode deixar em branco.</p>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={pesoVal}
+              onChange={(e) => setPesoVal(e.target.value)}
+              placeholder="Ex: 72,5"
+              className="w-full h-14 px-4 bg-[var(--sf-surface)] border border-[var(--sf-border)] text-white rounded-2xl text-xl outline-none focus:border-[var(--sf-blue)]"
+            />
+          </div>
+        )}
+
+        {stepAtual?.tipo === 'form' && (
+          <FormularioRespostas
+            perguntas={respostas}
+            onChange={setResposta}
+            uploadFn={uploadFotoAluno}
+            filtrarIdx={stepAtual.idxs}
+          />
+        )}
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-[var(--sf-bg)]/95 backdrop-blur-md border-t border-[var(--sf-border)] px-4 py-3 z-20">

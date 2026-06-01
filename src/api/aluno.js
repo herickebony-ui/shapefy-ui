@@ -53,12 +53,14 @@ export const buscarFeedbackAluno = async (name) => {
 //   status: "Respondido"
 //   verificar: 1  → trigger pra rotina que converte imagens privadas em públicas
 // Front NÃO seta: data_resposta, feedback_do_profissional, aluno_preencheu.
-export const responderFeedback = async (name, perguntas) => {
+export const responderFeedback = async (name, perguntas, extra = {}) => {
   const res = await client.post('/api/method/shapefy.api.aluno.responder_feedback', {
     name,
     perguntas_e_respostas: perguntas,
     status: 'Respondido',
     verificar: 1,
+    ...(extra.fotos != null ? { fotos: extra.fotos } : {}),
+    ...(extra.peso != null ? { peso: extra.peso } : {}),
   })
   return res.data?.message || null
 }
