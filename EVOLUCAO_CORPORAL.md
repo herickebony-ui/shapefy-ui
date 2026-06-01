@@ -1,7 +1,16 @@
 # CLAUDE — Reforma: Fonte Única de Evolução Corporal
 
 > **Consultar SEMPRE antes de trabalhar nesta reforma.** Doc de execução vivo. Plano de origem: `~/.claude/plans/contexto-do-problema-no-lazy-wind.md`.
-> Status (31/05 noite): **Fase 1 VALIDADA no beta** · Fase 2 discovery + Fase 4 dry-run rodados · API do front pronta · UI pendente.
+> Status (01/06): **Ciclo completo de pé no beta.** Fase 1 validada · Migração REAL feita (763 Registros, 730 pesos, backfill data_resposta) · CRUD Conjunto · Pendências de Peso · Feedback recebido composto · Painel de evolução (peso+fotos). Deploy por chave SSH + rsync.
+
+## Backlog ("depois")
+- **Wizard do aluno** (resposta escalonada Fotos→Peso→Perguntas).
+- **Plugar Conjunto nos feedbacks novos** (conversão de templates → Conjunto + UI no agendamento; hoje o conjunto não está ligado na criação de feedback).
+- **Backfill das Avaliações antigas → Registro** (dry-run + backup + revisão).
+- **Painel: refinar p/ muitas fotos** — seletor de datas + filtro por ângulo (postural). Hoje: últimas 5 datas, todos os ângulos.
+- **Segurança pré-prod**: `permission_query_conditions` no Registro (escopo por profissional no acesso bruto).
+- **23 pendências de peso** revisáveis em /pendencias-evolucao (botão "sem peso" pros legítimos).
+- **Restart precisa de sudo** (Hérick) p/ código Python no site ao vivo; migrate/rsync eu faço por chave.
 
 ## Progresso (sessão noturna 31/05)
 **Deploy no beta agora é por chave SSH + rsync** (sem GitHub/Marcos): chave `~/.ssh/shapefy_beta` autorizada no beta; deploy via `rsync ... shapefy@62.146.183.177:/opt/shapefy/apps/shapefy/shapefy/` + `bench --site beta.shapefy.online migrate`. Site do bench = **`beta.shapefy.online`**. **Restart precisa de sudo (senha)** → o Hérick roda `sudo supervisorctl restart shapefy-web: shapefy-workers:` pro site ao vivo pegar o código Python.

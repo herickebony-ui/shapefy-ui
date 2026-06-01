@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Star, X, RefreshCw, User, Calendar, FileText, Clock, Copy, Check } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Star, X, RefreshCw, User, Calendar, FileText, Clock, Copy, Check, Pencil } from 'lucide-react'
 import {
   buscarFeedback,
   salvarStatusFeedback,
@@ -11,7 +11,7 @@ import {
 import { Button, Spinner, Textarea, FormGroup } from '../../components/ui'
 import DetailPage from '../../components/templates/DetailPage'
 import ImagemInterativa from './ImagemInterativa'
-import { buscarRegistro } from '../../api/evolucao'
+import { buscarRegistro, salvarRegistro } from '../../api/evolucao'
 import { formatFeedbackParaCopia, copiarTexto } from '../../utils/copiarRespostas'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
@@ -47,6 +47,9 @@ export default function FeedbackDetalhe() {
 
   const [feedback, setFeedback] = useState(null)
   const [registro, setRegistro] = useState(null)
+  const [editandoPeso, setEditandoPeso] = useState(false)
+  const [pesoInput, setPesoInput] = useState('')
+  const [salvandoPeso, setSalvandoPeso] = useState(false)
   const [loading, setLoading] = useState(true)
   const [statusLocal, setStatusLocal] = useState('')
   const [salvandoStatus, setSalvandoStatus] = useState(false)
@@ -87,6 +90,25 @@ export default function FeedbackDetalhe() {
     }
     carregar()
   }, [id])
+
+  const salvarPeso = async () => {
+    const p = parseFloat(String(pesoInput).replace(',', '.'))
+    if (!p || p < 20 || p > 400) {
+      alert('Informe um peso válido em kg (entre 20 e 400).')
+      return
+    }
+    setSalvandoPeso(true)
+    try {
+      await salvarRegistro(registro.name, { peso: p, peso_revisado: 1 })
+      setRegistro((r) => ({ ...r, peso: p }))
+      setEditandoPeso(false)
+    } catch (e) {
+      console.error(e)
+      alert('Erro ao salvar o peso.')
+    } finally {
+      setSalvandoPeso(false)
+    }
+  }
 
   const handleRotate = async (feedbackId, fileUrl) => {
     const key = `${feedbackId}_${fileUrl}`
@@ -264,12 +286,40 @@ export default function FeedbackDetalhe() {
           {registro && (
             <div className="bg-[#1a1a1a] rounded-lg border border-[#323238] p-4 mb-6">
               <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Evolução · Fotos &amp; Peso</h3>
-              {registro.peso != null && (
-                <div className="mb-4">
-                  <span className="text-gray-500 text-[10px] uppercase tracking-wider font-bold">Peso</span>
-                  <p className="text-white text-2xl font-bold leading-none mt-1">{numBR(registro.peso)} <span className="text-base text-gray-500">kg</span></p>
-                </div>
-              )}
+              <div className="mb-4">
+                <span className="text-gray-500 text-[10px] uppercase tracking-wider font-bold">Peso</span>
+                {editandoPeso ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      autoFocus
+                      value={pesoInput}
+                      onChange={(e) => setPesoInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && salvarPeso()}
+                      placeholder="kg"
+                      className="w-24 h-9 px-3 bg-[#1a1a1a] border border-[#323238] text-white rounded-lg text-sm outline-none focus:border-[#2563eb]/60"
+                    />
+                    <Button variant="success" size="sm" icon={Check} loading={salvandoPeso} onClick={salvarPeso}>Salvar</Button>
+                    <Button variant="ghost" size="sm" onClick={() => setEditandoPeso(false)}>Cancelar</Button>
+                  </div>
+                ) : (
+                  <p className="text-white text-2xl font-bold leading-none mt-1 flex items-center gap-3">
+                    {registro.peso != null ? (
+                      <>{numBR(registro.peso)} <span className="text-base text-gray-500">kg</span></>
+                    ) : (
+                      <span className="text-gray-500 text-base font-medium">sem peso</span>
+                    )}
+                    <button
+                      onClick={() => { setPesoInput(registro.peso != null ? String(registro.peso).replace('.', ',') : ''); setEditandoPeso(true) }}
+                      title="Editar peso"
+                      className="h-7 w-7 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors"
+                    >
+                      <Pencil size={12} />
+                    </button>
+                  </p>
+                )}
+              </div>
               {registro.fotos?.length > 0 && (
                 <div className="space-y-4">
                   {registro.fotos.map((f, i) => (
