@@ -5,6 +5,14 @@ import client from './client'
 
 const DOCTYPE = 'Registro%20de%20Evolucao%20Fisica'
 
+// Timeline completa (registros + fotos) numa requisição só — evita N+1.
+export const timelineEvolucao = async (alunoId) => {
+  const res = await client.get('/api/method/shapefy.evolucao.api.timeline_evolucao', {
+    params: { aluno: alunoId },
+  })
+  return res.data?.message || { nome: '', registros: [] }
+}
+
 export const listarRegistrosPorAluno = async (alunoId) => {
   const res = await client.get(`/api/resource/${DOCTYPE}`, {
     params: {
