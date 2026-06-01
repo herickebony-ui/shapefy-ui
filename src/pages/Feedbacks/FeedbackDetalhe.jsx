@@ -271,12 +271,17 @@ export default function FeedbackDetalhe() {
                 </div>
               )}
               {registro.fotos?.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {registro.fotos.map((f, i) => (
                     <div key={i}>
                       <p className="text-[#93C5FD] text-[10px] font-bold uppercase tracking-wider mb-1 truncate" title={f.rotulo}>{f.rotulo}</p>
                       {f.url ? (
-                        <img src={`${FRAPPE_URL}${f.url}`} alt={f.rotulo} className="w-full rounded-lg border border-[#323238] object-cover aspect-[3/4]" loading="lazy" />
+                        <ImagemInterativa
+                          src={imgSrcs[`${feedback.name}_${f.url}`] || `${FRAPPE_URL}${f.url}`}
+                          feedbackId={feedback.name}
+                          idx={`reg_${i}`}
+                          onRotate={() => handleRotate(feedback.name, f.url)}
+                        />
                       ) : (
                         <div className="w-full aspect-[3/4] rounded-lg border border-dashed border-[#323238] flex items-center justify-center text-gray-600 text-[10px] text-center px-1">sem foto neste período</div>
                       )}
