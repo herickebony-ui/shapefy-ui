@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, TrendingUp, Images } from 'lucide-react'
-import { Spinner } from '../../components/ui'
-import { listarRegistrosPorAluno, buscarRegistro } from '../../api/evolucao'
+import { ArrowLeft, TrendingUp, Images, Pencil, Check } from 'lucide-react'
+import { Spinner, Button } from '../../components/ui'
+import { listarRegistrosPorAluno, buscarRegistro, salvarRegistro } from '../../api/evolucao'
 import useErrorModal from '../../hooks/useErrorModal'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
@@ -69,7 +69,7 @@ function GraficoPeso({ pontos }) {
 
 // ─── Comparação de fotos por slot (alinhada por slot_id) ──────────────────────
 function MatrizFotos({ registros }) {
-  const cols = registros.slice(-MAX_COLS) // últimas N datas
+  const cols = registros // todas as datas — scroll horizontal resolve o "muitas fotos"
   // união dos slots por slot_id (rótulo/ordem do registro mais recente que o tem)
   const slotMap = new Map()
   cols.forEach((reg) => {
@@ -124,7 +124,29 @@ export default function EvolucaoAluno() {
   const [registros, setRegistros] = useState([])
   const [registrosFotos, setRegistrosFotos] = useState([]) // docs completos (com fotos) das últimas datas
   const [loading, setLoading] = useState(true)
+  const [editId, setEditId] = useState(null)
+  const [pesoInput, setPesoInput] = useState('')
+  const [salvandoPeso, setSalvandoPeso] = useState(false)
+  const [mostrarEdicao, setMostrarEdicao] = useState(false)
   const errorModal = useErrorModal()
+
+  const salvarPeso = async () => {
+    const p = parseFloat(String(pesoInput).replace(',', '.'))
+    if (!p || p < 20 || p > 400) {
+      errorModal.show({ message: 'Informe um peso válido em kg (entre 20 e 400).' }, 'Editar peso')
+      return
+    }
+    setSalvandoPeso(true)
+    try {
+      await salvarRegistro(editId, { peso: p, peso_revisado: 1 })
+      setRegistros((rs) => rs.map((r) => (r.name === editId ? { ...r, peso: p } : r)))
+      setEditId(null)
+    } catch (e) {
+      errorModal.show(e, 'Editar peso')
+    } finally {
+      setSalvandoPeso(false)
+    }
+  }
 
   useEffect(() => {
     let cancelado = false
@@ -133,9 +155,8 @@ export default function EvolucaoAluno() {
         const data = await listarRegistrosPorAluno(id)
         if (cancelado) return
         setRegistros(data)
-        // A listagem não traz child tables (fotos) — busca o doc completo das últimas N datas.
-        const ultimos = data.slice(-MAX_COLS)
-        const completos = await Promise.all(ultimos.map((r) => buscarRegistro(r.name).catch(() => null)))
+        // A listagem não traz child tables (fotos) — busca o doc completo de cada registro.
+        const completos = await Promise.all(data.map((r) => buscarRegistro(r.name).catch(() => null)))
         if (!cancelado) setRegistrosFotos(completos.filter(Boolean))
       } catch (e) {
         if (!cancelado) errorModal.show(e, 'Carregar evolução')
@@ -172,12 +193,56 @@ export default function EvolucaoAluno() {
       ) : (
         <>
           <div className="bg-[#1a1a1a] rounded-xl border border-[#323238] p-4">
-            <h2 className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3"><TrendingUp size={13} /> Peso ao longo do tempo</h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider"><TrendingUp size={13} /> Peso ao longo do tempo</h2>
+              <Button variant="ghost" size="xs" icon={Pencil} onClick={() => setMostrarEdicao((v) => !v)}>{mostrarEdicao ? 'Ocultar' : 'Editar pesos'}</Button>
+            </div>
             <GraficoPeso pontos={pontosPeso} />
+
+            {/* Lista editável de pesos por data (escondida por padrão — o gráfico já mostra) */}
+            {mostrarEdicao && (
+            <div className="mt-4 border-t border-[#323238]/50 pt-3 space-y-1">
+              <p className="text-gray-600 text-[10px] uppercase tracking-wider font-bold mb-1">Corrija ou adicione o peso de cada data</p>
+              {[...registros].reverse().map((r) => (
+                <div key={r.name} className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-white/5">
+                  <span className="text-gray-400 text-xs w-14 shrink-0">{fmtData(r.data)}</span>
+                  {editId === r.name ? (
+                    <div className="flex items-center gap-2 flex-1">
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        autoFocus
+                        value={pesoInput}
+                        onChange={(e) => setPesoInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && salvarPeso()}
+                        placeholder="kg"
+                        className="w-24 h-8 px-2 bg-[#0a0a0a] border border-[#323238] text-white rounded-lg text-sm outline-none focus:border-[#2563eb]/60"
+                      />
+                      <Button variant="success" size="xs" icon={Check} loading={salvandoPeso} onClick={salvarPeso}>Salvar</Button>
+                      <button onClick={() => setEditId(null)} className="text-gray-500 text-xs hover:text-white">cancelar</button>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="flex-1 text-sm font-semibold">
+                        {r.peso != null ? <span className="text-white">{numBR(r.peso)} kg</span> : <span className="text-gray-600 font-normal italic">sem peso</span>}
+                      </span>
+                      <button
+                        onClick={() => { setPesoInput(r.peso != null ? String(r.peso).replace('.', ',') : ''); setEditId(r.name) }}
+                        title="Editar peso"
+                        className="h-7 w-7 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors shrink-0"
+                      >
+                        <Pencil size={12} />
+                      </button>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+            )}
           </div>
 
           <div className="bg-[#1a1a1a] rounded-xl border border-[#323238] p-4">
-            <h2 className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3"><Images size={13} /> Comparação de fotos (últimas {MAX_COLS} datas)</h2>
+            <h2 className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3"><Images size={13} /> Comparação de fotos <span className="text-gray-600 normal-case">· role pro lado →</span></h2>
             <MatrizFotos registros={registrosFotos} />
           </div>
         </>
