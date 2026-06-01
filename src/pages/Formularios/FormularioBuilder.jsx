@@ -6,6 +6,7 @@ import {
   criarFormularioFeedback, salvarFormularioFeedback, buscarFormularioFeedback,
 } from '../../api/formularios'
 import { TIPOS_ANAMNESE, TIPOS_FEEDBACK, TIPOS_CONFIG, sanearPerguntas } from '../../utils/formularioUtils'
+import { listarConjuntos } from '../../api/conjuntos'
 import { parseFrappeError } from '../../utils/frappeErrors'
 import useErrorModal from '../../hooks/useErrorModal'
 import { Button, FormGroup, Input, Select, Textarea, Spinner, Tabs, RichTextEditor, BotaoAjuda } from '../../components/ui'
@@ -68,6 +69,9 @@ export default function FormularioBuilder() {
   const [feedbackInicial, setFeedbackInicial] = useState(false)
   const [dieta, setDieta] = useState(false)
   const [treino, setTreino] = useState(false)
+  const [conjuntoFotos, setConjuntoFotos] = useState('')
+  const [pedirPeso, setPedirPeso] = useState(true)
+  const [conjuntos, setConjuntos] = useState([])
   const [loading, setLoading] = useState(!isNovo)
   const [salvando, setSalvando] = useState(false)
   const [abaAtiva, setAbaAtiva] = useState('perguntas')
@@ -88,11 +92,18 @@ export default function FormularioBuilder() {
           setFeedbackInicial(!!doc.feedback_inicial)
           setDieta(!!doc.dieta)
           setTreino(!!doc.treino)
+          setConjuntoFotos(doc.conjunto_fotos || '')
+          setPedirPeso(doc.incluir_peso == null ? true : !!doc.incluir_peso)
         }
       })
       .catch(e => errorModal.show(e, 'Carregar formulário'))
       .finally(() => setLoading(false))
   }, [id, isNovo, isFeedback])
+
+  useEffect(() => {
+    if (!isFeedback) return
+    listarConjuntos({ limit: 100 }).then(({ list }) => setConjuntos(list || [])).catch(() => {})
+  }, [isFeedback])
 
   const limparErroPergunta = (idx, campo) => {
     setErrors(prev => {
@@ -204,7 +215,7 @@ export default function FormularioBuilder() {
     const perguntasSaneadas = sanearPerguntas(perguntas)
     try {
       if (isFeedback) {
-        const payload = { titulo, enabled, feedback_inicial: feedbackInicial, dieta, treino, perguntas: perguntasSaneadas }
+        const payload = { titulo, enabled, feedback_inicial: feedbackInicial, dieta, treino, conjunto_fotos: conjuntoFotos, incluir_peso: pedirPeso, perguntas: perguntasSaneadas }
         if (isNovo) {
           const doc = await criarFormularioFeedback(payload)
           navigate(`/criar-formularios/feedback/${doc.name}`, { replace: true })
@@ -313,6 +324,17 @@ export default function FormularioBuilder() {
             <ToggleRow label="Feedback inicial" descricao="Campo de comentário inicial" value={feedbackInicial} onChange={setFeedbackInicial} />
             <ToggleRow label="Dieta" descricao="Avaliação da dieta" value={dieta} onChange={setDieta} />
             <ToggleRow label="Treino" descricao="Avaliação do treino" value={treino} onChange={setTreino} />
+          </div>
+          <div className="pt-3 pb-1 border-t border-[#323238]/50">
+            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-2">Coleta de evolução</p>
+            <FormGroup label="Conjunto de Fotos" hint="O aluno preenche estas fotos no feedback. Vazio = usa o conjunto padrão do profissional.">
+              <Select
+                value={conjuntoFotos}
+                onChange={setConjuntoFotos}
+                options={[{ value: '', label: '(padrão do profissional)' }, ...conjuntos.map(c => ({ value: c.name, label: c.titulo }))]}
+              />
+            </FormGroup>
+            <ToggleRow label="Pedir peso" descricao="Mostra o passo de peso no feedback do aluno" value={pedirPeso} onChange={setPedirPeso} />
           </div>
         </div>
       )}
