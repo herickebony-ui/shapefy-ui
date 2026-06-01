@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { RefreshCw, Check, AlertTriangle } from 'lucide-react'
+import { RefreshCw, Check, AlertTriangle, X } from 'lucide-react'
 import ListPage from '../../components/templates/ListPage'
 import { Button } from '../../components/ui'
 import { listarPendenciasPeso, salvarRegistro } from '../../api/evolucao'
@@ -14,6 +14,7 @@ const fmtData = (d) => {
 function LinhaPendencia({ item, onResolvido, onErro }) {
   const [valor, setValor] = useState('')
   const [salvando, setSalvando] = useState(false)
+  const [dispensando, setDispensando] = useState(false)
 
   const salvar = async () => {
     const peso = parseFloat(String(valor).replace(',', '.'))
@@ -29,6 +30,18 @@ function LinhaPendencia({ item, onResolvido, onErro }) {
       onErro(e)
     } finally {
       setSalvando(false)
+    }
+  }
+
+  const semPeso = async () => {
+    setDispensando(true)
+    try {
+      await salvarRegistro(item.registro, { peso_revisado: 1 })
+      onResolvido(item.registro)
+    } catch (e) {
+      onErro(e)
+    } finally {
+      setDispensando(false)
     }
   }
 
@@ -56,6 +69,9 @@ function LinhaPendencia({ item, onResolvido, onErro }) {
         <Button variant="success" size="sm" icon={Check} loading={salvando} onClick={salvar}>
           Corrigir
         </Button>
+        <Button variant="ghost" size="sm" icon={X} loading={dispensando} onClick={semPeso}>
+          Sem peso
+        </Button>
       </div>
     </div>
   )
@@ -80,8 +96,25 @@ export default function PendenciasEvolucao() {
 
   useEffect(() => { carregar() }, [carregar])
 
+  const [marcandoTodos, setMarcandoTodos] = useState(false)
   const resolvido = (registro) => setLista((p) => p.filter((x) => x.registro !== registro))
   const erro = (e) => (typeof e === 'string' ? errorModal.show({ message: e }, 'Pendência') : errorModal.show(e, 'Corrigir peso'))
+
+  const marcarTodosSemPeso = async () => {
+    if (!window.confirm(`Marcar todos os ${lista.length} como "sem peso"? (você pode corrigir individualmente em vez disso)`)) return
+    setMarcandoTodos(true)
+    const falhas = []
+    for (const item of lista) {
+      try {
+        await salvarRegistro(item.registro, { peso_revisado: 1 })
+      } catch {
+        falhas.push(item.registro)
+      }
+    }
+    setLista((p) => p.filter((x) => falhas.includes(x.registro)))
+    setMarcandoTodos(false)
+    if (falhas.length) erro(`${falhas.length} não puderam ser marcados.`)
+  }
 
   return (
     <ListPage
@@ -97,9 +130,12 @@ export default function PendenciasEvolucao() {
     >
       {!loading && lista.length > 0 && (
         <>
-          <div className="flex items-center gap-2 text-amber-300 text-xs bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2 mb-3">
-            <AlertTriangle size={14} />
-            <span>{lista.length} feedback(s) com peso não interpretado. O valor cru é o que o aluno digitou.</span>
+          <div className="flex items-center gap-3 text-amber-300 text-xs bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2 mb-3">
+            <AlertTriangle size={14} className="shrink-0" />
+            <span className="flex-1">{lista.length} feedback(s) com peso não interpretado. O valor cru é o que o aluno digitou.</span>
+            <Button variant="ghost" size="xs" icon={X} loading={marcandoTodos} onClick={marcarTodosSemPeso} className="whitespace-nowrap shrink-0">
+              Marcar todos sem peso
+            </Button>
           </div>
           <div className="space-y-2">
             {lista.map((item) => (
