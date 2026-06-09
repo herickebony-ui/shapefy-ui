@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
 import useAuthStore from '../store/authStore'
@@ -7,6 +7,7 @@ import { autenticarAluno, homeAluno } from '../api/aluno'
 import { buscarAssinatura, buscarPlano } from '../api/assinatura'
 import { Input, Button } from '../components/ui'
 import { tw } from '../styles/tokens'
+import client from '../api/client'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -21,9 +22,51 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showPwd, setShowPwd] = useState(false)
+  const [checkingSession, setCheckingSession] = useState(true)
 
   // Aceita ?redirect (padrão do backend) e ?next (legado interno).
   const next = searchParams.get('redirect') || searchParams.get('next')
+
+  // Ao chegar na /login, verifica se já há um token válido no localStorage.
+  // Evita mostrar o formulário para quem foi redirecionado por engano.
+  useEffect(() => {
+    async function checkExistingSession() {
+      const alunoToken = localStorage.getItem('aluno_token')
+      const frappeToken = localStorage.getItem('frappe_token')
+
+      if (alunoToken) {
+        try {
+          await client.get('/api/method/shapefy.api.aluno.perfil', { skipAuthRedirect: true })
+          navigate(next && next.startsWith('/aluno') ? next : '/aluno', { replace: true })
+          return
+        } catch {
+          // Token inválido ou expirado — limpa e mostra o formulário
+          localStorage.removeItem('aluno_token')
+        }
+      } else if (frappeToken) {
+        try {
+          const frappeUser = localStorage.getItem('frappe_user')
+          await client.get('/api/resource/Profissional', {
+            params: {
+              fields: JSON.stringify(['name']),
+              filters: JSON.stringify([['user', '=', frappeUser]]),
+              limit: 1,
+            },
+            skipAuthRedirect: true,
+          })
+          navigate(next && next.startsWith('/') && !next.startsWith('/aluno') ? next : '/', { replace: true })
+          return
+        } catch {
+          // Token inválido — limpa e mostra o formulário
+          localStorage.removeItem('frappe_token')
+          localStorage.removeItem('frappe_user')
+        }
+      }
+
+      setCheckingSession(false)
+    }
+    checkExistingSession()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleLoginProfissional(e) {
     e.preventDefault()
@@ -91,6 +134,14 @@ export default function Login() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (checkingSession) {
+    return (
+      <div className={`${tw.page} flex items-center justify-center`}>
+        <p className="text-gray-500 text-sm">Verificando sessão...</p>
+      </div>
+    )
   }
 
   return (

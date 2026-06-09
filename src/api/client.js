@@ -1,4 +1,5 @@
 import axios from 'axios'
+import useAuthStore from '../store/authStore'
 
 const client = axios.create({
   baseURL: import.meta.env.VITE_FRAPPE_URL,
@@ -17,19 +18,22 @@ client.interceptors.request.use((config) => {
   return config
 })
 
+// Flag para evitar múltiplos redirects simultâneos quando várias requests
+// falham com 401 ao mesmo tempo (ex: burst de requests ao abrir o app).
+let isRedirecting = false
+
 client.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 && !error.config?.skipAuthRedirect) {
-      localStorage.removeItem('frappe_token')
-      localStorage.removeItem('frappe_user')
-      localStorage.removeItem('frappe_user_name')
-      localStorage.removeItem('aluno_token')
-      localStorage.removeItem('shapefy-auth')
-      localStorage.removeItem('shapefy-onboarding')
-      localStorage.removeItem('shapefy-jornada-dismissed')
+    if (error.response?.status === 401 && !error.config?.skipAuthRedirect && !isRedirecting) {
+      isRedirecting = true
+      // Usa clearAuth() para limpar Zustand + localStorage de forma consistente,
+      // em vez de remover chaves manualmente (incluindo shapefy-auth).
+      useAuthStore.getState().clearAuth()
       if (window.location.pathname !== '/login') {
         window.location.href = '/login'
+      } else {
+        isRedirecting = false
       }
     }
     return Promise.reject(error)
