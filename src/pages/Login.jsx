@@ -37,11 +37,16 @@ export default function Login() {
       if (alunoToken) {
         try {
           await client.get('/api/method/shapefy.api.aluno.perfil', { skipAuthRedirect: true })
-          navigate(next && next.startsWith('/aluno') ? next : '/aluno', { replace: true })
+          const lastPath = localStorage.getItem('aluno_last_path')
+          const destination = (next && next.startsWith('/aluno'))
+            ? next
+            : (lastPath && lastPath.startsWith('/aluno') ? lastPath : '/aluno')
+          navigate(destination, { replace: true })
           return
         } catch {
           // Token inválido ou expirado — limpa e mostra o formulário
           localStorage.removeItem('aluno_token')
+          localStorage.removeItem('aluno_last_path')
         }
       } else if (frappeToken) {
         try {
@@ -127,7 +132,11 @@ export default function Login() {
       } catch (err) {
         console.warn('Falha ao buscar home do aluno:', err)
       }
-      navigate(next && next.startsWith('/aluno') ? next : '/aluno')
+      const lastPath = localStorage.getItem('aluno_last_path')
+      const destination = (next && next.startsWith('/aluno'))
+        ? next
+        : (lastPath && lastPath.startsWith('/aluno') ? lastPath : '/aluno')
+      navigate(destination)
     } catch (err) {
       console.log('ERRO:', err.response?.data || err.message)
       setError('Código de acesso inválido. Verifique e tente novamente.')

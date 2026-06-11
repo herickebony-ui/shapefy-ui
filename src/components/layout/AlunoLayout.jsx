@@ -1,14 +1,21 @@
+import { useEffect } from 'react'
 import { LogOut } from 'lucide-react'
-import { Outlet, useNavigate } from 'react-router-dom'
+import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import useAuthStore from '../../store/authStore'
 import { logoutAluno } from '../../api/aluno'
 
 export default function AlunoLayout() {
   const navigate = useNavigate()
+  const location = useLocation()
   const clearAuth = useAuthStore((s) => s.clearAuth)
+
+  useEffect(() => {
+    localStorage.setItem('aluno_last_path', location.pathname + location.search)
+  }, [location])
 
   const handleLogout = async () => {
     await logoutAluno()
+    localStorage.removeItem('aluno_last_path')
     clearAuth()
     navigate('/login')
   }
