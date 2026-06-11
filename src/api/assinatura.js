@@ -2,11 +2,21 @@ import client from './client'
 
 const userEmail = () => localStorage.getItem('frappe_user') || ''
 
+export const listarPlanosParaMigracao = async () => {
+  const res = await client.get('/api/method/shapefy.api.assinatura.listar_planos_para_migracao')
+  return res.data?.message || { plans: [], plano_atual: null }
+}
+
+export const iniciarMigracaoPlano = async (novo_plano) => {
+  const res = await client.post('/api/method/shapefy.api.assinatura.iniciar_migracao_plano', { novo_plano })
+  return res.data?.message
+}
+
 export const buscarAssinatura = async () => {
   const res = await client.get('/api/resource/Assinatura%20do%20Usuario', {
     params: {
       fields: JSON.stringify(['name', 'usuario', 'plano_de_assinatura', 'valido_de', 'valido_ate', 'status']),
-      filters: JSON.stringify([['usuario', '=', userEmail()]]),
+      filters: JSON.stringify([['usuario', '=', userEmail()], ['status', '=', 'Ativo']]),
       limit: 1,
     },
   })
