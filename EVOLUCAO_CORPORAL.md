@@ -4,6 +4,7 @@
 > Status (01/06): **Ciclo completo de pé no beta.** Fase 1 validada · Migração REAL feita (763 Registros, 730 pesos, backfill data_resposta) · CRUD Conjunto · Pendências de Peso · Feedback recebido composto · Painel de evolução (peso+fotos). Deploy por chave SSH + rsync.
 
 ## Backlog ("depois")
+- **[ÚLTIMA ETAPA] Conjunto+peso na ANAMNESE** (vinculação/agendamento) — espelhar o que foi feito no Feedback (13/06): seletor de Conjunto de Fotos + Pedir peso na vinculação e no cronograma. Hérick pediu pra deixar a anamnese por último; feedback primeiro.
 - **Wizard do aluno** (resposta escalonada Fotos→Peso→Perguntas).
 - **Plugar Conjunto nos feedbacks novos** (conversão de templates → Conjunto + UI no agendamento; hoje o conjunto não está ligado na criação de feedback).
 - **Backfill das Avaliações antigas → Registro** (dry-run + backup + revisão).
