@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react'
 import { Image as ImageIcon, RotateCw, Trash2, Upload } from 'lucide-react'
 import useErrorModal from '../../hooks/useErrorModal'
+import { toRenderableImage } from '../../utils/heicToJpeg'
+import HeicSafeImg from './HeicSafeImg'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 
@@ -25,18 +27,20 @@ export default function ImageUploadResposta({ value, onChange, uploadFn, onRotat
 
   const enviar = async (file) => {
     if (!file) return
-    if (!file.type.startsWith('image/')) {
+    const ehImagem = file.type.startsWith('image/') || /\.(heic|heif)$/i.test(file.name || '')
+    if (!ehImagem) {
       errorModal.show({
         type: 'validation',
         title: 'Arquivo inválido',
-        messages: ['Envie apenas arquivos de imagem (PNG, JPG, WEBP).'],
+        messages: ['Envie apenas arquivos de imagem (PNG, JPG, WEBP, HEIC).'],
         statusCode: 0,
       }, 'Upload de imagem')
       return
     }
     setUploading(true)
     try {
-      const url = await uploadFn(file)
+      const preparado = await toRenderableImage(file) // HEIC do iPhone -> JPEG
+      const url = await uploadFn(preparado)
       if (url) onChange(url)
       else errorModal.show({
         type: 'server',
@@ -89,7 +93,7 @@ export default function ImageUploadResposta({ value, onChange, uploadFn, onRotat
   }
 
   const preview = value
-    ? `${FRAPPE_URL}${value}${rotateBust ? `?v=${rotateBust}` : ''}`
+    ? `${FRAPPE_URL}${encodeURI(value)}${rotateBust ? `?v=${rotateBust}` : ''}`
     : null
 
   return (
@@ -115,7 +119,7 @@ export default function ImageUploadResposta({ value, onChange, uploadFn, onRotat
           <span className="w-8 h-8 border-2 border-[#2563eb] border-t-transparent rounded-full animate-spin" />
         ) : preview ? (
           <>
-            <img src={preview} alt={label || 'foto'} className="w-full h-full object-cover" />
+            <HeicSafeImg src={preview} alt={label || 'foto'} className="w-full h-full object-cover" />
             {dragOver && (
               <div className="absolute inset-0 bg-[#2563eb]/40 flex items-center justify-center text-white text-xs font-bold uppercase tracking-widest">
                 Solte para substituir

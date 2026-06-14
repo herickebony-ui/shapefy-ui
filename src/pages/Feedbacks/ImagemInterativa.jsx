@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { RefreshCw } from 'lucide-react'
+import { heicUrlToObjectUrl } from '../../utils/heicToJpeg'
 
 export default function ImagemInterativa({ src, feedbackId, idx, onRotate, readonly = false }) {
   const storageKey = `shapefy_img_${feedbackId}_${idx}`
@@ -17,6 +18,7 @@ export default function ImagemInterativa({ src, feedbackId, idx, onRotate, reado
 
   const [imgLoading, setImgLoading] = useState(true)
   const [imgError, setImgError] = useState(false)
+  const [heicSrc, setHeicSrc] = useState(null) // fallback: HEIC antigo decodificado no cliente
 
   const isDirty = scale !== 1 || pos.x !== 0 || pos.y !== 0 || align !== 0 || rotation !== 0
 
@@ -134,7 +136,7 @@ export default function ImagemInterativa({ src, feedbackId, idx, onRotate, reado
         )}
         {src && (
           <img
-            src={src}
+            src={heicSrc || src}
             alt="Feedback"
             draggable={false}
             className="max-h-full max-w-full object-contain"
@@ -144,7 +146,14 @@ export default function ImagemInterativa({ src, feedbackId, idx, onRotate, reado
               display: imgError ? 'none' : 'block',
             }}
             onLoad={() => setImgLoading(false)}
-            onError={() => { setImgLoading(false); setImgError(true) }}
+            onError={async () => {
+              // Fallback: HEIC antigo que o navegador não decodifica — tenta converter no cliente.
+              if (!heicSrc) {
+                const obj = await heicUrlToObjectUrl(src)
+                if (obj) { setHeicSrc(obj); setImgLoading(true); return }
+              }
+              setImgLoading(false); setImgError(true)
+            }}
           />
         )}
         <div className="absolute inset-0 border-2 border-transparent group-hover:border-white/10 rounded-lg pointer-events-none transition-colors" />

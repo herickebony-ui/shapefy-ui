@@ -9,6 +9,7 @@ import CampoRating from './CampoRating'
 import CampoInt from './CampoInt'
 import CampoImagem from './CampoImagem'
 import CampoBlocoHTML from './CampoBlocoHTML'
+import { toRenderableImage } from '../../../utils/heicToJpeg'
 
 const isSecao = (t) => t === 'Quebra de Seção' || t === 'Quebra de Sessão' || t === 'Section Break'
 const isHTML = (t) => t === 'Bloco HTML' || t === 'HTML'
@@ -246,7 +247,7 @@ export default function FormularioRespostas({ perguntas, onChange, uploadFn, fil
     // Faz upload em paralelo, sem bloquear no primeiro erro
     const resultados = await Promise.allSettled(
       pares.map(async ({ idx, file }) => {
-        const url = await uploadFn(file)
+        const url = await uploadFn(await toRenderableImage(file)) // HEIC do iPhone -> JPEG
         if (!url) throw new Error('Upload falhou')
         return { idx, url }
       })

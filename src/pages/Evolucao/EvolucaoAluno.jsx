@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, TrendingUp, Images, Pencil, Check } from 'lucide-react'
 import { Spinner, Button } from '../../components/ui'
+import HeicSafeImg from '../../components/ui/HeicSafeImg'
 import { timelineEvolucao, salvarRegistro } from '../../api/evolucao'
 import useErrorModal from '../../hooks/useErrorModal'
 
@@ -118,7 +119,7 @@ function MatrizFotos({ registros }) {
               return (
                 <div key={reg.name} className="w-[120px] aspect-[3/4]">
                   {url ? (
-                    <img src={`${FRAPPE_URL}${url}`} alt={slot.rotulo} className="w-full h-full rounded-lg border border-[#323238] object-cover" loading="lazy" />
+                    <HeicSafeImg src={`${FRAPPE_URL}${encodeURI(url)}`} alt={slot.rotulo} className="w-full h-full rounded-lg border border-[#323238] object-cover" loading="lazy" />
                   ) : (
                     <div className="w-full h-full rounded-lg border border-dashed border-[#323238] flex items-center justify-center text-gray-600 text-[9px] text-center px-1">sem foto neste período</div>
                   )}
