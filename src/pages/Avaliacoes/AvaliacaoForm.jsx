@@ -4,6 +4,7 @@ import { User, Ruler, Dumbbell, Check, RefreshCw, Image as ImageIcon, Upload, Tr
 import client from '../../api/client'
 import { criarAvaliacao, salvarAvaliacao, buscarAvaliacao } from '../../api/avaliacoes'
 import { listarAlunos, buscarAluno } from '../../api/alunos'
+import { listarConjuntos, buscarConjunto, conjuntoPadraoAtual } from '../../api/conjuntos'
 import { normalizarAlturaCm } from '../../api/dietas'
 import {
   Button, FormGroup, Input, Select, Autocomplete, Spinner,
@@ -12,18 +13,6 @@ import DetailPage from '../../components/templates/DetailPage'
 import useErrorModal from '../../hooks/useErrorModal'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
-
-const PHOTOS = [
-  { key: 'front_photo',              label: 'Frente'                          },
-  { key: 'flexed_right_side_photo',  label: 'Lado direito braço flexionado'   },
-  { key: 'relaxed_right_side_photo', label: 'Lado direito braço relaxado'     },
-  { key: 'back_photo',               label: 'Costas'                          },
-  { key: 'flexed_left_side_photo',   label: 'Lado esquerdo braço flexionado'  },
-  { key: 'relaxed_left_side_photo',  label: 'Lado esquerdo braço relaxado'    },
-  { key: 'others_1',                 label: 'Outros 1'                        },
-  { key: 'others_2',                 label: 'Outros 2'                        },
-]
-const PHOTO_KEYS = PHOTOS.map(p => p.key)
 
 const SEXO_OPTS = [
   { value: 'Feminino', label: 'Feminino' },
@@ -42,7 +31,7 @@ const emptyForm = () => ({
   wrist_circumference: '', ankle_circumference: '',
   skinfold_triceps: '', skinfold_subscapular: '', skinfold_suprailiac: '',
   skinfold_abdominal: '', skinfold_chest: '', skinfold_midaxillary: '', skinfold_thigh: '',
-  ...Object.fromEntries(PHOTO_KEYS.map(k => [k, ''])),
+  conjunto_fotos: '',
 })
 
 function SecaoForm({ icon: Icon, title, children }) {
@@ -193,6 +182,28 @@ export default function AvaliacaoForm() {
   const [carregando, setCarregando] = useState(editando)
   const errorModal = useErrorModal()
 
+  // Fotos da avaliação agora vêm de um Conjunto de Fotos (mesmos slots dos feedbacks).
+  const [conjuntos, setConjuntos] = useState([])
+  const [conjuntoSlots, setConjuntoSlots] = useState([])
+  const [fotosSlots, setFotosSlots] = useState({}) // { slot_id: url }
+
+  const carregarSlots = useCallback(async (conjuntoId) => {
+    if (!conjuntoId) { setConjuntoSlots([]); return }
+    try {
+      const doc = await buscarConjunto(conjuntoId)
+      setConjuntoSlots((doc?.slots || []).slice().sort((a, b) => (a.ordem || 0) - (b.ordem || 0)))
+    } catch { setConjuntoSlots([]) }
+  }, [])
+
+  useEffect(() => {
+    listarConjuntos({ limit: 100 }).then(({ list }) => setConjuntos(list || [])).catch(() => {})
+    if (!editando) {
+      conjuntoPadraoAtual().then((padrao) => {
+        if (padrao) { setForm(prev => ({ ...prev, conjunto_fotos: padrao })); carregarSlots(padrao) }
+      }).catch(() => {})
+    }
+  }, [editando, carregarSlots])
+
   useEffect(() => {
     if (!editando) return
     let cancelado = false
@@ -210,6 +221,11 @@ export default function AvaliacaoForm() {
           limpo[k] = String(v).split(' ')[0]
         })
         setForm(prev => ({ ...prev, ...limpo }))
+        // Novo formato: conjunto + fotos por slot (mapa slot_id->url).
+        const mapaFotos = {}
+        ;(d.fotos || []).forEach(f => { if (f.slot_id) mapaFotos[f.slot_id] = f.url || '' })
+        setFotosSlots(mapaFotos)
+        if (d.conjunto_fotos) carregarSlots(d.conjunto_fotos)
       })
       .catch(e => {
         errorModal.show(e, 'Carregar avaliação')
@@ -217,7 +233,7 @@ export default function AvaliacaoForm() {
       })
       .finally(() => { if (!cancelado) setCarregando(false) })
     return () => { cancelado = true }
-  }, [id, editando, navigate])
+  }, [id, editando, navigate, carregarSlots])
 
   const set = (campo) => (val) => setForm(prev => ({ ...prev, [campo]: val }))
 
@@ -253,20 +269,21 @@ export default function AvaliacaoForm() {
     setSalvando(true)
     try {
       const payload = { ...form }
+      payload.conjunto_fotos = form.conjunto_fotos || null
       // Garante altura sempre em cm antes da coerção numérica genérica abaixo
       if (payload.height !== '' && payload.height != null) {
         payload.height = String(normalizarAlturaCm(payload.height))
       }
       Object.keys(payload).forEach(k => {
-        // Fotos guardam URL — não converter pra número, e vazio fica null pra Frappe limpar o campo.
-        if (PHOTO_KEYS.includes(k)) {
-          if (payload[k] === '') payload[k] = null
-          return
-        }
+        if (k === 'conjunto_fotos') return
         if (payload[k] === '') payload[k] = 0
         else if (!isNaN(Number(payload[k])) && k !== 'aluno' && k !== 'nome_completo' && k !== 'date' && k !== 'sex')
           payload[k] = Number(payload[k])
       })
+      // Fotos do conjunto → child table `fotos` (slot_id/rotulo/ordem/url).
+      payload.fotos = conjuntoSlots
+        .map((s, i) => ({ slot_id: s.slot_id, rotulo: s.rotulo, ordem: s.ordem || i + 1, url: fotosSlots[s.slot_id] || '' }))
+        .filter(f => f.url)
       if (editando) {
         // Frappe não aceita alterar `aluno` em update direto sem cuidados — mantém os campos editáveis.
         const { aluno: _aluno, nome_completo: _nome, ...editavel } = payload
@@ -407,21 +424,37 @@ export default function AvaliacaoForm() {
           </div>
         </SecaoForm>
 
-        {/* Fotos */}
+        {/* Fotos (Conjunto) */}
         <SecaoForm icon={ImageIcon} title="Fotos">
-          <p className="text-xs text-gray-500 mb-4">
-            Até 8 fotos: frente, costas, laterais (relaxado e contraído) e 2 extras. Clique no quadro ou arraste a imagem direto do computador. As fotos sobem em qualidade original (sem compressão) e ficam públicas — disponíveis pras comparações e PDFs.
-          </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {PHOTOS.map(({ key, label }) => (
-              <FotoUpload
-                key={key}
-                label={label}
-                value={form[key]}
-                onChange={set(key)}
+          <div className="mb-4 max-w-md">
+            <FormGroup label="Conjunto de Fotos" hint="Define os ângulos a registrar. As fotos entram na evolução do aluno (mesmos slots dos feedbacks).">
+              <Select
+                value={form.conjunto_fotos}
+                onChange={(v) => { set('conjunto_fotos')(v); carregarSlots(v) }}
+                options={conjuntos.map(c => ({ value: c.name, label: c.titulo }))}
+                placeholder="Selecionar conjunto..."
               />
-            ))}
+            </FormGroup>
           </div>
+          {conjuntoSlots.length > 0 ? (
+            <>
+              <p className="text-xs text-gray-500 mb-4">
+                Clique no quadro ou arraste a imagem. As fotos sobem em qualidade original (sem compressão) e ficam públicas — disponíveis pras comparações e PDFs.
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {conjuntoSlots.map((s) => (
+                  <FotoUpload
+                    key={s.slot_id}
+                    label={s.rotulo}
+                    value={fotosSlots[s.slot_id] || ''}
+                    onChange={(url) => setFotosSlots(prev => ({ ...prev, [s.slot_id]: url || '' }))}
+                  />
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="text-xs text-gray-600 italic">Selecione um conjunto de fotos pra registrar as imagens.</p>
+          )}
         </SecaoForm>
 
       </div>
