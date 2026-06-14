@@ -89,14 +89,17 @@ export default function FeedbackResposta() {
     return { fotos, peso, qual }
   }, [respostas])
 
-  // Passos do wizard. Com conjunto: Fotos(slots) → Peso(input) → Perguntas(qualit.).
+  // Passos do wizard. Com conjunto: Fotos(slots) → Peso(input) → Perguntas.
+  // O conjunto é ADITIVO: os passos Fotos/Peso do conjunto são coleta estruturada
+  // EXTRA; TODAS as perguntas do formulário (incl. Anexar Imagem e peso) continuam
+  // aparecendo normalmente nas Perguntas — nada do template é escondido.
   // Sem conjunto: Fotos(perguntas-foto) → Peso(pergunta-peso) → Perguntas.
   const passos = useMemo(() => {
     const arr = []
     if (novoFluxo) {
       if (conjuntoSlots.length) arr.push({ id: 'fotos', label: 'Fotos', tipo: 'slots' })
       if (incluirPeso) arr.push({ id: 'peso', label: 'Peso', tipo: 'peso' })
-      arr.push({ id: 'perguntas', label: 'Perguntas', tipo: 'form', idxs: new Set(particao.qual) })
+      arr.push({ id: 'perguntas', label: 'Perguntas', tipo: 'form', idxs: new Set([...particao.qual, ...particao.fotos, ...particao.peso]) })
     } else {
       if (particao.fotos.length) arr.push({ id: 'fotos', label: 'Fotos', tipo: 'form', idxs: new Set(particao.fotos) })
       if (particao.peso.length) arr.push({ id: 'peso', label: 'Peso', tipo: 'form', idxs: new Set(particao.peso) })
@@ -139,10 +142,9 @@ export default function FeedbackResposta() {
   }
 
   const handleEnviar = async () => {
-    // Obrigatórias dos passos de formulário (no fluxo com conjunto, só as qualitativas).
-    const idxsForm = novoFluxo
-      ? new Set(particao.qual)
-      : new Set([...particao.fotos, ...particao.peso, ...particao.qual])
+    // Todas as perguntas do formulário aparecem e são validadas (o conjunto adiciona
+    // slots/peso por cima, mas não esconde nada do template).
+    const idxsForm = new Set([...particao.qual, ...particao.fotos, ...particao.peso])
     const faltamForm = listarFaltantesObrigatorias(respostas).filter(f => idxsForm.has(f.idx))
     const slotsFaltando = novoFluxo
       ? conjuntoSlots.filter(s => s.obrigatorio && !fotosSlots[s.slot_id])

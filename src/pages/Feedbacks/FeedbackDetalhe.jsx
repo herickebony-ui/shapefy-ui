@@ -16,11 +16,6 @@ import { formatFeedbackParaCopia, copiarTexto } from '../../utils/copiarResposta
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 
-// Pergunta de VALOR de peso (ex: "Peso atual"), pra esconder da tabela quando o
-// peso já aparece no bloco de evolução. Não pega "Se pesou hoje" (Seleção).
-const ehPerguntaPeso = (item) =>
-  ['Texto Curto', 'Número', 'Numero', 'Int'].includes(item.tipo) &&
-  /peso/i.test(item.pergunta || '')
 const numBR = (n) => (n == null ? '—' : Number(n).toFixed(1).replace('.', ','))
 
 const fmtData = (d) => {
@@ -92,7 +87,7 @@ export default function FeedbackDetalhe() {
     const key = `${feedbackId}_${fileUrl}`
     try {
       await rotarImagemFeedback([feedbackId], fileUrl, 'right')
-      setImgSrcs(prev => ({ ...prev, [key]: `${FRAPPE_URL}${fileUrl}?v=${Date.now()}` }))
+      setImgSrcs(prev => ({ ...prev, [key]: `${FRAPPE_URL}${encodeURI(fileUrl)}?v=${Date.now()}` }))
     } catch (e) {
       console.error(e)
     }
@@ -277,7 +272,7 @@ export default function FeedbackDetalhe() {
                       <p className="text-[#93C5FD] text-[10px] font-bold uppercase tracking-wider mb-1 truncate" title={f.rotulo}>{f.rotulo}</p>
                       {f.url ? (
                         <ImagemInterativa
-                          src={imgSrcs[`${feedback.name}_${f.url}`] || `${FRAPPE_URL}${f.url}`}
+                          src={imgSrcs[`${feedback.name}_${f.url}`] || `${FRAPPE_URL}${encodeURI(f.url)}`}
                           feedbackId={feedback.name}
                           idx={`reg_${i}`}
                           onRotate={() => handleRotate(feedback.name, f.url)}
@@ -297,8 +292,9 @@ export default function FeedbackDetalhe() {
             <table className="w-full text-left border-collapse">
               <tbody className="divide-y divide-[#323238]/40">
                 {feedback.perguntas_e_respostas?.map((item, idx) => {
-                  // Com Registro vinculado, foto e peso vêm do bloco acima — não duplica aqui.
-                  if (registro && (item.tipo === 'Anexar Imagem' || ehPerguntaPeso(item))) return null
+                  // O bloco de Evolução (acima) mostra peso/fotos estruturados do Registro,
+                  // mas TODAS as perguntas do formulário também aparecem normalmente aqui
+                  // (decisão: não esconder nada do template; o peso pode aparecer nos dois).
                   if (item.tipo === 'Quebra de Seção') {
                     return (
                       <tr key={idx} className="bg-[#0a0a0a]">
@@ -338,7 +334,7 @@ export default function FeedbackDetalhe() {
                             {item.resposta ? (
                               <div className="relative">
                                 <ImagemInterativa
-                                  src={imgSrcs[rotKey] || `${FRAPPE_URL}${item.resposta}`}
+                                  src={imgSrcs[rotKey] || `${FRAPPE_URL}${encodeURI(item.resposta)}`}
                                   feedbackId={feedback.name}
                                   idx={idx}
                                   onRotate={() => handleRotate(feedback.name, item.resposta)}
