@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Wand2 } from 'lucide-react'
 import { Button, FormGroup, Input, Select } from '../../../components/ui'
+import { listarConjuntos } from '../../../api/conjuntos'
 import { gerarDatasSerie } from './serie'
 
 const DIAS_SEMANA_OPTS = [
@@ -40,8 +41,29 @@ export default function PadronizarFormulario({
     dias_aviso: 1,
     pular_ferias: true,
     pular_feriados: true,
+    conjunto_fotos: '',
+    incluir_peso: true,
   })
   const [diasDoMes, setDiasDoMes] = useState([5, 20])
+  const [conjuntos, setConjuntos] = useState([])
+
+  useEffect(() => {
+    listarConjuntos({ limit: 100 })
+      .then(({ list }) => setConjuntos(list || []))
+      .catch(() => {})
+  }, [])
+
+  // Ao trocar o formulário padrão, pré-preenche conjunto/peso com o que foi salvo
+  // na aba Config dele. O profissional só mexe pra fugir do padrão nesta série.
+  useEffect(() => {
+    const f = formularios.find(x => x.name === form.formulario)
+    if (!f) return
+    setForm(p => ({
+      ...p,
+      conjunto_fotos: f.conjunto_fotos || '',
+      incluir_peso: f.incluir_peso == null ? true : !!Number(f.incluir_peso),
+    }))
+  }, [form.formulario, formularios])
 
   // Espelha a vigência do plano: ao mudar Início/Fim em cima, reflete aqui.
   useEffect(() => {
@@ -79,6 +101,8 @@ export default function PadronizarFormulario({
       is_training: false,
       nota: '',
       observacao: '',
+      conjunto_fotos: form.conjunto_fotos || '',
+      incluir_peso: form.incluir_peso,
     }))
     onGerar(novas)
   }
@@ -184,6 +208,31 @@ export default function PadronizarFormulario({
         <FormGroup label="Dias de aviso" hint="Quantos dias antes avisar">
           <Input type="number" value={String(form.dias_aviso)}
             onChange={(v) => setForm(p => ({ ...p, dias_aviso: Number(v) || 1 }))} />
+        </FormGroup>
+      </div>
+
+      {/* Coleta de evolução — pré-preenchido do formulário; troque pra fugir do padrão */}
+      <div className="grid grid-cols-3 gap-2">
+        <div className="col-span-2">
+          <FormGroup label="Conjunto de fotos" hint="Vem do formulário. Troque pra fugir do padrão nesta série.">
+            <Select
+              value={form.conjunto_fotos}
+              onChange={(v) => setForm(p => ({ ...p, conjunto_fotos: v }))}
+              options={conjuntos.map(c => ({ value: c.name, label: c.titulo }))}
+              placeholder="Nenhum / padrão do profissional"
+            />
+          </FormGroup>
+        </div>
+        <FormGroup label="Peso">
+          <label className="flex items-center gap-2 h-10 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={form.incluir_peso}
+              onChange={(e) => setForm(p => ({ ...p, incluir_peso: e.target.checked }))}
+              className="accent-[#2563eb] h-4 w-4"
+            />
+            <span className="text-xs text-gray-300 font-medium">Pedir</span>
+          </label>
         </FormGroup>
       </div>
 

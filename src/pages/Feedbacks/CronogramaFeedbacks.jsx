@@ -36,6 +36,7 @@ import {
 } from '../../api/templates'
 import { listarAlunos, buscarAluno, salvarAluno } from '../../api/alunos'
 import { listarFormulariosFeedback } from '../../api/formularios'
+import { listarConjuntos } from '../../api/conjuntos'
 import { listarContratos } from '../../api/contratosAluno'
 
 import {
@@ -78,6 +79,7 @@ export default function CronogramaFeedbacks() {
   // ─── Dados base ─────────────────────────────────────────────────────────────
   const [todosAlunos, setTodosAlunos] = useState([])
   const [formularios, setFormularios] = useState([])
+  const [conjuntos, setConjuntos] = useState([])
   const [feriasList, setFeriasList] = useState([])
   const [carregandoBase, setCarregandoBase] = useState(true)
 
@@ -139,14 +141,16 @@ export default function CronogramaFeedbacks() {
   const carregarBase = useCallback(async () => {
     setCarregandoBase(true)
     try {
-      const [alunosRes, formsRes, feriasRes] = await Promise.all([
+      const [alunosRes, formsRes, feriasRes, conjuntosRes] = await Promise.all([
         listarAlunos({ limit: 500 }),
         listarFormulariosFeedback(),
         listarFerias(),
+        listarConjuntos({ limit: 100 }).catch(() => ({ list: [] })),
       ])
       setTodosAlunos(alunosRes.list || [])
       setFormularios(formsRes || [])
       setFeriasList(feriasRes || [])
+      setConjuntos(conjuntosRes.list || [])
     } catch (e) {
       console.error(e)
       showToast('Falha ao carregar dados', 'error')
@@ -200,6 +204,8 @@ export default function CronogramaFeedbacks() {
         is_start: !!ag.is_start,
         is_training: !!ag.is_training,
         respondido_em: ag.respondido_em,
+        conjunto_fotos: ag.conjunto_fotos || '',
+        incluir_peso: ag.incluir_peso,
       })).sort((x, y) => (x.date || '').localeCompare(y.date || ''))
       setSchedule({ dates })
       // Vigência: contrato é fonte de verdade. Se há contrato relevante com
@@ -338,6 +344,47 @@ export default function CronogramaFeedbacks() {
         // reverte
         setSchedule(prev => ({
           dates: prev.dates.map(d => d.date === date ? { ...d, formulario: atual.formulario } : d),
+        }))
+      }
+    }
+  }, [schedule.dates, showToast])
+
+  // Override por data do conjunto de fotos (vazio = segue o formulário da linha).
+  const handleSetConjuntoData = useCallback(async (date, conjunto) => {
+    const atual = schedule.dates.find(d => d.date === date)
+    if (!atual) return
+    setSchedule(prev => ({
+      dates: prev.dates.map(d => d.date === date ? { ...d, conjunto_fotos: conjunto } : d),
+    }))
+    if (atual._name) {
+      try {
+        await salvarAgendamento(atual._name, { conjunto_fotos: conjunto || '' })
+      } catch (e) {
+        console.error(e)
+        showToast('Falha ao salvar conjunto', 'error')
+        setSchedule(prev => ({
+          dates: prev.dates.map(d => d.date === date ? { ...d, conjunto_fotos: atual.conjunto_fotos } : d),
+        }))
+      }
+    }
+  }, [schedule.dates, showToast])
+
+  // Override por data do "pedir peso".
+  const handleSetPesoData = useCallback(async (date, pedir) => {
+    const atual = schedule.dates.find(d => d.date === date)
+    if (!atual) return
+    const val = pedir ? 1 : 0
+    setSchedule(prev => ({
+      dates: prev.dates.map(d => d.date === date ? { ...d, incluir_peso: val } : d),
+    }))
+    if (atual._name) {
+      try {
+        await salvarAgendamento(atual._name, { incluir_peso: val })
+      } catch (e) {
+        console.error(e)
+        showToast('Falha ao salvar peso', 'error')
+        setSchedule(prev => ({
+          dates: prev.dates.map(d => d.date === date ? { ...d, incluir_peso: atual.incluir_peso } : d),
         }))
       }
     }
@@ -498,16 +545,27 @@ export default function CronogramaFeedbacks() {
         plan_duration: Number(planForm.plan_duration) || 0,
         formulario_padrao: planForm.formulario_padrao || formularioSugerido || null,
       })
-      await sincronizarCronogramaDoAluno(alunoId, schedule.dates.map(d => ({
-        formulario: d.formulario || planForm.formulario_padrao,
-        data_agendada: d.date,
-        dias_aviso: Number(d.dias_aviso) || 1,
-        status: d.status || 'Agendado',
-        observacao: d.observacao || '',
-        nota: d.nota || '',
-        is_start: d.is_start ? 1 : 0,
-        is_training: d.is_training ? 1 : 0,
-      })))
+      await sincronizarCronogramaDoAluno(alunoId, schedule.dates.map(d => {
+        const fid = d.formulario || planForm.formulario_padrao
+        const form = formularios.find(f => f.name === fid)
+        // Snapshot do conjunto/peso: override da data, senão herda do formulário.
+        const conjunto = d.conjunto_fotos ? d.conjunto_fotos : (form?.conjunto_fotos || '')
+        const peso = d.incluir_peso != null
+          ? d.incluir_peso
+          : (form?.incluir_peso == null ? 1 : Number(form.incluir_peso))
+        return {
+          formulario: fid,
+          data_agendada: d.date,
+          dias_aviso: Number(d.dias_aviso) || 1,
+          status: d.status || 'Agendado',
+          observacao: d.observacao || '',
+          nota: d.nota || '',
+          is_start: d.is_start ? 1 : 0,
+          is_training: d.is_training ? 1 : 0,
+          conjunto_fotos: conjunto,
+          incluir_peso: peso,
+        }
+      }))
       showToast('Cronograma salvo!', 'success')
       await carregarAluno(alunoId)
     } catch (e) {
@@ -989,39 +1047,70 @@ export default function CronogramaFeedbacks() {
                         : 0
                       const cycleText = d.cycleDurationText
                       const ehADefinir = cycleText && cycleText.includes('definir')
+                      const formObjRow = formularios.find(f => f.name === (d.formulario || formularioSugerido))
+                      const pesoRow = d.incluir_peso != null
+                        ? !!Number(d.incluir_peso)
+                        : (formObjRow?.incluir_peso == null ? true : !!Number(formObjRow.incluir_peso))
+                      const zebra = d.is_start
+                        ? 'bg-[#2563eb]/15'
+                        : (idx % 2 === 0 ? 'bg-[#1f1f24] hover:bg-[#26262c]' : 'bg-[#191a1d] hover:bg-[#26262c]')
                       return (
                         <LongPressRow key={d.date}
                           onLongPress={(e) => {
                             setMarcoZeroMenu({ date: d.date, x: e.clientX, y: e.clientY })
                           }}
-                          className={`grid grid-cols-[78px_44px_1fr_44px_92px_24px] gap-1.5 px-3 py-2 border-b border-[#323238]/40 items-center transition-colors select-none ${
-                            d.is_start ? 'bg-[#2563eb]/15' : 'hover:bg-[#1e1e22]'
-                          }`}>
-                          <span className="text-white font-medium text-xs">{fmtDateBR(d.date)}</span>
+                          className={`grid grid-cols-[78px_44px_1fr_44px_92px_24px] gap-1.5 px-3 py-2.5 border-b border-[#323238]/30 items-center transition-colors select-none ${zebra}`}>
+                          <span className="text-white font-semibold text-xs">{fmtDateBR(d.date)}</span>
                           <span className="flex justify-center">
                             <TipoBotao item={d}
                               onCycle={(_, novoEstado) => handleSetTipo(d.date, novoEstado)}
                               variant="icon"
                               size="sm" />
                           </span>
-                          {d.is_start ? (
-                            <span
-                              title="Ponto de partida não dispara feedback — só serve de âncora pra contar o intervalo."
-                              className="h-7 px-2 inline-flex items-center bg-[#1a1a1a]/40 border border-dashed border-[#323238] text-gray-500 italic rounded text-[11px] truncate"
-                            >
-                              Sem formulário (ponto de partida)
-                            </span>
-                          ) : (
-                            <select
-                              value={d.formulario || formularioSugerido || ''}
-                              onChange={(e) => handleSetFormulario(d.date, e.target.value)}
-                              className="h-7 px-1 bg-[#1a1a1a] border border-[#323238] text-white rounded text-[11px] outline-none focus:border-[#2563eb]/60 truncate"
-                            >
-                              {formularios.map((f) => (
-                                <option key={f.name} value={f.name}>{f.titulo}</option>
-                              ))}
-                            </select>
-                          )}
+                          <div className="flex flex-col gap-1.5 min-w-0">
+                            {d.is_start ? (
+                              <span
+                                title="Ponto de partida não dispara feedback — só serve de âncora pra contar o intervalo."
+                                className="h-7 px-2 inline-flex items-center bg-[#1a1a1a]/40 border border-dashed border-[#323238] text-gray-500 italic rounded text-[11px] truncate"
+                              >
+                                Sem formulário (ponto de partida)
+                              </span>
+                            ) : (
+                              <>
+                                <select
+                                  value={d.formulario || formularioSugerido || ''}
+                                  onChange={(e) => handleSetFormulario(d.date, e.target.value)}
+                                  className="h-7 px-1 bg-[#1a1a1a] border border-[#323238] text-white rounded text-[11px] outline-none focus:border-[#2563eb]/60 truncate"
+                                >
+                                  {formularios.map((f) => (
+                                    <option key={f.name} value={f.name}>{f.titulo}</option>
+                                  ))}
+                                </select>
+                                <div className="flex items-center gap-1.5">
+                                  <select
+                                    value={d.conjunto_fotos || ''}
+                                    onChange={(e) => handleSetConjuntoData(d.date, e.target.value)}
+                                    title="Conjunto de fotos desta data (vazio = segue o formulário)"
+                                    className="flex-1 min-w-0 h-6 px-1 bg-[#141416] border border-[#2a2a30] text-gray-400 rounded text-[10px] outline-none focus:border-[#2563eb]/60 truncate"
+                                  >
+                                    <option value="">Fotos: do formulário</option>
+                                    {conjuntos.map((c) => (
+                                      <option key={c.name} value={c.name}>{c.titulo}</option>
+                                    ))}
+                                  </select>
+                                  <label className="flex items-center gap-1 cursor-pointer select-none shrink-0" title="Pedir peso nesta data">
+                                    <input
+                                      type="checkbox"
+                                      checked={pesoRow}
+                                      onChange={(e) => handleSetPesoData(d.date, e.target.checked)}
+                                      className="accent-[#2563eb] h-3.5 w-3.5"
+                                    />
+                                    <span className="text-[10px] text-gray-400 font-medium">peso</span>
+                                  </label>
+                                </div>
+                              </>
+                            )}
+                          </div>
                           <span className="text-[10px] text-gray-500 text-center">
                             {intervalo > 0 ? `${intervalo}s` : '—'}
                           </span>

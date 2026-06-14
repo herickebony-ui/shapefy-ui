@@ -77,6 +77,7 @@ export const listarFormulariosFeedback = async () => {
       fields: JSON.stringify([
         'name', 'titulo', 'enabled',
         'dieta', 'treino', 'feedback_inicial',
+        'conjunto_fotos', 'incluir_peso',
       ]),
       limit: 100,
       order_by: 'creation desc',
