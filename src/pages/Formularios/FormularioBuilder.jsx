@@ -331,7 +331,7 @@ export default function FormularioBuilder() {
               <Select
                 value={conjuntoFotos}
                 onChange={setConjuntoFotos}
-                options={[{ value: '', label: '(padrão do profissional)' }, ...conjuntos.map(c => ({ value: c.name, label: c.titulo }))]}
+                options={conjuntos.map(c => ({ value: c.name, label: c.titulo }))}
               />
             </FormGroup>
             <ToggleRow label="Pedir peso" descricao="Mostra o passo de peso no feedback do aluno" value={pedirPeso} onChange={setPedirPeso} />
