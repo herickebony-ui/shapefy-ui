@@ -133,7 +133,7 @@ function MatrizFotos({ registros }) {
   )
 }
 
-export default function EvolucaoAluno() {
+export default function EvolucaoAluno({ mode = 'both' }) {
   const { id } = useParams()
   const navigate = useNavigate()
   const [registros, setRegistros] = useState([])
@@ -180,6 +180,9 @@ export default function EvolucaoAluno() {
   if (loading) return <div className="flex justify-center py-24"><Spinner />{errorModal.element}</div>
 
   const pontosPeso = registros.filter((r) => r.peso != null && r.peso > 0).map((r) => ({ data: r.data, peso: r.peso }))
+  const showPeso = mode === 'both' || mode === 'peso'
+  const showFotos = mode === 'both' || mode === 'fotos'
+  const titulo = mode === 'peso' ? 'Peso' : mode === 'fotos' ? 'Fotos' : 'Evolução'
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
@@ -188,7 +191,7 @@ export default function EvolucaoAluno() {
           <ArrowLeft size={14} />
         </button>
         <div className="flex-1 min-w-0">
-          <h1 className="text-white text-lg font-bold truncate">Evolução · {nome || id}</h1>
+          <h1 className="text-white text-lg font-bold truncate">{titulo} · {nome || id}</h1>
           <p className="text-gray-500 text-xs">{registros.length} registro(s) na timeline (fonte única)</p>
         </div>
       </div>
@@ -199,6 +202,7 @@ export default function EvolucaoAluno() {
         </div>
       ) : (
         <>
+          {showPeso && (
           <div className="bg-[#1a1a1a] rounded-xl border border-[#323238] p-4">
             <div className="flex items-center justify-between mb-3">
               <h2 className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider"><TrendingUp size={13} /> Peso ao longo do tempo</h2>
@@ -247,11 +251,14 @@ export default function EvolucaoAluno() {
             </div>
             )}
           </div>
+          )}
 
+          {showFotos && (
           <div className="bg-[#1a1a1a] rounded-xl border border-[#323238] p-4">
             <h2 className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3"><Images size={13} /> Comparação de fotos <span className="text-gray-600 normal-case">· role pro lado →</span></h2>
             <MatrizFotos registros={registros} />
           </div>
+          )}
         </>
       )}
       {errorModal.element}

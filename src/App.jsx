@@ -29,6 +29,7 @@ import ConjuntoListagem from './pages/Conjuntos/ConjuntoListagem'
 import ConjuntoBuilder from './pages/Conjuntos/ConjuntoBuilder'
 import PendenciasEvolucao from './pages/Evolucao/PendenciasEvolucao'
 import EvolucaoAluno from './pages/Evolucao/EvolucaoAluno'
+import EvolucaoListaAlunos from './pages/Evolucao/EvolucaoListaAlunos'
 import Suporte from './pages/Suporte/Suporte'
 import UsuarioHub from './pages/Usuario/UsuarioHub'
 import PerfilProfissional from './pages/Perfil/PerfilProfissional'
@@ -153,6 +154,10 @@ function App() {
           <Route path="anamneses" element={<AnamneseListagem />} />
           <Route path="alunos/:id" element={<AlunoDetalhe />} />
           <Route path="alunos/:id/evolucao" element={<EvolucaoAluno />} />
+          <Route path="evolucao/peso" element={<EvolucaoListaAlunos mode="peso" />} />
+          <Route path="evolucao/peso/:id" element={<EvolucaoAluno mode="peso" />} />
+          <Route path="evolucao/fotos" element={<EvolucaoListaAlunos mode="fotos" />} />
+          <Route path="evolucao/fotos/:id" element={<EvolucaoAluno mode="fotos" />} />
           <Route path="alunos" element={<Navigate to="/anamneses" replace />} />
 
           {/* dieta */}

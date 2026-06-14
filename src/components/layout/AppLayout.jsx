@@ -5,7 +5,7 @@ import {
   PanelLeftClose, PanelLeftOpen, UtensilsCrossed, BookOpen,
   Wind, Waves, Pill, CreditCard, UserCircle, HelpCircle, Briefcase,
   TrendingUp, Calendar, LayoutDashboard, Wallet, Layers,
-  Inbox, CalendarClock, FileEdit, FileQuestion, Bookmark,
+  Inbox, CalendarClock, FileEdit, FileQuestion, Bookmark, Images,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import useAuthStore from '../../store/authStore'
@@ -32,7 +32,8 @@ const NAV_ITEMS = [
   { id: 'painel-feedbacks',     label: 'Central de Feedbacks',         icon: LayoutDashboard, path: '/painel-feedbacks' },
   { id: 'feedbacks',            label: 'Feedbacks Recebidos',          icon: Inbox,           path: '/feedbacks' },
   { id: 'cronograma-feedbacks', label: 'Planejar Feedbacks do Aluno', icon: CalendarClock,   path: '/cronograma-feedbacks' },
-  { id: 'conjuntos-fotos',      label: 'Conjuntos de Fotos',           icon: Layers,          path: '/conjuntos-fotos' },
+  { id: 'evolucao-peso',        label: 'Peso do Aluno',                icon: TrendingUp,      path: '/evolucao/peso' },
+  { id: 'evolucao-fotos',       label: 'Fotos do Aluno',               icon: Images,          path: '/evolucao/fotos' },
   { id: 'pendencias-evolucao',  label: 'Pendências de Peso',           icon: FileQuestion,    path: '/pendencias-evolucao' },
   { id: 'treinos',              label: 'Treinos Realizados',           icon: Activity,        path: '/treinos',           modulo: 'treino' },
   { id: 'progressao-cargas',    label: 'Progressão de Cargas',         icon: TrendingUp,      path: '/progressao-cargas', modulo: 'treino' },
@@ -42,6 +43,7 @@ const NAV_ITEMS = [
   { id: 'planos',       label: 'Planos',              icon: Layers,          path: '/planos' },
 
   { type: 'divider', label: 'Catálogos' },
+  { id: 'conjuntos-fotos',    label: 'Conjuntos de Fotos', icon: Layers,         path: '/conjuntos-fotos' },
   { id: 'exercicios',         label: 'Exercícios',        icon: ListChecks,      path: '/exercicios',         modulo: 'treino' },
   { id: 'alongamentos',       label: 'Alongamentos',      icon: Waves,           path: '/alongamentos',       modulo: 'treino' },
   { id: 'aerobicos',          label: 'Aeróbicos',         icon: Wind,            path: '/aerobicos',          modulo: 'treino' },
