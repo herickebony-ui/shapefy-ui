@@ -3,8 +3,6 @@ import { criarNotificacaoAluno } from './notificacoes'
 
 const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
 
-const primeiroNome = (nome) => String(nome || '').trim().split(/\s+/)[0] || ''
-
 // Vincula um feedback manualmente: cria o Feedback a partir do template
 // (Formulario Feedback) com aluno selecionado e dispara notificação ao aluno.
 // IMPORTANTE: NÃO mandar `perguntas_e_respostas` no POST — o backend tem hook
@@ -32,10 +30,9 @@ export const vincularFeedback = async (alunoId, formularioId) => {
   const feedback = res.data?.data
   // Notifica o aluno no app — falha silenciosa pra não bloquear o vínculo.
   try {
-    const nome = primeiroNome(aluno.nome_completo)
     await criarNotificacaoAluno({
       aluno: alunoId,
-      titulo: nome ? `Novo feedback disponível, ${nome}!` : 'Novo feedback disponível!',
+      titulo: 'Você tem um novo feedback pra preencher!',
       descricao: `Preencha o feedback "${template.titulo || ''}" no app.`,
     })
   } catch (err) {

@@ -1,8 +1,6 @@
 import client from './client'
 import { criarNotificacaoAluno } from './notificacoes'
 
-const primeiroNome = (nome) => String(nome || '').trim().split(/\s+/)[0] || ''
-
 export const listarAnamneses = async ({ alunoId, page = 1, limit = 50 } = {}) => {
   const params = {
     fields: JSON.stringify([
@@ -104,10 +102,9 @@ export const vincularAnamnese = async (alunoId, formulario, enviarAluno = true) 
   const anamnese = res.data?.data
   if (enviarAluno) {
     try {
-      const primeiro = primeiroNome(aluno.nome_completo)
       await criarNotificacaoAluno({
         aluno: alunoId,
-        titulo: primeiro ? `Nova anamnese, ${primeiro}!` : 'Nova anamnese disponível',
+        titulo: 'Você tem uma nova anamnese pra preencher!',
         descricao: `Acesse o app para preencher: ${template.titulo || ''}`.trim(),
       })
     } catch (err) {

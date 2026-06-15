@@ -343,7 +343,7 @@ export default function ModeloDietaListagem() {
         <ModalAplicarModelo
           modelo={modalAplicar}
           onClose={() => setModalAplicar(null)}
-          onAplicado={(novaId) => { setModalAplicar(null); navigate(`/dietas/${novaId}`) }}
+          onAplicado={(novaId) => { setModalAplicar(null); navigate(`/dietas/${novaId}`, { state: { recemCriada: true } }) }}
         />
       )}
 

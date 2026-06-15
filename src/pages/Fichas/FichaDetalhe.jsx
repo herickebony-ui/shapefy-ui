@@ -1725,6 +1725,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
         })
         onSave(resultado)
       } else {
+        const isNovoTreino = !ficha.name
         const resultado = ficha.name ? await salvarFicha(ficha.name, dados) : await criarFicha(dados)
         if (!ficha.name && resultado?.name) setFicha(f => ({ ...f, name: resultado.name }))
         onSave(resultado)
@@ -1733,8 +1734,8 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
         if (agendado_para !== false && ficha.aluno && entityName) {
           await criarNotificacaoAluno({
             aluno: ficha.aluno,
-            titulo: 'Seu novo treino está disponível!',
-            descricao: 'Confira sua nova ficha de treino no app.',
+            titulo: isNovoTreino ? 'Seu novo treino está disponível!' : 'Seu treino foi atualizado!',
+            descricao: isNovoTreino ? 'Confira sua nova ficha de treino no app.' : 'Seu treino foi ajustado. Confira no app.',
             url: `/ficha/${entityName}`,
             agendado_para,
           })
