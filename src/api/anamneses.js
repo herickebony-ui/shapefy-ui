@@ -67,7 +67,7 @@ export const salvarAnamnese = async (id, perguntas) => {
 export const listarFormularios = async () => {
   const res = await client.get('/api/resource/Formulario%20de%20Anamnese', {
     params: {
-      fields: JSON.stringify(["name","titulo"]),
+      fields: JSON.stringify(["name","titulo","conjunto_fotos","incluir_peso"]),
       limit: 50, order_by: 'creation desc'
     }
   })
@@ -80,7 +80,7 @@ export const listarFormularios = async () => {
 // template (campo `formulario`). Se mandarmos a child table preenchida +
 // hook copiando, resulta em 114 perguntas (57 nossas + 57 do hook).
 // Comprovado: admin cria sem `perguntas_e_respostas` → 57 perguntas únicas.
-export const vincularAnamnese = async (alunoId, formulario, enviarAluno = true) => {
+export const vincularAnamnese = async (alunoId, formulario, enviarAluno = true, { conjunto_fotos, incluir_peso } = {}) => {
   const [formRes, alunoRes] = await Promise.all([
     client.get(`/api/resource/Formulario%20de%20Anamnese/${encodeURIComponent(formulario)}`),
     client.get(`/api/resource/Aluno/${encodeURIComponent(alunoId)}`),
@@ -89,7 +89,7 @@ export const vincularAnamnese = async (alunoId, formulario, enviarAluno = true) 
   const aluno = alunoRes.data.data || {}
   const profissional = localStorage.getItem('frappe_user') || ''
   const today = new Date().toISOString().slice(0, 10)
-  const res = await client.post('/api/resource/Anamnese', {
+  const payload = {
     aluno: alunoId,
     formulario,
     titulo: template.titulo || '',
@@ -100,7 +100,11 @@ export const vincularAnamnese = async (alunoId, formulario, enviarAluno = true) 
     enviar_aluno: enviarAluno ? 1 : 0,
     aluno_preencheu: 0,
     entregue: 0,
-  })
+  }
+  // Override do agendamento (senão o backend congela do formulário / padrão do profissional).
+  if (conjunto_fotos) payload.conjunto_fotos = conjunto_fotos
+  if (incluir_peso !== undefined && incluir_peso !== null) payload.incluir_peso = incluir_peso ? 1 : 0
+  const res = await client.post('/api/resource/Anamnese', payload)
   const anamnese = res.data?.data
   if (enviarAluno) {
     try {

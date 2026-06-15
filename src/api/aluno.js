@@ -82,10 +82,12 @@ export const buscarAnamneseAluno = async (name) => {
 // aluno_preencheu=1, data_resposta (before_save) e verificar=1 (cron
 // process_anamnese_images_to_public converte imagens privadas em públicas).
 // Front só envia name + child table.
-export const responderAnamnese = async (name, perguntas) => {
+export const responderAnamnese = async (name, perguntas, extra = {}) => {
   const res = await client.post('/api/method/shapefy.api.aluno.responder_anamnese', {
     name,
     perguntas_e_respostas: perguntas,
+    ...(extra.fotos != null ? { fotos: extra.fotos } : {}),
+    ...(extra.peso != null ? { peso: extra.peso } : {}),
   })
   return res.data?.message || null
 }

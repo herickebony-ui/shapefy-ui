@@ -87,13 +87,13 @@ export default function FormularioBuilder() {
       .then(doc => {
         setTitulo(doc.titulo || '')
         setPerguntas(doc.perguntas?.length ? sanearPerguntas(doc.perguntas) : [perguntaVazia()])
+        setConjuntoFotos(doc.conjunto_fotos || '')
+        setPedirPeso(doc.incluir_peso == null ? true : !!doc.incluir_peso)
         if (isFeedback) {
           setEnabled(!!doc.enabled)
           setFeedbackInicial(!!doc.feedback_inicial)
           setDieta(!!doc.dieta)
           setTreino(!!doc.treino)
-          setConjuntoFotos(doc.conjunto_fotos || '')
-          setPedirPeso(doc.incluir_peso == null ? true : !!doc.incluir_peso)
         }
       })
       .catch(e => errorModal.show(e, 'Carregar formulário'))
@@ -101,9 +101,8 @@ export default function FormularioBuilder() {
   }, [id, isNovo, isFeedback])
 
   useEffect(() => {
-    if (!isFeedback) return
     listarConjuntos({ limit: 100 }).then(({ list }) => setConjuntos(list || [])).catch(() => {})
-  }, [isFeedback])
+  }, [])
 
   const limparErroPergunta = (idx, campo) => {
     setErrors(prev => {
@@ -223,7 +222,7 @@ export default function FormularioBuilder() {
           await salvarFormularioFeedback(id, payload)
         }
       } else {
-        const payload = { titulo, perguntas: perguntasSaneadas }
+        const payload = { titulo, perguntas: perguntasSaneadas, conjunto_fotos: conjuntoFotos, incluir_peso: pedirPeso }
         if (isNovo) {
           const doc = await criarFormularioAnamnese(payload)
           navigate(`/criar-formularios/anamnese/${doc.name}`, { replace: true })
@@ -302,45 +301,47 @@ export default function FormularioBuilder() {
         </FormGroup>
       </div>
 
-      {/* Tabs (feedback only) */}
-      {isFeedback && (
-        <Tabs
-          tabs={[
-            { id: 'perguntas', label: 'Perguntas' },
-            { id: 'config', label: 'Configurações' },
-          ]}
-          active={abaAtiva}
-          onChange={setAbaAtiva}
-          variant="underline"
-        />
-      )}
+      {/* Tabs */}
+      <Tabs
+        tabs={[
+          { id: 'perguntas', label: 'Perguntas' },
+          { id: 'config', label: 'Configurações' },
+        ]}
+        active={abaAtiva}
+        onChange={setAbaAtiva}
+        variant="underline"
+      />
 
-      {/* Aba Configurações (antiga Automação, simplificada) */}
-      {isFeedback && abaAtiva === 'config' && (
+      {/* Aba Configurações */}
+      {abaAtiva === 'config' && (
         <div className="bg-[#29292e] rounded-lg border border-[#323238] p-4 space-y-1">
-          <ToggleRow label="Ativo" descricao="Formulário disponível para envio" value={enabled} onChange={setEnabled} />
-          <div className="pt-3 pb-1">
-            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-2">Campos exibidos no feedback do aluno</p>
-            <ToggleRow label="Feedback inicial" descricao="Campo de comentário inicial" value={feedbackInicial} onChange={setFeedbackInicial} />
-            <ToggleRow label="Dieta" descricao="Avaliação da dieta" value={dieta} onChange={setDieta} />
-            <ToggleRow label="Treino" descricao="Avaliação do treino" value={treino} onChange={setTreino} />
-          </div>
-          <div className="pt-3 pb-1 border-t border-[#323238]/50">
+          {isFeedback && (
+            <>
+              <ToggleRow label="Ativo" descricao="Formulário disponível para envio" value={enabled} onChange={setEnabled} />
+              <div className="pt-3 pb-1">
+                <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-2">Campos exibidos no feedback do aluno</p>
+                <ToggleRow label="Feedback inicial" descricao="Campo de comentário inicial" value={feedbackInicial} onChange={setFeedbackInicial} />
+                <ToggleRow label="Dieta" descricao="Avaliação da dieta" value={dieta} onChange={setDieta} />
+                <ToggleRow label="Treino" descricao="Avaliação do treino" value={treino} onChange={setTreino} />
+              </div>
+            </>
+          )}
+          <div className={`pt-3 pb-1 ${isFeedback ? 'border-t border-[#323238]/50' : ''}`}>
             <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-2">Coleta de evolução</p>
-            <FormGroup label="Conjunto de Fotos" hint="O aluno preenche estas fotos no feedback. Vazio = usa o conjunto padrão do profissional.">
+            <FormGroup label="Conjunto de Fotos" hint={`O aluno preenche estas fotos ${isFeedback ? 'no feedback' : 'na anamnese'}. Vazio = usa o conjunto padrão do profissional.`}>
               <Select
                 value={conjuntoFotos}
                 onChange={setConjuntoFotos}
                 options={conjuntos.map(c => ({ value: c.name, label: c.titulo }))}
               />
             </FormGroup>
-            <ToggleRow label="Pedir peso" descricao="Mostra o passo de peso no feedback do aluno" value={pedirPeso} onChange={setPedirPeso} />
+            <ToggleRow label="Pedir peso" descricao={`Mostra o passo de peso ${isFeedback ? 'no feedback' : 'na anamnese'} do aluno`} value={pedirPeso} onChange={setPedirPeso} />
           </div>
         </div>
       )}
 
       {/* Lista de perguntas */}
-      {(!isFeedback || abaAtiva === 'perguntas') && (
+      {abaAtiva === 'perguntas' && (
         <div className="space-y-3">
           {perguntas.map((p, idx) => {
             const config = TIPOS_CONFIG[p.tipo] || {}

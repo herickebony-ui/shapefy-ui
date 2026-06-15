@@ -26,7 +26,7 @@ const deserializarPerguntas = (perguntas = []) =>
 export const listarFormulariosAnamnese = async () => {
   const res = await client.get(`/api/resource/${ENC_ANAMNESE}`, {
     params: {
-      fields: JSON.stringify(['name', 'titulo']),
+      fields: JSON.stringify(['name', 'titulo', 'conjunto_fotos', 'incluir_peso']),
       limit: 100,
       order_by: 'creation desc',
     },
@@ -40,18 +40,22 @@ export const buscarFormularioAnamnese = async (id) => {
   return { ...d, perguntas: deserializarPerguntas(d.perguntas) }
 }
 
-export const criarFormularioAnamnese = async ({ titulo, perguntas }) => {
+export const criarFormularioAnamnese = async ({ titulo, perguntas, conjunto_fotos, incluir_peso }) => {
   const res = await client.post(`/api/resource/${ENC_ANAMNESE}`, {
     titulo,
     profissional: profissionalLogado(),
+    conjunto_fotos: conjunto_fotos || null,
+    incluir_peso: incluir_peso ? 1 : 0,
     perguntas: serializarPerguntas(perguntas, 'anamnese'),
   })
   return res.data.data
 }
 
-export const salvarFormularioAnamnese = async (id, { titulo, perguntas }) => {
+export const salvarFormularioAnamnese = async (id, { titulo, perguntas, conjunto_fotos, incluir_peso }) => {
   const res = await client.put(`/api/resource/${ENC_ANAMNESE}/${encodeURIComponent(id)}`, {
     titulo,
+    conjunto_fotos: conjunto_fotos || null,
+    incluir_peso: incluir_peso ? 1 : 0,
     perguntas: serializarPerguntas(perguntas, 'anamnese'),
   })
   return res.data.data
@@ -66,6 +70,8 @@ export const duplicarFormularioAnamnese = async (id) => {
   return criarFormularioAnamnese({
     titulo: `${original.titulo || 'Formulário'} (Cópia)`,
     perguntas: original.perguntas || [],
+    conjunto_fotos: original.conjunto_fotos,
+    incluir_peso: original.incluir_peso,
   })
 }
 
