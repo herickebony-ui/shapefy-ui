@@ -2,6 +2,7 @@ import client from './client'
 
 const RESOURCE_DIETA = 'Modelo Dieta'
 const RESOURCE_FICHA = 'Modelo Ficha'
+const RESOURCE_INSTRUCAO = 'Modelo Instrucao'
 
 const META_FIELDS = [
   'name', 'creation', 'modified', 'modified_by', 'owner',
@@ -156,6 +157,83 @@ export const salvarModeloFicha = async (name, campos) => {
 
 export const excluirModeloFicha = async (name) => {
   await client.delete(`/api/resource/${encodeURIComponent(RESOURCE_FICHA)}/${encodeURIComponent(name)}`)
+}
+
+// ─── Modelo Instrucao — CRUD ──────────────────────────────────────────────────
+
+export const listarModelosInstrucao = async ({ busca = '', page = 1, limit = 50 } = {}) => {
+  const filtros = []
+  if (busca) filtros.push(['Modelo Instrucao', 'titulo', 'like', `%${busca}%`])
+
+  const params = {
+    fields: JSON.stringify([
+      'name', 'titulo', 'descricao', 'dieta', 'treino', 'economico', 'enabled', 'creation', 'modified',
+    ]),
+    limit: busca ? 200 : limit,
+    limit_start: busca ? 0 : (page - 1) * limit,
+    order_by: 'modified desc',
+  }
+  if (filtros.length) params.filters = JSON.stringify(filtros)
+
+  const res = await client.get(`/api/resource/${encodeURIComponent(RESOURCE_INSTRUCAO)}`, { params })
+  const list = res.data?.data || []
+  return { list, hasMore: list.length === limit }
+}
+
+export const buscarModeloInstrucao = async (name) => {
+  const res = await client.get(`/api/resource/${encodeURIComponent(RESOURCE_INSTRUCAO)}/${encodeURIComponent(name)}`)
+  return res.data?.data
+}
+
+export const criarModeloInstrucao = async (campos) => {
+  const res = await client.post(`/api/resource/${encodeURIComponent(RESOURCE_INSTRUCAO)}`, campos)
+  return res.data?.data
+}
+
+export const salvarModeloInstrucao = async (name, campos) => {
+  const res = await client.put(`/api/resource/${encodeURIComponent(RESOURCE_INSTRUCAO)}/${encodeURIComponent(name)}`, campos)
+  return res.data?.data
+}
+
+export const excluirModeloInstrucao = async (name) => {
+  await client.delete(`/api/resource/${encodeURIComponent(RESOURCE_INSTRUCAO)}/${encodeURIComponent(name)}`)
+}
+
+export const duplicarModeloInstrucao = async (name) => {
+  const orig = await buscarModeloInstrucao(name)
+  return criarModeloInstrucao({
+    titulo: `${orig.titulo} (cópia)`,
+    dieta: orig.dieta || 0,
+    treino: orig.treino || 0,
+    economico: orig.economico || 0,
+    descricao: orig.descricao || '',
+    blocos_json: orig.blocos_json || '[]',
+  })
+}
+
+// Upload genérico de arquivo (PDF/imagem) — sempre público e sem optimize.
+export const uploadArquivo = async (file) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('is_private', '0')
+  formData.append('optimize', '0')
+  const res = await client.post('/api/method/upload_file', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return res.data?.message?.file_url
+}
+
+// Segmentos do modelo de instrução — os mesmos checkboxes do Aluno.
+export const SEGMENTOS_INSTRUCAO = [
+  { key: 'dieta', label: 'Dieta' },
+  { key: 'treino', label: 'Treino' },
+  { key: 'economico', label: 'Econômico' },
+]
+
+// Rótulo legível a partir dos checkboxes (ex: "Dieta Econômico").
+export const rotuloModelo = (m = {}) => {
+  const base = m.dieta && m.treino ? 'Dieta + Treino' : m.dieta ? 'Dieta' : m.treino ? 'Treino' : '—'
+  return base === '—' ? '—' : base + (m.economico ? ' Econômico' : '')
 }
 
 // ─── Categorias (espelham os Select do DocType) ───────────────────────────────

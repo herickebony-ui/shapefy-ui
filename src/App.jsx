@@ -41,11 +41,15 @@ import DemoAluno from './pages/Demo/DemoAluno'
 import MeuLinkCadastro from './pages/Cadastro/MeuLinkCadastro'
 import ModeloDietaListagem from './pages/Modelos/ModeloDietaListagem'
 import ModeloFichaListagem from './pages/Modelos/ModeloFichaListagem'
+import ModeloInstrucaoListagem from './pages/Modelos/ModeloInstrucaoListagem'
+import ModeloInstrucaoEditor from './pages/Modelos/ModeloInstrucaoEditor'
 import AlunoLayout from './components/layout/AlunoLayout'
 import AlunoHome from './pages/Aluno/AlunoHome'
 import FeedbackResposta from './pages/Aluno/FeedbackResposta'
 import AnamneseResposta from './pages/Aluno/AnamneseResposta'
 import TreinoLista from './pages/Aluno/TreinoLista'
+import InstrucoesAluno from './pages/Aluno/InstrucoesAluno'
+import InstrucaoDetalheAluno from './pages/Aluno/InstrucaoDetalheAluno'
 import TreinoFicha from './pages/Aluno/TreinoFicha'
 import TreinoExecucao from './pages/Aluno/TreinoExecucao'
 import AerobicoLista from './pages/Aluno/AerobicoLista'
@@ -117,6 +121,8 @@ function App() {
           }
         >
           <Route index element={<AlunoHome />} />
+          <Route path="instrucoes" element={<InstrucoesAluno />} />
+          <Route path="instrucoes/:name" element={<InstrucaoDetalheAluno />} />
           <Route path="feedbacks" element={<FeedbacksProximos />} />
           <Route path="feedbacks/:id" element={<FeedbackResposta />} />
           <Route path="anamneses/:id" element={<AnamneseResposta />} />
@@ -163,6 +169,10 @@ function App() {
           <Route path="fichas/:id" element={<ModuleRoute modulo="treino"><FichaDetalhe /></ModuleRoute>} />
           <Route path="modelos/fichas" element={<ModuleRoute modulo="treino"><ModeloFichaListagem /></ModuleRoute>} />
           <Route path="modelos/fichas/:id" element={<ModuleRoute modulo="treino"><FichaDetalhe /></ModuleRoute>} />
+
+          {/* instruções (onboarding) — cobre dieta e/ou treino */}
+          <Route path="modelos/instrucoes" element={<ModeloInstrucaoListagem />} />
+          <Route path="modelos/instrucoes/:id" element={<ModeloInstrucaoEditor />} />
           <Route path="exercicios" element={<ModuleRoute modulo="treino"><GerenciarTreino /></ModuleRoute>} />
           <Route path="alongamentos" element={<ModuleRoute modulo="treino"><GerenciarAlongamentos /></ModuleRoute>} />
           <Route path="aerobicos" element={<ModuleRoute modulo="treino"><GerenciarAerobicos /></ModuleRoute>} />
