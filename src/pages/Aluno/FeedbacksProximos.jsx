@@ -66,7 +66,7 @@ export default function FeedbacksProximos() {
       .sort((a, b) => {
         const da = String(a.data_agendada || a.data || a.date || '').split(/[T ]/)[0]
         const db = String(b.data_agendada || b.data || b.date || '').split(/[T ]/)[0]
-        return db.localeCompare(da)
+        return da.localeCompare(db)
       })
   }, [proximos])
 
