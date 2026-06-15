@@ -1,4 +1,5 @@
 import client from './client'
+import { compressImageIfLarge } from '../utils/image'
 
 // Login do aluno via código de acesso. Retorna o doc Aluno + senha_de_acesso.
 // O senha_de_acesso vira o token enviado em X-Aluno-Token nas requests seguintes.
@@ -135,8 +136,11 @@ export const salvarPerfilAluno = async (data) => {
 // is_private=0 (pública, pra render via <img src>) e optimize=0 (preserva
 // qualidade original — comparações visuais entre feedbacks exigem isso).
 export const uploadFotoAluno = async (file) => {
+  // Reduz fotos gigantes (iPhone/AirDrop) antes de subir — evita o app travar.
+  // Fotos normais passam intactas. Ver src/utils/image.js.
+  const otimizada = await compressImageIfLarge(file)
   const fd = new FormData()
-  fd.append('file', file)
+  fd.append('file', otimizada)
   const res = await client.post('/api/method/shapefy.api.aluno.upload_foto', fd, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
