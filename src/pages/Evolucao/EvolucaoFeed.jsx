@@ -52,7 +52,7 @@ function RegistroComparacao({ registros, pontosPeso = [], nome, onVoltar }) {
       </div>
       <div className="flex-1 overflow-auto p-4 md:p-6">
         <div className="max-w-7xl mx-auto space-y-4">
-          {pontosGrafico.length >= 2 && (
+          {pontosPeso.length >= 2 && (
             <div className="bg-[#1a1a1a] rounded-lg border border-[#323238] p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
