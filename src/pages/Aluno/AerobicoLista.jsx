@@ -235,6 +235,7 @@ export default function AerobicoLista() {
   const navigate = useNavigate()
   const [aerobicos, setAerobicos] = useState([])
   const [semanaIso, setSemanaIso] = useState(null)
+  const [orientacoes, setOrientacoes] = useState('')
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState(null)
   // id do aerobico que esta sendo salvo (pra mostrar loading no botao certo)
@@ -245,6 +246,7 @@ export default function AerobicoLista() {
       const res = await listarAerobicos(fichaName)
       setAerobicos(res?.aerobicos || [])
       setSemanaIso(res?.semana_iso || null)
+      setOrientacoes(res?.orientacoes_aerobicos || '')
     } catch (err) {
       console.error('Falha ao listar aerobicos:', err)
       setErro(err.response?.status === 403
@@ -263,6 +265,7 @@ export default function AerobicoLista() {
         if (cancelado) return
         setAerobicos(res?.aerobicos || [])
         setSemanaIso(res?.semana_iso || null)
+        setOrientacoes(res?.orientacoes_aerobicos || '')
       })
       .catch(err => {
         if (cancelado) return
@@ -344,6 +347,22 @@ export default function AerobicoLista() {
           </GlassCard>
         ) : (
           <>
+            {orientacoes && (
+              <div className="mb-3">
+                <GlassCard as="div" className="px-4 py-3">
+                  <p
+                    className="text-[#60A5FA] text-[11px] font-bold uppercase"
+                    style={{ letterSpacing: '0.18em' }}
+                  >
+                    Orientacoes
+                  </p>
+                  <p className="text-gray-200 text-xs mt-1.5 leading-relaxed whitespace-pre-wrap">
+                    {orientacoes}
+                  </p>
+                </GlassCard>
+              </div>
+            )}
+
             <div className="mb-3">
               <AlertCard
                 variant="info"

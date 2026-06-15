@@ -148,6 +148,18 @@ export default function TreinoFicha() {
         </div>
       )}
 
+      {/* Orientacoes gerais */}
+      {ficha?.orientacoes && (
+        <div className="px-4 mt-4">
+          <div className={`${CARD} px-4 py-4`}>
+            <p className={`${LABEL} mb-2`} style={LABEL_STYLE}>Orientacoes</p>
+            <p className="text-gray-200 text-xs leading-relaxed whitespace-pre-wrap">
+              {ficha.orientacoes}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Distribuicao semanal */}
       <div className="px-4 mt-4">
         <div className={`${CARD} px-4 py-4`}>
@@ -284,17 +296,6 @@ export default function TreinoFicha() {
         </div>
       )}
 
-      {/* Orientacoes gerais */}
-      {ficha?.orientacoes && (
-        <div className="px-4 mt-6">
-          <div className={`${CARD} px-4 py-4`}>
-            <p className={`${LABEL} mb-2`} style={LABEL_STYLE}>Orientacoes</p>
-            <p className="text-gray-200 text-xs leading-relaxed whitespace-pre-wrap">
-              {ficha.orientacoes}
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
