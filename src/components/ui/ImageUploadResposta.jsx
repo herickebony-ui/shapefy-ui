@@ -3,6 +3,7 @@ import { Image as ImageIcon, RotateCw, Trash2, Upload } from 'lucide-react'
 import useErrorModal from '../../hooks/useErrorModal'
 import { toRenderableImage } from '../../utils/heicToJpeg'
 import HeicSafeImg from './HeicSafeImg'
+import { cropImgStyle } from '../evolucao/ModeloCropper'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 
@@ -17,7 +18,7 @@ const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 //   O orquestrador (form) abre um modal de distribuicao das fotos pelos slots.
 // O input usa `multiple` por padrao — em iOS isso forca o picker a ir direto na
 // galeria (sem opcao de camera), atendendo ao requisito de "so galeria".
-export default function ImageUploadResposta({ value, onChange, uploadFn, onRotate, label, disabled, onMultipleSelected }) {
+export default function ImageUploadResposta({ value, onChange, uploadFn, onRotate, label, disabled, onMultipleSelected, modelo, modeloCrop }) {
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [rotating, setRotating] = useState(false)
@@ -125,6 +126,14 @@ export default function ImageUploadResposta({ value, onChange, uploadFn, onRotat
                 Solte para substituir
               </div>
             )}
+          </>
+        ) : modelo ? (
+          <>
+            <img src={`${FRAPPE_URL}${encodeURI(modelo)}`} alt="modelo" draggable={false} style={cropImgStyle(modeloCrop)} className="opacity-75" />
+            <div className="absolute inset-0 bg-black/15 flex flex-col items-center justify-center gap-1 text-center px-3">
+              <span className="text-yellow-400 text-sm font-extrabold uppercase tracking-widest [text-shadow:0_1px_4px_rgba(0,0,0,0.95)]">Modelo</span>
+              <span className="text-white text-[11px] leading-tight [text-shadow:0_1px_3px_rgba(0,0,0,0.9)]">{dragOver ? 'Solte aqui' : 'Toque para enviar a sua'}</span>
+            </div>
           </>
         ) : (
           <div className="flex flex-col items-center gap-2 text-gray-500 px-4 text-center">

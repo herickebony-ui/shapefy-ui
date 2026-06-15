@@ -5,11 +5,8 @@ import { Spinner } from '../../components/ui'
 import { ActionButton } from '../../components/aluno'
 import { FormularioRespostas, listarFaltantesObrigatorias } from '../../components/aluno/form'
 import CampoImagem from '../../components/aluno/form/CampoImagem'
-import { cropImgStyle } from '../../components/evolucao/ModeloCropper'
 import { buscarFeedbackAluno, responderFeedback, uploadFotoAluno } from '../../api/aluno'
 import useErrorModal from '../../hooks/useErrorModal'
-
-const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 
 const fmtData = (d) => {
   if (!d) return '—'
@@ -259,19 +256,16 @@ export default function FeedbackResposta() {
           <div className="grid grid-cols-2 gap-3">
             {conjuntoSlots.map(s => (
               <div key={s.slot_id}>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--sf-text-muted)] mb-1">
-                  {s.rotulo}{s.obrigatorio ? <span className="text-[var(--sf-red)]"> *</span> : null}
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--sf-text-muted)] mb-1 min-h-[2.4em] leading-tight flex items-end">
+                  <span>{s.rotulo}{s.obrigatorio ? <span className="text-[var(--sf-red)]"> *</span> : null}</span>
                 </p>
-                {s.foto_modelo && (
-                  <div className="relative mb-1.5 rounded-lg overflow-hidden border border-[var(--sf-border)] aspect-square">
-                    <img src={`${FRAPPE_URL}${encodeURI(s.foto_modelo)}`} alt="modelo" draggable={false} style={cropImgStyle(s.foto_modelo_crop)} className="opacity-50" />
-                    <span className="absolute top-1 left-1 text-[8px] font-bold uppercase tracking-widest bg-black/60 text-white px-1.5 py-0.5 rounded">modelo</span>
-                  </div>
-                )}
                 <CampoImagem
                   value={fotosSlots[s.slot_id] || ''}
                   onChange={(url) => setFotosSlots(prev => ({ ...prev, [s.slot_id]: url || '' }))}
                   uploadFn={uploadFotoAluno}
+                  modelo={s.foto_modelo}
+                  modeloCrop={s.foto_modelo_crop}
+                  fullWidth
                 />
               </div>
             ))}
