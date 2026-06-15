@@ -10,6 +10,7 @@ const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 // (dimmed) pro usuário saber qual pose/ângulo preencher.
 export default function FotoSlotUpload({ label, value, onChange, modelo = '' }) {
   const [uploading, setUploading] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
   const inputRef = useRef(null)
   const errorModal = useErrorModal()
 
@@ -35,6 +36,13 @@ export default function FotoSlotUpload({ label, value, onChange, modelo = '' }) 
     }
   }
 
+  const handleDrop = async (e) => {
+    e.preventDefault()
+    setDragOver(false)
+    if (uploading) return
+    await enviarArquivo(e.dataTransfer.files?.[0])
+  }
+
   const preview = value ? `${FRAPPE_URL}${value}` : null
   const modeloUrl = modelo ? `${FRAPPE_URL}${modelo}` : null
 
@@ -44,12 +52,24 @@ export default function FotoSlotUpload({ label, value, onChange, modelo = '' }) 
       {label && <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 truncate">{label}</p>}
       <div
         onClick={() => !uploading && inputRef.current?.click()}
-        className="relative aspect-square w-full rounded-lg border border-dashed border-[#323238] bg-[#0a0a0a] hover:border-[#2563eb]/50 overflow-hidden cursor-pointer transition-colors flex items-center justify-center"
+        onDragOver={(e) => { e.preventDefault(); if (!uploading) setDragOver(true) }}
+        onDragEnter={(e) => { e.preventDefault(); if (!uploading) setDragOver(true) }}
+        onDragLeave={(e) => { e.preventDefault(); setDragOver(false) }}
+        onDrop={handleDrop}
+        className={`relative aspect-square w-full rounded-lg border border-dashed overflow-hidden cursor-pointer transition-colors flex items-center justify-center
+          ${dragOver ? 'border-[#2563eb] bg-[#2563eb]/10' : 'border-[#323238] bg-[#0a0a0a] hover:border-[#2563eb]/50'}`}
       >
         {uploading ? (
           <span className="w-6 h-6 border-2 border-[#2563eb] border-t-transparent rounded-full animate-spin" />
         ) : preview ? (
-          <img src={preview} alt={label} className="w-full h-full object-cover" />
+          <>
+            <img src={preview} alt={label} className="w-full h-full object-cover" />
+            {dragOver && (
+              <div className="absolute inset-0 bg-[#2563eb]/40 flex items-center justify-center text-white text-[10px] font-bold uppercase tracking-widest">
+                Solte para substituir
+              </div>
+            )}
+          </>
         ) : modeloUrl ? (
           <>
             <img src={modeloUrl} alt="modelo" className="w-full h-full object-cover opacity-30" />
@@ -61,7 +81,7 @@ export default function FotoSlotUpload({ label, value, onChange, modelo = '' }) 
         ) : (
           <div className="flex flex-col items-center gap-1.5 text-gray-600 px-2 text-center">
             <Camera size={20} />
-            <span className="text-[10px] leading-tight">Clique pra enviar</span>
+            <span className="text-[10px] leading-tight">{dragOver ? 'Solte aqui' : 'Clique ou arraste'}</span>
           </div>
         )}
       </div>
