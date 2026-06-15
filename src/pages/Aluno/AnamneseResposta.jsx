@@ -8,6 +8,8 @@ import CampoImagem from '../../components/aluno/form/CampoImagem'
 import { buscarAnamneseAluno, responderAnamnese, uploadFotoAluno } from '../../api/aluno'
 import useErrorModal from '../../hooks/useErrorModal'
 
+const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
+
 const fmtData = (d) => {
   if (!d) return '—'
   const [y, m, day] = String(d).split(' ')[0].split('-')
@@ -259,6 +261,12 @@ export default function AnamneseResposta() {
                 <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--sf-text-muted)] mb-1">
                   {s.rotulo}{s.obrigatorio ? <span className="text-[var(--sf-red)]"> *</span> : null}
                 </p>
+                {s.foto_modelo && (
+                  <div className="relative mb-1.5 rounded-lg overflow-hidden border border-[var(--sf-border)]">
+                    <img src={`${FRAPPE_URL}${encodeURI(s.foto_modelo)}`} alt="modelo" className="w-full aspect-[3/4] object-cover opacity-50" />
+                    <span className="absolute top-1 left-1 text-[8px] font-bold uppercase tracking-widest bg-black/60 text-white px-1.5 py-0.5 rounded">modelo</span>
+                  </div>
+                )}
                 <CampoImagem
                   value={fotosSlots[s.slot_id] || ''}
                   onChange={(url) => setFotosSlots(prev => ({ ...prev, [s.slot_id]: url || '' }))}
