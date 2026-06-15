@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft, ChevronRight, BarChart2, Plus,
   ClipboardList, Activity, Calendar, Mail, Phone, AtSign,
-  Cake,
+  Cake, Images, TrendingUp,
 } from 'lucide-react'
 
 const WhatsAppIcon = ({ size = 14 }) => (
@@ -16,6 +16,7 @@ import { listarDietas } from '../../api/dietas'
 import { listarFichas } from '../../api/fichas'
 import { listarAnamneses } from '../../api/anamneses'
 import { listarAvaliacoesPorAluno } from '../../api/avaliacoes'
+import EvolucaoFeed from '../Evolucao/EvolucaoFeed'
 import {
   Button, Badge, Tabs, Spinner, EmptyState,
 } from '../../components/ui'
@@ -48,6 +49,7 @@ const TABS = [
   { id: 'treinos',    label: 'Treinos',             icon: Activity },
   { id: 'anamnese',   label: 'Anamnese',            icon: ClipboardList },
   { id: 'composicao', label: 'Composição Corporal', icon: BarChart2 },
+  { id: 'evolucao',   label: 'Evolução',            icon: TrendingUp },
 ]
 
 export default function AlunoDetalhe() {
@@ -412,6 +414,10 @@ export default function AlunoDetalhe() {
               </div>
             )}
           </div>
+        )}
+
+        {abaAtiva === 'evolucao' && (
+          <EvolucaoFeed alunoId={id} embedded />
         )}
       </div>
     </div>

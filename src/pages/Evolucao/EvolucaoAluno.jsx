@@ -17,7 +17,7 @@ const fmtData = (d) => {
 const numBR = (n) => (n == null ? '—' : Number(n).toFixed(1).replace('.', ','))
 
 // ─── Gráfico de peso (SVG inline) ─────────────────────────────────────────────
-function GraficoPeso({ pontos }) {
+export function GraficoPeso({ pontos }) {
   if (pontos.length < 2) {
     return <p className="text-gray-500 text-xs text-center py-6">Poucos registros de peso pra traçar o gráfico (mínimo 2).</p>
   }
@@ -83,7 +83,7 @@ function GraficoPeso({ pontos }) {
 }
 
 // ─── Comparação de fotos por slot (alinhada por slot_id) ──────────────────────
-function MatrizFotos({ registros }) {
+export function MatrizFotos({ registros }) {
   const cols = registros // todas as datas — scroll horizontal resolve o "muitas fotos"
   // união dos slots por slot_id (rótulo/ordem do registro mais recente que o tem)
   const slotMap = new Map()
@@ -133,7 +133,7 @@ function MatrizFotos({ registros }) {
   )
 }
 
-export default function EvolucaoAluno({ mode = 'both' }) {
+export default function EvolucaoAluno({ mode = 'both', embedded = false }) {
   const { id } = useParams()
   const navigate = useNavigate()
   const [registros, setRegistros] = useState([])
@@ -185,16 +185,18 @@ export default function EvolucaoAluno({ mode = 'both' }) {
   const titulo = mode === 'peso' ? 'Peso' : mode === 'fotos' ? 'Fotos' : 'Evolução'
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
-      <div className="flex items-center gap-4">
-        <button onClick={() => navigate(-1)} className="h-9 w-9 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors shrink-0">
-          <ArrowLeft size={14} />
-        </button>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-white text-lg font-bold truncate">{titulo} · {nome || id}</h1>
-          <p className="text-gray-500 text-xs">{registros.length} registro(s) na timeline (fonte única)</p>
+    <div className={embedded ? 'space-y-5' : 'max-w-4xl mx-auto px-4 py-6 space-y-5'}>
+      {!embedded && (
+        <div className="flex items-center gap-4">
+          <button onClick={() => navigate(-1)} className="h-9 w-9 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors shrink-0">
+            <ArrowLeft size={14} />
+          </button>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-white text-lg font-bold truncate">{titulo} · {nome || id}</h1>
+            <p className="text-gray-500 text-xs">{registros.length} registro(s) na timeline (fonte única)</p>
+          </div>
         </div>
-      </div>
+      )}
 
       {registros.length === 0 ? (
         <div className="bg-[#29292e] rounded-xl border border-[#323238] p-8 text-center">
