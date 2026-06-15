@@ -4,10 +4,11 @@ import { Plus, Trash2, ChevronUp, ChevronDown, Save, ArrowLeft, Copy } from 'luc
 import { criarConjunto, salvarConjunto, buscarConjunto } from '../../api/conjuntos'
 import { Button, FormGroup, Input, Spinner } from '../../components/ui'
 import FotoSlotUpload from '../../components/evolucao/FotoSlotUpload'
+import ModeloCropper, { DEFAULT_CROP, parseCrop } from '../../components/evolucao/ModeloCropper'
 import useErrorModal from '../../hooks/useErrorModal'
 
 const gerarId = () => `${Date.now()}_${Math.random().toString(36).slice(2)}`
-const slotVazio = () => ({ _id: gerarId(), rotulo: '', obrigatorio: false, slot_id: '', foto_modelo: '' })
+const slotVazio = () => ({ _id: gerarId(), rotulo: '', obrigatorio: false, slot_id: '', foto_modelo: '', foto_modelo_crop: { ...DEFAULT_CROP } })
 
 export default function ConjuntoBuilder() {
   const navigate = useNavigate()
@@ -38,6 +39,7 @@ export default function ConjuntoBuilder() {
                 obrigatorio: !!s.obrigatorio,
                 slot_id: s.slot_id || '',
                 foto_modelo: s.foto_modelo || '',
+                foto_modelo_crop: parseCrop(s.foto_modelo_crop),
               }))
             : [slotVazio()],
         )
@@ -95,6 +97,7 @@ export default function ConjuntoBuilder() {
         obrigatorio: s.obrigatorio ? 1 : 0,
         ordem: i + 1,
         foto_modelo: s.foto_modelo || '',
+        foto_modelo_crop: s.foto_modelo ? JSON.stringify(s.foto_modelo_crop || DEFAULT_CROP) : '',
         // só manda slot_id quando já existe (edição) — novos o backend gera.
         ...(s.slot_id ? { slot_id: s.slot_id } : {}),
       })),
@@ -175,9 +178,16 @@ export default function ConjuntoBuilder() {
               <div className="w-28 shrink-0">
                 <FotoSlotUpload label="Foto modelo" value={s.foto_modelo} onChange={(url) => updateSlot(idx, 'foto_modelo', url)} />
               </div>
-              <p className="text-gray-500 text-[11px] leading-relaxed pt-1">
-                Imagem de exemplo da pose/ângulo (opcional). Aparece como guia pro aluno na hora de tirar a foto deste slot.
-              </p>
+              {s.foto_modelo ? (
+                <div className="w-32 shrink-0">
+                  <p className="text-gray-500 text-[10px] mb-1">Enquadre como o aluno vai ver:</p>
+                  <ModeloCropper url={s.foto_modelo} crop={s.foto_modelo_crop} onChange={(c) => updateSlot(idx, 'foto_modelo_crop', c)} />
+                </div>
+              ) : (
+                <p className="text-gray-500 text-[11px] leading-relaxed pt-1">
+                  Imagem de exemplo da pose/ângulo (opcional). Aparece como guia pro aluno na hora de tirar a foto deste slot.
+                </p>
+              )}
             </div>
           </div>
         ))}

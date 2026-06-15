@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { Upload, Trash2, Camera } from 'lucide-react'
 import client from '../../api/client'
+import { cropImgStyle } from './ModeloCropper'
 import useErrorModal from '../../hooks/useErrorModal'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
@@ -8,7 +9,7 @@ const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 // Upload de foto de um slot (público, sem optimize — qualidade original p/ comparação).
 // `modelo`: URL de uma foto de exemplo; quando o slot está vazio, aparece como guia
 // (dimmed) pro usuário saber qual pose/ângulo preencher.
-export default function FotoSlotUpload({ label, value, onChange, modelo = '' }) {
+export default function FotoSlotUpload({ label, value, onChange, modelo = '', modeloCrop = '' }) {
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const inputRef = useRef(null)
@@ -72,7 +73,7 @@ export default function FotoSlotUpload({ label, value, onChange, modelo = '' }) 
           </>
         ) : modeloUrl ? (
           <>
-            <img src={modeloUrl} alt="modelo" className="w-full h-full object-cover opacity-30" />
+            <img src={modeloUrl} alt="modelo" draggable={false} style={cropImgStyle(modeloCrop)} className="opacity-30" />
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-gray-300">
               <Camera size={18} />
               <span className="text-[9px] font-bold uppercase tracking-widest bg-black/50 px-1.5 py-0.5 rounded">modelo</span>

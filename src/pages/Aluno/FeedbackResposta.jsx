@@ -5,6 +5,7 @@ import { Spinner } from '../../components/ui'
 import { ActionButton } from '../../components/aluno'
 import { FormularioRespostas, listarFaltantesObrigatorias } from '../../components/aluno/form'
 import CampoImagem from '../../components/aluno/form/CampoImagem'
+import { cropImgStyle } from '../../components/evolucao/ModeloCropper'
 import { buscarFeedbackAluno, responderFeedback, uploadFotoAluno } from '../../api/aluno'
 import useErrorModal from '../../hooks/useErrorModal'
 
@@ -262,8 +263,8 @@ export default function FeedbackResposta() {
                   {s.rotulo}{s.obrigatorio ? <span className="text-[var(--sf-red)]"> *</span> : null}
                 </p>
                 {s.foto_modelo && (
-                  <div className="relative mb-1.5 rounded-lg overflow-hidden border border-[var(--sf-border)]">
-                    <img src={`${FRAPPE_URL}${encodeURI(s.foto_modelo)}`} alt="modelo" className="w-full aspect-[3/4] object-cover opacity-50" />
+                  <div className="relative mb-1.5 rounded-lg overflow-hidden border border-[var(--sf-border)] aspect-square">
+                    <img src={`${FRAPPE_URL}${encodeURI(s.foto_modelo)}`} alt="modelo" draggable={false} style={cropImgStyle(s.foto_modelo_crop)} className="opacity-50" />
                     <span className="absolute top-1 left-1 text-[8px] font-bold uppercase tracking-widest bg-black/60 text-white px-1.5 py-0.5 rounded">modelo</span>
                   </div>
                 )}

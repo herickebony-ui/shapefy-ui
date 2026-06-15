@@ -138,6 +138,7 @@ export default function RegistrarEvolucaoModal({ alunoId = null, alunoNome = '',
                 key={s.slot_id}
                 label={s.rotulo}
                 modelo={s.foto_modelo || ''}
+                modeloCrop={s.foto_modelo_crop || ''}
                 value={fotosSlots[s.slot_id] || ''}
                 onChange={(url) => setFotosSlots(prev => ({ ...prev, [s.slot_id]: url }))}
               />
