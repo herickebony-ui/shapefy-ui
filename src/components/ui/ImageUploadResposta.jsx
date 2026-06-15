@@ -6,6 +6,17 @@ import HeicSafeImg from './HeicSafeImg'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 
+// Formatos RAW (ex: ProRAW/.dng do iPhone) que o navegador não decodifica e que
+// travam o app ao tentar processar. Detecta por extensão e por mime — bloqueamos
+// com aviso amigável (só olha o nome/tipo, não lê o arquivo) em vez de deixar fechar.
+const RAW_EXT = /\.(dng|cr2|cr3|crw|nef|nrw|arw|srf|sr2|raf|orf|rw2|raw|pef|x3f|3fr|erf|kdc|dcr|mrw|mef|mos|tiff?)$/i
+const ehFormatoRaw = (file) => {
+  if (!file) return false
+  if (RAW_EXT.test(file.name || '')) return true
+  const t = (file.type || '').toLowerCase()
+  return /dng|x-adobe|x-canon|x-nikon|x-sony|x-panasonic|tiff/.test(t)
+}
+
 // Drop zone de imagem reutilizável.
 // value: file_url salva (ex: "/files/xxx.jpg"); '' / null = sem imagem.
 // onChange(file_url|''): chamado após upload OK ou remoção.
@@ -25,8 +36,22 @@ export default function ImageUploadResposta({ value, onChange, uploadFn, onRotat
   const inputRef = useRef(null)
   const errorModal = useErrorModal()
 
+  const mostrarAvisoRaw = () => {
+    errorModal.show({
+      type: 'validation',
+      title: 'Formato de foto não suportado',
+      messages: [
+        'Essa foto está em formato RAW/ProRAW (.dng) — o app não consegue abrir esse tipo de arquivo.',
+        'No iPhone: Ajustes → Câmera → Formatos → desligue "Apple ProRAW". Depois escolha a foto de novo.',
+        'Ou selecione uma foto normal (JPG / HEIC).',
+      ],
+      statusCode: 0,
+    }, 'Foto')
+  }
+
   const enviar = async (file) => {
     if (!file) return
+    if (ehFormatoRaw(file)) { mostrarAvisoRaw(); return }
     const ehImagem = file.type.startsWith('image/') || /\.(heic|heif)$/i.test(file.name || '')
     if (!ehImagem) {
       errorModal.show({
@@ -59,11 +84,14 @@ export default function ImageUploadResposta({ value, onChange, uploadFn, onRotat
     const files = Array.from(e.target.files || [])
     e.target.value = ''
     if (files.length === 0) return
-    if (files.length > 1 && onMultipleSelected) {
-      onMultipleSelected(files)
+    const validos = files.filter(f => !ehFormatoRaw(f))
+    if (validos.length < files.length) mostrarAvisoRaw()
+    if (validos.length === 0) return
+    if (validos.length > 1 && onMultipleSelected) {
+      onMultipleSelected(validos)
       return
     }
-    await enviar(files[0])
+    await enviar(validos[0])
   }
 
   const handleDrop = async (e) => {
@@ -72,11 +100,14 @@ export default function ImageUploadResposta({ value, onChange, uploadFn, onRotat
     if (uploading || disabled) return
     const files = Array.from(e.dataTransfer.files || [])
     if (files.length === 0) return
-    if (files.length > 1 && onMultipleSelected) {
-      onMultipleSelected(files)
+    const validos = files.filter(f => !ehFormatoRaw(f))
+    if (validos.length < files.length) mostrarAvisoRaw()
+    if (validos.length === 0) return
+    if (validos.length > 1 && onMultipleSelected) {
+      onMultipleSelected(validos)
       return
     }
-    await enviar(files[0])
+    await enviar(validos[0])
   }
 
   const handleRotate = async () => {
