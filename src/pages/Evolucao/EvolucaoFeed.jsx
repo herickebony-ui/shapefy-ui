@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Activity, Search, Columns, X, ArrowLeft, CheckCircle } from 'lucide-react'
+import { Activity, Search, Columns, X, ArrowLeft, CheckCircle, Plus } from 'lucide-react'
 import { Button, Badge, Spinner, EmptyState, DataTable } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 import ImagemInterativa from '../Feedbacks/ImagemInterativa'
+import RegistrarEvolucaoModal from '../../components/evolucao/RegistrarEvolucaoModal'
 import { listarRegistros, buscarRegistro } from '../../api/evolucao'
 import { listarAlunosByIds } from '../../api/alunos'
 import { GraficoPeso } from './EvolucaoAluno'
@@ -26,6 +27,8 @@ const fmtData = (d) => {
   return `${day}/${m}/${y}`
 }
 const numBR = (n) => (n == null ? '—' : Number(n).toFixed(1).replace('.', ','))
+const PAGE_SIZE = 30
+const FEED_LIMIT = 1000 // teto de registros carregados pro feed (paginação é client-side)
 
 // Comparação de Registros — mesmo visual da comparação de feedbacks: tabela
 // datas × (peso + slots), fotos via ImagemInterativa, com gráfico de peso no topo.
@@ -114,7 +117,7 @@ function RegistroComparacao({ registros, pontosPeso = [], nome, onVoltar }) {
   )
 }
 
-export default function EvolucaoFeed({ alunoId = null, embedded = false }) {
+export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded = false }) {
   const [registros, setRegistros] = useState([])
   const [nomes, setNomes] = useState({})
   const [loading, setLoading] = useState(true)
@@ -125,12 +128,15 @@ export default function EvolucaoFeed({ alunoId = null, embedded = false }) {
   const [comparando, setComparando] = useState(null)
   const [pontosTodos, setPontosTodos] = useState([])
   const [loadingCmp, setLoadingCmp] = useState(false)
+  const [page, setPage] = useState(1)
+  const [showRegistrar, setShowRegistrar] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
   const errorModal = useErrorModal()
 
   useEffect(() => {
     let cancelado = false
     setLoading(true)
-    listarRegistros({ aluno: alunoId, limit: 300 })
+    listarRegistros({ aluno: alunoId, limit: FEED_LIMIT })
       .then(async (regs) => {
         if (cancelado) return
         setRegistros(regs)
@@ -146,7 +152,7 @@ export default function EvolucaoFeed({ alunoId = null, embedded = false }) {
       .finally(() => !cancelado && setLoading(false))
     return () => { cancelado = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [alunoId])
+  }, [alunoId, refreshKey])
 
   const filtrados = useMemo(() => {
     const q = busca.trim().toLowerCase()
@@ -155,6 +161,9 @@ export default function EvolucaoFeed({ alunoId = null, embedded = false }) {
       (!filtroOrigem || r.origem === filtroOrigem)
     )
   }, [registros, nomes, busca, filtroOrigem])
+
+  // Reseta pra primeira página sempre que o conjunto filtrado muda.
+  useEffect(() => { setPage(1) }, [busca, filtroOrigem, alunoId])
 
   // Só compara registros do MESMO aluno.
   const alunoSel = selecionados.length ? selecionados[0].aluno : null
@@ -286,7 +295,10 @@ export default function EvolucaoFeed({ alunoId = null, embedded = false }) {
   ]
 
   const toolbar = !modoComparar ? (
-    <Button variant="secondary" size="sm" icon={Columns} onClick={() => setModoComparar(true)}>Comparar</Button>
+    <div className="flex items-center gap-2">
+      <Button variant="primary" size="sm" icon={Plus} onClick={() => setShowRegistrar(true)}>Registrar evolução</Button>
+      <Button variant="secondary" size="sm" icon={Columns} onClick={() => setModoComparar(true)}>Comparar</Button>
+    </div>
   ) : (
     <div className="flex items-center gap-2">
       <span className="text-xs text-blue-300 font-bold">{selecionados.length} selecionado(s)</span>
@@ -302,7 +314,24 @@ export default function EvolucaoFeed({ alunoId = null, embedded = false }) {
   ) : filtrados.length === 0 ? (
     <EmptyState icon={Activity} title="Sem registros de evolução" description="Os registros aparecem quando o aluno responde feedback/anamnese (com fotos/peso) ou você cria uma avaliação." />
   ) : (
-    <DataTable columns={columns} rows={filtrados} rowKey="name" onRowClick={viewRegistro} />
+    <DataTable
+      columns={columns}
+      rows={filtrados}
+      rowKey="name"
+      onRowClick={viewRegistro}
+      page={page}
+      pageSize={busca ? (filtrados.length || 1) : PAGE_SIZE}
+      onPage={busca ? undefined : setPage}
+    />
+  )
+
+  const registrarModal = showRegistrar && (
+    <RegistrarEvolucaoModal
+      alunoId={alunoId}
+      alunoNome={alunoNome}
+      onClose={() => setShowRegistrar(false)}
+      onCriado={() => setRefreshKey(k => k + 1)}
+    />
   )
 
   // Embutido na aba do aluno: sem o chrome do ListPage.
@@ -310,6 +339,7 @@ export default function EvolucaoFeed({ alunoId = null, embedded = false }) {
     return (
       <div className="space-y-3">
         {errorModal.element}
+        {registrarModal}
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <p className="text-gray-500 text-xs">Selecione 2–3 registros pra comparar peso e fotos.</p>
           {toolbar}
@@ -322,6 +352,7 @@ export default function EvolucaoFeed({ alunoId = null, embedded = false }) {
   return (
     <>
       {errorModal.element}
+      {registrarModal}
       <ListPage
         title="Evolução do Aluno"
         subtitle={`Peso e fotos dos seus alunos · ${filtrados.length} registro(s)`}

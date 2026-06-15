@@ -417,7 +417,7 @@ export default function AlunoDetalhe() {
         )}
 
         {abaAtiva === 'evolucao' && (
-          <EvolucaoFeed alunoId={id} embedded />
+          <EvolucaoFeed alunoId={id} alunoNome={aluno.nome_completo} embedded />
         )}
       </div>
     </div>
