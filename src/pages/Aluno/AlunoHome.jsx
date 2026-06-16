@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Dumbbell, Apple, ClipboardList, Scale, MessageSquare,
-  Bell, Calendar, ChevronRight, X, Pill, Repeat, User,
+  Bell, Calendar, ChevronRight, X, Pill, Repeat, User, BookOpen,
 } from 'lucide-react'
 import { Spinner } from '../../components/ui'
 import {
@@ -19,6 +19,7 @@ import {
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 
 const ICON_POR_ID = {
+  instrucoes: BookOpen,
   treino: Dumbbell,
   dieta: Apple,
   anamnese: ClipboardList,
@@ -39,6 +40,8 @@ const InstagramIcon = (props) => (
 function resolveCardLink(card, pendencias, flags) {
   const legado = (path) => `${FRAPPE_URL}${path}`
   switch (card.id) {
+    case 'instrucoes':
+      return { reactPath: '/aluno/instrucoes' }
     case 'treino':
       if (flags && flags.tem_treino === false) return { disabled: true }
       return { reactPath: '/aluno/treinos' }

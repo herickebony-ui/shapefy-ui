@@ -24,6 +24,7 @@ const NAV_ITEMS = [
   { type: 'divider', label: 'Modelos' },
   { id: 'modelos-fichas', label: 'Modelos de Ficha',  icon: Bookmark,        path: '/modelos/fichas', modulo: 'treino' },
   { id: 'modelos-dietas', label: 'Modelos de Dieta',  icon: Bookmark,        path: '/modelos/dietas', modulo: 'dieta' },
+  { id: 'modelos-instrucoes', label: 'Modelos de Instrução', icon: Bookmark, path: '/modelos/instrucoes' },
 
   { type: 'divider', label: 'Avaliação' },
   { id: 'avaliacoes',   label: 'Avaliações Corporais', icon: BarChart2,      path: '/avaliacoes' },

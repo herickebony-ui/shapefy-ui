@@ -96,6 +96,18 @@ export const listarDietasAluno = async () => {
   return res.data?.message?.dietas || []
 }
 
+// Lista (leve) das instruções vinculadas ao aluno: [{name, titulo, descricao, tipo}].
+export const buscarInstrucoesAluno = async () => {
+  const res = await client.get('/api/method/shapefy.api.aluno.instrucoes')
+  return res.data?.message?.instrucoes || []
+}
+
+// Detalhe de uma instrução (com os blocos). Só se o aluno estiver vinculado.
+export const buscarInstrucaoDetalheAluno = async (name) => {
+  const res = await client.get('/api/method/shapefy.api.aluno.instrucao_detalhe', { params: { name } })
+  return res.data?.message || null
+}
+
 // Busca uma dieta especifica (com refeicoes/opcoes/grupos/substitutos ja
 // populados). Backend retorna { dieta: {...campos do header...},
 // meals: [{index, title, options: [{index, title, legend, groups: [{main,

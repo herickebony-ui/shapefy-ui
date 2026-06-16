@@ -8,7 +8,7 @@ import { listarAnamneses, buscarAnamnese, salvarAnamnese, excluirAnamnese, lista
 import { listarAvaliacoesPorAluno } from '../../api/avaliacoes'
 import {
   Button, Badge, Modal, Tabs, Spinner, EmptyState,
-  FormGroup, Input, Select, Textarea,
+  FormGroup, Input, Select, Textarea, BotaoAjuda,
 } from '../../components/ui'
 import ImagemInterativa from '../Feedbacks/ImagemInterativa'
 import useErrorModal from '../../hooks/useErrorModal'
@@ -121,6 +121,7 @@ export function TabPerfil({ aluno: inicial, alunoId, onSaved }) {
     enabled: !!inicial.enabled,
     dieta: !!inicial.dieta,
     treino: !!inicial.treino,
+    economico: !!inicial.economico,
     ja_usou_o_aplicativo: !!inicial.ja_usou_o_aplicativo,
   })
   const [address, setAddress] = useState(() => parseEndereco(inicial['endereço']))
@@ -170,6 +171,7 @@ export function TabPerfil({ aluno: inicial, alunoId, onSaved }) {
         enabled: form.enabled ? 1 : 0,
         dieta: form.dieta ? 1 : 0,
         treino: form.treino ? 1 : 0,
+        economico: form.economico ? 1 : 0,
       })
       onSaved?.(atualizado)
       setSalvo(true)
@@ -267,11 +269,23 @@ export function TabPerfil({ aluno: inicial, alunoId, onSaved }) {
         <Textarea value={form.orientacoes_globais} onChange={set('orientacoes_globais')} rows={3} />
       </FormGroup>
 
-      <SecaoPerfil titulo="Status e Configurações" />
+      <div className="flex items-center gap-2">
+        <SecaoPerfil titulo="Status e Configurações" />
+        <BotaoAjuda
+          title="O que marcar aqui?"
+          subtitle="Em poucas palavras"
+          topicos={[
+            { title: 'Possui dieta / Possui treino', description: 'Marque o que o aluno tem. É isso que libera a dieta e o treino dele dentro do app.' },
+            { title: 'Econômico', description: 'Marque só se o aluno é do plano econômico. Aí ele recebe as instruções da versão econômica. Deixe "Possui dieta/treino" marcados normalmente.' },
+            { title: 'Exemplo', description: 'Aluno comum com dieta: marque só "Possui dieta". Aluno do plano econômico com dieta: marque "Possui dieta" + "Econômico".' },
+          ]}
+        />
+      </div>
       <div className="bg-[#1a1a1a] rounded-lg border border-[#323238] px-4 py-2">
         <ToggleField label="Aluno ativo" descricao="Desativar oculta o aluno das listagens" value={form.enabled} onChange={toggle('enabled')} />
         <ToggleField label="Possui dieta" value={form.dieta} onChange={toggle('dieta')} />
         <ToggleField label="Possui treino" value={form.treino} onChange={toggle('treino')} />
+        <ToggleField label="Econômico" descricao="Marque se o aluno é do plano econômico (recebe as instruções da versão econômica)" value={form.economico} onChange={toggle('economico')} />
         <div className="flex items-center justify-between py-2.5">
           <div>
             <p className="text-white text-xs font-medium">Já usou o aplicativo</p>
