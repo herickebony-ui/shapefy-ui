@@ -6,6 +6,7 @@ import {
   listarFeedbacks, listarFormularios, buscarFeedback, listarFeedbacksDoAluno,
   salvarStatusFeedback, rotarImagemFeedback, trocarFotosFeedback, excluirFeedback,
 } from '../../api/feedbacks'
+import { buscarRegistro } from '../../api/evolucao'
 import useErrorModal from '../../hooks/useErrorModal'
 import { Button, Badge, Spinner, EmptyState, DataTable, Modal } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
@@ -35,6 +36,17 @@ const normalizar = (t) =>
 
 // ─── View: Comparação ────────────────────────────────────────────────────────
 
+const numBR = (n) => (n == null ? '—' : Number(n).toFixed(1).replace('.', ','))
+
+// Carrega o Registro de Evolução de cada feedback comparado (fotos do conjunto + peso).
+async function enriquecerComRegistro(dados) {
+  return Promise.all(dados.map(async (d) => {
+    if (!d.registro_evolucao) return { ...d, registro: null }
+    try { return { ...d, registro: await buscarRegistro(d.registro_evolucao) } }
+    catch { return { ...d, registro: null } }
+  }))
+}
+
 function ViewComparacao({ dados, imgSrcs, onVoltar, onRotate, modoTrocarFoto, setModoTrocarFoto, fotosSelecionadas, setFotosSelecionadas, salvandoTroca, onConfirmarTroca }) {
   // `dados` vem ordenado ascendente (mais antigo → mais recente), então o último
   // é o feedback mais recente. As perguntas de referência (coluna esquerda)
@@ -43,6 +55,16 @@ function ViewComparacao({ dados, imgSrcs, onVoltar, onRotate, modoTrocarFoto, se
   const base = referencia?.perguntas_e_respostas || []
   const formulariosDistintos = new Set(dados.map(d => d.formulario).filter(Boolean)).size > 1
   const [copiado, setCopiado] = useState(false)
+
+  // Fotos do conjunto + peso vêm do Registro de cada feedback (alinhadas por slot_id).
+  const slotMapCmp = new Map()
+  dados.forEach((d) => (d.registro?.fotos || []).forEach((f) => {
+    if (f.slot_id) slotMapCmp.set(f.slot_id, { slot_id: f.slot_id, rotulo: f.rotulo || '—', ordem: f.ordem ?? 999 })
+  }))
+  const slotsConjunto = [...slotMapCmp.values()].sort((a, b) => (a.ordem || 0) - (b.ordem || 0))
+  const temPeso = dados.some((d) => d.registro?.peso != null)
+  const temEvolucao = slotsConjunto.length > 0 || temPeso
+  const urlSlot = (registro, slotId) => (registro?.fotos || []).find((x) => x.slot_id === slotId)?.url || null
 
   const handleCopiarRespostas = async () => {
     const ok = await copiarTexto(formatComparacaoParaCopia(dados, { tipo: 'Feedback' }))
@@ -139,6 +161,55 @@ function ViewComparacao({ dados, imgSrcs, onVoltar, onRotate, modoTrocarFoto, se
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#323238]/40">
+                {temEvolucao && (
+                  <>
+                    <tr className="bg-[#0a0a0a]/50">
+                      <td colSpan={dados.length + 1} className="p-3">
+                        <h3 className="text-xs font-bold text-white uppercase tracking-wider bg-[#2563eb]/10 border-l-4 border-[#2563eb] px-4 py-2 rounded-r-lg">
+                          Evolução · Fotos &amp; Peso (conjunto)
+                        </h3>
+                      </td>
+                    </tr>
+                    {temPeso && (
+                      <tr className="hover:bg-white/5">
+                        <td className="p-2 md:p-3 align-top sticky left-0 bg-[#1a1a1a] z-10 min-w-[140px] md:min-w-[200px] md:w-48">
+                          <span className="text-white text-xs font-bold">Peso</span>
+                        </td>
+                        {dados.map((d, i) => (
+                          <td key={i} className="p-2 md:p-3 text-center align-top">
+                            {d.registro?.peso != null
+                              ? <span className="text-white text-sm font-bold">{numBR(d.registro.peso)} <span className="text-gray-500 text-xs">kg</span></span>
+                              : <span className="text-gray-600 text-xs">—</span>}
+                          </td>
+                        ))}
+                      </tr>
+                    )}
+                    {slotsConjunto.map((slot) => (
+                      <tr key={slot.slot_id} className="hover:bg-white/5">
+                        <td className="p-2 md:p-3 align-top sticky left-0 bg-[#1a1a1a] z-10 min-w-[140px] md:min-w-[200px] md:w-48">
+                          <span className="text-[#93C5FD] text-[10px] font-bold uppercase tracking-wider">{slot.rotulo}</span>
+                        </td>
+                        {dados.map((d, i) => {
+                          const url = urlSlot(d.registro, slot.slot_id)
+                          return (
+                            <td key={i} className="p-0 text-center align-top">
+                              {url ? (
+                                <ImagemInterativa
+                                  src={`${FRAPPE_URL}${encodeURI(url)}`}
+                                  feedbackId={d.name}
+                                  idx={`reg_${slot.slot_id}`}
+                                  onRotate={() => onRotate(d.name, url)}
+                                />
+                              ) : (
+                                <span className="text-gray-600 text-xs">—</span>
+                              )}
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    ))}
+                  </>
+                )}
                 {base.map((item, idx) => {
                   if (item.tipo === 'Quebra de Seção') {
                     return (
@@ -338,7 +409,7 @@ export default function FeedbackListagem() {
       const resultados = await Promise.all(lista.map(fb => buscarFeedback(fb.name)))
       const dados = resultados.filter(Boolean)
       dados.sort((a, b) => (a.data_resposta || a.modified || '').localeCompare(b.data_resposta || b.modified || ''))
-      setDadosComparacao(dados)
+      setDadosComparacao(await enriquecerComRegistro(dados))
     } catch (e) {
       console.error(e)
       setView('list')
@@ -362,7 +433,7 @@ export default function FeedbackListagem() {
       const resultados = await Promise.all(ultimos.map(f => buscarFeedback(f.name)))
       const dados = resultados.filter(Boolean)
       dados.sort((a, b) => (a.data_resposta || a.modified || '').localeCompare(b.data_resposta || b.modified || ''))
-      setDadosComparacao(dados)
+      setDadosComparacao(await enriquecerComRegistro(dados))
     } catch (e) {
       console.error(e)
       setView('list')

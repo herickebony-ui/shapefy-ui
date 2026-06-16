@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft, ChevronRight, BarChart2, Plus,
   ClipboardList, Activity, Calendar, Mail, Phone, AtSign,
-  Cake,
+  Cake, Images, TrendingUp,
 } from 'lucide-react'
 
 const WhatsAppIcon = ({ size = 14 }) => (
@@ -16,6 +16,7 @@ import { listarDietas } from '../../api/dietas'
 import { listarFichas } from '../../api/fichas'
 import { listarAnamneses } from '../../api/anamneses'
 import { listarAvaliacoesPorAluno } from '../../api/avaliacoes'
+import EvolucaoFeed from '../Evolucao/EvolucaoFeed'
 import {
   Button, Badge, Tabs, Spinner, EmptyState,
 } from '../../components/ui'
@@ -48,6 +49,7 @@ const TABS = [
   { id: 'treinos',    label: 'Treinos',             icon: Activity },
   { id: 'anamnese',   label: 'Anamnese',            icon: ClipboardList },
   { id: 'composicao', label: 'Composição Corporal', icon: BarChart2 },
+  { id: 'evolucao',   label: 'Evolução',            icon: TrendingUp },
 ]
 
 export default function AlunoDetalhe() {
@@ -254,6 +256,13 @@ export default function AlunoDetalhe() {
                 >
                   <Calendar size={14} />
                 </button>
+                <button
+                  onClick={() => navigate(`/alunos/${encodeURIComponent(id)}/evolucao`)}
+                  title="Evolução (peso e fotos)"
+                  className="h-9 w-9 flex items-center justify-center text-[#2563eb] hover:text-white hover:bg-[#2563eb] border border-[#323238] hover:border-[#2563eb] rounded-lg transition-colors"
+                >
+                  <BarChart2 size={14} />
+                </button>
               </div>
             </div>
           </div>
@@ -405,6 +414,10 @@ export default function AlunoDetalhe() {
               </div>
             )}
           </div>
+        )}
+
+        {abaAtiva === 'evolucao' && (
+          <EvolucaoFeed alunoId={id} alunoNome={aluno.nome_completo} embedded />
         )}
       </div>
     </div>

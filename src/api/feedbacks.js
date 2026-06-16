@@ -9,7 +9,7 @@ const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
 // que copia as perguntas do template a partir do campo `formulario`. Mandar a
 // child table preenchida + hook = bug (na anamnese duplicava 57+57; no feedback
 // faz o status virar 'Respondido' indevidamente). Mesma lição da anamnese.
-export const vincularFeedback = async (alunoId, formularioId) => {
+export const vincularFeedback = async (alunoId, formularioId, { conjunto_fotos, incluir_peso } = {}) => {
   const [formRes, alunoRes] = await Promise.all([
     client.get(`/api/resource/Formulario%20Feedback/${encodeURIComponent(formularioId)}`),
     client.get(`/api/resource/Aluno/${encodeURIComponent(alunoId)}`),
@@ -17,7 +17,7 @@ export const vincularFeedback = async (alunoId, formularioId) => {
   const template = formRes.data.data || {}
   const aluno = alunoRes.data.data || {}
   const today = new Date().toISOString().slice(0, 10)
-  const res = await client.post('/api/resource/Feedback', {
+  const payload = {
     aluno: alunoId,
     formulario: formularioId,
     titulo: template.titulo || '',
@@ -26,7 +26,12 @@ export const vincularFeedback = async (alunoId, formularioId) => {
     profissional: profissionalLogado(),
     date: today,
     status: 'Enviado',
-  })
+  }
+  // Coleta de evolução: override explícito do modal. Vazio em conjunto = backend
+  // herda do formulário / padrão do profissional (_congelar_conjunto).
+  if (conjunto_fotos) payload.conjunto_fotos = conjunto_fotos
+  if (incluir_peso !== undefined && incluir_peso !== null) payload.incluir_peso = incluir_peso ? 1 : 0
+  const res = await client.post('/api/resource/Feedback', payload)
   const feedback = res.data?.data
   // Notifica o aluno no app — falha silenciosa pra não bloquear o vínculo.
   try {
@@ -96,7 +101,7 @@ export const listarFeedbacksDoAluno = async (alunoId, { statuses = ['Respondido'
 export const listarFormularios = async () => {
   const profissional = profissionalLogado()
   const params = {
-    fields: JSON.stringify(['name', 'titulo']),
+    fields: JSON.stringify(['name', 'titulo', 'conjunto_fotos', 'incluir_peso']),
     filters: JSON.stringify([['profissional', '=', profissional], ['enabled', '=', 1]]),
     limit: 100,
     order_by: 'titulo asc',

@@ -25,6 +25,11 @@ import ProgressaoCargas from './pages/Treinos/ProgressaoCargas'
 import BancoTextos from './pages/BancoTextos/BancoTextos'
 import FormularioListagem from './pages/Formularios/FormularioListagem'
 import FormularioBuilder from './pages/Formularios/FormularioBuilder'
+import ConjuntoListagem from './pages/Conjuntos/ConjuntoListagem'
+import ConjuntoBuilder from './pages/Conjuntos/ConjuntoBuilder'
+import PendenciasEvolucao from './pages/Evolucao/PendenciasEvolucao'
+import EvolucaoAluno from './pages/Evolucao/EvolucaoAluno'
+import EvolucaoFeed from './pages/Evolucao/EvolucaoFeed'
 import Suporte from './pages/Suporte/Suporte'
 import UsuarioHub from './pages/Usuario/UsuarioHub'
 import PerfilProfissional from './pages/Perfil/PerfilProfissional'
@@ -154,6 +159,8 @@ function App() {
           {/* anamnese — feature universal, sem gate de módulo */}
           <Route path="anamneses" element={<AnamneseListagem />} />
           <Route path="alunos/:id" element={<AlunoDetalhe />} />
+          <Route path="alunos/:id/evolucao" element={<EvolucaoAluno />} />
+          <Route path="evolucao" element={<EvolucaoFeed />} />
           <Route path="alunos" element={<Navigate to="/anamneses" replace />} />
 
           {/* dieta */}
@@ -198,6 +205,9 @@ function App() {
           <Route path="formularios/anamnese" element={<FormularioListagem tipoFixo="anamnese" />} />
           <Route path="criar-formularios" element={<Navigate to="/formularios/anamnese" replace />} />
           <Route path="criar-formularios/:tipo/:id" element={<FormularioBuilder />} />
+          <Route path="conjuntos-fotos" element={<ConjuntoListagem />} />
+          <Route path="conjuntos-fotos/:id" element={<ConjuntoBuilder />} />
+          <Route path="pendencias-evolucao" element={<PendenciasEvolucao />} />
           <Route path="suporte" element={<Suporte />} />
           <Route path="me" element={<UsuarioHub />} />
           <Route path="perfil" element={<PerfilProfissional />} />

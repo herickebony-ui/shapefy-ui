@@ -26,3 +26,6 @@ dist-ssr
 Caddyfile
 nginx.conf
 vite.config.js
+
+# Backend Frappe — repositório próprio, não subir junto com o front
+shapefy-frappe-app/

@@ -7,6 +7,38 @@ Backend: Frappe (Python). Comunicação exclusivamente via REST API nativa do Fr
 
 ---
 
+## Ambiente, Deploy e Protocolo de Execução
+
+### URLs
+- **Acesso do aluno (produção) é por `shapefyapp.com`.** Toda mudança do front (este repo `shapefy-ui`) é servida nessa URL — **principalmente a área do aluno** (`src/pages/Aluno/*`).
+- **Ambiente de trabalho = BETA: `beta.shapefyapp.com`** — máquina e banco **separados** de produção, dados copiados de prod recente. Pode quebrar/recriar livremente; **prod não é afetado**.
+- **NUNCA fazer deploy em produção.** Prod é decisão manual do Hérick, depois de validar tudo no beta.
+
+### Repositórios
+- Front: `shapefy-ui` (este repo).
+- Backend: `shapefy-frappe-app/` (app Frappe `shapefy`) — **repositório próprio**, no `.gitignore`, nunca commitar junto com o front.
+
+### Protocolo de execução (obrigatório para trabalho estrutural)
+- **Uma fase = uma branch = um PR.** Nunca misturar fases. Branch a partir de `develop`.
+- **Read-only primeiro**: antes de editar, inspecionar (`cat`/`grep`/`bench console` read-only) e **mostrar o diagnóstico ao Hérick**; só editar **após ele confirmar**.
+- **Edições determinísticas**: patches via script Python com **validação de âncora** (verificar que o trecho-alvo existe antes de substituir; abortar se não bater). Backup `.bak` antes de cada edição de arquivo. Nada de edição manual cega.
+- **bench**: `bench migrate` após criar/alterar doctypes; **`bench restart`** (não só `clear-cache`) após mudar código Python.
+- **Migração de dados**: sempre **dry-run primeiro** (relatório que NÃO grava — totais + ambíguos); gravação real só após o Hérick revisar. Patch **idempotente**.
+- **Commits convencionais** (`feat(scope):`, `fix(scope):`); arquivos **listados explicitamente** — nunca `git add .`.
+- Backup do beta é responsabilidade do Hérick (`bench backup --with-files`); não gerenciar backup.
+
+### Workflow padrão de mudança no backend (combinado com o Hérick)
+Padrão fixo para QUALQUER alteração no backend (`shapefy-frappe-app/`):
+1. **Claude edita tudo no repo local** (no Mac) — código Python, doctypes, hooks. **Nunca** editar direto no beta.
+2. **Deploy (Hérick roda):** no Mac → `bash deploy-beta.sh` (rsync local → beta; pede a senha do SSH).
+3. **No beta (Hérick roda):** `bench --site beta.shapefy.online migrate` (**só** se mexeu em doctype) + `sudo supervisorctl restart shapefy-web: shapefy-workers:` (**sempre** que mudou código Python).
+
+Claude prepara e edita aqui; o Hérick só roda os comandos no terminal do beta. Migrate só com mudança de doctype; restart sempre que muda Python.
+
+> **Reforma em andamento: Fonte Única de Evolução Corporal.** Antes de qualquer trabalho nessa reforma (Registro de Evolução Física, Conjunto de Fotos, evolução de peso/foto), **consultar SEMPRE `EVOLUCAO_CORPORAL.md`** na raiz do repo (doc de execução vivo). Plano de origem: `~/.claude/plans/contexto-do-problema-no-lazy-wind.md`.
+
+---
+
 ## Arquitetura
 
 ```
@@ -532,6 +564,12 @@ Wrapper leve com snapshot JSON da Ficha congelada (templates).
 Campos: `name`, `titulo`, `descricao`, `categoria` (Hipertrofia / Força / Resistência / Iniciante / Intermediário / Avançado / Reabilitação / Outros), `tags`, `objetivo_ref`, `nivel_ref`, `tipo_de_ciclo_ref`, `aluno_origem`, `ficha_origem`, `enabled`, `snapshot_json` (Long Text)
 API: `src/api/modelos.js` — `listarModelosFicha`, `buscarModeloFicha`, `criarModeloFicha`, `salvarModeloFicha`, `excluirModeloFicha`
 Helpers: `fichaParaSnapshot(ficha)` e `aplicarModeloFicha(snapshot, { aluno, nome_completo, data_de_inicio, data_de_fim })`.
+
+---
+
+## Repositórios Separados
+
+- **`shapefy-frappe-app/`** é o backend Frappe (Python) e tem repositório próprio. Está no `.gitignore` do front — **nunca commitar nem subir junto com o front**. Tratar como diretório à parte mesmo aparecendo dentro do working dir do `shapefy-ui`.
 
 ---
 
