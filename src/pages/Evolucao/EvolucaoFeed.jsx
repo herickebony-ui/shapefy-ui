@@ -153,7 +153,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
         } else if (buscaDebounced) {
           // Busca global por nome: resolve os alunos no servidor e traz TODOS os
           // registros deles — sem depender da janela de recentes do feed.
-          const al = await listarAlunos({ search: buscaDebounced, limit: 50 })
+          const { list: al } = await listarAlunos({ search: buscaDebounced, limit: 50 })
           const ids = al.map(a => a.name)
           if (!ids.length) {
             regs = []
