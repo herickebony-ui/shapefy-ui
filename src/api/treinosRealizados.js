@@ -1,7 +1,7 @@
 import client from './client'
+import { profissionalLogado } from './helpers'
 
 const DOCTYPE = 'Treino%20Realizado'
-const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
 
 const LIST_FIELDS = [
   'name', 'nome_completo', 'aluno', 'ficha', 'treino', 'treino_label',

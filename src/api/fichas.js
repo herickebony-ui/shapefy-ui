@@ -1,6 +1,6 @@
 import client from './client'
+import { profissionalLogado } from './helpers'
 
-const frappeOwner = () => localStorage.getItem('frappe_user') || ''
 
 // ─── Fichas de Treino ─────────────────────────────────────────────────────────
 
@@ -89,7 +89,7 @@ export const toggleAlongamento = async (id, enabled) => {
 }
 
 export const listarAlongamentos = async ({ limit = 200, gerenciar = false } = {}) => {
-  const owner = frappeOwner()
+  const owner = profissionalLogado()
   const filters = [['Alongamento', 'owner', '=', owner]]
   if (!gerenciar) filters.push(['Alongamento', 'enabled', '=', 1])
   const fields = ['name', 'nome_do_exercício', 'video', 'plataforma_do_vídeo']
@@ -116,7 +116,7 @@ export const toggleAerobico = async (id, enabled) => {
 }
 
 export const listarAerobicos = async ({ limit = 200, gerenciar = false } = {}) => {
-  const owner = frappeOwner()
+  const owner = profissionalLogado()
   const filters = [['Exercicio Aerobico', 'owner', '=', owner]]
   if (!gerenciar) filters.push(['Exercicio Aerobico', 'enabled', '=', 1])
   const fields = ['name', 'exercicio_aerobico', 'video', 'plataforma_do_vídeo']
@@ -128,7 +128,7 @@ export const listarAerobicos = async ({ limit = 200, gerenciar = false } = {}) =
 }
 
 export const listarExercicios = async ({ limit = 500 } = {}) => {
-  const owner = frappeOwner()
+  const owner = profissionalLogado()
   const res = await client.get('/api/resource/Treino%20Exercicio', {
     params: {
       fields: JSON.stringify([
@@ -144,4 +144,23 @@ export const listarExercicios = async ({ limit = 500 } = {}) => {
     },
   })
   return res.data?.data || []
+}
+
+// ─── IA ───────────────────────────────────────────────────────────────────────
+
+export const gerarFichaIA = async (params) => {
+  const res = await client.post('/api/method/shapefy.shapefy_ai.api.gerar_ficha_ia', params)
+  return res.data?.message  // { job_id }
+}
+
+export const getStatusGeracao = async (jobId) => {
+  const res = await client.get('/api/method/shapefy.shapefy_ai.api.get_status_geracao', {
+    params: { job_id: jobId },
+  })
+  return res.data?.message  // { status: 'pending'|'done'|'error', ficha?, message? }
+}
+
+export const gerarFichaIADeModelo = async (params) => {
+  const res = await client.post('/api/method/shapefy.shapefy_ai.api.gerar_ficha_ia_de_modelo', params)
+  return res.data?.message  // { job_id }
 }

@@ -1,7 +1,7 @@
 import client from './client'
+import { profissionalLogado } from './helpers'
 import { criarNotificacaoAluno } from './notificacoes'
 
-const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
 
 const primeiroNome = (nome) => String(nome || '').trim().split(/\s+/)[0] || ''
 

@@ -1,7 +1,7 @@
 import client from './client'
+import { profissionalLogado } from './helpers'
 
 const ENC_DOCTYPE = encodeURIComponent('Contrato Aluno')
-const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
 
 /**
  * Lista contratos do profissional. Filtros opcionais: aluno, modalidade, status_manual.

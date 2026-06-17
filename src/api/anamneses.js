@@ -1,5 +1,6 @@
 import client from './client'
 import { criarNotificacaoAluno } from './notificacoes'
+import { profissionalLogado } from './helpers'
 
 const primeiroNome = (nome) => String(nome || '').trim().split(/\s+/)[0] || ''
 
@@ -87,7 +88,7 @@ export const vincularAnamnese = async (alunoId, formulario, enviarAluno = true) 
   ])
   const template = formRes.data.data || {}
   const aluno = alunoRes.data.data || {}
-  const profissional = localStorage.getItem('frappe_user') || ''
+  const profissional = profissionalLogado()
   const today = new Date().toISOString().slice(0, 10)
   const res = await client.post('/api/resource/Anamnese', {
     aluno: alunoId,

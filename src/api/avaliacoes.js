@@ -1,7 +1,7 @@
 import client from './client'
+import { profissionalLogado } from './helpers'
 
 const DOCTYPE = 'Avaliacao%20da%20Composicao%20Corporal'
-const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
 
 const LIST_FIELDS = [
   'name', 'aluno', 'nome_completo', 'date', 'weight',

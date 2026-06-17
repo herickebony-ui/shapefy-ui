@@ -39,6 +39,7 @@ import CadastroPublico from './pages/Cadastro/CadastroPublico'
 import LandingpageRedirect from './pages/Landingpage/LandingpageRedirect'
 import DemoAluno from './pages/Demo/DemoAluno'
 import MeuLinkCadastro from './pages/Cadastro/MeuLinkCadastro'
+import FuncionarioListagem from './pages/Funcionarios/FuncionarioListagem'
 import ModeloDietaListagem from './pages/Modelos/ModeloDietaListagem'
 import ModeloFichaListagem from './pages/Modelos/ModeloFichaListagem'
 import AlunoLayout from './components/layout/AlunoLayout'
@@ -197,6 +198,7 @@ function App() {
           <Route path="financeiro" element={<FinanceiroListagem />} />
           <Route path="planos" element={<PlanosListagem />} />
           <Route path="meu-link-cadastro" element={<MeuLinkCadastro />} />
+          <Route path="funcionarios" element={<FuncionarioListagem />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

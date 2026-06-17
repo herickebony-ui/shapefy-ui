@@ -1,9 +1,9 @@
 import client from './client'
+import { profissionalLogado } from './helpers'
 import { tipoParaFrappe, tipoCanonical } from '../utils/formularioUtils'
 
 const ENC_ANAMNESE = 'Formulario%20de%20Anamnese'
 const ENC_FEEDBACK = 'Formulario%20Feedback'
-const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
 
 const serializarPerguntas = (perguntas, doctype) =>
   perguntas.map(({ _id, ...p }) => ({

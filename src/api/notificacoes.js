@@ -33,3 +33,16 @@ export const listarNotificacoesAluno = async (alunoId, { limit = 50 } = {}) => {
   })
   return res.data?.data || []
 }
+
+// ── Notificações do Profissional (geração de treino com IA, etc.) ──────────
+
+export const getNotificacoesProfissional = async () => {
+  const res = await client.get('/api/method/shapefy.shapefy_ai.api.get_notificacoes_profissional')
+  return res.data?.message || { nao_lidas: 0, notificacoes: [] }
+}
+
+export const marcarNotificacoesLidas = async (names = []) => {
+  await client.get('/api/method/shapefy.shapefy_ai.api.marcar_notificacoes_lidas', {
+    params: { names: JSON.stringify(names) },
+  })
+}

@@ -82,7 +82,9 @@ export default function Login() {
       const res = await login(form.usr, form.pwd)
       const token = res.message.token
       const fullName = res.message.full_name || ''
+      const profissional = res.message.profissional || form.usr
       localStorage.setItem('frappe_user_name', fullName.split(' ')[0])
+      localStorage.setItem('frappe_professional', profissional)
       setAuth(form.usr, token)
 
       try {

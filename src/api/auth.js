@@ -28,4 +28,5 @@ export async function logout() {
   localStorage.removeItem('frappe_token')
   localStorage.removeItem('frappe_user')
   localStorage.removeItem('frappe_user_name')
+  localStorage.removeItem('frappe_professional')
 }

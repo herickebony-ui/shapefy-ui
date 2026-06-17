@@ -1,6 +1,6 @@
 import client from './client'
+import { profissionalLogado } from './helpers'
 
-const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
 
 export const criarAluno = async (campos) => {
   const res = await client.post('/api/resource/Aluno', {

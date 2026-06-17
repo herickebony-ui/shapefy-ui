@@ -1,10 +1,10 @@
 import client from './client'
+import { profissionalLogado } from './helpers'
 
-const frappeOwner = () => localStorage.getItem('frappe_user') || ''
 export const listarAlimentos = async ({
   busca = '', grupo = '', enabled = '', page = 1, limit = 300,
 } = {}) => {
-  const owner = frappeOwner()
+  const owner = profissionalLogado()
 
   const filters = [['owner', '=', owner]]
   if (busca) filters.push(['food', 'like', `%${busca}%`])

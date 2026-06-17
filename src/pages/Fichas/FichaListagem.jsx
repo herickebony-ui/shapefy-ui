@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import {
   Plus, ChevronRight, Calendar, User, LayoutGrid, List,
   RefreshCw, AlertCircle, Copy, ClipboardList, X,
-  Trash2, SlidersHorizontal, Eye, Loader, BarChart2, FileText,
+  Trash2, SlidersHorizontal, Eye, Loader, BarChart2, FileText, Sparkles,
 } from 'lucide-react'
 import { listarFichas, buscarFicha, excluirFicha, criarFicha, salvarFicha, listarExercicios } from '../../api/fichas'
 import { listarAlunos } from '../../api/alunos'
 import ModalEscolherModelo from '../Modelos/ModalEscolherModelo'
+import ModalGerarFichaIA from './ModalGerarFichaIA'
 import { Button, FormGroup, Input, Autocomplete, Modal, EmptyState, Pagination, DataTable } from '../../components/ui'
 import { buscarSmart } from '../../utils/strings'
 import { openOrNavigate } from '../../utils/navigation'
@@ -946,6 +947,7 @@ export default function FichaListagem() {
   const [filtros, setFiltros] = useState(FILTROS_INICIAL)
   const [modalFiltros, setModalFiltros] = useState(false)
   const [modalNova, setModalNova] = useState(false)
+  const [modalGerarIA, setModalGerarIA] = useState(false)
   const [modalEscolherModelo, setModalEscolherModelo] = useState(false)
   const [modalDuplicar, setModalDuplicar] = useState(null)
   const [modalExcluir, setModalExcluir] = useState(null)
@@ -1031,6 +1033,12 @@ export default function FichaListagem() {
 
   return (
     <div className="p-8 text-white">
+      {modalGerarIA && (
+        <ModalGerarFichaIA
+          onClose={() => setModalGerarIA(false)}
+          onCriada={(id) => { setModalGerarIA(false); navigate(`/fichas/${id}`) }}
+        />
+      )}
       {modalNova && (
         <ModalNovaFicha
           onClose={() => setModalNova(false)}
@@ -1105,6 +1113,9 @@ export default function FichaListagem() {
             </div>
             <Button variant="secondary" size="sm" icon={FileText} onClick={() => setModalEscolherModelo(true)} title="A partir de modelo">
               <span className="hidden sm:inline">A partir de modelo</span>
+            </Button>
+            <Button variant="secondary" size="sm" icon={Sparkles} onClick={() => setModalGerarIA(true)} title="Gerar com IA">
+              <span className="hidden sm:inline">Gerar com IA</span>
             </Button>
             <Button variant="primary" size="sm" icon={Plus} onClick={() => setModalNova(true)}>
               Nova Ficha

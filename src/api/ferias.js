@@ -1,7 +1,7 @@
 import client from './client'
+import { profissionalLogado } from './helpers'
 
 const ENC_FERIAS = encodeURIComponent('Periodo Ferias')
-const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
 
 /**
  * Lista todos os períodos de férias do profissional logado.

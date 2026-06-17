@@ -1,7 +1,7 @@
 import client from './client'
+import { profissionalLogado } from './helpers'
 
 const ENC_FA = encodeURIComponent('Feedback Agendado')
-const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
 
 // ─── Listagem geral (dashboard) ───────────────────────────────────────────────
 

@@ -1,4 +1,5 @@
 import client from './client'
+import { profissionalLogado } from './helpers'
 import { buscarAluno } from './alunos'
 
 // Normaliza altura pra cm — aceita entrada em metros (1.70) ou cm (170) e
@@ -20,7 +21,6 @@ export const dadosAntropometricosFromAluno = (alunoDoc = {}) => ({
   frequencia_atividade: alunoDoc.frequencia_atividade || '',
 })
 
-const frappeOwner = () => localStorage.getItem('frappe_user') || ''
 
 // ─── Dietas ───────────────────────────────────────────────────────────────────
 
@@ -103,7 +103,7 @@ export const duplicarDieta = async (id, novoAluno = null, dataInicial = null, da
 // ─── Alimentos ────────────────────────────────────────────────────────────────
 
 export const listarAlimentos = async ({ busca = '', grupo = '', page = 1, limit = 50 } = {}) => {
-  const owner = frappeOwner()
+  const owner = profissionalLogado()
   const filters = [['enabled', '=', 1], ['owner', '=', owner]]
   if (busca) filters.push(["food", "like", `%${busca}%`])
   if (grupo) filters.push(["food_group", "=", grupo])
@@ -149,7 +149,7 @@ export const listarGrupos = async () => {
 // ─── Refeições Prontas ────────────────────────────────────────────────────────
 
 export const listarRefeicoesProntas = async ({ busca = '', enabled = '', page = 1, limit = 30 } = {}) => {
-  const owner = frappeOwner()
+  const owner = profissionalLogado()
 
   const filters = []
   if (busca) filters.push(['full_name', 'like', `%${busca}%`])

@@ -1,7 +1,7 @@
 import client from './client'
+import { profissionalLogado } from './helpers'
 
 const ENC_DOCTYPE = encodeURIComponent('Plano Shapefy')
-const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
 
 export const listarPlanos = async ({ search = '', page = 1, limit = 20, ativo = null } = {}) => {
   const filtros = [['profissional', '=', profissionalLogado()]]

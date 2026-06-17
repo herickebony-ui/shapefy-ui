@@ -1,7 +1,7 @@
 import client from './client'
+import { profissionalLogado } from './helpers'
 
 const ENC_TPL = encodeURIComponent('Template Mensagem')
-const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
 
 const TEMPLATE_PADRAO = {
   name: '__default__',

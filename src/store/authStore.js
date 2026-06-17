@@ -41,6 +41,7 @@ const useAuthStore = create(
       clearAuth: () => {
         localStorage.removeItem('frappe_token')
         localStorage.removeItem('frappe_user')
+        localStorage.removeItem('frappe_professional')
         localStorage.removeItem('aluno_token')
         localStorage.removeItem('shapefy-jornada-dismissed')
         useOnboardingStore.getState().resetOnboarding()

@@ -1,6 +1,6 @@
 import client from './client'
+import { profissionalLogado } from './helpers'
 
-const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
 
 export const listarAuditorias = async ({ aluno = '', acao = '', dataInicio = '', dataFim = '', limit = 100 } = {}) => {
   const filtros = { profissional: profissionalLogado() }

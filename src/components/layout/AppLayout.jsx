@@ -5,11 +5,12 @@ import {
   PanelLeftClose, PanelLeftOpen, UtensilsCrossed, BookOpen,
   Wind, Waves, Pill, CreditCard, UserCircle, HelpCircle, Briefcase,
   TrendingUp, Calendar, LayoutDashboard, Wallet, Layers,
-  Inbox, CalendarClock, FileEdit, FileQuestion, Bookmark,
+  Inbox, CalendarClock, FileEdit, FileQuestion, Bookmark, UserCog,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import useAuthStore from '../../store/authStore'
 import { logout } from '../../api/auth'
+import SinhoNotificacoes from '../ui/SinhoNotificacoes'
 
 const NAV_ITEMS = [
   { type: 'divider', label: 'Início' },
@@ -32,6 +33,7 @@ const NAV_ITEMS = [
   { id: 'painel-feedbacks',     label: 'Central de Feedbacks',         icon: LayoutDashboard, path: '/painel-feedbacks' },
   { id: 'feedbacks',            label: 'Feedbacks Recebidos',          icon: Inbox,           path: '/feedbacks' },
   { id: 'cronograma-feedbacks', label: 'Planejar Feedbacks do Aluno', icon: CalendarClock,   path: '/cronograma-feedbacks' },
+  { id: 'conjuntos-fotos',      label: 'Conjuntos de Fotos',           icon: Layers,          path: '/conjuntos-fotos' },
   { id: 'treinos',              label: 'Treinos Realizados',           icon: Activity,        path: '/treinos',           modulo: 'treino' },
   { id: 'progressao-cargas',    label: 'Progressão de Cargas',         icon: TrendingUp,      path: '/progressao-cargas', modulo: 'treino' },
 
@@ -52,6 +54,7 @@ const NAV_ITEMS = [
   { id: 'form-anamnese',   label: 'Formulários de Anamnese',  icon: FileQuestion, path: '/formularios/anamnese' },
 
   { type: 'divider', label: 'Conta' },
+  { id: 'funcionarios', label: 'Funcionários',         icon: UserCog,         path: '/funcionarios' },
   { id: 'perfil',       label: 'Perfil Profissional', icon: Briefcase,       path: '/perfil' },
   { id: 'assinatura',   label: 'Minha Assinatura',    icon: CreditCard,      path: '/assinatura' },
   { id: 'me',           label: 'Usuário',             icon: UserCircle,      path: '/me' },
@@ -218,6 +221,7 @@ export default function AppLayout() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <SinhoNotificacoes />
             <div className="text-right hidden sm:block">
               <p className="text-white text-sm font-medium">{userName}</p>
               <p className="text-gray-500 text-xs">{user}</p>
