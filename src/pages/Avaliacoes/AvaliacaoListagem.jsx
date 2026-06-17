@@ -11,7 +11,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
 } from 'recharts'
-import { listarAvaliacoes, listarAvaliacoesPorAluno, excluirAvaliacao } from '../../api/avaliacoes'
+import { listarAvaliacoes, listarAvaliacoesPorAluno, buscarAvaliacao, excluirAvaliacao } from '../../api/avaliacoes'
 import { buscarSmart } from '../../utils/strings'
 import { Button, Badge, Spinner, EmptyState, DataTable } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
@@ -33,15 +33,17 @@ const FORMULA_OPTS = [
   ...FORMULAS.map(f => ({ value: f.key, label: `${f.short} — ${f.label}` })),
 ]
 
+// key = campo legado (Attach Image) · slot = slot_id canônico (novo, child `fotos`).
+// A comparação lê do conjunto (fotos child) e, no fallback, do campo legado.
 const PHOTOS = [
-  { key: 'front_photo',              label: 'Frente'                          },
-  { key: 'flexed_right_side_photo',  label: 'Lado direito braço flexionado'   },
-  { key: 'relaxed_right_side_photo', label: 'Lado direito braço relaxado'     },
-  { key: 'back_photo',               label: 'Costas'                          },
-  { key: 'flexed_left_side_photo',   label: 'Lado esquerdo braço flexionado'  },
-  { key: 'relaxed_left_side_photo',  label: 'Lado esquerdo braço relaxado'    },
-  { key: 'others_1',                 label: 'Outros 1'                        },
-  { key: 'others_2',                 label: 'Outros 2'                        },
+  { key: 'front_photo',              slot: 'frente',              label: 'Frente'                          },
+  { key: 'flexed_right_side_photo',  slot: 'lado_dir_flexionado', label: 'Lado direito braço flexionado'   },
+  { key: 'relaxed_right_side_photo', slot: 'lado_dir_relaxado',   label: 'Lado direito braço relaxado'     },
+  { key: 'back_photo',               slot: 'costas',              label: 'Costas'                          },
+  { key: 'flexed_left_side_photo',   slot: 'lado_esq_flexionado', label: 'Lado esquerdo braço flexionado'  },
+  { key: 'relaxed_left_side_photo',  slot: 'lado_esq_relaxado',   label: 'Lado esquerdo braço relaxado'    },
+  { key: 'others_1',                 slot: 'outros_1',            label: 'Outros 1'                        },
+  { key: 'others_2',                 slot: 'outros_2',            label: 'Outros 2'                        },
 ]
 
 const fmtDate = (d) => {
@@ -189,6 +191,24 @@ export default function AvaliacaoListagem() {
     if (!visibleAvNames) return historico
     return historico.filter(av => visibleAvNames.has(av.name))
   }, [historico, visibleAvNames])
+
+  // Fotos por avaliação: a listagem (`fields:['*']`) NÃO traz a child table `fotos`,
+  // então busca o doc completo das comparadas. { avName: [{slot_id, url}] }
+  const [fotosPorAv, setFotosPorAv] = useState({})
+  useEffect(() => {
+    let cancel = false
+    const faltam = visibleAvs.filter(av => fotosPorAv[av.name] === undefined)
+    if (!faltam.length) return
+    Promise.all(faltam.map(av => buscarAvaliacao(av.name).then(d => [av.name, d?.fotos || []]).catch(() => [av.name, []])))
+      .then(pares => { if (!cancel) setFotosPorAv(prev => ({ ...prev, ...Object.fromEntries(pares) })) })
+    return () => { cancel = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleAvs])
+
+  // URL da foto de uma pose: novo formato (conjunto/child `fotos` por slot) com
+  // fallback no campo legado (front_photo, etc.).
+  const fotoDaPose = (av, p) =>
+    (fotosPorAv[av.name] || []).find(f => f.slot_id === p.slot)?.url || av[p.key] || ''
 
   const latest = visibleAvs[visibleAvs.length - 1]
   const first  = visibleAvs[0]
@@ -720,7 +740,7 @@ export default function AvaliacaoListagem() {
   }
 
   const hasAnyDobras = historico.some(hasDobras)
-  const hasAnyPhotos = historico.some(av => PHOTOS.some(p => av[p.key]))
+  const hasAnyPhotos = visibleAvs.some(av => PHOTOS.some(p => fotoDaPose(av, p)))
 
   return (
     <div className="p-6 space-y-5 pb-12">
@@ -1054,7 +1074,7 @@ export default function AvaliacaoListagem() {
 
             {/* Uma linha por pose com fotos lado a lado */}
             {PHOTOS.map(pose => {
-              const temAlguma = visibleAvs.some(av => av[pose.key])
+              const temAlguma = visibleAvs.some(av => fotoDaPose(av, pose))
               if (!temAlguma) return null
               return (
                 <div
@@ -1065,10 +1085,10 @@ export default function AvaliacaoListagem() {
                   <div className="text-[11px] font-semibold text-gray-300 pt-2 leading-tight">
                     {pose.label}
                   </div>
-                  {visibleAvs.map(av => av[pose.key] ? (
+                  {visibleAvs.map(av => fotoDaPose(av, pose) ? (
                     <div key={av.name}>
                       <ImagemInterativa
-                        src={`${FRAPPE_URL}${av[pose.key]}`}
+                        src={`${FRAPPE_URL}${fotoDaPose(av, pose)}`}
                         feedbackId={av.name}
                         idx={pose.key}
                         onRotate={() => {}}
