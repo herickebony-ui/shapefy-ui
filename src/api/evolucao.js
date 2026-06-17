@@ -51,6 +51,21 @@ export const buscarRegistro = async (id) => {
   return res.data.data
 }
 
+// Feed da tela Evolução do Aluno, paginado server-side. conteudo 'foto' (só com
+// foto) ou 'peso' (só com peso). Retorna { registros, hasMore }.
+export const listarRegistrosFeed = async ({ aluno = null, alunos = null, origem = '', conteudo = 'foto', limit = 30, limitStart = 0 } = {}) => {
+  const res = await client.post('/api/method/shapefy.evolucao.api.listar_registros_feed', {
+    aluno: aluno || undefined,
+    alunos: alunos || undefined,
+    origem: origem || undefined,
+    conteudo,
+    limit,
+    limit_start: limitStart,
+  })
+  const m = res.data?.message || {}
+  return { registros: m.registros || [], hasMore: !!m.has_more }
+}
+
 // Conta fotos por registro (pra sinalizar foto vs só-peso na lista) numa query só.
 // Retorna { [registroName]: qtdFotos }.
 export const contarFotos = async (registroNames = []) => {

@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Activity, Search, Columns, X, ArrowLeft, CheckCircle, Plus, Image as ImageIcon, Weight, ChevronLeft, ChevronRight, Pencil, Check } from 'lucide-react'
-import { Button, Badge, Spinner, EmptyState, DataTable } from '../../components/ui'
+import { Button, Badge, Spinner, EmptyState, DataTable, Tabs } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 import ImagemInterativa from '../Feedbacks/ImagemInterativa'
 import RegistrarEvolucaoModal from '../../components/evolucao/RegistrarEvolucaoModal'
-import { listarRegistros, buscarRegistro, contarFotos, salvarRegistro } from '../../api/evolucao'
+import { listarRegistros, listarRegistrosFeed, buscarRegistro, salvarRegistro } from '../../api/evolucao'
 import { listarAlunosByIds, listarAlunos } from '../../api/alunos'
 import { GraficoPeso } from './EvolucaoAluno'
 import useErrorModal from '../../hooks/useErrorModal'
@@ -204,8 +204,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
   const [filtroOrigem, setFiltroOrigem] = useState('')
-  const [filtroConteudo, setFiltroConteudo] = useState([])
-  const toggleConteudo = (v) => setFiltroConteudo(cs => cs.includes(v) ? cs.filter(x => x !== v) : [...cs, v])
+  const [modo, setModo] = useState('foto') // 'foto' = compara fotos | 'peso' = lista de peso
   const [modoComparar, setModoComparar] = useState(false)
   const [selecionados, setSelecionados] = useState([])
   const [comparando, setComparando] = useState(null)
@@ -214,7 +213,6 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
   const [loadingCmp, setLoadingCmp] = useState(false)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
-  const [fotoCount, setFotoCount] = useState({})
   const [showRegistrar, setShowRegistrar] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [buscaDebounced, setBuscaDebounced] = useState('')
@@ -231,32 +229,36 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
     return () => clearTimeout(t)
   }, [busca])
 
-  // Volta pra página 1 ao trocar escopo (busca/origem/aluno).
-  useEffect(() => { setPage(1) }, [buscaDebounced, filtroOrigem, alunoId])
+  // Volta pra página 1 ao trocar escopo (busca/origem/modo/aluno).
+  useEffect(() => { setPage(1) }, [buscaDebounced, filtroOrigem, modo, alunoId])
 
   useEffect(() => {
     let cancelado = false
     setLoading(true)
     const carregar = async () => {
       try {
-        let regs
+        let regs, more = false
         if (alunoId) {
-          regs = await listarRegistros({ aluno: alunoId, origem: filtroOrigem, limit: FEED_LIMIT })
+          const r = await listarRegistrosFeed({ aluno: alunoId, origem: filtroOrigem, conteudo: modo, limit: FEED_LIMIT })
+          regs = r.registros
         } else if (buscaDebounced) {
           const { list: al } = await listarAlunos({ search: buscaDebounced, limit: 50 })
           const ids = al.map(a => a.name)
           if (!ids.length) {
             regs = []
           } else {
-            regs = await listarRegistros({ alunos: ids, origem: filtroOrigem, limit: FEED_LIMIT })
+            const r = await listarRegistrosFeed({ alunos: ids, origem: filtroOrigem, conteudo: modo, limit: FEED_LIMIT })
+            regs = r.registros
             if (!cancelado) { const m = {}; al.forEach(a => { m[a.name] = a.nome_completo }); setNomes(prev => ({ ...prev, ...m })) }
           }
         } else {
-          regs = await listarRegistros({ origem: filtroOrigem, limit: PAGE_SIZE, limitStart: (page - 1) * PAGE_SIZE })
+          const r = await listarRegistrosFeed({ origem: filtroOrigem, conteudo: modo, limit: PAGE_SIZE, limitStart: (page - 1) * PAGE_SIZE })
+          regs = r.registros
+          more = r.hasMore
         }
         if (cancelado) return
         setRegistros(regs)
-        setHasMore(serverPaged && regs.length === PAGE_SIZE)
+        setHasMore(serverPaged && more)
         // nomes dos alunos da página (feed/embutido)
         if (!buscaDebounced && !alunoId) {
           const ids = [...new Set(regs.map(r => r.aluno).filter(Boolean))]
@@ -265,9 +267,6 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
             if (!cancelado) { const m = {}; al.forEach(a => { m[a.name] = a.nome_completo }); setNomes(prev => ({ ...prev, ...m })) }
           }
         }
-        // sinaliza foto vs só-peso (1 query pros registros carregados)
-        const counts = await contarFotos(regs.map(r => r.name)).catch(() => ({}))
-        if (!cancelado) setFotoCount(counts)
       } catch (e) {
         if (!cancelado) errorModal.show(e, 'Carregar evolução')
       } finally {
@@ -277,28 +276,14 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
     carregar()
     return () => { cancelado = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [alunoId, refreshKey, buscaDebounced, filtroOrigem, page])
+  }, [alunoId, refreshKey, buscaDebounced, filtroOrigem, modo, page])
 
-  // origem e busca já são filtradas no servidor; aqui o nome (transitório do debounce)
-  // e o filtro de conteúdo (foto/peso), que é client-side via contagem de fotos.
+  // origem/busca/modo já filtrados no servidor; aqui só o nome (transitório do debounce)
   const filtrados = useMemo(() => {
     const q = busca.trim().toLowerCase()
-    return registros.filter(r => {
-      if (q && !(nomes[r.aluno] || '').toLowerCase().includes(q)) return false
-      if (filtroConteudo.length) {
-        const tf = (fotoCount[r.name] || 0) > 0
-        const tp = r.peso != null && r.peso > 0
-        // OR entre os selecionados; "tem foto" / "tem peso" / "tem ambos"
-        const match = filtroConteudo.some(f =>
-          f === 'com_peso' ? tp :
-          f === 'com_foto' ? tf :
-          f === 'ambos' ? (tp && tf) : false
-        )
-        if (!match) return false
-      }
-      return true
-    })
-  }, [registros, nomes, busca, filtroConteudo, fotoCount])
+    if (!q) return registros
+    return registros.filter(r => (nomes[r.aluno] || '').toLowerCase().includes(q))
+  }, [registros, nomes, busca])
 
   // Só compara registros do MESMO aluno.
   const alunoSel = selecionados.length ? selecionados[0].aluno : null
@@ -446,28 +431,6 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
       render: (row) => { const b = ORIGEM_BADGE[row.origem] || ORIGEM_BADGE.manual; return <Badge variant={b.variant} size="sm">{b.label}</Badge> },
     },
     {
-      label: 'Conteúdo', headerClass: 'text-center', cellClass: 'text-center',
-      render: (row) => {
-        const nf = fotoCount[row.name] || 0
-        const temPeso = row.peso != null && row.peso > 0
-        return (
-          <div className="flex items-center justify-center gap-1">
-            {nf > 0 && (
-              <Badge variant="info" size="sm">
-                <span className="flex items-center gap-1"><ImageIcon size={11} />Foto</span>
-              </Badge>
-            )}
-            {temPeso && (
-              <Badge variant="success" size="sm">
-                <span className="flex items-center gap-1"><Weight size={11} />Peso</span>
-              </Badge>
-            )}
-            {!nf && !temPeso && <span className="text-gray-600 text-xs">—</span>}
-          </div>
-        )
-      },
-    },
-    {
       label: 'Data',
       render: (row) => <span className="text-gray-400 text-xs">{fmtData(row.data)}</span>,
     },
@@ -492,10 +455,24 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
     </div>
   )
 
+  // Toggle de modo: Fotos (compara fotos) | Peso (lista de peso). Padrão do
+  // Treino Realizado → Progressão de Carga.
+  const modoTabs = (
+    <Tabs
+      tabs={[
+        { id: 'foto', label: 'Fotos', icon: <ImageIcon size={14} /> },
+        { id: 'peso', label: 'Peso', icon: <Weight size={14} /> },
+      ]}
+      active={modo}
+      onChange={setModo}
+      variant="pills"
+    />
+  )
+
   const tabela = loading ? (
     <div className="flex justify-center py-16"><Spinner /></div>
   ) : filtrados.length === 0 ? (
-    <EmptyState icon={Activity} title="Sem registros de evolução" description="Os registros aparecem quando o aluno responde feedback/anamnese (com fotos/peso) ou você cria uma avaliação." />
+    <EmptyState icon={modo === 'peso' ? Weight : ImageIcon} title={modo === 'peso' ? 'Sem registros de peso' : 'Sem registros com foto'} description={modo === 'peso' ? 'Aparecem aqui os registros que têm peso.' : 'Aparecem aqui os registros que têm foto (feedback, avaliação inicial/postural, conjunto). O peso você vê abrindo qualquer registro.'} />
   ) : (
     <>
       <DataTable
@@ -535,7 +512,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
         {errorModal.element}
         {registrarModal}
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <p className="text-gray-500 text-xs">Selecione 2–3 registros pra comparar peso e fotos.</p>
+          {modoTabs}
           {toolbar}
         </div>
         {tabela}
@@ -549,7 +526,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
       {registrarModal}
       <ListPage
         title="Evolução do Aluno"
-        subtitle={serverPaged ? `Peso e fotos dos seus alunos · busque um nome pra ver todo o histórico` : `${filtrados.length} registro(s)`}
+        subtitle={modo === 'peso' ? 'Lista de peso dos seus alunos' : 'Fotos dos seus alunos · busque um nome pra ver todo o histórico'}
         actions={toolbar}
         filters={[
           { type: 'search', value: busca, onChange: setBusca, placeholder: 'Buscar aluno...', icon: Search },
@@ -560,16 +537,14 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
             { value: 'anamnese', label: 'Anamnese' },
             { value: 'manual', label: 'Manual' },
           ] },
-          { type: 'multiselect', value: filtroConteudo, onToggle: toggleConteudo, options: [
-            { value: 'com_foto', label: 'Com fotos' },
-            { value: 'com_peso', label: 'Com peso' },
-            { value: 'ambos', label: 'Peso e fotos' },
-          ] },
         ]}
-        loading={loading}
-        empty={filtrados.length === 0 && !loading ? { title: 'Sem registros de evolução', description: 'Aparecem quando há feedback/anamnese/avaliação do aluno.' } : null}
+        loading={false}
+        empty={null}
       >
-        {tabela}
+        <div className="space-y-3">
+          {modoTabs}
+          {tabela}
+        </div>
       </ListPage>
     </>
   )
