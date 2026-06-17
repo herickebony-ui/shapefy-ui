@@ -1112,7 +1112,8 @@ export default function CronogramaFeedbacks() {
                                 <select
                                   value={d.formulario || formularioSugerido || ''}
                                   onChange={(e) => handleSetFormulario(d.date, e.target.value)}
-                                  className="h-7 px-1 bg-[#1a1a1a] border border-[#323238] text-white rounded text-[11px] outline-none focus:border-[#2563eb]/60 truncate"
+                                  title="Override do formulário desta data (vazio = padrão da barra)"
+                                  className="h-7 px-1 bg-transparent border border-transparent hover:border-[#323238] focus:border-[#2563eb]/60 text-gray-300 rounded text-[11px] outline-none truncate transition-colors"
                                 >
                                   {formularios.map((f) => (
                                     <option key={f.name} value={f.name}>{f.titulo}</option>
@@ -1122,10 +1123,10 @@ export default function CronogramaFeedbacks() {
                                   <select
                                     value={d.conjunto_fotos || ''}
                                     onChange={(e) => handleSetConjuntoData(d.date, e.target.value)}
-                                    title="Padrão de fotos desta data (Não pedir = sem fotos)"
-                                    className="flex-1 min-w-0 h-6 px-1 bg-[#141416] border border-[#2a2a30] text-gray-400 rounded text-[10px] outline-none focus:border-[#2563eb]/60 truncate"
+                                    title="Override do padrão de fotos desta data (Padrão = segue a barra)"
+                                    className="flex-1 min-w-0 h-6 px-1 bg-transparent border border-transparent hover:border-[#2a2a30] focus:border-[#2563eb]/60 text-gray-500 rounded text-[10px] outline-none truncate transition-colors"
                                   >
-                                    <option value="">Não pedir</option>
+                                    <option value="">Padrão</option>
                                     {conjuntos.map((c) => (
                                       <option key={c.name} value={c.name}>{c.titulo}</option>
                                     ))}
