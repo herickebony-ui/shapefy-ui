@@ -15,6 +15,7 @@ import {
   EmptyState, DataTable,
 } from '../../components/ui'
 import { buscarSmart } from '../../utils/strings'
+import ModalCriarModeloDoZero from './ModalCriarModeloDoZero'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -215,6 +216,7 @@ export default function ModeloFichaListagem() {
   const [pageSize, setPageSize] = useState(20)
   const [modalEditar, setModalEditar] = useState(null)
   const [modalAplicar, setModalAplicar] = useState(null)
+  const [modalCriar, setModalCriar] = useState(false)
 
   useEffect(() => {
     const t = setTimeout(() => { setQuery(search); setPage(1) }, 400)
@@ -342,6 +344,9 @@ export default function ModeloFichaListagem() {
           onAplicado={(novaId) => { setModalAplicar(null); navigate(`/fichas/${novaId}`) }}
         />
       )}
+      {modalCriar && (
+        <ModalCriarModeloDoZero tipo="ficha" isOpen onClose={() => setModalCriar(false)} />
+      )}
 
       <div className="max-w-screen-xl mx-auto">
         {/* Header */}
@@ -354,6 +359,7 @@ export default function ModeloFichaListagem() {
           </div>
           <div className="flex items-center gap-2">
             <Button variant="secondary" size="sm" icon={RefreshCw} onClick={carregar} loading={loading} title="Atualizar" />
+            <Button variant="primary" size="sm" icon={Plus} onClick={() => setModalCriar(true)}>Criar do zero</Button>
           </div>
         </div>
 
