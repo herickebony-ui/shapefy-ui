@@ -41,14 +41,14 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
   const [pesoInput, setPesoInput] = useState('')
   const [dataInput, setDataInput] = useState('')
   const [salvando, setSalvando] = useState(false)
+  // Rótulo/ordem de cada slot (os tópicos da coluna esquerda) prevalece do registro
+  // MAIS RECENTE — itera do mais novo pro mais antigo e não sobrescreve.
   const slotMap = new Map()
-  registros.forEach(r => (r.fotos || []).forEach(f => {
-    if (f.slot_id) slotMap.set(f.slot_id, { slot_id: f.slot_id, rotulo: f.rotulo || '—', ordem: f.ordem ?? 999 })
+  ;[...registros].sort((a, b) => (b.data || '').localeCompare(a.data || '')).forEach(r => (r.fotos || []).forEach(f => {
+    if (f.slot_id && !slotMap.has(f.slot_id)) slotMap.set(f.slot_id, { slot_id: f.slot_id, rotulo: f.rotulo || '—', ordem: f.ordem ?? 999 })
   }))
   const slots = [...slotMap.values()].sort((a, b) => (a.ordem || 0) - (b.ordem || 0))
   const temPeso = true // sempre mostra a linha de Peso (pra poder editar/adicionar)
-  // Colunas da tabela: mais RECENTE na esquerda (o gráfico segue cronológico).
-  const cols = [...registros].sort((a, b) => (b.data || '').localeCompare(a.data || ''))
   const pontosSelecionados = registros.filter(r => r.peso != null && r.peso > 0).map(r => ({ data: r.data, peso: r.peso }))
   const pontosGrafico = verTodosPesos ? pontosPeso : pontosSelecionados
   const temTodos = pontosPeso.length > pontosSelecionados.length
@@ -157,7 +157,7 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
               <thead>
                 <tr className="bg-[#0a0a0a] border-b border-[#323238]">
                   <th className="p-2 md:p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider sticky left-0 bg-[#0a0a0a] z-10 min-w-[120px] md:w-40">Data</th>
-                  {cols.map((r, i) => (
+                  {registros.map((r, i) => (
                     <th key={i} className="p-2 md:p-3 text-[10px] font-bold text-white uppercase tracking-wider text-center min-w-[140px] md:min-w-[200px]">{fmtData(r.data)}</th>
                   ))}
                 </tr>
@@ -166,7 +166,7 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
                 {temPeso && (
                   <tr className="hover:bg-white/5">
                     <td className="p-2 md:p-3 sticky left-0 bg-[#1a1a1a] z-10"><span className="text-white text-xs font-bold">Peso</span></td>
-                    {cols.map((r, i) => (
+                    {registros.map((r, i) => (
                       <td key={i} className="p-2 md:p-3 text-center">
                         {r.peso != null && r.peso > 0
                           ? <span className="text-white text-sm font-bold">{numBR(r.peso)} <span className="text-gray-500 text-xs">kg</span></span>
@@ -178,7 +178,7 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
                 {slots.map(slot => (
                   <tr key={slot.slot_id} className="hover:bg-white/5">
                     <td className="p-2 md:p-3 sticky left-0 bg-[#1a1a1a] z-10"><span className="text-[#93C5FD] text-[10px] font-bold uppercase tracking-wider">{slot.rotulo}</span></td>
-                    {cols.map((r, i) => {
+                    {registros.map((r, i) => {
                       const url = urlSlot(r, slot.slot_id)
                       return (
                         <td key={i} className="p-0 text-center align-top">
