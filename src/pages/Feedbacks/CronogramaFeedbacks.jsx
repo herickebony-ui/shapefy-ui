@@ -4,7 +4,7 @@ import {
   Search, Plane, MessageSquare,
   Save, Copy, Trash2, X, ChevronLeft, ChevronRight, ArrowLeft,
   Users, Calendar as CalendarIcon, Wand2, Plus, Loader2,
-  Target, Repeat,
+  Target, Repeat, FileText, Image as ImageIcon,
 } from 'lucide-react'
 
 import {
@@ -1026,32 +1026,38 @@ export default function CronogramaFeedbacks() {
                   onClick={handleCopiarMensagem}>Copiar msg</Button>
               </div>
 
-              {/* Padrões das próximas datas marcadas (movido do calendário) */}
-              <div className="px-3 py-2.5 border-b border-[#323238]/60 bg-[#1a1a1a]/40 space-y-2">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2">
-                  <span className="text-[10px] uppercase tracking-widest text-gray-500 font-bold sm:w-28 shrink-0">Formulário padrão</span>
-                  <select
-                    value={formularioSugerido || ''}
-                    onChange={(e) => setPlanForm(p => ({ ...p, formulario_padrao: e.target.value }))}
-                    title="Aplicado às próximas datas marcadas"
-                    className="w-full sm:flex-1 h-9 sm:h-8 px-2 bg-[#1a1a1a] border border-[#323238] hover:border-gray-500 focus:border-[#2563eb]/60 text-white rounded-lg text-xs outline-none transition-colors">
-                    {formularios.map(f => (
-                      <option key={f.name} value={f.name}>{f.titulo}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2">
-                  <span className="text-[10px] uppercase tracking-widest text-gray-500 font-bold sm:w-28 shrink-0">Fotos padrão</span>
-                  <select
-                    value={conjuntoPadrao}
-                    onChange={(e) => setConjuntoPadrao(e.target.value)}
-                    title="Padrão de fotos aplicado às próximas datas"
-                    className="w-full sm:flex-1 h-9 sm:h-8 px-2 bg-[#1a1a1a] border border-[#323238] hover:border-gray-500 focus:border-[#2563eb]/60 text-white rounded-lg text-xs outline-none transition-colors">
-                    <option value="">Não pedir</option>
-                    {conjuntos.map(c => (
-                      <option key={c.name} value={c.name}>{c.titulo}</option>
-                    ))}
-                  </select>
+              {/* Padrão das próximas datas — rótulo em cima, cor discreta pra
+                  bater o olho (o foco da tela são as datas, não isto). */}
+              <div className="px-3 py-3 border-b border-[#323238]/60 bg-gradient-to-r from-[#2563eb]/[0.06] to-purple-500/[0.06]">
+                <p className="text-[9px] uppercase tracking-widest text-gray-500 font-bold mb-2">Padrão das próximas datas</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="flex items-center gap-1 text-[10px] uppercase tracking-widest text-[#93C5FD] font-bold mb-1">
+                      <FileText size={11} /> Formulário
+                    </label>
+                    <select
+                      value={formularioSugerido || ''}
+                      onChange={(e) => setPlanForm(p => ({ ...p, formulario_padrao: e.target.value }))}
+                      className="w-full h-9 px-2 bg-[#1a1a1a] border border-[#2563eb]/25 hover:border-[#2563eb]/50 focus:border-[#2563eb]/70 text-white rounded-lg text-xs outline-none transition-colors">
+                      {formularios.map(f => (
+                        <option key={f.name} value={f.name}>{f.titulo}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="flex items-center gap-1 text-[10px] uppercase tracking-widest text-purple-300 font-bold mb-1">
+                      <ImageIcon size={11} /> Fotos
+                    </label>
+                    <select
+                      value={conjuntoPadrao}
+                      onChange={(e) => setConjuntoPadrao(e.target.value)}
+                      className="w-full h-9 px-2 bg-[#1a1a1a] border border-purple-500/25 hover:border-purple-500/50 focus:border-purple-500/70 text-white rounded-lg text-xs outline-none transition-colors">
+                      <option value="">Não pedir</option>
+                      {conjuntos.map(c => (
+                        <option key={c.name} value={c.name}>{c.titulo}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
 
