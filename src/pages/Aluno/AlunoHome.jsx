@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Dumbbell, Apple, ClipboardList, Scale, MessageSquare,
-  Bell, Calendar, ChevronRight, X, Pill, Repeat, User, BookOpen,
+  Bell, Calendar, ChevronRight, X, Pill, Repeat, User, BookOpen, Check,
 } from 'lucide-react'
 import { Spinner } from '../../components/ui'
 import {
@@ -245,7 +245,8 @@ export default function AlunoHome() {
     return d >= hojeISO
   })
 
-  const temPendencia = !!(pendencias.feedback || pendencias.feedback_agendado_formulario || pendencias.anamnese)
+  const feedbackPendente = !!(pendencias.feedback || pendencias.feedback_agendado_formulario)
+  const temPendencia = !!(feedbackPendente || pendencias.anamnese)
 
   const handleCardClick = (card) => () => {
     const link = resolveCardLink(card, pendencias, flags)
@@ -290,6 +291,17 @@ export default function AlunoHome() {
             descricao="Toque pra responder."
             onClick={irPraPendencia}
           />
+        </div>
+      )}
+
+      {/* Sem feedback pendente: mostra o último que o aluno enviou (em vez de
+          nagar por disparos antigos da fila que ele já respondeu). */}
+      {!feedbackPendente && pendencias.ultimo_feedback_respondido && (
+        <div className="px-4 mt-2">
+          <div className="flex items-center gap-2 px-1 text-[var(--sf-text-muted)] text-xs">
+            <Check size={14} className="text-[var(--sf-green)] shrink-0" />
+            <span>Último feedback enviado em {fmtDataBR(pendencias.ultimo_feedback_respondido)}.</span>
+          </div>
         </div>
       )}
 
