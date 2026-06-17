@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { UserPlus, Edit2, UserX, Users, UserCheck } from 'lucide-react'
+import { UserPlus, Edit2, UserX, Users, UserCheck, KeyRound } from 'lucide-react'
 import {
-  listarFuncionarios, criarFuncionario, atualizarPermissoes, desativarFuncionario, reativarFuncionario,
+  listarFuncionarios, criarFuncionario, atualizarPermissoes, desativarFuncionario, reativarFuncionario, enviarResetSenha,
 } from '../../api/funcionarios'
 import { Button, FormGroup, Input, Modal } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
@@ -220,7 +220,7 @@ function ModalFuncionario({ funcionario, onSave, onClose }) {
 }
 
 // Card de funcionário na listagem
-function FuncionarioCard({ func, onEditar, onDesativar, onReativar, inativo }) {
+function FuncionarioCard({ func, onEditar, onDesativar, onReativar, onResetSenha, inativo }) {
   const perms = parsePermissoes(func.permissoes)
   const ativas = permissoesAtivas(perms)
 
@@ -260,6 +260,11 @@ function FuncionarioCard({ func, onEditar, onDesativar, onReativar, inativo }) {
         <button onClick={onEditar} title="Editar permissões" className="p-2 text-gray-400 hover:text-white hover:bg-[#323238] rounded-lg transition-colors">
           <Edit2 size={15} />
         </button>
+        {onResetSenha && (
+          <button onClick={onResetSenha} title="Enviar redefinição de senha" className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors">
+            <KeyRound size={15} />
+          </button>
+        )}
         {!inativo && onDesativar && (
           <button onClick={onDesativar} title="Desativar" className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors">
             <UserX size={15} />
@@ -316,6 +321,16 @@ export default function FuncionarioListagem() {
     }
   }
 
+  async function handleResetSenha(func) {
+    if (!confirm(`Enviar email de redefinição de senha para ${func.nome} (${func.user})?`)) return
+    try {
+      await enviarResetSenha(func.name)
+      alert('Email de redefinição de senha enviado!')
+    } catch (err) {
+      errorModal.show(err, 'Enviar redefinição de senha')
+    }
+  }
+
   function fecharModal() { setModalAberto(false); setEditando(null) }
   function onSalvo() { fecharModal(); carregar() }
 
@@ -355,7 +370,7 @@ export default function FuncionarioListagem() {
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Ativos ({ativos.length})</p>
                 <div className="space-y-2">
                   {ativos.map(func => (
-                    <FuncionarioCard key={func.name} func={func} onEditar={() => { setEditando(func); setModalAberto(true) }} onDesativar={() => handleDesativar(func)} />
+                    <FuncionarioCard key={func.name} func={func} onEditar={() => { setEditando(func); setModalAberto(true) }} onDesativar={() => handleDesativar(func)} onResetSenha={() => handleResetSenha(func)} />
                   ))}
                 </div>
               </section>
