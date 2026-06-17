@@ -28,9 +28,10 @@ export const listarRegistrosPorAluno = async (alunoId) => {
 const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
 
 // Feed de Registros do profissional — lista estilo feedback. Filtra por aluno se passado.
-export const listarRegistros = async ({ aluno, limit = 300 } = {}) => {
+export const listarRegistros = async ({ aluno, alunos, limit = 300 } = {}) => {
   const filtros = [['profissional', '=', profissionalLogado()]]
   if (aluno) filtros.push(['aluno', '=', aluno])
+  if (alunos && alunos.length) filtros.push(['aluno', 'in', alunos])
   const res = await client.get(`/api/resource/${DOCTYPE}`, {
     params: {
       fields: JSON.stringify(['name', 'aluno', 'data', 'origem', 'peso', 'conjunto_origem']),

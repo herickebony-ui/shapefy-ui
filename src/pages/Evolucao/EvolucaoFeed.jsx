@@ -5,7 +5,7 @@ import ListPage from '../../components/templates/ListPage'
 import ImagemInterativa from '../Feedbacks/ImagemInterativa'
 import RegistrarEvolucaoModal from '../../components/evolucao/RegistrarEvolucaoModal'
 import { listarRegistros, buscarRegistro } from '../../api/evolucao'
-import { listarAlunosByIds } from '../../api/alunos'
+import { listarAlunosByIds, listarAlunos } from '../../api/alunos'
 import { GraficoPeso } from './EvolucaoAluno'
 import useErrorModal from '../../hooks/useErrorModal'
 
@@ -131,28 +131,59 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
   const [page, setPage] = useState(1)
   const [showRegistrar, setShowRegistrar] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [buscaDebounced, setBuscaDebounced] = useState('')
   const errorModal = useErrorModal()
+
+  // Debounce da busca: a busca dispara reload server-side (não filtra só o que
+  // já estava carregado — senão o teto do feed esconde registros antigos do aluno).
+  useEffect(() => {
+    const t = setTimeout(() => setBuscaDebounced(busca.trim()), 400)
+    return () => clearTimeout(t)
+  }, [busca])
 
   useEffect(() => {
     let cancelado = false
     setLoading(true)
-    listarRegistros({ aluno: alunoId, limit: FEED_LIMIT })
-      .then(async (regs) => {
+    const carregar = async () => {
+      try {
+        let regs
+        if (alunoId) {
+          // Embutido na aba do aluno: todos os registros desse aluno.
+          regs = await listarRegistros({ aluno: alunoId, limit: FEED_LIMIT })
+        } else if (buscaDebounced) {
+          // Busca global por nome: resolve os alunos no servidor e traz TODOS os
+          // registros deles — sem depender da janela de recentes do feed.
+          const al = await listarAlunos({ search: buscaDebounced, limit: 50 })
+          const ids = al.map(a => a.name)
+          if (!ids.length) {
+            regs = []
+          } else {
+            regs = await listarRegistros({ alunos: ids, limit: FEED_LIMIT })
+            if (!cancelado) { const m = {}; al.forEach(a => { m[a.name] = a.nome_completo }); setNomes(prev => ({ ...prev, ...m })) }
+          }
+        } else {
+          // Feed global sem busca: registros mais recentes de todos os alunos.
+          regs = await listarRegistros({ limit: FEED_LIMIT })
+        }
         if (cancelado) return
         setRegistros(regs)
-        if (!alunoId) {
+        if (!alunoId && !buscaDebounced) {
           const ids = [...new Set(regs.map(r => r.aluno).filter(Boolean))]
           if (ids.length) {
             const al = await listarAlunosByIds(ids).catch(() => [])
             if (!cancelado) { const m = {}; al.forEach(a => { m[a.name] = a.nome_completo }); setNomes(m) }
           }
         }
-      })
-      .catch(e => !cancelado && errorModal.show(e, 'Carregar evolução'))
-      .finally(() => !cancelado && setLoading(false))
+      } catch (e) {
+        if (!cancelado) errorModal.show(e, 'Carregar evolução')
+      } finally {
+        if (!cancelado) setLoading(false)
+      }
+    }
+    carregar()
     return () => { cancelado = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [alunoId, refreshKey])
+  }, [alunoId, refreshKey, buscaDebounced])
 
   const filtrados = useMemo(() => {
     const q = busca.trim().toLowerCase()
