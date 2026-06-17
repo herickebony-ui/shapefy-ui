@@ -1029,7 +1029,7 @@ export default function CronogramaFeedbacks() {
               {/* Padrão das próximas datas — rótulo em cima, cor discreta pra
                   bater o olho (o foco da tela são as datas, não isto). */}
               <div className="px-3 py-3 border-b border-[#323238]/60 bg-gradient-to-r from-[#2563eb]/[0.06] to-purple-500/[0.06]">
-                <p className="text-[9px] uppercase tracking-widest text-gray-500 font-bold mb-2">Padrão das próximas datas</p>
+                <p className="text-[9px] uppercase tracking-widest text-gray-500 font-bold mb-2">Padrão das datas selecionadas</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div>
                     <label className="flex items-center gap-1 text-[10px] uppercase tracking-widest text-[#93C5FD] font-bold mb-1">
