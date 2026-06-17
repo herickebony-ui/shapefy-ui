@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Activity, Search, Columns, X, ArrowLeft, CheckCircle, Plus, Image as ImageIcon, LineChart as LineChartIcon, ChevronLeft, ChevronRight, Pencil, Check } from 'lucide-react'
+import { Activity, Search, Columns, X, ArrowLeft, CheckCircle, Plus, Image as ImageIcon, LineChart as LineChartIcon, ChevronLeft, ChevronRight, Pencil, Check, Trash2 } from 'lucide-react'
 import { Button, Badge, Spinner, EmptyState, DataTable } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 import ImagemInterativa from '../Feedbacks/ImagemInterativa'
 import RegistrarEvolucaoModal from '../../components/evolucao/RegistrarEvolucaoModal'
-import { listarRegistros, listarRegistrosFeed, buscarRegistro, salvarRegistro } from '../../api/evolucao'
+import { listarRegistros, listarRegistrosFeed, buscarRegistro, salvarRegistro, excluirRegistro } from '../../api/evolucao'
 import { listarAlunosByIds, listarAlunos } from '../../api/alunos'
 import { listarConjuntos } from '../../api/conjuntos'
 import { GraficoPeso } from './EvolucaoAluno'
@@ -33,7 +33,7 @@ const FEED_LIMIT = 1000 // teto de registros carregados pro feed (paginação é
 
 // Comparação de Registros — mesmo visual da comparação de feedbacks: tabela
 // datas × (peso + slots), fotos via ImagemInterativa, com gráfico de peso no topo.
-function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, onVoltar, onPesoSalvo }) {
+function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, onVoltar, onPesoSalvo, onExcluir }) {
   const listaEdicao = (todosRegistros && todosRegistros.length) ? todosRegistros : registros
   const [verTodosPesos, setVerTodosPesos] = useState(registros.length < 2)
   const [mostrarEdicao, setMostrarEdicao] = useState(false)
@@ -83,7 +83,12 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
         <button onClick={onVoltar} className="flex items-center gap-2 text-gray-500 hover:text-white transition-colors text-xs font-bold uppercase tracking-wide">
           <ArrowLeft size={16} /> Voltar
         </button>
-        <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">{nome} · {registros.length} registros</span>
+        <div className="flex items-center gap-3">
+          {registros.length === 1 && onExcluir && (
+            <Button variant="danger" size="xs" icon={Trash2} onClick={() => onExcluir(registros[0])}>Excluir</Button>
+          )}
+          <span className="text-xs text-gray-500 font-bold uppercase tracking-wider hidden sm:inline">{nome} · {registros.length} registros</span>
+        </div>
       </div>
       <div className="flex-1 overflow-auto p-4 md:p-6">
         <div className="max-w-7xl mx-auto space-y-4">
@@ -249,6 +254,15 @@ function PesoDetalhe({ aluno, nome, onVoltar }) {
       setSalvando(false)
     }
   }
+  const excluir = async (r) => {
+    if (!window.confirm(`Excluir o registro de ${fmtData(r.data)} (foto + peso)? Não dá pra desfazer.`)) return
+    try {
+      await excluirRegistro(r.name)
+      setRegs(rs => rs.filter(x => x.name !== r.name))
+    } catch (e) {
+      errorModal.show(e, 'Excluir registro')
+    }
+  }
 
   return (
     <div className="w-full h-full flex flex-col bg-[#0a0a0a] text-white animate-in fade-in duration-300">
@@ -294,12 +308,18 @@ function PesoDetalhe({ aluno, nome, onVoltar }) {
                       ) : (
                         <>
                           <span className="text-gray-300 text-xs font-medium w-24 shrink-0">{fmtData(r.data)}</span>
-                          <button onClick={() => abrir(r)} className="flex items-center gap-2 text-sm group">
-                            {r.peso != null && r.peso > 0
-                              ? <span className="text-white font-semibold">{numBR(r.peso)} kg</span>
-                              : <span className="text-gray-600 italic">sem peso</span>}
-                            <Pencil size={12} className="text-gray-600 group-hover:text-[#2563eb] transition-colors" />
-                          </button>
+                          <div className="flex items-center gap-3">
+                            <button onClick={() => abrir(r)} className="flex items-center gap-2 text-sm group">
+                              {r.peso != null && r.peso > 0
+                                ? <span className="text-white font-semibold">{numBR(r.peso)} kg</span>
+                                : <span className="text-gray-600 italic">sem peso</span>}
+                              <Pencil size={12} className="text-gray-600 group-hover:text-[#2563eb] transition-colors" />
+                            </button>
+                            <button onClick={() => excluir(r)} title="Excluir registro (foto + peso)"
+                              className="h-6 w-6 flex items-center justify-center text-gray-600 hover:text-red-400 transition-colors">
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
                         </>
                       )}
                     </div>
@@ -510,6 +530,17 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
         errorModal.show(e, 'Editar registro')
       }
     }
+    const onExcluir = async (reg) => {
+      if (!window.confirm(`Excluir o registro de ${fmtData(reg.data)} (foto + peso)? Não dá pra desfazer.`)) return
+      try {
+        await excluirRegistro(reg.name)
+        setRegistros(rs => rs.filter(r => r.name !== reg.name))
+        setComparando(null); setSelecionados([])
+        setRefreshKey(k => k + 1)
+      } catch (e) {
+        errorModal.show(e, 'Excluir registro')
+      }
+    }
     return (
       <RegistroComparacao
         registros={comparando}
@@ -518,6 +549,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
         nome={nome}
         onVoltar={() => { setComparando(null); setSelecionados([]); setModoComparar(false) }}
         onPesoSalvo={onPesoSalvo}
+        onExcluir={onExcluir}
       />
     )
   }
