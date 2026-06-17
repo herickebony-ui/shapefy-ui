@@ -240,10 +240,10 @@ export default function EvolucaoAluno({ mode = 'both', embedded = false }) {
                   ) : (
                     <>
                       <span className="flex-1 text-sm font-semibold">
-                        {r.peso != null ? <span className="text-white">{numBR(r.peso)} kg</span> : <span className="text-gray-600 font-normal italic">sem peso</span>}
+                        {r.peso != null && r.peso > 0 ? <span className="text-white">{numBR(r.peso)} kg</span> : <span className="text-gray-600 font-normal italic">sem peso</span>}
                       </span>
                       <button
-                        onClick={() => { setPesoInput(r.peso != null ? String(r.peso).replace('.', ',') : ''); setEditId(r.name) }}
+                        onClick={() => { setPesoInput(r.peso != null && r.peso > 0 ? String(r.peso).replace('.', ',') : ''); setEditId(r.name) }}
                         title="Editar peso"
                         className="h-7 w-7 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors shrink-0"
                       >

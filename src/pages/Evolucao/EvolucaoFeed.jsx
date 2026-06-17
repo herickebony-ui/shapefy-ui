@@ -349,7 +349,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
     const nome = nomes[comparando[0]?.aluno] || comparando[0]?.aluno || ''
     const alunoCmp = comparando[0]?.aluno
     const pontosLocais = registros
-      .filter(r => r.aluno === alunoCmp && r.peso != null)
+      .filter(r => r.aluno === alunoCmp && r.peso != null && r.peso > 0)
       .map(r => ({ data: r.data, peso: r.peso }))
       .sort((a, b) => (a.data || '').localeCompare(b.data || ''))
     const pontosPeso = pontosTodos.length ? pontosTodos : pontosLocais
