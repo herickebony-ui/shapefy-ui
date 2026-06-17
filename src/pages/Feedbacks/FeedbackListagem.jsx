@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { maybeOpenNewTab } from '../../utils/navigation'
 import { RefreshCw, Search, Columns, CheckCircle, Star, X, ArrowLeft, Link2, Trash2, AlertTriangle, Copy, Check } from 'lucide-react'
@@ -17,6 +17,7 @@ import { formatComparacaoParaCopia, copiarTexto } from '../../utils/copiarRespos
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 const PAGE_SIZE = 30
+const STATUS_FILTRO = ['Enviado', 'Respondido', 'Finalizado']
 
 const fmtData = (d) => {
   if (!d) return '—'
@@ -322,7 +323,7 @@ export default function FeedbackListagem() {
   const [formularios, setFormularios] = useState([])
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
-  const [filtroStatus, setFiltroStatus] = useState('Respondido')
+  const [filtroStatus, setFiltroStatus] = useState(['Respondido']) // multi-seleção
   const [filtroFormulario, setFiltroFormulario] = useState('')
   const [filtroDataInicio, setFiltroDataInicio] = useState('')
   const [filtroDataFim, setFiltroDataFim] = useState('')
@@ -352,8 +353,6 @@ export default function FeedbackListagem() {
       const { list } = await listarFeedbacks({
         busca: buscaUsada,
         status: opts.status ?? filtroStatus,
-        dataInicio: opts.dataInicio ?? filtroDataInicio,
-        dataFim: opts.dataFim ?? filtroDataFim,
         page: 1,
         limit: 500,
       })
@@ -367,7 +366,7 @@ export default function FeedbackListagem() {
     } finally {
       setLoading(false)
     }
-  }, [busca, filtroStatus, filtroDataInicio, filtroDataFim])
+  }, [busca, filtroStatus])
 
   useEffect(() => {
     listarFormularios().then(setFormularios).catch(console.error)
@@ -376,10 +375,28 @@ export default function FeedbackListagem() {
   useEffect(() => {
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
-      carregar({ busca, status: filtroStatus, dataInicio: filtroDataInicio, dataFim: filtroDataFim })
+      carregar({ busca, status: filtroStatus })
     }, 400)
     return () => clearTimeout(debounceRef.current)
-  }, [busca, filtroStatus, filtroDataInicio, filtroDataFim])
+  }, [busca, filtroStatus])
+
+  // Status (multi) já vem do servidor; formulário e a data (por data_resposta com
+  // fallback modified) são aplicados no client.
+  const feedbacksFiltrados = useMemo(() => {
+    let list = feedbacks
+    if (filtroFormulario) list = list.filter(f => f.titulo === filtroFormulario)
+    if (filtroStatus.length) list = list.filter(f => filtroStatus.includes(f.status || 'Enviado'))
+    if (filtroDataInicio || filtroDataFim) {
+      list = list.filter(f => {
+        const d = (f.data_resposta || f.modified || '').slice(0, 10)
+        if (!d) return false
+        if (filtroDataInicio && d < filtroDataInicio) return false
+        if (filtroDataFim && d > filtroDataFim) return false
+        return true
+      })
+    }
+    return list
+  }, [feedbacks, filtroFormulario, filtroStatus, filtroDataInicio, filtroDataFim])
 
   const handleRotate = async (feedbackId, fileUrl) => {
     const key = `${feedbackId}_${fileUrl}`
@@ -531,21 +548,15 @@ export default function FeedbackListagem() {
     )
   }
 
-  const statusOpts = [
-    { value: '', label: 'Todos' },
-    { value: 'Enviado', label: 'Enviado' },
-    { value: 'Respondido', label: 'Respondido' },
-    { value: 'Finalizado', label: 'Finalizado' },
-  ]
-
   const formularioOpts = [
     { value: '', label: 'Todos os formulários' },
     ...formularios.map(f => ({ value: f.titulo, label: f.titulo })),
   ]
 
-  const feedbacksFiltrados = (!busca && filtroFormulario)
-    ? feedbacks.filter(f => f.titulo === filtroFormulario)
-    : feedbacks
+  const toggleStatusFiltro = (s) => {
+    setFiltroStatus(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
+    setPage(1)
+  }
 
   const columns = [
     {
@@ -682,7 +693,6 @@ export default function FeedbackListagem() {
         }
         filters={[
           { type: 'search', value: busca, onChange: setBusca, placeholder: 'Buscar aluno...', icon: Search },
-          { type: 'select', value: filtroStatus, onChange: v => { setFiltroStatus(v); setPage(1) }, options: statusOpts },
           { type: 'select', value: filtroFormulario, onChange: v => { setFiltroFormulario(v); setPage(1) }, options: formularioOpts },
         ]}
         loading={loading}
@@ -692,7 +702,29 @@ export default function FeedbackListagem() {
             : null
         }
       >
-        {/* Filtro de datas */}
+        {/* Filtro de status (multi) — clique pra somar/remover; nenhum = todos */}
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
+          <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider mr-1">Status</span>
+          {STATUS_FILTRO.map(s => {
+            const ativo = filtroStatus.includes(s)
+            return (
+              <button
+                key={s}
+                type="button"
+                onClick={() => toggleStatusFiltro(s)}
+                className={`h-8 px-3 rounded-lg text-xs font-semibold border transition-colors ${
+                  ativo
+                    ? 'bg-[#2563eb] text-white border-[#2563eb]'
+                    : 'text-gray-300 border-[#323238] hover:border-gray-500'
+                }`}
+              >
+                {s}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Filtro de datas — por data_resposta com fallback modified */}
         <div className="flex gap-3 mb-3 flex-wrap">
           <div className="relative">
             <label className="absolute -top-2 left-2 text-[9px] text-gray-500 font-bold uppercase tracking-wider bg-[#0a0a0a] px-1 z-10">De</label>
