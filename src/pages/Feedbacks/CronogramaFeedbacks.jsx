@@ -1090,10 +1090,10 @@ export default function CronogramaFeedbacks() {
                                   <select
                                     value={d.conjunto_fotos || ''}
                                     onChange={(e) => handleSetConjuntoData(d.date, e.target.value)}
-                                    title="Conjunto de fotos desta data (vazio = segue o formulário)"
+                                    title="Padrão de fotos desta data (Não pedir = sem fotos)"
                                     className="flex-1 min-w-0 h-6 px-1 bg-[#141416] border border-[#2a2a30] text-gray-400 rounded text-[10px] outline-none focus:border-[#2563eb]/60 truncate"
                                   >
-                                    <option value="">Fotos: do formulário</option>
+                                    <option value="">Não pedir</option>
                                     {conjuntos.map((c) => (
                                       <option key={c.name} value={c.name}>{c.titulo}</option>
                                     ))}
@@ -1128,7 +1128,7 @@ export default function CronogramaFeedbacks() {
                           <button onClick={() => handleRemoverDataLocal(d.date)}
                             title="Remover"
                             className="h-6 w-6 inline-flex items-center justify-center text-gray-500 hover:text-red-400">
-                            <X size={12} />
+                            <Trash2 size={12} />
                           </button>
                         </LongPressRow>
                       )
