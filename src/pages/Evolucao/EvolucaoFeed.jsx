@@ -454,7 +454,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
           <div className="flex items-center justify-center gap-1">
             {nf > 0 && (
               <Badge variant="info" size="sm">
-                <span className="flex items-center gap-1"><ImageIcon size={11} />{nf}</span>
+                <span className="flex items-center gap-1"><ImageIcon size={11} />Foto</span>
               </Badge>
             )}
             {temPeso && (
