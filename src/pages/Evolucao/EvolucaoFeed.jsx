@@ -33,7 +33,7 @@ const FEED_LIMIT = 1000 // teto de registros carregados pro feed (paginação é
 
 // Comparação de Registros — mesmo visual da comparação de feedbacks: tabela
 // datas × (peso + slots), fotos via ImagemInterativa, com gráfico de peso no topo.
-function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, onVoltar, onPesoSalvo, onExcluir }) {
+function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, onVoltar, onPesoSalvo }) {
   const listaEdicao = (todosRegistros && todosRegistros.length) ? todosRegistros : registros
   const [verTodosPesos, setVerTodosPesos] = useState(registros.length < 2)
   const [mostrarEdicao, setMostrarEdicao] = useState(false)
@@ -83,12 +83,7 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
         <button onClick={onVoltar} className="flex items-center gap-2 text-gray-500 hover:text-white transition-colors text-xs font-bold uppercase tracking-wide">
           <ArrowLeft size={16} /> Voltar
         </button>
-        <div className="flex items-center gap-3">
-          {registros.length === 1 && onExcluir && (
-            <Button variant="danger" size="xs" icon={Trash2} onClick={() => onExcluir(registros[0])}>Excluir</Button>
-          )}
-          <span className="text-xs text-gray-500 font-bold uppercase tracking-wider hidden sm:inline">{nome} · {registros.length} registros</span>
-        </div>
+        <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">{nome} · {registros.length} registros</span>
       </div>
       <div className="flex-1 overflow-auto p-4 md:p-6">
         <div className="max-w-7xl mx-auto space-y-4">
@@ -530,17 +525,6 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
         errorModal.show(e, 'Editar registro')
       }
     }
-    const onExcluir = async (reg) => {
-      if (!window.confirm(`Excluir o registro de ${fmtData(reg.data)} (foto + peso)? Não dá pra desfazer.`)) return
-      try {
-        await excluirRegistro(reg.name)
-        setRegistros(rs => rs.filter(r => r.name !== reg.name))
-        setComparando(null); setSelecionados([])
-        setRefreshKey(k => k + 1)
-      } catch (e) {
-        errorModal.show(e, 'Excluir registro')
-      }
-    }
     return (
       <RegistroComparacao
         registros={comparando}
@@ -549,14 +533,24 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
         nome={nome}
         onVoltar={() => { setComparando(null); setSelecionados([]); setModoComparar(false) }}
         onPesoSalvo={onPesoSalvo}
-        onExcluir={onExcluir}
       />
     )
   }
 
+  const excluirLinha = async (row) => {
+    if (!window.confirm(`Excluir o registro de ${fmtData(row.data)} (foto + peso) deste aluno? Não dá pra desfazer.`)) return
+    try {
+      await excluirRegistro(row.name)
+      setRegistros(rs => rs.filter(r => r.name !== row.name))
+      setRefreshKey(k => k + 1)
+    } catch (e) {
+      errorModal.show(e, 'Excluir registro')
+    }
+  }
+
   const columns = [
     {
-      label: 'Ações', headerClass: 'w-28 text-center', cellClass: 'text-center',
+      label: 'Ações', headerClass: 'w-36 text-center', cellClass: 'text-center',
       render: (row) => (
         <div className="flex items-center justify-center gap-1.5" onClick={e => e.stopPropagation()}>
           <button
@@ -584,6 +578,13 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
             }`}
           >
             <CheckCircle size={12} />
+          </button>
+          <button
+            onClick={() => excluirLinha(row)}
+            title="Excluir registro (foto + peso)"
+            className="h-7 w-7 flex items-center justify-center text-[#2563eb] hover:text-white border border-[#2563eb]/30 hover:bg-[#2563eb] rounded-lg transition-colors"
+          >
+            <Trash2 size={12} />
           </button>
         </div>
       ),
