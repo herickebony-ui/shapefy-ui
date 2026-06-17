@@ -28,15 +28,18 @@ export const listarRegistrosPorAluno = async (alunoId) => {
 const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
 
 // Feed de Registros do profissional — lista estilo feedback. Filtra por aluno se passado.
-export const listarRegistros = async ({ aluno, alunos, limit = 300 } = {}) => {
+// limitStart: offset pra paginação server-side (feed geral pagina do back).
+export const listarRegistros = async ({ aluno, alunos, origem = '', limit = 300, limitStart = 0 } = {}) => {
   const filtros = [['profissional', '=', profissionalLogado()]]
   if (aluno) filtros.push(['aluno', '=', aluno])
   if (alunos && alunos.length) filtros.push(['aluno', 'in', alunos])
+  if (origem) filtros.push(['origem', '=', origem])
   const res = await client.get(`/api/resource/${DOCTYPE}`, {
     params: {
       fields: JSON.stringify(['name', 'aluno', 'data', 'origem', 'peso', 'conjunto_origem']),
       filters: JSON.stringify(filtros),
       limit,
+      limit_start: limitStart,
       order_by: 'data desc',
     },
   })
@@ -46,6 +49,22 @@ export const listarRegistros = async ({ aluno, alunos, limit = 300 } = {}) => {
 export const buscarRegistro = async (id) => {
   const res = await client.get(`/api/resource/${DOCTYPE}/${encodeURIComponent(id)}`)
   return res.data.data
+}
+
+// Conta fotos por registro (pra sinalizar foto vs só-peso na lista) numa query só.
+// Retorna { [registroName]: qtdFotos }.
+export const contarFotos = async (registroNames = []) => {
+  if (!registroNames.length) return {}
+  const res = await client.get('/api/resource/Registro%20Evolucao%20Foto', {
+    params: {
+      fields: JSON.stringify(['parent']),
+      filters: JSON.stringify([['parent', 'in', registroNames]]),
+      limit: 0,
+    },
+  })
+  const counts = {}
+  for (const r of res.data.data || []) counts[r.parent] = (counts[r.parent] || 0) + 1
+  return counts
 }
 
 // Lançamento manual retroativo (origem=manual): aluno + data passada + peso + fotos.

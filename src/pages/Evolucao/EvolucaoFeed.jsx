@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Activity, Search, Columns, X, ArrowLeft, CheckCircle, Plus } from 'lucide-react'
+import { Activity, Search, Columns, X, ArrowLeft, CheckCircle, Plus, Image as ImageIcon, Scale, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button, Badge, Spinner, EmptyState, DataTable } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 import ImagemInterativa from '../Feedbacks/ImagemInterativa'
 import RegistrarEvolucaoModal from '../../components/evolucao/RegistrarEvolucaoModal'
-import { listarRegistros, buscarRegistro } from '../../api/evolucao'
+import { listarRegistros, buscarRegistro, contarFotos } from '../../api/evolucao'
 import { listarAlunosByIds, listarAlunos } from '../../api/alunos'
 import { GraficoPeso } from './EvolucaoAluno'
 import useErrorModal from '../../hooks/useErrorModal'
@@ -129,17 +129,26 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
   const [pontosTodos, setPontosTodos] = useState([])
   const [loadingCmp, setLoadingCmp] = useState(false)
   const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(false)
+  const [fotoCount, setFotoCount] = useState({})
   const [showRegistrar, setShowRegistrar] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [buscaDebounced, setBuscaDebounced] = useState('')
   const errorModal = useErrorModal()
 
-  // Debounce da busca: a busca dispara reload server-side (não filtra só o que
-  // já estava carregado — senão o teto do feed esconde registros antigos do aluno).
+  // Feed global sem busca: pagina do servidor (não carrega tudo). Com busca ou
+  // embutido por aluno: puxa todos os registros do(s) aluno(s) de uma vez.
+  const serverPaged = !alunoId && !buscaDebounced
+
+  // Debounce da busca: dispara reload server-side (resolve os alunos no servidor),
+  // não filtra só o que já estava carregado.
   useEffect(() => {
     const t = setTimeout(() => setBuscaDebounced(busca.trim()), 400)
     return () => clearTimeout(t)
   }, [busca])
+
+  // Volta pra página 1 ao trocar escopo (busca/origem/aluno).
+  useEffect(() => { setPage(1) }, [buscaDebounced, filtroOrigem, alunoId])
 
   useEffect(() => {
     let cancelado = false
@@ -148,32 +157,33 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
       try {
         let regs
         if (alunoId) {
-          // Embutido na aba do aluno: todos os registros desse aluno.
-          regs = await listarRegistros({ aluno: alunoId, limit: FEED_LIMIT })
+          regs = await listarRegistros({ aluno: alunoId, origem: filtroOrigem, limit: FEED_LIMIT })
         } else if (buscaDebounced) {
-          // Busca global por nome: resolve os alunos no servidor e traz TODOS os
-          // registros deles — sem depender da janela de recentes do feed.
           const { list: al } = await listarAlunos({ search: buscaDebounced, limit: 50 })
           const ids = al.map(a => a.name)
           if (!ids.length) {
             regs = []
           } else {
-            regs = await listarRegistros({ alunos: ids, limit: FEED_LIMIT })
+            regs = await listarRegistros({ alunos: ids, origem: filtroOrigem, limit: FEED_LIMIT })
             if (!cancelado) { const m = {}; al.forEach(a => { m[a.name] = a.nome_completo }); setNomes(prev => ({ ...prev, ...m })) }
           }
         } else {
-          // Feed global sem busca: registros mais recentes de todos os alunos.
-          regs = await listarRegistros({ limit: FEED_LIMIT })
+          regs = await listarRegistros({ origem: filtroOrigem, limit: PAGE_SIZE, limitStart: (page - 1) * PAGE_SIZE })
         }
         if (cancelado) return
         setRegistros(regs)
-        if (!alunoId && !buscaDebounced) {
+        setHasMore(serverPaged && regs.length === PAGE_SIZE)
+        // nomes dos alunos da página (feed/embutido)
+        if (!buscaDebounced && !alunoId) {
           const ids = [...new Set(regs.map(r => r.aluno).filter(Boolean))]
           if (ids.length) {
             const al = await listarAlunosByIds(ids).catch(() => [])
-            if (!cancelado) { const m = {}; al.forEach(a => { m[a.name] = a.nome_completo }); setNomes(m) }
+            if (!cancelado) { const m = {}; al.forEach(a => { m[a.name] = a.nome_completo }); setNomes(prev => ({ ...prev, ...m })) }
           }
         }
+        // sinaliza foto vs só-peso (1 query pros registros carregados)
+        const counts = await contarFotos(regs.map(r => r.name)).catch(() => ({}))
+        if (!cancelado) setFotoCount(counts)
       } catch (e) {
         if (!cancelado) errorModal.show(e, 'Carregar evolução')
       } finally {
@@ -183,18 +193,14 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
     carregar()
     return () => { cancelado = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [alunoId, refreshKey, buscaDebounced])
+  }, [alunoId, refreshKey, buscaDebounced, filtroOrigem, page])
 
+  // origem e busca já são filtradas no servidor; aqui só o nome (defesa do transitório do debounce)
   const filtrados = useMemo(() => {
     const q = busca.trim().toLowerCase()
-    return registros.filter(r =>
-      (!q || (nomes[r.aluno] || '').toLowerCase().includes(q)) &&
-      (!filtroOrigem || r.origem === filtroOrigem)
-    )
-  }, [registros, nomes, busca, filtroOrigem])
-
-  // Reseta pra primeira página sempre que o conjunto filtrado muda.
-  useEffect(() => { setPage(1) }, [busca, filtroOrigem, alunoId])
+    if (!q) return registros
+    return registros.filter(r => (nomes[r.aluno] || '').toLowerCase().includes(q))
+  }, [registros, nomes, busca])
 
   // Só compara registros do MESMO aluno.
   const alunoSel = selecionados.length ? selecionados[0].aluno : null
@@ -316,12 +322,34 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
       render: (row) => { const b = ORIGEM_BADGE[row.origem] || ORIGEM_BADGE.manual; return <Badge variant={b.variant} size="sm">{b.label}</Badge> },
     },
     {
+      label: 'Conteúdo', headerClass: 'text-center', cellClass: 'text-center',
+      render: (row) => {
+        const nf = fotoCount[row.name] || 0
+        const temPeso = row.peso != null && row.peso > 0
+        return (
+          <div className="flex items-center justify-center gap-1">
+            {nf > 0 && (
+              <Badge variant="info" size="sm">
+                <span className="flex items-center gap-1"><ImageIcon size={11} />{nf}</span>
+              </Badge>
+            )}
+            {temPeso && (
+              <Badge variant="success" size="sm">
+                <span className="flex items-center gap-1"><Scale size={11} />Peso</span>
+              </Badge>
+            )}
+            {!nf && !temPeso && <span className="text-gray-600 text-xs">—</span>}
+          </div>
+        )
+      },
+    },
+    {
       label: 'Data',
       render: (row) => <span className="text-gray-400 text-xs">{fmtData(row.data)}</span>,
     },
     {
       label: 'Peso', headerClass: 'text-center', cellClass: 'text-center',
-      render: (row) => row.peso != null ? <span className="text-white text-sm font-semibold">{numBR(row.peso)} kg</span> : <span className="text-gray-600 text-xs">—</span>,
+      render: (row) => row.peso != null && row.peso > 0 ? <span className="text-white text-sm font-semibold">{numBR(row.peso)} kg</span> : <span className="text-gray-600 text-xs">—</span>,
     },
   ]
 
@@ -345,15 +373,26 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
   ) : filtrados.length === 0 ? (
     <EmptyState icon={Activity} title="Sem registros de evolução" description="Os registros aparecem quando o aluno responde feedback/anamnese (com fotos/peso) ou você cria uma avaliação." />
   ) : (
-    <DataTable
-      columns={columns}
-      rows={filtrados}
-      rowKey="name"
-      onRowClick={viewRegistro}
-      page={page}
-      pageSize={busca ? (filtrados.length || 1) : PAGE_SIZE}
-      onPage={busca ? undefined : setPage}
-    />
+    <>
+      <DataTable
+        columns={columns}
+        rows={filtrados}
+        rowKey="name"
+        onRowClick={viewRegistro}
+        // Feed paginado: rows já é a página do servidor → mostra tudo (page 1 interno).
+        // Busca/embutido: pagina no client.
+        page={serverPaged ? 1 : page}
+        pageSize={serverPaged || busca ? (filtrados.length || 1) : PAGE_SIZE}
+        onPage={serverPaged || busca ? undefined : setPage}
+      />
+      {serverPaged && (filtrados.length > 0) && (
+        <div className="flex items-center justify-between mt-3 px-1">
+          <Button variant="secondary" size="sm" icon={ChevronLeft} disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>Anterior</Button>
+          <span className="text-xs text-gray-500 font-medium">Página {page}</span>
+          <Button variant="secondary" size="sm" iconRight={ChevronRight} disabled={!hasMore} onClick={() => setPage(p => p + 1)}>Próxima</Button>
+        </div>
+      )}
+    </>
   )
 
   const registrarModal = showRegistrar && (
@@ -386,7 +425,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
       {registrarModal}
       <ListPage
         title="Evolução do Aluno"
-        subtitle={`Peso e fotos dos seus alunos · ${filtrados.length} registro(s)`}
+        subtitle={serverPaged ? `Peso e fotos dos seus alunos · busque um nome pra ver todo o histórico` : `${filtrados.length} registro(s)`}
         actions={toolbar}
         filters={[
           { type: 'search', value: busca, onChange: setBusca, placeholder: 'Buscar aluno...', icon: Search },
