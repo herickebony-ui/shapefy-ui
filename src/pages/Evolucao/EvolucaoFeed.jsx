@@ -553,17 +553,18 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
       render: (row) => <span className="text-white text-sm font-medium">{nomes[row.aluno] || row.aluno}</span>,
     }] : []),
     {
-      label: 'Tipo',
+      label: 'Formulário',
       render: (row) => {
         const b = ORIGEM_BADGE[row.origem] || ORIGEM_BADGE.manual
-        const fonte = row.fonte || row.conjunto || (row.origem === 'avaliacao' ? 'Avaliação Corporal' : '')
-        return (
-          <div className="flex items-center gap-2">
-            <Badge variant={b.variant} size="sm">{b.label}</Badge>
-            {fonte && <span className="text-gray-400 text-xs">{fonte}</span>}
-          </div>
-        )
+        const nome = row.fonte || (row.origem === 'avaliacao' ? 'Avaliação Corporal' : b.label)
+        return <Badge variant={b.variant} size="sm">{nome}</Badge>
       },
+    },
+    {
+      label: 'Padrão de fotos',
+      render: (row) => row.conjunto
+        ? <Badge variant="purple" size="sm">{row.conjunto}</Badge>
+        : <span className="text-gray-600 text-xs">—</span>,
     },
     {
       label: 'Data',
