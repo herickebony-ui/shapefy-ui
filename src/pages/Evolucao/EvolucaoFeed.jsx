@@ -288,8 +288,13 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
       if (filtroConteudo.length) {
         const tf = (fotoCount[r.name] || 0) > 0
         const tp = r.peso != null && r.peso > 0
-        const cat = tp && tf ? 'ambos' : tp ? 'so_peso' : tf ? 'so_foto' : 'nada'
-        if (!filtroConteudo.includes(cat)) return false
+        // OR entre os selecionados; "tem foto" / "tem peso" / "tem ambos"
+        const match = filtroConteudo.some(f =>
+          f === 'com_peso' ? tp :
+          f === 'com_foto' ? tf :
+          f === 'ambos' ? (tp && tf) : false
+        )
+        if (!match) return false
       }
       return true
     })
@@ -556,8 +561,8 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
             { value: 'manual', label: 'Manual' },
           ] },
           { type: 'multiselect', value: filtroConteudo, onToggle: toggleConteudo, options: [
-            { value: 'so_peso', label: 'Só peso' },
-            { value: 'so_foto', label: 'Só fotos' },
+            { value: 'com_foto', label: 'Com fotos' },
+            { value: 'com_peso', label: 'Com peso' },
             { value: 'ambos', label: 'Peso e fotos' },
           ] },
         ]}
