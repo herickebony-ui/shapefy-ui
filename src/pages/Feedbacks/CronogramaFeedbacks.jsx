@@ -942,7 +942,7 @@ export default function CronogramaFeedbacks() {
       {/* Layout completo — renderiza sempre, mesmo sem aluno selecionado */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* ─── Coluna esquerda ─────────────────────────────────────────── */}
-          <div className="lg:col-span-5 space-y-4">
+          <div className="lg:col-span-6 space-y-4">
 
             {/* Aluno: célula única — nome aparece no input; clica e digita pra trocar */}
             <div className="bg-[#29292e] border border-[#323238] rounded-xl p-4 space-y-3">
@@ -1175,7 +1175,7 @@ export default function CronogramaFeedbacks() {
           </div>
 
           {/* ─── Coluna direita ──────────────────────────────────────────── */}
-          <div className="lg:col-span-7 space-y-4">
+          <div className="lg:col-span-6 space-y-4">
 
             {/* Vigência: read-only quando há contrato, editável quando não */}
             <div className="bg-[#29292e] border border-[#323238] rounded-xl p-4 space-y-3">
