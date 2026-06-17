@@ -1,14 +1,15 @@
 import client from './client'
-import { profissionalLogado } from './helpers'
+import { filtrosBusca } from '../utils/strings'
 
 // CRUD de Conjunto de Fotos (template de slots do profissional).
 // Doctype: "Conjunto de Fotos" (+ child "Conjunto de Fotos Slot").
 
 const DOCTYPE = 'Conjunto%20de%20Fotos'
+const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
 
 export const listarConjuntos = async ({ busca, page = 1, limit = 50 } = {}) => {
   const filters = [['profissional', '=', profissionalLogado()]]
-  if (busca) filters.push(['titulo', 'like', `%${busca}%`])
+  if (busca) filters.push(...filtrosBusca('titulo', busca))
   const params = {
     fields: JSON.stringify(['name', 'titulo', 'enabled', 'profissional']),
     filters: JSON.stringify(filters),
@@ -41,4 +42,15 @@ export const salvarConjunto = async (id, payload) => {
 
 export const excluirConjunto = async (id) => {
   await client.delete(`/api/resource/${DOCTYPE}/${encodeURIComponent(id)}`)
+}
+
+// Conjunto padrão do profissional (usado automaticamente nos feedbacks).
+export const conjuntoPadraoAtual = async () => {
+  const res = await client.get('/api/method/shapefy.evolucao.api.conjunto_padrao_atual')
+  return res.data?.message?.conjunto_fotos_padrao || null
+}
+
+export const definirConjuntoPadrao = async (name) => {
+  const res = await client.post('/api/method/shapefy.evolucao.api.definir_conjunto_padrao', { conjunto: name || '' })
+  return res.data?.message?.conjunto_fotos_padrao || null
 }

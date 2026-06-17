@@ -1316,6 +1316,9 @@ export default function DietaDetalhe() {
   const location = useLocation()
   const isTemplate = location.pathname.startsWith('/modelos/dietas/')
   const backHref = isTemplate ? '/modelos/dietas' : '/dietas'
+  // Sinal vindo da navegação: dieta recém-criada (Nova Dieta / modelo / duplicar).
+  // Usado pra decidir o texto da notificação: 1º envio = "nova", depois = "atualizada".
+  const recemCriadaRef = useRef(location.state?.recemCriada || false)
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -1443,10 +1446,12 @@ export default function DietaDetalhe() {
       await salvarDieta(id, payload)
       // agendado_para === false → salvou sem notificar (escolha do profissional)
       if (agendado_para !== false) {
+        const isNovaDieta = recemCriadaRef.current
+        recemCriadaRef.current = false
         await criarNotificacaoAluno({
           aluno: draft.aluno,
-          titulo: 'Sua nova dieta está disponível!',
-          descricao: 'Confira sua nova dieta no app.',
+          titulo: isNovaDieta ? 'Sua nova dieta está disponível!' : 'Sua dieta foi atualizada!',
+          descricao: isNovaDieta ? 'Confira sua nova dieta no app.' : 'Sua dieta foi ajustada. Confira no app.',
           url: `/dieta/${id}`,
           agendado_para,
         })
@@ -1699,7 +1704,7 @@ export default function DietaDetalhe() {
           dietaId={id}
           nomeAtual={draft.nome_completo || draft.aluno}
           onClose={() => setModalDuplicar(false)}
-          onDuplicado={(novaId) => { setModalDuplicar(false); if (novaId) navigate(`/dietas/${novaId}`) }}
+          onDuplicado={(novaId) => { setModalDuplicar(false); if (novaId) navigate(`/dietas/${novaId}`, { state: { recemCriada: true } }) }}
         />
       )}
 

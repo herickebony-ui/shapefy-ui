@@ -25,6 +25,10 @@ import ProgressaoCargas from './pages/Treinos/ProgressaoCargas'
 import BancoTextos from './pages/BancoTextos/BancoTextos'
 import FormularioListagem from './pages/Formularios/FormularioListagem'
 import FormularioBuilder from './pages/Formularios/FormularioBuilder'
+import ConjuntoListagem from './pages/Conjuntos/ConjuntoListagem'
+import ConjuntoBuilder from './pages/Conjuntos/ConjuntoBuilder'
+import EvolucaoAluno from './pages/Evolucao/EvolucaoAluno'
+import EvolucaoFeed from './pages/Evolucao/EvolucaoFeed'
 import Suporte from './pages/Suporte/Suporte'
 import UsuarioHub from './pages/Usuario/UsuarioHub'
 import PerfilProfissional from './pages/Perfil/PerfilProfissional'
@@ -42,11 +46,15 @@ import MeuLinkCadastro from './pages/Cadastro/MeuLinkCadastro'
 import FuncionarioListagem from './pages/Funcionarios/FuncionarioListagem'
 import ModeloDietaListagem from './pages/Modelos/ModeloDietaListagem'
 import ModeloFichaListagem from './pages/Modelos/ModeloFichaListagem'
+import ModeloInstrucaoListagem from './pages/Modelos/ModeloInstrucaoListagem'
+import ModeloInstrucaoEditor from './pages/Modelos/ModeloInstrucaoEditor'
 import AlunoLayout from './components/layout/AlunoLayout'
 import AlunoHome from './pages/Aluno/AlunoHome'
 import FeedbackResposta from './pages/Aluno/FeedbackResposta'
 import AnamneseResposta from './pages/Aluno/AnamneseResposta'
 import TreinoLista from './pages/Aluno/TreinoLista'
+import InstrucoesAluno from './pages/Aluno/InstrucoesAluno'
+import InstrucaoDetalheAluno from './pages/Aluno/InstrucaoDetalheAluno'
 import TreinoFicha from './pages/Aluno/TreinoFicha'
 import TreinoExecucao from './pages/Aluno/TreinoExecucao'
 import AerobicoLista from './pages/Aluno/AerobicoLista'
@@ -118,6 +126,8 @@ function App() {
           }
         >
           <Route index element={<AlunoHome />} />
+          <Route path="instrucoes" element={<InstrucoesAluno />} />
+          <Route path="instrucoes/:name" element={<InstrucaoDetalheAluno />} />
           <Route path="feedbacks" element={<FeedbacksProximos />} />
           <Route path="feedbacks/:id" element={<FeedbackResposta />} />
           <Route path="anamneses/:id" element={<AnamneseResposta />} />
@@ -149,6 +159,8 @@ function App() {
           {/* anamnese — feature universal, sem gate de módulo */}
           <Route path="anamneses" element={<AnamneseListagem />} />
           <Route path="alunos/:id" element={<AlunoDetalhe />} />
+          <Route path="alunos/:id/evolucao" element={<EvolucaoAluno />} />
+          <Route path="evolucao" element={<EvolucaoFeed />} />
           <Route path="alunos" element={<Navigate to="/anamneses" replace />} />
 
           {/* dieta */}
@@ -164,6 +176,10 @@ function App() {
           <Route path="fichas/:id" element={<ModuleRoute modulo="treino"><FichaDetalhe /></ModuleRoute>} />
           <Route path="modelos/fichas" element={<ModuleRoute modulo="treino"><ModeloFichaListagem /></ModuleRoute>} />
           <Route path="modelos/fichas/:id" element={<ModuleRoute modulo="treino"><FichaDetalhe /></ModuleRoute>} />
+
+          {/* instruções (onboarding) — cobre dieta e/ou treino */}
+          <Route path="modelos/instrucoes" element={<ModeloInstrucaoListagem />} />
+          <Route path="modelos/instrucoes/:id" element={<ModeloInstrucaoEditor />} />
           <Route path="exercicios" element={<ModuleRoute modulo="treino"><GerenciarTreino /></ModuleRoute>} />
           <Route path="alongamentos" element={<ModuleRoute modulo="treino"><GerenciarAlongamentos /></ModuleRoute>} />
           <Route path="aerobicos" element={<ModuleRoute modulo="treino"><GerenciarAerobicos /></ModuleRoute>} />
@@ -189,6 +205,8 @@ function App() {
           <Route path="formularios/anamnese" element={<FormularioListagem tipoFixo="anamnese" />} />
           <Route path="criar-formularios" element={<Navigate to="/formularios/anamnese" replace />} />
           <Route path="criar-formularios/:tipo/:id" element={<FormularioBuilder />} />
+          <Route path="conjuntos-fotos" element={<ConjuntoListagem />} />
+          <Route path="conjuntos-fotos/:id" element={<ConjuntoBuilder />} />
           <Route path="suporte" element={<Suporte />} />
           <Route path="me" element={<UsuarioHub />} />
           <Route path="perfil" element={<PerfilProfissional />} />

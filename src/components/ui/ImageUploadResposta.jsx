@@ -1,8 +1,22 @@
 import { useRef, useState } from 'react'
 import { Image as ImageIcon, RotateCw, Trash2, Upload } from 'lucide-react'
 import useErrorModal from '../../hooks/useErrorModal'
+import { toRenderableImage } from '../../utils/heicToJpeg'
+import HeicSafeImg from './HeicSafeImg'
+import { cropImgStyle } from '../evolucao/ModeloCropper'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
+
+// Formatos RAW (ex: ProRAW/.dng do iPhone) que o navegador não decodifica e que
+// travam o app ao tentar processar. Detecta por extensão e por mime — bloqueamos
+// com aviso amigável (só olha o nome/tipo, não lê o arquivo) em vez de deixar fechar.
+const RAW_EXT = /\.(dng|cr2|cr3|crw|nef|nrw|arw|srf|sr2|raf|orf|rw2|raw|pef|x3f|3fr|erf|kdc|dcr|mrw|mef|mos|tiff?)$/i
+const ehFormatoRaw = (file) => {
+  if (!file) return false
+  if (RAW_EXT.test(file.name || '')) return true
+  const t = (file.type || '').toLowerCase()
+  return /dng|x-adobe|x-canon|x-nikon|x-sony|x-panasonic|tiff/.test(t)
+}
 
 // Drop zone de imagem reutilizável.
 // value: file_url salva (ex: "/files/xxx.jpg"); '' / null = sem imagem.
@@ -15,7 +29,7 @@ const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 //   O orquestrador (form) abre um modal de distribuicao das fotos pelos slots.
 // O input usa `multiple` por padrao — em iOS isso forca o picker a ir direto na
 // galeria (sem opcao de camera), atendendo ao requisito de "so galeria".
-export default function ImageUploadResposta({ value, onChange, uploadFn, onRotate, label, disabled, onMultipleSelected }) {
+export default function ImageUploadResposta({ value, onChange, uploadFn, onRotate, label, disabled, onMultipleSelected, modelo, modeloCrop }) {
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [rotating, setRotating] = useState(false)
@@ -23,20 +37,36 @@ export default function ImageUploadResposta({ value, onChange, uploadFn, onRotat
   const inputRef = useRef(null)
   const errorModal = useErrorModal()
 
+  const mostrarAvisoRaw = () => {
+    errorModal.show({
+      type: 'validation',
+      title: 'Formato de foto não suportado',
+      messages: [
+        'Essa foto está em formato RAW/ProRAW (.dng) — o app não consegue abrir esse tipo de arquivo.',
+        'No iPhone: Ajustes → Câmera → Formatos → desligue "Apple ProRAW". Depois escolha a foto de novo.',
+        'Ou selecione uma foto normal (JPG / HEIC).',
+      ],
+      statusCode: 0,
+    }, 'Foto')
+  }
+
   const enviar = async (file) => {
     if (!file) return
-    if (!file.type.startsWith('image/')) {
+    if (ehFormatoRaw(file)) { mostrarAvisoRaw(); return }
+    const ehImagem = file.type.startsWith('image/') || /\.(heic|heif)$/i.test(file.name || '')
+    if (!ehImagem) {
       errorModal.show({
         type: 'validation',
         title: 'Arquivo inválido',
-        messages: ['Envie apenas arquivos de imagem (PNG, JPG, WEBP).'],
+        messages: ['Envie apenas arquivos de imagem (PNG, JPG, WEBP, HEIC).'],
         statusCode: 0,
       }, 'Upload de imagem')
       return
     }
     setUploading(true)
     try {
-      const url = await uploadFn(file)
+      const preparado = await toRenderableImage(file) // HEIC do iPhone -> JPEG
+      const url = await uploadFn(preparado)
       if (url) onChange(url)
       else errorModal.show({
         type: 'server',
@@ -55,11 +85,14 @@ export default function ImageUploadResposta({ value, onChange, uploadFn, onRotat
     const files = Array.from(e.target.files || [])
     e.target.value = ''
     if (files.length === 0) return
-    if (files.length > 1 && onMultipleSelected) {
-      onMultipleSelected(files)
+    const validos = files.filter(f => !ehFormatoRaw(f))
+    if (validos.length < files.length) mostrarAvisoRaw()
+    if (validos.length === 0) return
+    if (validos.length > 1 && onMultipleSelected) {
+      onMultipleSelected(validos)
       return
     }
-    await enviar(files[0])
+    await enviar(validos[0])
   }
 
   const handleDrop = async (e) => {
@@ -68,11 +101,14 @@ export default function ImageUploadResposta({ value, onChange, uploadFn, onRotat
     if (uploading || disabled) return
     const files = Array.from(e.dataTransfer.files || [])
     if (files.length === 0) return
-    if (files.length > 1 && onMultipleSelected) {
-      onMultipleSelected(files)
+    const validos = files.filter(f => !ehFormatoRaw(f))
+    if (validos.length < files.length) mostrarAvisoRaw()
+    if (validos.length === 0) return
+    if (validos.length > 1 && onMultipleSelected) {
+      onMultipleSelected(validos)
       return
     }
-    await enviar(files[0])
+    await enviar(validos[0])
   }
 
   const handleRotate = async () => {
@@ -89,7 +125,7 @@ export default function ImageUploadResposta({ value, onChange, uploadFn, onRotat
   }
 
   const preview = value
-    ? `${FRAPPE_URL}${value}${rotateBust ? `?v=${rotateBust}` : ''}`
+    ? `${FRAPPE_URL}${encodeURI(value)}${rotateBust ? `?v=${rotateBust}` : ''}`
     : null
 
   return (
@@ -115,12 +151,20 @@ export default function ImageUploadResposta({ value, onChange, uploadFn, onRotat
           <span className="w-8 h-8 border-2 border-[#2563eb] border-t-transparent rounded-full animate-spin" />
         ) : preview ? (
           <>
-            <img src={preview} alt={label || 'foto'} className="w-full h-full object-cover" />
+            <HeicSafeImg src={preview} alt={label || 'foto'} className="w-full h-full object-cover" />
             {dragOver && (
               <div className="absolute inset-0 bg-[#2563eb]/40 flex items-center justify-center text-white text-xs font-bold uppercase tracking-widest">
                 Solte para substituir
               </div>
             )}
+          </>
+        ) : modelo ? (
+          <>
+            <img src={`${FRAPPE_URL}${encodeURI(modelo)}`} alt="modelo" draggable={false} style={cropImgStyle(modeloCrop)} className="opacity-75" />
+            <div className="absolute inset-0 bg-black/15 flex flex-col items-center justify-center gap-1 text-center px-3">
+              <span className="text-yellow-400 text-sm font-extrabold uppercase tracking-widest [text-shadow:0_1px_4px_rgba(0,0,0,0.95)]">Modelo</span>
+              <span className="text-white text-[11px] leading-tight [text-shadow:0_1px_3px_rgba(0,0,0,0.9)]">{dragOver ? 'Solte aqui' : 'Toque para enviar a sua'}</span>
+            </div>
           </>
         ) : (
           <div className="flex flex-col items-center gap-2 text-gray-500 px-4 text-center">

@@ -4,7 +4,7 @@ import {
   Search, Plane, MessageSquare,
   Save, Copy, Trash2, X, ChevronLeft, ChevronRight, ArrowLeft,
   Users, Calendar as CalendarIcon, Wand2, Plus, Loader2,
-  Target, Repeat,
+  Target, Repeat, FileText, Image as ImageIcon,
 } from 'lucide-react'
 
 import {
@@ -36,6 +36,7 @@ import {
 } from '../../api/templates'
 import { listarAlunos, buscarAluno, salvarAluno } from '../../api/alunos'
 import { listarFormulariosFeedback } from '../../api/formularios'
+import { listarConjuntos, conjuntoPadraoAtual } from '../../api/conjuntos'
 import { listarContratos } from '../../api/contratosAluno'
 
 import {
@@ -78,6 +79,8 @@ export default function CronogramaFeedbacks() {
   // ─── Dados base ─────────────────────────────────────────────────────────────
   const [todosAlunos, setTodosAlunos] = useState([])
   const [formularios, setFormularios] = useState([])
+  const [conjuntos, setConjuntos] = useState([])
+  const [conjuntoPadrao, setConjuntoPadrao] = useState('') // padrão de fotos das próximas datas
   const [feriasList, setFeriasList] = useState([])
   const [carregandoBase, setCarregandoBase] = useState(true)
 
@@ -139,14 +142,18 @@ export default function CronogramaFeedbacks() {
   const carregarBase = useCallback(async () => {
     setCarregandoBase(true)
     try {
-      const [alunosRes, formsRes, feriasRes] = await Promise.all([
+      const [alunosRes, formsRes, feriasRes, conjuntosRes, padraoRes] = await Promise.all([
         listarAlunos({ limit: 500 }),
         listarFormulariosFeedback(),
         listarFerias(),
+        listarConjuntos({ limit: 100 }).catch(() => ({ list: [] })),
+        conjuntoPadraoAtual().catch(() => null),
       ])
       setTodosAlunos(alunosRes.list || [])
       setFormularios(formsRes || [])
       setFeriasList(feriasRes || [])
+      setConjuntos(conjuntosRes.list || [])
+      if (padraoRes) setConjuntoPadrao(padraoRes)
     } catch (e) {
       console.error(e)
       showToast('Falha ao carregar dados', 'error')
@@ -200,6 +207,8 @@ export default function CronogramaFeedbacks() {
         is_start: !!ag.is_start,
         is_training: !!ag.is_training,
         respondido_em: ag.respondido_em,
+        conjunto_fotos: ag.conjunto_fotos || '',
+        incluir_peso: ag.incluir_peso,
       })).sort((x, y) => (x.date || '').localeCompare(y.date || ''))
       setSchedule({ dates })
       // Vigência: contrato é fonte de verdade. Se há contrato relevante com
@@ -338,6 +347,47 @@ export default function CronogramaFeedbacks() {
         // reverte
         setSchedule(prev => ({
           dates: prev.dates.map(d => d.date === date ? { ...d, formulario: atual.formulario } : d),
+        }))
+      }
+    }
+  }, [schedule.dates, showToast])
+
+  // Override por data do conjunto de fotos (vazio = segue o formulário da linha).
+  const handleSetConjuntoData = useCallback(async (date, conjunto) => {
+    const atual = schedule.dates.find(d => d.date === date)
+    if (!atual) return
+    setSchedule(prev => ({
+      dates: prev.dates.map(d => d.date === date ? { ...d, conjunto_fotos: conjunto } : d),
+    }))
+    if (atual._name) {
+      try {
+        await salvarAgendamento(atual._name, { conjunto_fotos: conjunto || '' })
+      } catch (e) {
+        console.error(e)
+        showToast('Falha ao salvar conjunto', 'error')
+        setSchedule(prev => ({
+          dates: prev.dates.map(d => d.date === date ? { ...d, conjunto_fotos: atual.conjunto_fotos } : d),
+        }))
+      }
+    }
+  }, [schedule.dates, showToast])
+
+  // Override por data do "pedir peso".
+  const handleSetPesoData = useCallback(async (date, pedir) => {
+    const atual = schedule.dates.find(d => d.date === date)
+    if (!atual) return
+    const val = pedir ? 1 : 0
+    setSchedule(prev => ({
+      dates: prev.dates.map(d => d.date === date ? { ...d, incluir_peso: val } : d),
+    }))
+    if (atual._name) {
+      try {
+        await salvarAgendamento(atual._name, { incluir_peso: val })
+      } catch (e) {
+        console.error(e)
+        showToast('Falha ao salvar peso', 'error')
+        setSchedule(prev => ({
+          dates: prev.dates.map(d => d.date === date ? { ...d, incluir_peso: atual.incluir_peso } : d),
         }))
       }
     }
@@ -498,16 +548,27 @@ export default function CronogramaFeedbacks() {
         plan_duration: Number(planForm.plan_duration) || 0,
         formulario_padrao: planForm.formulario_padrao || formularioSugerido || null,
       })
-      await sincronizarCronogramaDoAluno(alunoId, schedule.dates.map(d => ({
-        formulario: d.formulario || planForm.formulario_padrao,
-        data_agendada: d.date,
-        dias_aviso: Number(d.dias_aviso) || 1,
-        status: d.status || 'Agendado',
-        observacao: d.observacao || '',
-        nota: d.nota || '',
-        is_start: d.is_start ? 1 : 0,
-        is_training: d.is_training ? 1 : 0,
-      })))
+      await sincronizarCronogramaDoAluno(alunoId, schedule.dates.map(d => {
+        const fid = d.formulario || planForm.formulario_padrao
+        const form = formularios.find(f => f.name === fid)
+        // Snapshot do conjunto/peso: override da data > Fotos padrão da barra > formulário.
+        const conjunto = d.conjunto_fotos ? d.conjunto_fotos : (conjuntoPadrao || form?.conjunto_fotos || '')
+        const peso = d.incluir_peso != null
+          ? d.incluir_peso
+          : (form?.incluir_peso == null ? 1 : Number(form.incluir_peso))
+        return {
+          formulario: fid,
+          data_agendada: d.date,
+          dias_aviso: Number(d.dias_aviso) || 1,
+          status: d.status || 'Agendado',
+          observacao: d.observacao || '',
+          nota: d.nota || '',
+          is_start: d.is_start ? 1 : 0,
+          is_training: d.is_training ? 1 : 0,
+          conjunto_fotos: conjunto,
+          incluir_peso: peso,
+        }
+      }))
       showToast('Cronograma salvo!', 'success')
       await carregarAluno(alunoId)
     } catch (e) {
@@ -884,7 +945,7 @@ export default function CronogramaFeedbacks() {
       {/* Layout completo — renderiza sempre, mesmo sem aluno selecionado */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* ─── Coluna esquerda ─────────────────────────────────────────── */}
-          <div className="lg:col-span-5 space-y-4">
+          <div className="lg:col-span-6 space-y-4">
 
             {/* Aluno: célula única — nome aparece no input; clica e digita pra trocar */}
             <div className="bg-[#29292e] border border-[#323238] rounded-xl p-4 space-y-3">
@@ -965,6 +1026,41 @@ export default function CronogramaFeedbacks() {
                   onClick={handleCopiarMensagem}>Copiar msg</Button>
               </div>
 
+              {/* Padrão das próximas datas — rótulo em cima, cor discreta pra
+                  bater o olho (o foco da tela são as datas, não isto). */}
+              <div className="px-3 py-3 border-b border-[#323238]/60 bg-gradient-to-r from-[#2563eb]/[0.06] to-purple-500/[0.06]">
+                <p className="text-[9px] uppercase tracking-widest text-gray-500 font-bold mb-2">Padrão das datas selecionadas</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="flex items-center gap-1 text-[10px] uppercase tracking-widest text-[#93C5FD] font-bold mb-1">
+                      <FileText size={11} /> Formulário
+                    </label>
+                    <select
+                      value={formularioSugerido || ''}
+                      onChange={(e) => setPlanForm(p => ({ ...p, formulario_padrao: e.target.value }))}
+                      className="w-full h-9 px-2 bg-[#1a1a1a] border border-[#2563eb]/25 hover:border-[#2563eb]/50 focus:border-[#2563eb]/70 text-white rounded-lg text-xs outline-none transition-colors">
+                      {formularios.map(f => (
+                        <option key={f.name} value={f.name}>{f.titulo}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="flex items-center gap-1 text-[10px] uppercase tracking-widest text-purple-300 font-bold mb-1">
+                      <ImageIcon size={11} /> Fotos
+                    </label>
+                    <select
+                      value={conjuntoPadrao}
+                      onChange={(e) => setConjuntoPadrao(e.target.value)}
+                      className="w-full h-9 px-2 bg-[#1a1a1a] border border-purple-500/25 hover:border-purple-500/50 focus:border-purple-500/70 text-white rounded-lg text-xs outline-none transition-colors">
+                      <option value="">Não pedir</option>
+                      {conjuntos.map(c => (
+                        <option key={c.name} value={c.name}>{c.titulo}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               <div className="max-h-[520px] overflow-y-auto">
                 {schedule.dates.length === 0 ? (
                   <div className="p-6 text-center">
@@ -989,39 +1085,71 @@ export default function CronogramaFeedbacks() {
                         : 0
                       const cycleText = d.cycleDurationText
                       const ehADefinir = cycleText && cycleText.includes('definir')
+                      const formObjRow = formularios.find(f => f.name === (d.formulario || formularioSugerido))
+                      const pesoRow = d.incluir_peso != null
+                        ? !!Number(d.incluir_peso)
+                        : (formObjRow?.incluir_peso == null ? true : !!Number(formObjRow.incluir_peso))
+                      const zebra = d.is_start
+                        ? 'bg-[#2563eb]/15'
+                        : (idx % 2 === 0 ? 'bg-[#1f1f24] hover:bg-[#26262c]' : 'bg-[#191a1d] hover:bg-[#26262c]')
                       return (
                         <LongPressRow key={d.date}
                           onLongPress={(e) => {
                             setMarcoZeroMenu({ date: d.date, x: e.clientX, y: e.clientY })
                           }}
-                          className={`grid grid-cols-[78px_44px_1fr_44px_92px_24px] gap-1.5 px-3 py-2 border-b border-[#323238]/40 items-center transition-colors select-none ${
-                            d.is_start ? 'bg-[#2563eb]/15' : 'hover:bg-[#1e1e22]'
-                          }`}>
-                          <span className="text-white font-medium text-xs">{fmtDateBR(d.date)}</span>
+                          className={`grid grid-cols-[78px_44px_1fr_44px_92px_24px] gap-1.5 px-3 py-2.5 border-b border-[#323238]/30 items-center transition-colors select-none ${zebra}`}>
+                          <span className="text-white font-semibold text-xs">{fmtDateBR(d.date)}</span>
                           <span className="flex justify-center">
                             <TipoBotao item={d}
                               onCycle={(_, novoEstado) => handleSetTipo(d.date, novoEstado)}
                               variant="icon"
                               size="sm" />
                           </span>
-                          {d.is_start ? (
-                            <span
-                              title="Ponto de partida não dispara feedback — só serve de âncora pra contar o intervalo."
-                              className="h-7 px-2 inline-flex items-center bg-[#1a1a1a]/40 border border-dashed border-[#323238] text-gray-500 italic rounded text-[11px] truncate"
-                            >
-                              Sem formulário (ponto de partida)
-                            </span>
-                          ) : (
-                            <select
-                              value={d.formulario || formularioSugerido || ''}
-                              onChange={(e) => handleSetFormulario(d.date, e.target.value)}
-                              className="h-7 px-1 bg-[#1a1a1a] border border-[#323238] text-white rounded text-[11px] outline-none focus:border-[#2563eb]/60 truncate"
-                            >
-                              {formularios.map((f) => (
-                                <option key={f.name} value={f.name}>{f.titulo}</option>
-                              ))}
-                            </select>
-                          )}
+                          <div className="flex flex-col gap-1.5 min-w-0">
+                            {d.is_start ? (
+                              <span
+                                title="Ponto de partida não dispara feedback — só serve de âncora pra contar o intervalo."
+                                className="h-7 px-2 inline-flex items-center bg-[#1a1a1a]/40 border border-dashed border-[#323238] text-gray-500 italic rounded text-[11px] truncate"
+                              >
+                                Sem formulário (ponto de partida)
+                              </span>
+                            ) : (
+                              <>
+                                <select
+                                  value={d.formulario || formularioSugerido || ''}
+                                  onChange={(e) => handleSetFormulario(d.date, e.target.value)}
+                                  title="Override do formulário desta data (vazio = padrão da barra)"
+                                  className="h-7 px-1 bg-transparent border border-transparent hover:border-[#323238] focus:border-[#2563eb]/60 text-gray-300 rounded text-[11px] outline-none truncate transition-colors"
+                                >
+                                  {formularios.map((f) => (
+                                    <option key={f.name} value={f.name}>{f.titulo}</option>
+                                  ))}
+                                </select>
+                                <div className="flex items-center gap-1.5">
+                                  <select
+                                    value={d.conjunto_fotos || ''}
+                                    onChange={(e) => handleSetConjuntoData(d.date, e.target.value)}
+                                    title="Override do padrão de fotos desta data (Padrão = segue a barra)"
+                                    className="flex-1 min-w-0 h-6 px-1 bg-transparent border border-transparent hover:border-[#2a2a30] focus:border-[#2563eb]/60 text-gray-500 rounded text-[10px] outline-none truncate transition-colors"
+                                  >
+                                    <option value="">Padrão</option>
+                                    {conjuntos.map((c) => (
+                                      <option key={c.name} value={c.name}>{c.titulo}</option>
+                                    ))}
+                                  </select>
+                                  <label className="flex items-center gap-1 cursor-pointer select-none shrink-0" title="Pedir peso nesta data">
+                                    <input
+                                      type="checkbox"
+                                      checked={pesoRow}
+                                      onChange={(e) => handleSetPesoData(d.date, e.target.checked)}
+                                      className="accent-[#2563eb] h-3.5 w-3.5"
+                                    />
+                                    <span className="text-[10px] text-gray-400 font-medium">peso</span>
+                                  </label>
+                                </div>
+                              </>
+                            )}
+                          </div>
                           <span className="text-[10px] text-gray-500 text-center">
                             {intervalo > 0 ? `${intervalo}s` : '—'}
                           </span>
@@ -1039,7 +1167,7 @@ export default function CronogramaFeedbacks() {
                           <button onClick={() => handleRemoverDataLocal(d.date)}
                             title="Remover"
                             className="h-6 w-6 inline-flex items-center justify-center text-gray-500 hover:text-red-400">
-                            <X size={12} />
+                            <Trash2 size={12} />
                           </button>
                         </LongPressRow>
                       )
@@ -1086,7 +1214,7 @@ export default function CronogramaFeedbacks() {
           </div>
 
           {/* ─── Coluna direita ──────────────────────────────────────────── */}
-          <div className="lg:col-span-7 space-y-4">
+          <div className="lg:col-span-6 space-y-4">
 
             {/* Vigência: read-only quando há contrato, editável quando não */}
             <div className="bg-[#29292e] border border-[#323238] rounded-xl p-4 space-y-3">
@@ -1173,24 +1301,7 @@ export default function CronogramaFeedbacks() {
                 </div>
               ) : calendarMode === 'calendar' ? (
                 <>
-                  {/* Sub-barra: formulário padrão das próximas datas marcadas */}
-                  <div className="px-3 md:px-4 py-2.5 border-b border-[#323238]/60 bg-[#1a1a1a]/40 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2.5">
-                    <span className="text-[10px] uppercase tracking-widest text-gray-500 font-bold shrink-0">
-                      Formulário padrão
-                    </span>
-                    <select
-                      value={formularioSugerido || ''}
-                      onChange={(e) => setPlanForm(p => ({ ...p, formulario_padrao: e.target.value }))}
-                      className="w-full sm:flex-1 sm:min-w-[180px] h-10 sm:h-8 px-2 bg-[#1a1a1a] border border-[#323238] hover:border-gray-500 focus:border-[#2563eb]/60 text-white rounded-lg text-xs outline-none transition-colors">
-                      {formularios.map(f => (
-                        <option key={f.name} value={f.name}>{f.titulo}</option>
-                      ))}
-                    </select>
-                    <span className="text-[10px] text-gray-500 italic">
-                      Aplicado às próximas datas marcadas
-                    </span>
-                  </div>
-                  <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {Array.from({ length: 12 }, (_, m) => (
                       <MesGrid
                         key={m}

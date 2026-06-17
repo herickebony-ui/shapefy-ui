@@ -1,9 +1,8 @@
 import client from './client'
 import { profissionalLogado } from './helpers'
 import { criarNotificacaoAluno } from './notificacoes'
+import { filtrosBusca } from '../utils/strings'
 
-
-const primeiroNome = (nome) => String(nome || '').trim().split(/\s+/)[0] || ''
 
 // Vincula um feedback manualmente: cria o Feedback a partir do template
 // (Formulario Feedback) com aluno selecionado e dispara notificação ao aluno.
@@ -11,7 +10,7 @@ const primeiroNome = (nome) => String(nome || '').trim().split(/\s+/)[0] || ''
 // que copia as perguntas do template a partir do campo `formulario`. Mandar a
 // child table preenchida + hook = bug (na anamnese duplicava 57+57; no feedback
 // faz o status virar 'Respondido' indevidamente). Mesma lição da anamnese.
-export const vincularFeedback = async (alunoId, formularioId) => {
+export const vincularFeedback = async (alunoId, formularioId, { conjunto_fotos, incluir_peso } = {}) => {
   const [formRes, alunoRes] = await Promise.all([
     client.get(`/api/resource/Formulario%20Feedback/${encodeURIComponent(formularioId)}`),
     client.get(`/api/resource/Aluno/${encodeURIComponent(alunoId)}`),
@@ -19,7 +18,7 @@ export const vincularFeedback = async (alunoId, formularioId) => {
   const template = formRes.data.data || {}
   const aluno = alunoRes.data.data || {}
   const today = new Date().toISOString().slice(0, 10)
-  const res = await client.post('/api/resource/Feedback', {
+  const payload = {
     aluno: alunoId,
     formulario: formularioId,
     titulo: template.titulo || '',
@@ -28,14 +27,18 @@ export const vincularFeedback = async (alunoId, formularioId) => {
     profissional: profissionalLogado(),
     date: today,
     status: 'Enviado',
-  })
+  }
+  // Coleta de evolução: override explícito do modal. Vazio em conjunto = backend
+  // herda do formulário / padrão do profissional (_congelar_conjunto).
+  if (conjunto_fotos) payload.conjunto_fotos = conjunto_fotos
+  if (incluir_peso !== undefined && incluir_peso !== null) payload.incluir_peso = incluir_peso ? 1 : 0
+  const res = await client.post('/api/resource/Feedback', payload)
   const feedback = res.data?.data
   // Notifica o aluno no app — falha silenciosa pra não bloquear o vínculo.
   try {
-    const nome = primeiroNome(aluno.nome_completo)
     await criarNotificacaoAluno({
       aluno: alunoId,
-      titulo: nome ? `Novo feedback disponível, ${nome}!` : 'Novo feedback disponível!',
+      titulo: 'Você tem um novo feedback pra preencher!',
       descricao: `Preencha o feedback "${template.titulo || ''}" no app.`,
     })
   } catch (err) {
@@ -44,18 +47,19 @@ export const vincularFeedback = async (alunoId, formularioId) => {
   return feedback
 }
 
-export const listarFeedbacks = async ({ busca = '', status = '', dataInicio = '', dataFim = '', page = 1, limit = 500 } = {}) => {
+// `status` aceita string ou array (multi-seleção → filtro `in`). O recorte de
+// data é feito no client (por data_resposta com fallback modified), não aqui.
+export const listarFeedbacks = async ({ busca = '', status = '', page = 1, limit = 500 } = {}) => {
   const profissional = profissionalLogado()
   const filtros = [
     ['profissional', 'in', [profissional, '']],
     ['status', '!=', 'Enviando'],
   ]
   if (busca) {
-    filtros.push(['nome_completo', 'like', `%${busca}%`])
+    filtros.push(...filtrosBusca('nome_completo', busca))
   } else {
-    if (status) filtros.push(['status', '=', status])
-    if (dataInicio) filtros.push(['date', '>=', dataInicio])
-    if (dataFim) filtros.push(['date', '<=', dataFim])
+    const statusArr = (Array.isArray(status) ? status : [status]).filter(Boolean)
+    if (statusArr.length) filtros.push(['status', 'in', statusArr])
   }
 
   const params = {
@@ -99,7 +103,7 @@ export const listarFeedbacksDoAluno = async (alunoId, { statuses = ['Respondido'
 export const listarFormularios = async () => {
   const profissional = profissionalLogado()
   const params = {
-    fields: JSON.stringify(['name', 'titulo']),
+    fields: JSON.stringify(['name', 'titulo', 'conjunto_fotos', 'incluir_peso']),
     filters: JSON.stringify([['profissional', '=', profissional], ['enabled', '=', 1]]),
     limit: 100,
     order_by: 'titulo asc',

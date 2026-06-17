@@ -1,5 +1,6 @@
 import client from './client'
 import { profissionalLogado } from './helpers'
+import { filtrosBusca } from '../utils/strings'
 
 export const listarAlimentos = async ({
   busca = '', grupo = '', enabled = '', page = 1, limit = 300,
@@ -7,7 +8,7 @@ export const listarAlimentos = async ({
   const owner = profissionalLogado()
 
   const filters = [['owner', '=', owner]]
-  if (busca) filters.push(['food', 'like', `%${busca}%`])
+  if (busca) filters.push(...filtrosBusca('food', busca))
   if (grupo) filters.push(['food_group', '=', grupo])
   if (enabled !== '') filters.push(['enabled', '=', Number(enabled)])
 

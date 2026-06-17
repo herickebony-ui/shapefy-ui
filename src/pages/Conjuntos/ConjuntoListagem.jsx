@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, RefreshCw, Edit, Trash2, Images } from 'lucide-react'
+import { Plus, RefreshCw, Edit, Trash2, Images, Star } from 'lucide-react'
 import ListPage from '../../components/templates/ListPage'
 import { Button } from '../../components/ui'
-import { listarConjuntos, excluirConjunto } from '../../api/conjuntos'
+import { listarConjuntos, excluirConjunto, conjuntoPadraoAtual, definirConjuntoPadrao } from '../../api/conjuntos'
 import useErrorModal from '../../hooks/useErrorModal'
 
 export default function ConjuntoListagem() {
@@ -11,13 +11,15 @@ export default function ConjuntoListagem() {
   const [lista, setLista] = useState([])
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
+  const [padrao, setPadrao] = useState(null)
   const errorModal = useErrorModal()
 
   const carregar = useCallback(async () => {
     setLoading(true)
     try {
-      const { list } = await listarConjuntos({ busca })
+      const [{ list }, pad] = await Promise.all([listarConjuntos({ busca }), conjuntoPadraoAtual()])
       setLista(list)
+      setPadrao(pad)
     } catch (e) {
       errorModal.show(e, 'Carregar conjuntos')
     } finally {
@@ -25,6 +27,15 @@ export default function ConjuntoListagem() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [busca])
+
+  const togglePadrao = async (name) => {
+    try {
+      const novo = await definirConjuntoPadrao(name === padrao ? null : name)
+      setPadrao(novo)
+    } catch (e) {
+      errorModal.show(e, 'Definir padrão')
+    }
+  }
 
   useEffect(() => {
     const t = setTimeout(carregar, 300)
@@ -74,10 +85,22 @@ export default function ConjuntoListagem() {
                 <Images size={16} className="text-[#60A5FA]" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-white text-sm font-semibold truncate">{c.titulo}</p>
+                <p className="text-white text-sm font-semibold truncate flex items-center gap-2">
+                  {c.titulo}
+                  {c.name === padrao && (
+                    <span className="text-[9px] uppercase tracking-wider text-yellow-400 border border-yellow-400/40 rounded px-1.5 py-0.5 shrink-0">Padrão</span>
+                  )}
+                </p>
                 <p className={`text-xs ${c.enabled ? 'text-green-400' : 'text-gray-500'}`}>{c.enabled ? 'Ativo' : 'Inativo'}</p>
               </div>
               <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                <button
+                  onClick={() => togglePadrao(c.name)}
+                  title={c.name === padrao ? 'Remover como padrão' : 'Definir como padrão (usado nos feedbacks)'}
+                  className={`h-7 w-7 flex items-center justify-center border rounded-lg transition-colors ${c.name === padrao ? 'text-yellow-400 border-yellow-400/40 hover:bg-yellow-600 hover:text-white' : 'text-gray-400 border-[#323238] hover:border-yellow-400/50 hover:text-yellow-400'}`}
+                >
+                  <Star size={12} fill={c.name === padrao ? 'currentColor' : 'none'} />
+                </button>
                 <button
                   onClick={() => navigate(`/conjuntos-fotos/${c.name}`)}
                   title="Editar"

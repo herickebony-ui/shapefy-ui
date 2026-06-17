@@ -842,9 +842,16 @@ export default function TreinosRealizados() {
                     </div>
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell">
-                    <span className="text-xs font-mono text-blue-300 bg-[#1a1a1a] border border-[#323238] px-2 py-0.5 rounded">
-                      {t.treino_label || t.treino}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs font-mono text-blue-300 bg-[#1a1a1a] border border-[#323238] px-2 py-0.5 rounded">
+                        {t.treino_label || t.treino}
+                      </span>
+                      {!!Number(t.tem_aerobico) && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-bold uppercase tracking-wide text-green-400 bg-green-500/10 border border-green-500/20 px-1.5 py-0.5 rounded">
+                          <Activity size={9} /> aeróbico
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 hidden md:table-cell">
                     <p className="text-gray-300 text-xs">{fmtDate(t.data_e_hora_do_inicio)}</p>

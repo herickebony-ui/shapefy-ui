@@ -15,6 +15,7 @@ import {
   EmptyState, DataTable,
 } from '../../components/ui'
 import { buscarSmart } from '../../utils/strings'
+import ModalCriarModeloDoZero from './ModalCriarModeloDoZero'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -215,6 +216,7 @@ export default function ModeloFichaListagem() {
   const [pageSize, setPageSize] = useState(20)
   const [modalEditar, setModalEditar] = useState(null)
   const [modalAplicar, setModalAplicar] = useState(null)
+  const [modalCriar, setModalCriar] = useState(false)
 
   useEffect(() => {
     const t = setTimeout(() => { setQuery(search); setPage(1) }, 400)
@@ -225,8 +227,10 @@ export default function ModeloFichaListagem() {
     setLoading(true)
     setError(null)
     try {
-      const { list } = await listarModelosFicha({ busca: query, categoria, limit: 200 })
-      const filtrada = query ? list.filter(m => buscarSmart(m.titulo, query)) : list
+      // Lista pequena: busca no servidor depende da collation (acento). Buscamos
+      // tudo da categoria e filtramos local com buscarSmart (acento + coringa garantidos).
+      const { list } = await listarModelosFicha({ categoria, limit: 200 })
+      const filtrada = query ? list.filter(m => buscarSmart([m.titulo, m.descricao], query)) : list
       setModelos(filtrada)
     } catch (err) {
       setError(err?.message || 'Erro ao buscar modelos')
@@ -255,13 +259,13 @@ export default function ModeloFichaListagem() {
   const colunas = [
     {
       label: 'Título',
-      headerClass: 'min-w-[240px]',
+      headerClass: 'min-w-[200px]',
       render: (m) => (
-        <>
+        <div className="max-w-[240px] lg:max-w-[460px]">
           <p className="text-white font-semibold text-sm truncate">{m.titulo || '—'}</p>
           {m.descricao && <p className="text-gray-500 text-xs mt-0.5 truncate">{m.descricao}</p>}
           <p className="text-gray-600 text-[10px] mt-0.5">modificado em: {formatDate(m.modified)}</p>
-        </>
+        </div>
       ),
     },
     {
@@ -340,6 +344,9 @@ export default function ModeloFichaListagem() {
           onAplicado={(novaId) => { setModalAplicar(null); navigate(`/fichas/${novaId}`) }}
         />
       )}
+      {modalCriar && (
+        <ModalCriarModeloDoZero tipo="ficha" isOpen onClose={() => setModalCriar(false)} />
+      )}
 
       <div className="max-w-screen-xl mx-auto">
         {/* Header */}
@@ -352,6 +359,7 @@ export default function ModeloFichaListagem() {
           </div>
           <div className="flex items-center gap-2">
             <Button variant="secondary" size="sm" icon={RefreshCw} onClick={carregar} loading={loading} title="Atualizar" />
+            <Button variant="primary" size="sm" icon={Plus} onClick={() => setModalCriar(true)}>Criar do zero</Button>
           </div>
         </div>
 

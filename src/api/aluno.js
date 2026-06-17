@@ -53,12 +53,14 @@ export const buscarFeedbackAluno = async (name) => {
 //   status: "Respondido"
 //   verificar: 1  → trigger pra rotina que converte imagens privadas em públicas
 // Front NÃO seta: data_resposta, feedback_do_profissional, aluno_preencheu.
-export const responderFeedback = async (name, perguntas) => {
+export const responderFeedback = async (name, perguntas, extra = {}) => {
   const res = await client.post('/api/method/shapefy.api.aluno.responder_feedback', {
     name,
     perguntas_e_respostas: perguntas,
     status: 'Respondido',
     verificar: 1,
+    ...(extra.fotos != null ? { fotos: extra.fotos } : {}),
+    ...(extra.peso != null ? { peso: extra.peso } : {}),
   })
   return res.data?.message || null
 }
@@ -80,10 +82,12 @@ export const buscarAnamneseAluno = async (name) => {
 // aluno_preencheu=1, data_resposta (before_save) e verificar=1 (cron
 // process_anamnese_images_to_public converte imagens privadas em públicas).
 // Front só envia name + child table.
-export const responderAnamnese = async (name, perguntas) => {
+export const responderAnamnese = async (name, perguntas, extra = {}) => {
   const res = await client.post('/api/method/shapefy.api.aluno.responder_anamnese', {
     name,
     perguntas_e_respostas: perguntas,
+    ...(extra.fotos != null ? { fotos: extra.fotos } : {}),
+    ...(extra.peso != null ? { peso: extra.peso } : {}),
   })
   return res.data?.message || null
 }
@@ -94,6 +98,18 @@ export const responderAnamnese = async (name, perguntas) => {
 export const listarDietasAluno = async () => {
   const res = await client.get('/api/method/shapefy.api.aluno.dieta_lista')
   return res.data?.message?.dietas || []
+}
+
+// Lista (leve) das instruções vinculadas ao aluno: [{name, titulo, descricao, tipo}].
+export const buscarInstrucoesAluno = async () => {
+  const res = await client.get('/api/method/shapefy.api.aluno.instrucoes')
+  return res.data?.message?.instrucoes || []
+}
+
+// Detalhe de uma instrução (com os blocos). Só se o aluno estiver vinculado.
+export const buscarInstrucaoDetalheAluno = async (name) => {
+  const res = await client.get('/api/method/shapefy.api.aluno.instrucao_detalhe', { params: { name } })
+  return res.data?.message || null
 }
 
 // Busca uma dieta especifica (com refeicoes/opcoes/grupos/substitutos ja

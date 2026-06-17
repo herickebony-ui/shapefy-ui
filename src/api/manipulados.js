@@ -1,5 +1,6 @@
 import client from './client'
 import { profissionalLogado } from './helpers'
+import { filtrosBusca } from '../utils/strings'
 
 // `momento_de_uso` é um campo OPCIONAL no DocType Manipulados. Se o admin ainda
 // não criou (Link → "Momento de Uso"), os reads abaixo fazem fallback automático
@@ -41,7 +42,7 @@ export const buscarManipulados = async (busca = '', limit = 20) => {
   const owner = profissionalLogado()
   const filters = [['enabled', '=', 1]]
   if (owner) filters.push(['owner', '=', owner])
-  if (busca) filters.push(['full_name', 'like', `%${busca}%`])
+  if (busca) filters.push(...filtrosBusca('full_name', busca))
   const res = await getComFallback({
     filters: JSON.stringify(filters),
     limit,

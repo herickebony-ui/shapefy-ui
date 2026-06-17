@@ -14,7 +14,7 @@ import {
 // JornadaInicial e OnboardingBanner removidos daqui — vivem só no Dashboard
 // (rota /), que é a tela inicial pós-login. Aqui o foco é gerenciar as
 // anamneses em si.
-import { buscarSmart, primeiroNome } from '../../utils/strings'
+import { buscarSmart } from '../../utils/strings'
 import VincularAnamneseModal from '../../components/anamnese/VincularAnamneseModal'
 import AnamneseViewerModal from '../../components/anamnese/AnamneseViewerModal'
 
@@ -190,13 +190,9 @@ export default function AnamneseListagem() {
         // o aluno no app que o plano está disponível. Falha silenciosa: não
         // bloqueia a marcação se a notificação não criar.
         if (novoEntregue && a.aluno) {
-          const primeiro = primeiroNome(a.nome_completo)
-          const titulo = primeiro
-            ? `Seu plano está disponível! ${primeiro}!`
-            : 'Seu plano está disponível!'
           criarNotificacaoAluno({
             aluno: a.aluno,
-            titulo,
+            titulo: 'Seu planejamento está pronto!',
             descricao: 'Acesse o app para conferir seu planejamento.',
           }).catch(err => console.error('Erro ao criar notificação:', err))
         }

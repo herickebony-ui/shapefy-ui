@@ -1,5 +1,6 @@
 import client from './client'
 import { profissionalLogado } from './helpers'
+import { filtrosBusca } from '../utils/strings'
 
 
 export const criarAluno = async (campos) => {
@@ -13,7 +14,7 @@ export const criarAluno = async (campos) => {
 export const listarAlunos = async ({ search = '', enabled = '', sexo = '', page = 1, limit = 20 } = {}) => {
   const filtros = [["profissional", "=", profissionalLogado()]]
   if (search) {
-    filtros.push(["nome_completo", "like", `%${search}%`])
+    filtros.push(...filtrosBusca('nome_completo', search))
   } else {
     if (enabled !== '') filtros.push(["enabled", "=", Number(enabled)])
     if (sexo) filtros.push(["sexo", "=", sexo])
@@ -48,16 +49,25 @@ export const buscarAluno = async (id) => {
 export const listarAlunosByIds = async (ids = []) => {
   const unicos = [...new Set(ids.filter(Boolean))]
   if (!unicos.length) return []
-  const params = {
-    fields: JSON.stringify(['name', 'nome_completo', 'foto', 'telefone', 'enabled', 'plan_start', 'plan_end', 'plan_duration']),
-    filters: JSON.stringify([
-      ['profissional', '=', profissionalLogado()],
-      ['name', 'in', unicos],
-    ]),
-    limit: unicos.length,
-  }
-  const res = await client.get('/api/resource/Aluno', { params })
-  return res.data.data || []
+  // Chunk: um `in` com centenas de IDs estoura o querystring (URL muito longa →
+  // 414/falha). Quebra em lotes e junta os resultados.
+  const CHUNK = 80
+  const fields = JSON.stringify(['name', 'nome_completo', 'foto', 'telefone', 'enabled', 'plan_start', 'plan_end', 'plan_duration'])
+  const lotes = []
+  for (let i = 0; i < unicos.length; i += CHUNK) lotes.push(unicos.slice(i, i + CHUNK))
+  const resultados = await Promise.all(lotes.map(lote =>
+    client.get('/api/resource/Aluno', {
+      params: {
+        fields,
+        filters: JSON.stringify([
+          ['profissional', '=', profissionalLogado()],
+          ['name', 'in', lote],
+        ]),
+        limit: lote.length,
+      },
+    }).then(res => res.data.data || []).catch(() => [])
+  ))
+  return resultados.flat()
 }
 
 export const salvarAluno = async (id, campos) => {

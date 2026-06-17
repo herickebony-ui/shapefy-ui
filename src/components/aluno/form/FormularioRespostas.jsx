@@ -9,6 +9,7 @@ import CampoRating from './CampoRating'
 import CampoInt from './CampoInt'
 import CampoImagem from './CampoImagem'
 import CampoBlocoHTML from './CampoBlocoHTML'
+import { toRenderableImage } from '../../../utils/heicToJpeg'
 
 const isSecao = (t) => t === 'Quebra de Seção' || t === 'Quebra de Sessão' || t === 'Section Break'
 const isHTML = (t) => t === 'Bloco HTML' || t === 'HTML'
@@ -226,7 +227,7 @@ function DistribuirFotosModal({ aberto, files, campos, onConfirm, onClose }) {
 // perguntas: array de { pergunta, tipo, opcoes, reqd, conteudo_html, resposta }
 // onChange: (idx, valor) => void
 // uploadFn: usado pelos campos do tipo Anexar Imagem
-export default function FormularioRespostas({ perguntas, onChange, uploadFn }) {
+export default function FormularioRespostas({ perguntas, onChange, uploadFn, filtrarIdx }) {
   const [bulkFiles, setBulkFiles] = useState(null)
 
   const camposImagem = perguntas
@@ -246,7 +247,7 @@ export default function FormularioRespostas({ perguntas, onChange, uploadFn }) {
     // Faz upload em paralelo, sem bloquear no primeiro erro
     const resultados = await Promise.allSettled(
       pares.map(async ({ idx, file }) => {
-        const url = await uploadFn(file)
+        const url = await uploadFn(await toRenderableImage(file)) // HEIC do iPhone -> JPEG
         if (!url) throw new Error('Upload falhou')
         return { idx, url }
       })
@@ -262,6 +263,8 @@ export default function FormularioRespostas({ perguntas, onChange, uploadFn }) {
     <>
       <div className="flex flex-col gap-2.5">
         {perguntas.map((item, idx) => {
+          // Wizard: renderiza só os índices do passo atual (preserva idx original no onChange).
+          if (filtrarIdx && !filtrarIdx.has(idx)) return null
           if (isSecao(item.tipo)) {
             return <SecaoDivider key={idx} titulo={item.pergunta} />
           }

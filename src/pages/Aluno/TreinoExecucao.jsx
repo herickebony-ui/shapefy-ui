@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft, Play, AlertCircle, CheckCircle2, Check, Replace, Ban,
-  StickyNote, Trophy, Info, Eye, ExternalLink, X, Timer,
+  StickyNote, Trophy, Info, Eye, ExternalLink, Timer,
 } from 'lucide-react'
 import { FormGroup, Select, Spinner, Textarea } from '../../components/ui'
 import {
@@ -19,6 +19,9 @@ const CARD = 'sf-card'
 const CARD_DESTAQUE = 'sf-card sf-card--highlight'
 const LABEL = 'text-[#60A5FA] text-[11px] font-bold uppercase'
 const LABEL_STYLE = { letterSpacing: '0.18em' }
+// Titulo de secao (Treino principal / Alongamento & mobilidade): branco, caixa
+// alta, um pouco maior que o nome do exercicio (text-sm).
+const SECTION_TITLE = 'text-white text-base font-bold uppercase tracking-wider'
 
 // ============================================================
 // Helpers
@@ -81,6 +84,19 @@ const formatarTempoLongo = (segundos) => {
   return `${pad(h)}:${pad(m)}:${pad(s)}`
 }
 
+// Cor do timer de descanso: comeca branco e vai esquentando (ambar ->
+// laranja -> vermelho) conforme se aproxima e passa do fim do descanso.
+// `alvo` = segundos do limite superior do descanso (ex: "0 a 30" -> 30).
+// TODO: tokenizar essas cores na area do aluno (--sf-warn/--sf-orange).
+const corDescanso = (elapsed, alvo) => {
+  if (!alvo || alvo <= 0) return '#FFFFFF'
+  if (elapsed >= alvo) return '#EF4444'        // passou do tempo (vermelho)
+  const ratio = elapsed / alvo
+  if (ratio >= 0.85) return '#FB923C'          // quase la (laranja)
+  if (ratio >= 0.55) return '#FBBF24'          // chegando perto (ambar)
+  return '#FFFFFF'                             // ainda com folga (branco)
+}
+
 const achatarExercicios = (lista) => {
   const out = []
   for (const item of lista || []) {
@@ -125,62 +141,51 @@ const inicializarEstado = (fichaId, treinoId, alongamentos, exercicios) => {
 
 const getYouTubeEmbed = (id) => `https://www.youtube.com/embed/${id}?rel=0&autoplay=1&modestbranding=1`
 const getVimeoEmbed = (id) => `https://player.vimeo.com/video/${id}?autoplay=1`
-const getDriveEmbed = (id) => `https://drive.google.com/file/d/${id}/preview`
 const getYouTubeThumb = (id) => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
+// Drive: proxy do backend que entrega o arquivo bruto pra um <video> nativo
+// (play/pause/scrub/PiP/fullscreen reais), no lugar do iframe /preview do Drive.
+const getDriveStream = (id) =>
+  `${import.meta.env.VITE_FRAPPE_URL}/api/method/shapefy.api.video.stream?drive_id=${encodeURIComponent(id)}`
+
+// Marcador de secao (Treino principal / Alongamento & mobilidade): barra de
+// acento azul fina + titulo branco caixa-alta + contador discreto a direita.
+function MarcadorSecao({ titulo, count, sufixo }) {
+  return (
+    <div className="flex items-center gap-2.5 mb-4 px-1">
+      <span className="h-5 w-1 rounded-full bg-[#2563eb] shrink-0" aria-hidden="true" />
+      <h2 className={`${SECTION_TITLE} flex-1`}>{titulo}</h2>
+      {count != null && (
+        <span className="text-[var(--sf-text-muted)] text-xs font-medium tabular-nums shrink-0">
+          {count} {sufixo}
+        </span>
+      )}
+    </div>
+  )
+}
 
 function VideoEmbed({ id, plataforma }) {
   const [aberto, setAberto] = useState(false)
-  const [modalCheio, setModalCheio] = useState(false)
   if (!id) return null
   const plat = (plataforma || 'YouTube').toLowerCase()
   const ehDrive = plat.includes('drive')
   const ehVimeo = plat.includes('vimeo')
 
-  // Drive: player embarcado e limitado. Abrimos em modal verdadeiramente fullscreen
-  // (iframe ocupa 100% da viewport) com so um botao flutuante de fechar — assim o
-  // player do Google tem o maximo de espaco e a experiencia fica decente.
-  if (ehDrive) {
-    return (
-      <>
-        <button
-          type="button"
-          onClick={() => setModalCheio(true)}
-          className="relative w-full aspect-video rounded-xl overflow-hidden border border-[var(--sf-border)] bg-gradient-to-br from-[var(--sf-surface-2)] to-[var(--sf-bg)] group flex items-center justify-center"
-        >
-          <span className="absolute top-2 left-2 text-[10px] font-bold uppercase tracking-widest text-[#60A5FA] bg-black/60 px-2 py-0.5 rounded">
-            Google Drive
-          </span>
-          <div className="h-14 w-14 rounded-full bg-[#2563eb] flex items-center justify-center shadow-[0_0_28px_rgba(37,99,235,0.6)] group-hover:scale-110 transition-transform">
-            <Play size={22} className="text-white fill-white ml-0.5" />
-          </div>
-          <span className="absolute bottom-2 text-[10px] text-[var(--sf-text-muted)]">
-            Toque para ver em tela cheia
-          </span>
-        </button>
-        {modalCheio && (
-          <div className="fixed inset-0 z-[200] bg-black">
-            <iframe
-              src={getDriveEmbed(id)}
-              title="Video"
-              allow="autoplay; encrypted-media; picture-in-picture"
-              allowFullScreen
-              className="w-full h-full border-0"
-            />
-            <button
-              onClick={() => setModalCheio(false)}
-              className="fixed top-3 right-3 z-10 h-10 w-10 flex items-center justify-center rounded-full bg-black/70 backdrop-blur text-white border border-white/20 hover:bg-black/90 transition-colors shadow-lg"
-              style={{ top: 'max(0.75rem, env(safe-area-inset-top))' }}
-              aria-label="Fechar"
-            >
-              <X size={18} />
-            </button>
-          </div>
-        )}
-      </>
-    )
-  }
-
   if (aberto) {
+    // Drive: player nativo <video> via proxy do backend (controles reais).
+    if (ehDrive) {
+      return (
+        <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-[var(--sf-border)] bg-black">
+          <video
+            src={getDriveStream(id)}
+            controls
+            autoPlay
+            playsInline
+            preload="metadata"
+            className="w-full h-full"
+          />
+        </div>
+      )
+    }
     const src = ehVimeo ? getVimeoEmbed(id) : getYouTubeEmbed(id)
     return (
       <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-[var(--sf-border)] bg-black">
@@ -201,7 +206,13 @@ function VideoEmbed({ id, plataforma }) {
       onClick={() => setAberto(true)}
       className="relative w-full aspect-video rounded-xl overflow-hidden border border-[var(--sf-border)] bg-black group"
     >
-      {ehVimeo ? (
+      {ehDrive ? (
+        <div className="w-full h-full bg-gradient-to-br from-[var(--sf-surface-2)] to-[var(--sf-bg)] flex items-center justify-center">
+          <span className="absolute top-2 left-2 text-[10px] font-bold uppercase tracking-widest text-[#60A5FA] bg-black/60 px-2 py-0.5 rounded">
+            Google Drive
+          </span>
+        </div>
+      ) : ehVimeo ? (
         <div className="w-full h-full bg-gradient-to-br from-[var(--sf-surface-2)] to-[var(--sf-bg)] flex items-center justify-center">
           <span className="text-[#60A5FA] text-xs uppercase tracking-widest font-bold">Vimeo</span>
         </div>
@@ -233,6 +244,8 @@ function CronometrosBar({ inicioMs, agora, descanso, onPularDescanso }) {
   const elapsedTreino = Math.max(0, Math.floor((agora - inicioMs) / 1000))
   const descansando = !!descanso?.ativo
   const elapsedDesc = descansando ? Math.max(0, Math.floor((agora - descanso.inicioMs) / 1000)) : 0
+  const alvoDesc = descanso?.upper || descanso?.lower || 0
+  const corDesc = corDescanso(elapsedDesc, alvoDesc)
 
   return (
     <div className="sf-card flex items-center justify-between gap-3 px-4 py-3">
@@ -244,7 +257,10 @@ function CronometrosBar({ inicioMs, agora, descanso, onPularDescanso }) {
       </div>
       {descansando ? (
         <>
-          <span className="text-[#FB7185] text-sm font-bold tabular-nums">
+          <span
+            className="text-sm font-bold tabular-nums transition-colors duration-500"
+            style={{ color: corDesc }}
+          >
             Descansando - {formatarTempo(elapsedDesc)}
           </span>
           <button
@@ -363,16 +379,6 @@ function ExercicioBody({
           <p className="text-white text-sm font-bold mt-0.5 leading-snug">
             {tituloFinal}
           </p>
-          <p className="text-[#60A5FA] text-[11px] mt-1">
-            {exercicio.series ? `${exercicio.series}x ` : ''}{exercicio.repeticoes || '-'}
-            {exercicio.descanso && ` - desc ${exercicio.descanso}`}
-            {exercicio.carga_sugerida ? ` - sugerido ${exercicio.carga_sugerida}kg` : ''}
-          </p>
-          {exercicio.observacao && (
-            <p className="text-[#60A5FA] text-[11px] mt-1.5 leading-relaxed">
-              {exercicio.observacao}
-            </p>
-          )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <button
@@ -397,6 +403,19 @@ function ExercicioBody({
           <VideoEmbed id={exercicio.video} plataforma={exercicio.plataforma_video} />
         </div>
       )}
+
+      <div className="mt-3 rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2.5">
+        <p className="text-white text-sm font-bold leading-snug">
+          {exercicio.series ? `${exercicio.series}x ` : ''}{exercicio.repeticoes || '-'}
+          {exercicio.descanso && ` - desc ${exercicio.descanso}`}
+          {exercicio.carga_sugerida ? ` - sugerido ${exercicio.carga_sugerida}kg` : ''}
+        </p>
+        {exercicio.observacao && (
+          <p className="text-gray-300 text-xs font-medium mt-1.5 leading-relaxed">
+            {exercicio.observacao}
+          </p>
+        )}
+      </div>
 
       {!pulado && series.length > 0 && (
         <div className="flex flex-col gap-3 mt-4">
@@ -451,16 +470,19 @@ function AlongamentoCard({ alongamento, estado, onConcluir, onFeedback }) {
       <p className="text-white text-xs font-bold uppercase tracking-wider leading-snug">
         {alongamento.exercicio}
       </p>
-      <p className="text-[var(--sf-text-muted)] text-[11px] mt-1">
-        {alongamento.series} {alongamento.series === 1 ? 'serie' : 'series'}
-        {alongamento.observacoes && ` - ${alongamento.observacoes}`}
-      </p>
 
       {alongamento.video && (
         <div className="mt-3">
           <VideoEmbed id={alongamento.video} plataforma={alongamento.plataforma_video} />
         </div>
       )}
+
+      <div className="mt-3 rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2.5">
+        <p className="text-white text-sm font-bold leading-snug">
+          {alongamento.series} {alongamento.series === 1 ? 'serie' : 'series'}
+          {alongamento.observacoes && ` - ${alongamento.observacoes}`}
+        </p>
+      </div>
 
       <textarea
         value={estado?.feedback || ''}
@@ -1048,7 +1070,7 @@ export default function TreinoExecucao() {
 
   if (!dados) return null
 
-  const { treino_label, orientacoes_treino, alongamentos = [], exercicios = [] } = dados
+  const { treino_label, orientacoes_treino, orientacoes_aem, alongamentos = [], exercicios = [] } = dados
 
   // ----------- Modo Visualizacao -----------
   if (modoVer) {
@@ -1084,18 +1106,13 @@ export default function TreinoExecucao() {
           </div>
         </div>
 
-        {orientacoes_treino && (
-          <div className="px-4 mt-3">
-            <div className={`${CARD} px-4 py-3 border-l-4 !border-l-[#2563eb]`}>
-              <p className={LABEL}>Orientacoes</p>
-              <p className="text-gray-200 text-xs mt-1.5 leading-relaxed whitespace-pre-wrap">{orientacoes_treino}</p>
-            </div>
-          </div>
-        )}
-
         {alongamentos.length > 0 && (
           <section className="px-4 mt-5">
-            <p className={`${LABEL} mb-3 px-1`}>Alongamentos & mobilidade</p>
+            <MarcadorSecao
+              titulo="Alongamento & mobilidade"
+              count={alongamentos.length}
+              sufixo={alongamentos.length === 1 ? 'exercício' : 'exercícios'}
+            />
             <div className="flex flex-col gap-2.5">
               {alongamentos.map(a => (
                 <VerExercicioInline
@@ -1113,7 +1130,11 @@ export default function TreinoExecucao() {
 
         {exercAchatados.length > 0 && (
           <section className="px-4 mt-5">
-            <p className={`${LABEL} mb-3 px-1`}>Treino principal</p>
+            <MarcadorSecao
+              titulo="Treino principal"
+              count={exercAchatados.length}
+              sufixo={exercAchatados.length === 1 ? 'exercício' : 'exercícios'}
+            />
             <div className="flex flex-col gap-2.5">
               {exercAchatados.map(({ ex, combo }) => (
                 <VerExercicioInline
@@ -1174,18 +1195,19 @@ export default function TreinoExecucao() {
       {/* Spacer pro fixed cronometro nao cobrir o primeiro conteudo */}
       <div className="h-[88px]" aria-hidden="true" />
 
-      {orientacoes_treino && (
-        <div className="px-4 mt-3">
-          <div className={`${CARD} px-4 py-3 border-l-4 !border-l-[#2563eb]`}>
-            <p className={LABEL}>Orientacoes</p>
-            <p className="text-gray-200 text-xs mt-1.5 leading-relaxed whitespace-pre-wrap">{orientacoes_treino}</p>
-          </div>
-        </div>
-      )}
-
       {alongamentos.length > 0 && (
         <section className="px-4 mt-5">
-          <p className={`${LABEL} mb-3 px-1`}>Alongamentos & mobilidade</p>
+          <MarcadorSecao
+            titulo="Alongamento & mobilidade"
+            count={alongamentos.length}
+            sufixo={alongamentos.length === 1 ? 'exercício' : 'exercícios'}
+          />
+          {orientacoes_aem && (
+            <div className={`${CARD} px-4 py-3 border-l-4 !border-l-[#2563eb] mb-3`}>
+              <p className={LABEL}>Orientacoes</p>
+              <p className="text-gray-200 text-xs mt-1.5 leading-relaxed whitespace-pre-wrap">{orientacoes_aem}</p>
+            </div>
+          )}
           <div className="flex flex-col gap-3">
             {alongamentos.map(a => (
               <AlongamentoCard
@@ -1202,7 +1224,17 @@ export default function TreinoExecucao() {
 
       {exercicios.length > 0 && (
         <section className="px-4 mt-6">
-          <p className={`${LABEL} mb-3 px-1`}>Treino principal</p>
+          <MarcadorSecao
+            titulo="Treino principal"
+            count={exercicios.length}
+            sufixo={exercicios.length === 1 ? 'exercício' : 'exercícios'}
+          />
+          {orientacoes_treino && (
+            <div className={`${CARD} px-4 py-3 border-l-4 !border-l-[#2563eb] mb-3`}>
+              <p className={LABEL}>Orientacoes</p>
+              <p className="text-gray-200 text-xs mt-1.5 leading-relaxed whitespace-pre-wrap">{orientacoes_treino}</p>
+            </div>
+          )}
           <div className="flex flex-col gap-3">
             {exercicios.map((item, i) => (
               <ExercicioCard

@@ -16,6 +16,7 @@ import { listarAlunos, listarAlunosByIds } from '../../api/alunos'
 
 import Toast from './cronograma/Toast'
 import { fmtDateBR, todayISO } from './cronograma/utils'
+import { buscarSmart } from '../../utils/strings'
 
 // ─── Helpers de período ──────────────────────────────────────────────────────
 const DIAS_NOME = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
@@ -95,6 +96,7 @@ export default function PainelFeedbacks() {
   const [queryBusca, setQueryBusca] = useState('')
   const [filtroPeriodo, setFiltroPeriodo] = useState('esta_semana')
   const [filtroTipo, setFiltroTipo] = useState('') // '', 'feedback', 'troca'
+  const [filtroStatus, setFiltroStatus] = useState('') // '', 'Respondido', 'Atrasado', 'Aguardando', 'Agendado'
   const [semanaOffset, setSemanaOffset] = useState(0)
   const [intervaloInicio, setIntervaloInicio] = useState('')
   const [intervaloFim, setIntervaloFim] = useState('')
@@ -201,17 +203,13 @@ export default function PainelFeedbacks() {
     })
   }, [agendamentos, alunosPorId])
 
-  // Stats fixas dos atalhos (não acompanham o filtro de período)
+  // "Para hoje" é fixo (não acompanha o filtro de período). Atrasados agora segue
+  // o período e vem do `resumoPeriodo`.
   const stats = useMemo(() => {
     return {
       hoje: agendamentosHidratados.filter(a =>
         !a.is_start &&
         a.data_agendada === hojeISO &&
-        a.status !== 'Respondido' && a.status !== 'Concluido',
-      ).length,
-      atrasados: agendamentosHidratados.filter(a =>
-        !a.is_start &&
-        a.data_agendada < hojeISO &&
         a.status !== 'Respondido' && a.status !== 'Concluido',
       ).length,
     }
@@ -257,6 +255,10 @@ export default function PainelFeedbacks() {
       color: meta.color,
       value: noPeriodo.length,
       trocas: noPeriodo.filter(a => a.is_training).length,
+      // Atrasados acompanham o período ativo (vencidos e não respondidos dentro do recorte).
+      atrasados: noPeriodo.filter(a =>
+        a.data_agendada < hojeISO && a.status !== 'Respondido' && a.status !== 'Concluido',
+      ).length,
     }
   }, [agendamentosHidratados, filtroPeriodo, semana, hojeISO, intervaloInicio, intervaloFim])
 
@@ -341,12 +343,10 @@ export default function PainelFeedbacks() {
     if (filtroTipo === 'troca') lista = lista.filter(a => a.is_training)
     else if (filtroTipo === 'feedback') lista = lista.filter(a => !a.is_training)
 
+    if (filtroStatus) lista = lista.filter(a => statusOperacional(a, hojeISO).label === filtroStatus)
+
     if (queryBusca) {
-      const q = queryBusca.toLowerCase()
-      lista = lista.filter(a =>
-        (a._alunoNome || '').toLowerCase().includes(q) ||
-        (a._alunoEmail || '').toLowerCase().includes(q),
-      )
+      lista = lista.filter(a => buscarSmart([a._alunoNome, a._alunoEmail], queryBusca))
     }
 
     return lista.sort((a, b) => {
@@ -354,7 +354,7 @@ export default function PainelFeedbacks() {
       if (dateCmp !== 0) return dateCmp
       return (a._alunoNome || '').localeCompare(b._alunoNome || '')
     })
-  }, [agendamentosHidratados, filtroPeriodo, filtroTipo, queryBusca, semana, hojeISO, intervaloInicio, intervaloFim])
+  }, [agendamentosHidratados, filtroPeriodo, filtroTipo, filtroStatus, queryBusca, semana, hojeISO, intervaloInicio, intervaloFim])
 
   // ═════════════════════════════════════════════════════════════════════════
   // Handlers
@@ -605,6 +605,17 @@ export default function PainelFeedbacks() {
               { value: 'troca',    label: 'Apenas trocas' },
             ],
           },
+          {
+            type: 'select', value: filtroStatus, onChange: setFiltroStatus,
+            placeholder: 'Status',
+            options: [
+              { value: '',           label: 'Todos os status' },
+              { value: 'Respondido', label: 'Respondido' },
+              { value: 'Atrasado',   label: 'Atrasado' },
+              { value: 'Aguardando', label: 'Aguardando' },
+              { value: 'Agendado',   label: 'Agendado' },
+            ],
+          },
         ]}
         loading={loading}
       >
@@ -735,10 +746,10 @@ export default function PainelFeedbacks() {
             onClick={() => setFiltroTipo(filtroTipo === 'troca' ? '' : 'troca')}
           />
           <CardClicavel
-            label="Atrasados" value={stats.atrasados} unit="alunos"
+            label="Atrasados" value={resumoPeriodo.atrasados} unit="alunos"
             color="red"
-            ativo={filtroPeriodo === 'atrasados'}
-            onClick={() => setFiltroPeriodo('atrasados')}
+            ativo={filtroStatus === 'Atrasado'}
+            onClick={() => setFiltroStatus(filtroStatus === 'Atrasado' ? '' : 'Atrasado')}
           />
         </div>
 

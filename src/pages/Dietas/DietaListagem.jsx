@@ -607,21 +607,21 @@ export default function DietaListagem() {
       {modalNovaDieta && (
         <ModalNovaDieta
           onClose={() => setModalNovaDieta(false)}
-          onCriada={(id) => { setModalNovaDieta(false); navigate(`/dietas/${id}`) }}
+          onCriada={(id) => { setModalNovaDieta(false); navigate(`/dietas/${id}`, { state: { recemCriada: true } }) }}
         />
       )}
       <ModalEscolherModelo
         tipo="dieta"
         isOpen={modalEscolherModelo}
         onClose={() => setModalEscolherModelo(false)}
-        onCriada={(novaId) => { setModalEscolherModelo(false); navigate(`/dietas/${novaId}`) }}
+        onCriada={(novaId) => { setModalEscolherModelo(false); navigate(`/dietas/${novaId}`, { state: { recemCriada: true } }) }}
       />
       {modalDuplicar && (
         <ModalDuplicarDieta
           dietaId={modalDuplicar.id}
           nomeAtual={modalDuplicar.nome}
           onClose={() => setModalDuplicar(null)}
-          onDuplicado={(novaId) => { setModalDuplicar(null); if (novaId) navigate(`/dietas/${novaId}`); else fetchDietas() }}
+          onDuplicado={(novaId) => { setModalDuplicar(null); if (novaId) navigate(`/dietas/${novaId}`, { state: { recemCriada: true } }); else fetchDietas() }}
         />
       )}
       {vizId && <VisualizacaoDietaModal dietaId={vizId} onClose={() => setVizId(null)} />}

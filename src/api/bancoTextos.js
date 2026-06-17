@@ -1,4 +1,5 @@
 import client from './client'
+import { filtrosBusca } from '../utils/strings'
 
 const encode = (dt) => encodeURIComponent(dt)
 
@@ -154,7 +155,7 @@ export const listarTextos = async (doctype, campo, { busca, apenasAtivos = true,
 
   const filters = []
   if (apenasAtivos) filters.push(['enabled', '=', 1])
-  if (busca) filters.push([campo, 'like', `%${busca}%`])
+  if (busca) filters.push(...filtrosBusca(campo, busca))
 
   const res = await client.get(`/api/resource/${encode(doctype)}`, {
     params: {
@@ -172,7 +173,7 @@ export const listarTodosTextos = async (doctype, campo, { busca, extra = null } 
   if (extra) fields.push(extra)
 
   const filters = []
-  if (busca) filters.push([campo, 'like', `%${busca}%`])
+  if (busca) filters.push(...filtrosBusca(campo, busca))
 
   const res = await client.get(`/api/resource/${encode(doctype)}`, {
     params: {

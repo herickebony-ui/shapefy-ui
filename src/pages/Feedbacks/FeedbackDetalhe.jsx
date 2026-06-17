@@ -11,9 +11,12 @@ import {
 import { Button, Spinner, Textarea, FormGroup } from '../../components/ui'
 import DetailPage from '../../components/templates/DetailPage'
 import ImagemInterativa from './ImagemInterativa'
+import { buscarRegistro } from '../../api/evolucao'
 import { formatFeedbackParaCopia, copiarTexto } from '../../utils/copiarRespostas'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
+
+const numBR = (n) => (n == null ? '—' : Number(n).toFixed(1).replace('.', ','))
 
 const fmtData = (d) => {
   if (!d) return '—'
@@ -38,6 +41,7 @@ export default function FeedbackDetalhe() {
   const feedbacksFiltrados = location.state?.feedbacksFiltrados || []
 
   const [feedback, setFeedback] = useState(null)
+  const [registro, setRegistro] = useState(null)
   const [loading, setLoading] = useState(true)
   const [statusLocal, setStatusLocal] = useState('')
   const [salvandoStatus, setSalvandoStatus] = useState(false)
@@ -62,6 +66,14 @@ export default function FeedbackDetalhe() {
         setFeedback(data)
         setStatusLocal(data.status || '')
         setResposta(data.feedback_do_profissional || '')
+        // Fonte única: busca o Registro de Evolução vinculado (fotos + peso).
+        if (data.registro_evolucao) {
+          try {
+            setRegistro(await buscarRegistro(data.registro_evolucao))
+          } catch { /* sem registro: cai no modo antigo (perguntas) */ }
+        } else {
+          setRegistro(null)
+        }
       } catch (e) {
         console.error(e)
       } finally {
@@ -75,7 +87,7 @@ export default function FeedbackDetalhe() {
     const key = `${feedbackId}_${fileUrl}`
     try {
       await rotarImagemFeedback([feedbackId], fileUrl, 'right')
-      setImgSrcs(prev => ({ ...prev, [key]: `${FRAPPE_URL}${fileUrl}?v=${Date.now()}` }))
+      setImgSrcs(prev => ({ ...prev, [key]: `${FRAPPE_URL}${encodeURI(fileUrl)}?v=${Date.now()}` }))
     } catch (e) {
       console.error(e)
     }
@@ -243,11 +255,46 @@ export default function FeedbackDetalhe() {
             {feedback.email && <span>{feedback.email}</span>}
           </div>
 
+          {/* Bloco de Evolução (fonte única): Fotos + Peso do Registro vinculado */}
+          {registro && (
+            <div className="bg-[#1a1a1a] rounded-lg border border-[#323238] p-4 mb-6">
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Evolução · Fotos &amp; Peso</h3>
+              {registro.peso != null && (
+                <div className="mb-4">
+                  <span className="text-gray-500 text-[10px] uppercase tracking-wider font-bold">Peso</span>
+                  <p className="text-white text-2xl font-bold leading-none mt-1">{numBR(registro.peso)} <span className="text-base text-gray-500">kg</span></p>
+                </div>
+              )}
+              {registro.fotos?.length > 0 && (
+                <div className="space-y-4">
+                  {registro.fotos.map((f, i) => (
+                    <div key={i}>
+                      <p className="text-[#93C5FD] text-[10px] font-bold uppercase tracking-wider mb-1 truncate" title={f.rotulo}>{f.rotulo}</p>
+                      {f.url ? (
+                        <ImagemInterativa
+                          src={imgSrcs[`${feedback.name}_${f.url}`] || `${FRAPPE_URL}${encodeURI(f.url)}`}
+                          feedbackId={feedback.name}
+                          idx={`reg_${i}`}
+                          onRotate={() => handleRotate(feedback.name, f.url)}
+                        />
+                      ) : (
+                        <div className="w-full aspect-[3/4] rounded-lg border border-dashed border-[#323238] flex items-center justify-center text-gray-600 text-[10px] text-center px-1">sem foto neste período</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Tabela Q&A */}
           <div className="bg-[#1a1a1a] rounded-lg border border-[#323238] overflow-hidden mb-6">
             <table className="w-full text-left border-collapse">
               <tbody className="divide-y divide-[#323238]/40">
                 {feedback.perguntas_e_respostas?.map((item, idx) => {
+                  // O bloco de Evolução (acima) mostra peso/fotos estruturados do Registro,
+                  // mas TODAS as perguntas do formulário também aparecem normalmente aqui
+                  // (decisão: não esconder nada do template; o peso pode aparecer nos dois).
                   if (item.tipo === 'Quebra de Seção') {
                     return (
                       <tr key={idx} className="bg-[#0a0a0a]">
@@ -287,7 +334,7 @@ export default function FeedbackDetalhe() {
                             {item.resposta ? (
                               <div className="relative">
                                 <ImagemInterativa
-                                  src={imgSrcs[rotKey] || `${FRAPPE_URL}${item.resposta}`}
+                                  src={imgSrcs[rotKey] || `${FRAPPE_URL}${encodeURI(item.resposta)}`}
                                   feedbackId={feedback.name}
                                   idx={idx}
                                   onRotate={() => handleRotate(feedback.name, item.resposta)}

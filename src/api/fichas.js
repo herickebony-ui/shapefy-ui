@@ -1,12 +1,13 @@
 import client from './client'
 import { profissionalLogado } from './helpers'
+import { filtrosBusca } from '../utils/strings'
 
 
 // ─── Fichas de Treino ─────────────────────────────────────────────────────────
 
 export const listarFichas = async ({ busca, nivel, aluno, page = 1, limit = 50 } = {}) => {
   const filters = []
-  if (busca) filters.push(['nome_completo', 'like', `%${busca}%`])
+  if (busca) filters.push(...filtrosBusca('nome_completo', busca))
   if (nivel) filters.push(['nivel', '=', nivel])
   if (aluno) filters.push(['aluno', '=', aluno])
 

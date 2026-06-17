@@ -63,8 +63,9 @@ export default function ModalEscolherModelo({ tipo, isOpen, onClose, onCriada })
     if (!isOpen || step !== 1) return
     setLoading(true)
     try {
-      const { list } = await listarFn({ busca: query, categoria, limit: 100 })
-      const filtrada = query ? list.filter(m => buscarSmart(m.titulo, query)) : list
+      // Lista pequena: filtro local com buscarSmart garante acento + coringa.
+      const { list } = await listarFn({ categoria, limit: 100 })
+      const filtrada = query ? list.filter(m => buscarSmart([m.titulo, m.descricao], query)) : list
       setModelos(filtrada)
     } catch (e) {
       console.error(e)

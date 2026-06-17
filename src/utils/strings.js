@@ -15,22 +15,23 @@ export const normalizarTexto = (s = '') =>
   String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
 /**
- * Match canônico de busca: substring acent-insensitive com suporte a coringa `%`.
+ * Match canônico de busca: substring acent-insensitive com coringa `%`.
  *
- * - `textos`: string ou array de strings (matcha se ALGUM contiver a query)
- * - `query`: string digitada pelo usuário
- * - `opts.coringa`: se true (default), `%` separa partes que devem aparecer em ordem
+ * - `textos`: string ou array de strings (matcha se ALGUM campo contiver).
+ * - `query`: string digitada. Espaço é literal; `%` é coringa e as partes
+ *   precisam aparecer NA ORDEM (mesma semântica do `LIKE` do banco).
  *
- * Retorna `true` quando query vazia (não filtra nada).
+ * Ex: "%jo%luc%" casa "João Lucas" (jo…luc em ordem) mas não "João Silva".
+ * Retorna `true` quando a query é vazia (não filtra nada).
  */
-export const buscarSmart = (textos, query, { coringa = true } = {}) => {
+export const buscarSmart = (textos, query) => {
   const q = normalizarTexto(query || '').trim()
   if (!q) return true
   const lista = Array.isArray(textos) ? textos : [textos]
   const checa = (texto) => {
     const t = normalizarTexto(texto || '')
     if (!t) return false
-    if (coringa && q.includes('%')) {
+    if (q.includes('%')) {
       const partes = q.split('%').map(p => p.trim()).filter(Boolean)
       let idx = 0
       for (const p of partes) {
@@ -43,6 +44,40 @@ export const buscarSmart = (textos, query, { coringa = true } = {}) => {
     return t.includes(q)
   }
   return lista.some(checa)
+}
+
+/**
+ * Monta o padrão `LIKE` do Frappe a partir da query do usuário.
+ *
+ * O coringa `%` é preservado como wildcard (partes em ordem) e o espaço é
+ * literal. A query é sempre envolvida por `%...%` para casar substring.
+ *
+ *   padraoLike('joao')      → '%joao%'
+ *   padraoLike('%jo%luc%')  → '%jo%luc%'   (jo…luc em ordem)
+ *   padraoLike('joao lucas')→ '%joao lucas%' (espaço literal)
+ *
+ * Retorna `null` quando não há termo. Acento depende da collation do banco
+ * (best-effort); listas pequenas filtram local com `buscarSmart`.
+ */
+export const padraoLike = (query) => {
+  const partes = String(query || '').split('%').map(p => p.trim()).filter(Boolean)
+  return partes.length ? `%${partes.join('%')}%` : null
+}
+
+/**
+ * Açúcar pra montar a condição de filtro Frappe a partir da query.
+ *
+ * - `campo`: nome do campo OU prefixo `[doctype, campo]` (reportview.get).
+ * - Retorna array (0 ou 1 condição) pronto pra spread no `filters`.
+ *
+ *   filtrosBusca('nome_completo', q)           → [['nome_completo','like','%a%']]
+ *   filtrosBusca(['Modelo Ficha','titulo'], q) → [['Modelo Ficha','titulo','like','%a%']]
+ */
+export const filtrosBusca = (campo, query) => {
+  const p = padraoLike(query)
+  if (!p) return []
+  const prefixo = Array.isArray(campo) ? campo : [campo]
+  return [[...prefixo, 'like', p]]
 }
 
 /**

@@ -1,12 +1,13 @@
 import client from './client'
 import { profissionalLogado } from './helpers'
+import { filtrosBusca } from '../utils/strings'
 
 const DOCTYPE = 'Treino%20Realizado'
 
 const LIST_FIELDS = [
   'name', 'nome_completo', 'aluno', 'ficha', 'treino', 'treino_label',
   'data_e_hora_do_inicio', 'data_e_hora_do_conclusao', 'tempo_total_de_treino',
-  'status', 'intensidade_do_treino', 'entregue', 'data_entrega',
+  'status', 'intensidade_do_treino', 'entregue', 'data_entrega', 'tem_aerobico',
 ]
 
 const nowFrappeDatetime = () => {
@@ -19,7 +20,7 @@ export const listarTreinosRealizados = async ({ busca, alunoId, status, page = 1
   const filters = [['profissional', '=', profissionalLogado()]]
   if (alunoId) filters.push(['aluno', '=', alunoId])
   if (status) filters.push(['status', '=', status])
-  if (busca) filters.push(['nome_completo', 'like', `%${busca}%`])
+  if (busca) filters.push(...filtrosBusca('nome_completo', busca))
 
   const res = await client.get(`/api/resource/${DOCTYPE}`, {
     params: {

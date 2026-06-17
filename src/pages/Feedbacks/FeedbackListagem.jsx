@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { maybeOpenNewTab } from '../../utils/navigation'
 import { RefreshCw, Search, Columns, CheckCircle, Star, X, ArrowLeft, Link2, Trash2, AlertTriangle, Copy, Check } from 'lucide-react'
@@ -6,6 +6,7 @@ import {
   listarFeedbacks, listarFormularios, buscarFeedback, listarFeedbacksDoAluno,
   salvarStatusFeedback, rotarImagemFeedback, trocarFotosFeedback, excluirFeedback,
 } from '../../api/feedbacks'
+import { buscarRegistro } from '../../api/evolucao'
 import useErrorModal from '../../hooks/useErrorModal'
 import { Button, Badge, Spinner, EmptyState, DataTable, Modal } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
@@ -16,6 +17,7 @@ import { formatComparacaoParaCopia, copiarTexto } from '../../utils/copiarRespos
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 const PAGE_SIZE = 30
+const STATUS_FILTRO = ['Enviado', 'Respondido', 'Finalizado']
 
 const fmtData = (d) => {
   if (!d) return '—'
@@ -35,6 +37,17 @@ const normalizar = (t) =>
 
 // ─── View: Comparação ────────────────────────────────────────────────────────
 
+const numBR = (n) => (n == null ? '—' : Number(n).toFixed(1).replace('.', ','))
+
+// Carrega o Registro de Evolução de cada feedback comparado (fotos do conjunto + peso).
+async function enriquecerComRegistro(dados) {
+  return Promise.all(dados.map(async (d) => {
+    if (!d.registro_evolucao) return { ...d, registro: null }
+    try { return { ...d, registro: await buscarRegistro(d.registro_evolucao) } }
+    catch { return { ...d, registro: null } }
+  }))
+}
+
 function ViewComparacao({ dados, imgSrcs, onVoltar, onRotate, modoTrocarFoto, setModoTrocarFoto, fotosSelecionadas, setFotosSelecionadas, salvandoTroca, onConfirmarTroca }) {
   // `dados` vem ordenado ascendente (mais antigo → mais recente), então o último
   // é o feedback mais recente. As perguntas de referência (coluna esquerda)
@@ -43,6 +56,16 @@ function ViewComparacao({ dados, imgSrcs, onVoltar, onRotate, modoTrocarFoto, se
   const base = referencia?.perguntas_e_respostas || []
   const formulariosDistintos = new Set(dados.map(d => d.formulario).filter(Boolean)).size > 1
   const [copiado, setCopiado] = useState(false)
+
+  // Fotos do conjunto + peso vêm do Registro de cada feedback (alinhadas por slot_id).
+  const slotMapCmp = new Map()
+  dados.forEach((d) => (d.registro?.fotos || []).forEach((f) => {
+    if (f.slot_id) slotMapCmp.set(f.slot_id, { slot_id: f.slot_id, rotulo: f.rotulo || '—', ordem: f.ordem ?? 999 })
+  }))
+  const slotsConjunto = [...slotMapCmp.values()].sort((a, b) => (a.ordem || 0) - (b.ordem || 0))
+  const temPeso = dados.some((d) => d.registro?.peso != null)
+  const temEvolucao = slotsConjunto.length > 0 || temPeso
+  const urlSlot = (registro, slotId) => (registro?.fotos || []).find((x) => x.slot_id === slotId)?.url || null
 
   const handleCopiarRespostas = async () => {
     const ok = await copiarTexto(formatComparacaoParaCopia(dados, { tipo: 'Feedback' }))
@@ -139,6 +162,55 @@ function ViewComparacao({ dados, imgSrcs, onVoltar, onRotate, modoTrocarFoto, se
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#323238]/40">
+                {temEvolucao && (
+                  <>
+                    <tr className="bg-[#0a0a0a]/50">
+                      <td colSpan={dados.length + 1} className="p-3">
+                        <h3 className="text-xs font-bold text-white uppercase tracking-wider bg-[#2563eb]/10 border-l-4 border-[#2563eb] px-4 py-2 rounded-r-lg">
+                          Evolução · Fotos &amp; Peso (conjunto)
+                        </h3>
+                      </td>
+                    </tr>
+                    {temPeso && (
+                      <tr className="hover:bg-white/5">
+                        <td className="p-2 md:p-3 align-top sticky left-0 bg-[#1a1a1a] z-10 min-w-[140px] md:min-w-[200px] md:w-48">
+                          <span className="text-white text-xs font-bold">Peso</span>
+                        </td>
+                        {dados.map((d, i) => (
+                          <td key={i} className="p-2 md:p-3 text-center align-top">
+                            {d.registro?.peso != null
+                              ? <span className="text-white text-sm font-bold">{numBR(d.registro.peso)} <span className="text-gray-500 text-xs">kg</span></span>
+                              : <span className="text-gray-600 text-xs">—</span>}
+                          </td>
+                        ))}
+                      </tr>
+                    )}
+                    {slotsConjunto.map((slot) => (
+                      <tr key={slot.slot_id} className="hover:bg-white/5">
+                        <td className="p-2 md:p-3 align-top sticky left-0 bg-[#1a1a1a] z-10 min-w-[140px] md:min-w-[200px] md:w-48">
+                          <span className="text-[#93C5FD] text-[10px] font-bold uppercase tracking-wider">{slot.rotulo}</span>
+                        </td>
+                        {dados.map((d, i) => {
+                          const url = urlSlot(d.registro, slot.slot_id)
+                          return (
+                            <td key={i} className="p-0 text-center align-top">
+                              {url ? (
+                                <ImagemInterativa
+                                  src={`${FRAPPE_URL}${encodeURI(url)}`}
+                                  feedbackId={d.name}
+                                  idx={`reg_${slot.slot_id}`}
+                                  onRotate={() => onRotate(d.name, url)}
+                                />
+                              ) : (
+                                <span className="text-gray-600 text-xs">—</span>
+                              )}
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    ))}
+                  </>
+                )}
                 {base.map((item, idx) => {
                   if (item.tipo === 'Quebra de Seção') {
                     return (
@@ -251,7 +323,7 @@ export default function FeedbackListagem() {
   const [formularios, setFormularios] = useState([])
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
-  const [filtroStatus, setFiltroStatus] = useState('Respondido')
+  const [filtroStatus, setFiltroStatus] = useState(['Respondido']) // multi-seleção
   const [filtroFormulario, setFiltroFormulario] = useState('')
   const [filtroDataInicio, setFiltroDataInicio] = useState('')
   const [filtroDataFim, setFiltroDataFim] = useState('')
@@ -281,8 +353,6 @@ export default function FeedbackListagem() {
       const { list } = await listarFeedbacks({
         busca: buscaUsada,
         status: opts.status ?? filtroStatus,
-        dataInicio: opts.dataInicio ?? filtroDataInicio,
-        dataFim: opts.dataFim ?? filtroDataFim,
         page: 1,
         limit: 500,
       })
@@ -296,7 +366,7 @@ export default function FeedbackListagem() {
     } finally {
       setLoading(false)
     }
-  }, [busca, filtroStatus, filtroDataInicio, filtroDataFim])
+  }, [busca, filtroStatus])
 
   useEffect(() => {
     listarFormularios().then(setFormularios).catch(console.error)
@@ -305,10 +375,28 @@ export default function FeedbackListagem() {
   useEffect(() => {
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
-      carregar({ busca, status: filtroStatus, dataInicio: filtroDataInicio, dataFim: filtroDataFim })
+      carregar({ busca, status: filtroStatus })
     }, 400)
     return () => clearTimeout(debounceRef.current)
-  }, [busca, filtroStatus, filtroDataInicio, filtroDataFim])
+  }, [busca, filtroStatus])
+
+  // Status (multi) já vem do servidor; formulário e a data (por data_resposta com
+  // fallback modified) são aplicados no client.
+  const feedbacksFiltrados = useMemo(() => {
+    let list = feedbacks
+    if (filtroFormulario) list = list.filter(f => f.titulo === filtroFormulario)
+    if (filtroStatus.length) list = list.filter(f => filtroStatus.includes(f.status || 'Enviado'))
+    if (filtroDataInicio || filtroDataFim) {
+      list = list.filter(f => {
+        const d = (f.data_resposta || f.modified || '').slice(0, 10)
+        if (!d) return false
+        if (filtroDataInicio && d < filtroDataInicio) return false
+        if (filtroDataFim && d > filtroDataFim) return false
+        return true
+      })
+    }
+    return list
+  }, [feedbacks, filtroFormulario, filtroStatus, filtroDataInicio, filtroDataFim])
 
   const handleRotate = async (feedbackId, fileUrl) => {
     const key = `${feedbackId}_${fileUrl}`
@@ -338,7 +426,7 @@ export default function FeedbackListagem() {
       const resultados = await Promise.all(lista.map(fb => buscarFeedback(fb.name)))
       const dados = resultados.filter(Boolean)
       dados.sort((a, b) => (a.data_resposta || a.modified || '').localeCompare(b.data_resposta || b.modified || ''))
-      setDadosComparacao(dados)
+      setDadosComparacao(await enriquecerComRegistro(dados))
     } catch (e) {
       console.error(e)
       setView('list')
@@ -362,7 +450,7 @@ export default function FeedbackListagem() {
       const resultados = await Promise.all(ultimos.map(f => buscarFeedback(f.name)))
       const dados = resultados.filter(Boolean)
       dados.sort((a, b) => (a.data_resposta || a.modified || '').localeCompare(b.data_resposta || b.modified || ''))
-      setDadosComparacao(dados)
+      setDadosComparacao(await enriquecerComRegistro(dados))
     } catch (e) {
       console.error(e)
       setView('list')
@@ -460,21 +548,15 @@ export default function FeedbackListagem() {
     )
   }
 
-  const statusOpts = [
-    { value: '', label: 'Todos' },
-    { value: 'Enviado', label: 'Enviado' },
-    { value: 'Respondido', label: 'Respondido' },
-    { value: 'Finalizado', label: 'Finalizado' },
-  ]
-
   const formularioOpts = [
     { value: '', label: 'Todos os formulários' },
     ...formularios.map(f => ({ value: f.titulo, label: f.titulo })),
   ]
 
-  const feedbacksFiltrados = (!busca && filtroFormulario)
-    ? feedbacks.filter(f => f.titulo === filtroFormulario)
-    : feedbacks
+  const toggleStatusFiltro = (s) => {
+    setFiltroStatus(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
+    setPage(1)
+  }
 
   const columns = [
     {
@@ -611,7 +693,6 @@ export default function FeedbackListagem() {
         }
         filters={[
           { type: 'search', value: busca, onChange: setBusca, placeholder: 'Buscar aluno...', icon: Search },
-          { type: 'select', value: filtroStatus, onChange: v => { setFiltroStatus(v); setPage(1) }, options: statusOpts },
           { type: 'select', value: filtroFormulario, onChange: v => { setFiltroFormulario(v); setPage(1) }, options: formularioOpts },
         ]}
         loading={loading}
@@ -621,7 +702,29 @@ export default function FeedbackListagem() {
             : null
         }
       >
-        {/* Filtro de datas */}
+        {/* Filtro de status (multi) — clique pra somar/remover; nenhum = todos */}
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
+          <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider mr-1">Status</span>
+          {STATUS_FILTRO.map(s => {
+            const ativo = filtroStatus.includes(s)
+            return (
+              <button
+                key={s}
+                type="button"
+                onClick={() => toggleStatusFiltro(s)}
+                className={`h-8 px-3 rounded-lg text-xs font-semibold border transition-colors ${
+                  ativo
+                    ? 'bg-[#2563eb] text-white border-[#2563eb]'
+                    : 'text-gray-300 border-[#323238] hover:border-gray-500'
+                }`}
+              >
+                {s}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Filtro de datas — por data_resposta com fallback modified */}
         <div className="flex gap-3 mb-3 flex-wrap">
           <div className="relative">
             <label className="absolute -top-2 left-2 text-[9px] text-gray-500 font-bold uppercase tracking-wider bg-[#0a0a0a] px-1 z-10">De</label>

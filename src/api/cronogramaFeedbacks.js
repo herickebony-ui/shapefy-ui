@@ -79,6 +79,8 @@ export const listarAgendamentosDoAluno = async (alunoId) => {
       'nota',
       'is_start',
       'is_training',
+      'conjunto_fotos',
+      'incluir_peso',
     ]),
     filters: JSON.stringify([
       ['profissional', '=', profissional],
@@ -109,6 +111,8 @@ export const criarAgendamento = async (payload) => {
     nota = '',
     is_start = 0,
     is_training = 0,
+    conjunto_fotos,
+    incluir_peso,
   } = payload
   const res = await client.post(`/api/resource/${ENC_FA}`, {
     aluno,
@@ -121,6 +125,9 @@ export const criarAgendamento = async (payload) => {
     nota,
     is_start: is_start ? 1 : 0,
     is_training: is_training ? 1 : 0,
+    // Coleta de evolução (override do cronograma; vazio = backend herda do formulário)
+    ...(conjunto_fotos ? { conjunto_fotos } : {}),
+    ...(incluir_peso != null ? { incluir_peso: incluir_peso ? 1 : 0 } : {}),
   })
   return res.data.data
 }
@@ -220,6 +227,8 @@ export const sincronizarCronogramaDoAluno = async (alunoId, payloads) => {
         is_start: p.is_start ? 1 : 0,
         is_training: p.is_training ? 1 : 0,
         status: p.status || ex.status,
+        conjunto_fotos: p.conjunto_fotos || '',
+        ...(p.incluir_peso != null ? { incluir_peso: p.incluir_peso ? 1 : 0 } : {}),
       })
       operacoes.atualizados.push(ex.name)
     } else {
@@ -234,6 +243,8 @@ export const sincronizarCronogramaDoAluno = async (alunoId, payloads) => {
         nota: p.nota || '',
         is_start: p.is_start ? 1 : 0,
         is_training: p.is_training ? 1 : 0,
+        conjunto_fotos: p.conjunto_fotos || '',
+        incluir_peso: p.incluir_peso,
       })
       operacoes.criados.push(novo.name)
     }

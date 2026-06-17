@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Link2, X, FileText, Send } from 'lucide-react'
-import { Modal, Button, FormGroup, Autocomplete, Spinner, EmptyState } from '../ui'
+import { Modal, Button, FormGroup, Autocomplete, Spinner, EmptyState, Select } from '../ui'
 import { listarAlunos } from '../../api/alunos'
 import { listarFormularios, vincularFeedback } from '../../api/feedbacks'
+import { listarConjuntos } from '../../api/conjuntos'
 import useErrorModal from '../../hooks/useErrorModal'
 
 const buscarAlunosFn = async (q) => {
@@ -23,6 +24,9 @@ export default function VincularFeedbackModal({
   const [formularioSelecionado, setFormularioSelecionado] = useState('')
   const [loadingForms, setLoadingForms] = useState(true)
   const [vinculando, setVinculando] = useState(false)
+  const [conjuntos, setConjuntos] = useState([])
+  const [conjuntoFotos, setConjuntoFotos] = useState('')
+  const [pedirPeso, setPedirPeso] = useState(true)
   const errorModal = useErrorModal()
 
   useEffect(() => {
@@ -30,7 +34,18 @@ export default function VincularFeedbackModal({
       .then(list => setFormularios(list || []))
       .catch(console.error)
       .finally(() => setLoadingForms(false))
+    listarConjuntos({ limit: 100 })
+      .then(({ list }) => setConjuntos(list || []))
+      .catch(() => {})
   }, [])
+
+  // Ao escolher o formulário, pré-preenche conjunto/peso com o que foi salvo na
+  // aba Config dele. O profissional só mexe se quiser fugir do padrão neste envio.
+  const selecionarFormulario = (f) => {
+    setFormularioSelecionado(f.name)
+    setConjuntoFotos(f.conjunto_fotos || '')
+    setPedirPeso(f.incluir_peso == null ? true : !!Number(f.incluir_peso))
+  }
 
   const handleVincular = async () => {
     if (!aluno || !formularioSelecionado) {
@@ -48,7 +63,10 @@ export default function VincularFeedbackModal({
     if (vinculando) return
     setVinculando(true)
     try {
-      await vincularFeedback(aluno.name, formularioSelecionado)
+      await vincularFeedback(aluno.name, formularioSelecionado, {
+        conjunto_fotos: conjuntoFotos,
+        incluir_peso: pedirPeso,
+      })
       onVinculado?.()
       onClose()
     } catch (e) {
@@ -131,7 +149,7 @@ export default function VincularFeedbackModal({
                   <button
                     key={f.name}
                     type="button"
-                    onClick={() => setFormularioSelecionado(f.name)}
+                    onClick={() => selecionarFormulario(f)}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border text-left transition-colors ${
                       ativo
                         ? 'bg-[#2563eb]/10 border-[#2563eb] text-white'
@@ -150,6 +168,29 @@ export default function VincularFeedbackModal({
             </div>
           )}
         </FormGroup>
+
+        {formularioSelecionado && (
+          <div className="rounded-lg border border-[#323238] bg-[#1a1a1a]/40 p-3 space-y-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Coleta de evolução</p>
+            <FormGroup label="Conjunto de fotos" hint="Já vem do formulário. Troque só se quiser fugir do padrão neste envio.">
+              <Select
+                value={conjuntoFotos}
+                onChange={setConjuntoFotos}
+                options={conjuntos.map(c => ({ value: c.name, label: c.titulo }))}
+                placeholder="Nenhum / padrão do profissional"
+              />
+            </FormGroup>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={pedirPeso}
+                onChange={(e) => setPedirPeso(e.target.checked)}
+                className="accent-[#2563eb] h-4 w-4"
+              />
+              <span className="text-xs text-gray-300 font-medium">Pedir peso neste feedback</span>
+            </label>
+          </div>
+        )}
 
         <div className="rounded-lg border border-[#0052cc]/40 bg-[#0052cc]/10 px-4 py-3 text-xs text-blue-200 flex items-start gap-2">
           <Link2 size={14} className="mt-0.5 shrink-0" />
