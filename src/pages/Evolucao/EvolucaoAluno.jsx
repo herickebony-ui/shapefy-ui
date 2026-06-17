@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, TrendingUp, Images, Pencil, Check } from 'lucide-react'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Spinner, Button } from '../../components/ui'
 import HeicSafeImg from '../../components/ui/HeicSafeImg'
 import { timelineEvolucao, salvarRegistro } from '../../api/evolucao'
@@ -12,38 +13,48 @@ const MAX_COLS = 5 // datas comparadas lado a lado nas fotos
 const fmtData = (d) => {
   if (!d || d === 'None') return '—'
   const [y, m, day] = String(d).split(' ')[0].split('-')
-  return `${day}/${m}`
+  return `${day}/${m}/${(y || '').slice(2)}`
 }
 const numBR = (n) => (n == null ? '—' : Number(n).toFixed(1).replace('.', ','))
 
-// ─── Gráfico de peso (SVG inline) ─────────────────────────────────────────────
+// ─── Tooltip do gráfico de peso (instantâneo) ─────────────────────────────────
+function ChartTipPeso({ active, payload, label }) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="bg-[#1a1a1f] border border-[#323238] rounded-lg px-3 py-2 text-xs shadow-xl">
+      <p className="text-gray-400 mb-1">{label}</p>
+      <p className="text-[#3B82F6] font-bold">{numBR(payload[0].value)} kg</p>
+    </div>
+  )
+}
+
+// ─── Gráfico de peso (recharts: eixo Y, linha vertical no hover, tooltip) ──────
 export function GraficoPeso({ pontos }) {
   if (pontos.length < 2) {
-    return <p className="text-gray-500 text-xs text-center py-6">Poucos registros de peso pra traçar o gráfico (mínimo 2).</p>
+    const unico = pontos[0]
+    return (
+      <div className="flex flex-col items-center justify-center py-6 text-center">
+        {unico ? (
+          <>
+            <p className="text-gray-500 text-[10px] uppercase tracking-wider font-bold mb-1">Peso registrado</p>
+            <p className="text-white text-4xl font-bold leading-none">{numBR(unico.peso)} <span className="text-lg text-gray-500">kg</span></p>
+            <p className="text-gray-600 text-xs mt-2">{fmtData(unico.data)}</p>
+            <p className="text-gray-600 text-[11px] mt-3">A curva aparece com 2+ registros de peso.</p>
+          </>
+        ) : (
+          <p className="text-gray-500 text-xs">Sem peso registrado nestes pontos.</p>
+        )}
+      </div>
+    )
   }
-  const pesos = pontos.map((p) => p.peso)
-  const min = Math.min(...pesos)
-  const max = Math.max(...pesos)
-  const range = max - min || 1
-  const coords = pontos.map((p, i) => ({
-    x: (i / (pontos.length - 1)) * 100,
-    y: 100 - ((p.peso - min) / range) * 100,
-    peso: p.peso,
-    data: p.data,
-  }))
-  const poly = coords.map((c) => `${c.x},${c.y}`).join(' ')
   const primeiro = pontos[0].peso
   const ultimo = pontos[pontos.length - 1].peso
   const delta = ultimo - primeiro
-  // Com muitos pontos, mostra rótulo de valor só nos notáveis (1º, último, min, max).
-  const denso = pontos.length > 10
-  const maxIdx = pesos.indexOf(Math.max(...pesos))
-  const minIdx = pesos.indexOf(Math.min(...pesos))
-  const notavel = (i) => !denso || i === 0 || i === pontos.length - 1 || i === maxIdx || i === minIdx
+  const data = pontos.map((p) => ({ date: fmtData(p.data), peso: p.peso }))
 
   return (
     <div>
-      <div className="flex items-end gap-4 mb-4">
+      <div className="flex items-end gap-4 mb-3">
         <div>
           <p className="text-gray-500 text-[10px] uppercase tracking-wider font-bold">Atual</p>
           <p className="text-white text-2xl font-bold leading-none">{numBR(ultimo)} <span className="text-sm text-gray-500">kg</span></p>
@@ -55,29 +66,21 @@ export function GraficoPeso({ pontos }) {
           </p>
         </div>
       </div>
-      <div className="relative w-full h-40">
-        <div className="absolute left-2 right-2 top-6 bottom-8">
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
-            <polyline points={poly} fill="none" stroke="#2563eb" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
-          </svg>
-          {coords.map((c, i) => (
-            <div
-              key={i}
-              title={`${fmtData(c.data)} · ${numBR(c.peso)} kg`}
-              className="absolute -translate-x-1/2 -translate-y-1/2 cursor-default"
-              style={{ left: `${c.x}%`, top: `${c.y}%` }}
-            >
-              <div className={`rounded-full bg-[#3B82F6] border-2 border-[#1a1a1a] transition-transform hover:scale-150 ${denso ? 'h-1.5 w-1.5' : 'h-2 w-2'}`} />
-              {notavel(i) && (
-                <span className="absolute left-1/2 -translate-x-1/2 bottom-3 text-[9px] font-bold text-white whitespace-nowrap">{numBR(c.peso)}</span>
-              )}
-              {(!denso || i === 0 || i === pontos.length - 1) && (
-                <span className="absolute left-1/2 -translate-x-1/2 -bottom-5 text-[9px] text-gray-500 whitespace-nowrap">{fmtData(c.data)}</span>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
+      <ResponsiveContainer width="100%" height={180}>
+        <LineChart data={data} margin={{ top: 5, right: 12, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#323238" />
+          <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#777' }} minTickGap={24} />
+          <YAxis
+            tick={{ fontSize: 10, fill: '#777' }}
+            domain={['dataMin - 1', 'dataMax + 1']}
+            width={40}
+            tickFormatter={(v) => Math.round(v)}
+            allowDecimals={false}
+          />
+          <Tooltip content={<ChartTipPeso />} cursor={{ stroke: '#2563eb', strokeWidth: 1 }} />
+          <Line type="monotone" dataKey="peso" stroke="#2563eb" strokeWidth={2} dot={{ fill: '#2563eb', r: 3 }} activeDot={{ r: 5 }} connectNulls />
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   )
 }

@@ -62,6 +62,27 @@ export default function ListPage({
                 />
               </div>
             )
+            if (f.type === 'multiselect') return (
+              <div key={i} className="flex items-center gap-1.5 flex-wrap">
+                {(f.options || []).map((opt) => {
+                  const active = (f.value || []).includes(opt.value)
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => f.onToggle(opt.value)}
+                      className={`px-3 h-9 rounded-lg text-xs font-semibold border transition-colors ${
+                        active
+                          ? 'bg-[#2563eb] border-[#2563eb] text-white'
+                          : 'bg-[#1a1a1a] border-[#323238] text-gray-400 hover:text-white hover:border-gray-500'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  )
+                })}
+              </div>
+            )
             return null
           })}
         </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Activity, Search, Columns, X, ArrowLeft, CheckCircle, Plus, Image as ImageIcon, Scale, ChevronLeft, ChevronRight, Pencil, Check } from 'lucide-react'
+import { Activity, Search, Columns, X, ArrowLeft, CheckCircle, Plus, Image as ImageIcon, Weight, ChevronLeft, ChevronRight, Pencil, Check } from 'lucide-react'
 import { Button, Badge, Spinner, EmptyState, DataTable } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 import ImagemInterativa from '../Feedbacks/ImagemInterativa'
@@ -24,7 +24,7 @@ const ORIGEM_BADGE = {
 const fmtData = (d) => {
   if (!d) return '—'
   const [y, m, day] = String(d).split(' ')[0].split('-')
-  return `${day}/${m}/${y}`
+  return `${day}/${m}/${(y || '').slice(2)}`
 }
 const numBR = (n) => (n == null ? '—' : Number(n).toFixed(1).replace('.', ','))
 const PAGE_SIZE = 30
@@ -32,8 +32,10 @@ const FEED_LIMIT = 1000 // teto de registros carregados pro feed (paginação é
 
 // Comparação de Registros — mesmo visual da comparação de feedbacks: tabela
 // datas × (peso + slots), fotos via ImagemInterativa, com gráfico de peso no topo.
-function RegistroComparacao({ registros, pontosPeso = [], nome, onVoltar, onPesoSalvo }) {
+function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, onVoltar, onPesoSalvo }) {
+  const listaEdicao = (todosRegistros && todosRegistros.length) ? todosRegistros : registros
   const [verTodosPesos, setVerTodosPesos] = useState(registros.length < 2)
+  const [mostrarEdicao, setMostrarEdicao] = useState(false)
   const [editId, setEditId] = useState(null)
   const [pesoInput, setPesoInput] = useState('')
   const [salvando, setSalvando] = useState(false)
@@ -71,21 +73,65 @@ function RegistroComparacao({ registros, pontosPeso = [], nome, onVoltar, onPeso
       </div>
       <div className="flex-1 overflow-auto p-4 md:p-6">
         <div className="max-w-7xl mx-auto space-y-4">
-          {pontosPeso.length >= 2 && (
-            <div className="bg-[#1a1a1a] rounded-lg border border-[#323238] p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                  Peso ao longo do tempo{verTodosPesos ? ' · todos os registros' : ' · selecionados'}
-                </h3>
+          <div className="bg-[#1a1a1a] rounded-lg border border-[#323238] p-4">
+            <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
+              <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                Peso ao longo do tempo{verTodosPesos ? ' · todos os registros' : ' · selecionados'}
+              </h3>
+              <div className="flex items-center gap-2">
                 {temTodos && (
                   <Button variant="ghost" size="xs" onClick={() => setVerTodosPesos(v => !v)}>
                     {verTodosPesos ? 'Só selecionados' : 'Comparar todos os pesos'}
                   </Button>
                 )}
+                <Button variant={mostrarEdicao ? 'info' : 'ghost'} size="xs" icon={Pencil} onClick={() => setMostrarEdicao(v => !v)}>
+                  Editar peso
+                </Button>
               </div>
-              <GraficoPeso pontos={pontosGrafico} />
             </div>
-          )}
+            <GraficoPeso pontos={pontosGrafico} />
+            {mostrarEdicao && (
+              <div className="mt-4 pt-4 border-t border-[#323238]">
+                <p className="text-gray-500 text-[10px] uppercase tracking-wider font-bold mb-2">Editar peso por data · todos os registros · não altera a data</p>
+                <div className="space-y-1 max-h-72 overflow-auto pr-1">
+                  {[...listaEdicao].sort((a, b) => (b.data || '').localeCompare(a.data || '')).map((r) => (
+                    <div key={r.name} className="flex items-center justify-between gap-3 px-2 py-1.5 rounded hover:bg-white/5">
+                      <span className="text-gray-300 text-xs font-medium w-24 shrink-0">{fmtData(r.data)}</span>
+                      {editId === r.name ? (
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="number" step="0.1" autoFocus value={pesoInput}
+                            onChange={e => setPesoInput(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') salvarPeso(r.name); if (e.key === 'Escape') setEditId(null) }}
+                            placeholder="kg"
+                            className="w-20 h-8 px-2 bg-[#29292e] border border-[#2563eb]/60 text-white rounded-lg text-sm outline-none text-center"
+                          />
+                          <button onClick={() => salvarPeso(r.name)} disabled={salvando} title="Salvar"
+                            className="h-8 w-8 flex items-center justify-center text-green-400 hover:text-white border border-green-500/30 hover:bg-green-700 rounded-lg transition-colors">
+                            {salvando ? <span className="w-3 h-3 border-2 border-green-400 border-t-transparent rounded-full animate-spin" /> : <Check size={14} />}
+                          </button>
+                          <button onClick={() => setEditId(null)} title="Cancelar"
+                            className="h-8 w-8 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] rounded-lg transition-colors">
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { setPesoInput(r.peso != null && r.peso > 0 ? String(r.peso).replace('.', ',') : ''); setEditId(r.name) }}
+                          className="flex items-center gap-2 text-sm group"
+                        >
+                          {r.peso != null && r.peso > 0
+                            ? <span className="text-white font-semibold">{numBR(r.peso)} kg</span>
+                            : <span className="text-gray-600 italic">sem peso</span>}
+                          <Pencil size={12} className="text-gray-600 group-hover:text-[#2563eb] transition-colors" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
           <div className="bg-[#1a1a1a] rounded-lg border border-[#323238] overflow-x-auto">
             <table className="w-full text-left border-collapse table-fixed">
               <thead>
@@ -102,35 +148,9 @@ function RegistroComparacao({ registros, pontosPeso = [], nome, onVoltar, onPeso
                     <td className="p-2 md:p-3 sticky left-0 bg-[#1a1a1a] z-10"><span className="text-white text-xs font-bold">Peso</span></td>
                     {registros.map((r, i) => (
                       <td key={i} className="p-2 md:p-3 text-center">
-                        {editId === r.name ? (
-                          <span className="inline-flex items-center gap-1">
-                            <input
-                              type="number" step="0.1" autoFocus value={pesoInput}
-                              onChange={e => setPesoInput(e.target.value)}
-                              onKeyDown={e => { if (e.key === 'Enter') salvarPeso(r.name); if (e.key === 'Escape') setEditId(null) }}
-                              className="w-16 h-7 px-2 bg-[#29292e] border border-[#2563eb]/60 text-white rounded text-xs outline-none text-center"
-                            />
-                            <button onClick={() => salvarPeso(r.name)} disabled={salvando} title="Salvar"
-                              className="h-7 w-7 flex items-center justify-center text-green-400 hover:text-white border border-green-500/30 hover:bg-green-700 rounded-lg transition-colors">
-                              {salvando ? <span className="w-3 h-3 border-2 border-green-400 border-t-transparent rounded-full animate-spin" /> : <Check size={12} />}
-                            </button>
-                            <button onClick={() => setEditId(null)} title="Cancelar"
-                              className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] rounded-lg transition-colors">
-                              <X size={12} />
-                            </button>
-                          </span>
-                        ) : (
-                          <button
-                            onClick={() => { setPesoInput(r.peso != null && r.peso > 0 ? String(r.peso).replace('.', ',') : ''); setEditId(r.name) }}
-                            title="Editar peso (não altera a data)"
-                            className="group inline-flex items-center gap-1.5 hover:bg-white/5 rounded px-1.5 py-0.5 transition-colors"
-                          >
-                            {r.peso != null && r.peso > 0
-                              ? <span className="text-white text-sm font-bold">{numBR(r.peso)} <span className="text-gray-500 text-xs">kg</span></span>
-                              : <span className="text-gray-600 text-xs italic">sem peso</span>}
-                            <Pencil size={11} className="text-gray-600 group-hover:text-[#2563eb] transition-colors" />
-                          </button>
-                        )}
+                        {r.peso != null && r.peso > 0
+                          ? <span className="text-white text-sm font-bold">{numBR(r.peso)} <span className="text-gray-500 text-xs">kg</span></span>
+                          : <span className="text-gray-600 text-xs italic">sem peso</span>}
                       </td>
                     ))}
                   </tr>
@@ -167,10 +187,13 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
   const [filtroOrigem, setFiltroOrigem] = useState('')
+  const [filtroConteudo, setFiltroConteudo] = useState([])
+  const toggleConteudo = (v) => setFiltroConteudo(cs => cs.includes(v) ? cs.filter(x => x !== v) : [...cs, v])
   const [modoComparar, setModoComparar] = useState(false)
   const [selecionados, setSelecionados] = useState([])
   const [comparando, setComparando] = useState(null)
   const [pontosTodos, setPontosTodos] = useState([])
+  const [registrosDoAluno, setRegistrosDoAluno] = useState([])
   const [loadingCmp, setLoadingCmp] = useState(false)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
@@ -239,12 +262,21 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [alunoId, refreshKey, buscaDebounced, filtroOrigem, page])
 
-  // origem e busca já são filtradas no servidor; aqui só o nome (defesa do transitório do debounce)
+  // origem e busca já são filtradas no servidor; aqui o nome (transitório do debounce)
+  // e o filtro de conteúdo (foto/peso), que é client-side via contagem de fotos.
   const filtrados = useMemo(() => {
     const q = busca.trim().toLowerCase()
-    if (!q) return registros
-    return registros.filter(r => (nomes[r.aluno] || '').toLowerCase().includes(q))
-  }, [registros, nomes, busca])
+    return registros.filter(r => {
+      if (q && !(nomes[r.aluno] || '').toLowerCase().includes(q)) return false
+      if (filtroConteudo.length) {
+        const tf = (fotoCount[r.name] || 0) > 0
+        const tp = r.peso != null && r.peso > 0
+        const cat = tp && tf ? 'ambos' : tp ? 'so_peso' : tf ? 'so_foto' : 'nada'
+        if (!filtroConteudo.includes(cat)) return false
+      }
+      return true
+    })
+  }, [registros, nomes, busca, filtroConteudo, fotoCount])
 
   // Só compara registros do MESMO aluno.
   const alunoSel = selecionados.length ? selecionados[0].aluno : null
@@ -282,15 +314,16 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
   // Ao comparar/visualizar, busca a série COMPLETA de pesos do aluno (não só os do
   // feed misto, que vem capado por limit) — assim "comparar todos" mostra a curva toda.
   useEffect(() => {
-    if (!comparando) { setPontosTodos([]); return }
+    if (!comparando) { setPontosTodos([]); setRegistrosDoAluno([]); return }
     const aluno = comparando[0]?.aluno
     if (!aluno) return
     let cancel = false
     listarRegistros({ aluno, limit: 500 })
       .then(regs => {
         if (cancel) return
+        setRegistrosDoAluno(regs) // histórico completo (com name) pro "Editar peso"
         const pts = regs
-          .filter(r => r.peso != null)
+          .filter(r => r.peso != null && r.peso > 0)
           .map(r => ({ data: r.data, peso: r.peso }))
           .sort((a, b) => (a.data || '').localeCompare(b.data || ''))
         setPontosTodos(pts)
@@ -320,14 +353,17 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
       .map(r => ({ data: r.data, peso: r.peso }))
       .sort((a, b) => (a.data || '').localeCompare(b.data || ''))
     const pontosPeso = pontosTodos.length ? pontosTodos : pontosLocais
+    // "Editar peso" lista TODO o histórico do aluno (com name). Fallback: comparados.
+    const todosRegistros = registrosDoAluno.length ? registrosDoAluno : comparando
     const onPesoSalvo = async (regName, peso) => {
       try {
         await salvarRegistro(regName, { peso, peso_revisado: 1 })
         // atualiza local sem recarregar (e sem tocar na data)
         setComparando(cs => cs.map(c => c.name === regName ? { ...c, peso } : c))
         setRegistros(rs => rs.map(r => r.name === regName ? { ...r, peso } : r))
+        setRegistrosDoAluno(rs => rs.map(r => r.name === regName ? { ...r, peso } : r))
         setPontosTodos(pts => {
-          const alvo = comparando.find(c => c.name === regName)
+          const alvo = (registrosDoAluno.length ? registrosDoAluno : comparando).find(c => c.name === regName)
           if (!alvo) return pts
           const semEsse = pts.filter(p => p.data !== alvo.data)
           return [...semEsse, { data: alvo.data, peso }].sort((a, b) => (a.data || '').localeCompare(b.data || ''))
@@ -339,6 +375,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
     return (
       <RegistroComparacao
         registros={comparando}
+        todosRegistros={todosRegistros}
         pontosPeso={pontosPeso}
         nome={nome}
         onVoltar={() => { setComparando(null); setSelecionados([]); setModoComparar(false) }}
@@ -396,7 +433,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
             )}
             {temPeso && (
               <Badge variant="success" size="sm">
-                <span className="flex items-center gap-1"><Scale size={11} />Peso</span>
+                <span className="flex items-center gap-1"><Weight size={11} />Peso</span>
               </Badge>
             )}
             {!nf && !temPeso && <span className="text-gray-600 text-xs">—</span>}
@@ -496,6 +533,11 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
             { value: 'feedback', label: 'Feedback' },
             { value: 'anamnese', label: 'Anamnese' },
             { value: 'manual', label: 'Manual' },
+          ] },
+          { type: 'multiselect', value: filtroConteudo, onToggle: toggleConteudo, options: [
+            { value: 'so_peso', label: 'Só peso' },
+            { value: 'so_foto', label: 'Só fotos' },
+            { value: 'ambos', label: 'Peso e fotos' },
           ] },
         ]}
         loading={loading}
