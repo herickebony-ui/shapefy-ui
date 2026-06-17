@@ -1,5 +1,6 @@
 import client from './client'
 import { criarNotificacaoAluno } from './notificacoes'
+import { filtrosBusca } from '../utils/strings'
 
 const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
 
@@ -53,7 +54,7 @@ export const listarFeedbacks = async ({ busca = '', status = '', dataInicio = ''
     ['status', '!=', 'Enviando'],
   ]
   if (busca) {
-    filtros.push(['nome_completo', 'like', `%${busca}%`])
+    filtros.push(...filtrosBusca('nome_completo', busca))
   } else {
     if (status) filtros.push(['status', '=', status])
     if (dataInicio) filtros.push(['date', '>=', dataInicio])

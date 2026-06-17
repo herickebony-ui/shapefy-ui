@@ -1,4 +1,5 @@
 import client from './client'
+import { filtrosBusca } from '../utils/strings'
 
 const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
 
@@ -13,7 +14,7 @@ export const criarAluno = async (campos) => {
 export const listarAlunos = async ({ search = '', enabled = '', sexo = '', page = 1, limit = 20 } = {}) => {
   const filtros = [["profissional", "=", profissionalLogado()]]
   if (search) {
-    filtros.push(["nome_completo", "like", `%${search}%`])
+    filtros.push(...filtrosBusca('nome_completo', search))
   } else {
     if (enabled !== '') filtros.push(["enabled", "=", Number(enabled)])
     if (sexo) filtros.push(["sexo", "=", sexo])

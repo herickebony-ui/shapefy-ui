@@ -1,4 +1,5 @@
 import client from './client'
+import { filtrosBusca } from '../utils/strings'
 
 const RESOURCE_DIETA = 'Modelo Dieta'
 const RESOURCE_FICHA = 'Modelo Ficha'
@@ -76,7 +77,7 @@ export const aplicarModeloFicha = (snapshot, { aluno, nome_completo, data_de_ini
 
 export const listarModelosDieta = async ({ busca = '', categoria = '', page = 1, limit = 50 } = {}) => {
   const filtros = []
-  if (busca) filtros.push(['Modelo Dieta', 'titulo', 'like', `%${busca}%`])
+  if (busca) filtros.push(...filtrosBusca(['Modelo Dieta', 'titulo'], busca))
   if (categoria) filtros.push(['Modelo Dieta', 'categoria', '=', categoria])
 
   const params = {
@@ -119,7 +120,7 @@ export const excluirModeloDieta = async (name) => {
 
 export const listarModelosFicha = async ({ busca = '', categoria = '', page = 1, limit = 50 } = {}) => {
   const filtros = []
-  if (busca) filtros.push(['Modelo Ficha', 'titulo', 'like', `%${busca}%`])
+  if (busca) filtros.push(...filtrosBusca(['Modelo Ficha', 'titulo'], busca))
   if (categoria) filtros.push(['Modelo Ficha', 'categoria', '=', categoria])
 
   const params = {
@@ -163,7 +164,7 @@ export const excluirModeloFicha = async (name) => {
 
 export const listarModelosInstrucao = async ({ busca = '', page = 1, limit = 50 } = {}) => {
   const filtros = []
-  if (busca) filtros.push(['Modelo Instrucao', 'titulo', 'like', `%${busca}%`])
+  if (busca) filtros.push(...filtrosBusca(['Modelo Instrucao', 'titulo'], busca))
 
   const params = {
     fields: JSON.stringify([

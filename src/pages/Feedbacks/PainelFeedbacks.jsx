@@ -16,6 +16,7 @@ import { listarAlunos, listarAlunosByIds } from '../../api/alunos'
 
 import Toast from './cronograma/Toast'
 import { fmtDateBR, todayISO } from './cronograma/utils'
+import { buscarSmart } from '../../utils/strings'
 
 // ─── Helpers de período ──────────────────────────────────────────────────────
 const DIAS_NOME = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
@@ -342,11 +343,7 @@ export default function PainelFeedbacks() {
     else if (filtroTipo === 'feedback') lista = lista.filter(a => !a.is_training)
 
     if (queryBusca) {
-      const q = queryBusca.toLowerCase()
-      lista = lista.filter(a =>
-        (a._alunoNome || '').toLowerCase().includes(q) ||
-        (a._alunoEmail || '').toLowerCase().includes(q),
-      )
+      lista = lista.filter(a => buscarSmart([a._alunoNome, a._alunoEmail], queryBusca))
     }
 
     return lista.sort((a, b) => {

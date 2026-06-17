@@ -1,4 +1,5 @@
 import client from './client'
+import { filtrosBusca } from '../utils/strings'
 
 // DocType: Momento de Uso
 // Campos: nome_do_momento (Data, único — também é o `name`), profissional (Link User,
@@ -9,7 +10,7 @@ const ENC = encodeURIComponent('Momento de Uso')
 
 export const buscarMomentosDeUso = async (busca = '', limit = 20) => {
   const filters = []
-  if (busca) filters.push(['nome_do_momento', 'like', `%${busca}%`])
+  if (busca) filters.push(...filtrosBusca('nome_do_momento', busca))
   const res = await client.get(`/api/resource/${ENC}`, {
     params: {
       fields: JSON.stringify(['name', 'nome_do_momento', 'ordem']),

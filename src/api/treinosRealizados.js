@@ -1,4 +1,5 @@
 import client from './client'
+import { filtrosBusca } from '../utils/strings'
 
 const DOCTYPE = 'Treino%20Realizado'
 const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
@@ -19,7 +20,7 @@ export const listarTreinosRealizados = async ({ busca, alunoId, status, page = 1
   const filters = [['profissional', '=', profissionalLogado()]]
   if (alunoId) filters.push(['aluno', '=', alunoId])
   if (status) filters.push(['status', '=', status])
-  if (busca) filters.push(['nome_completo', 'like', `%${busca}%`])
+  if (busca) filters.push(...filtrosBusca('nome_completo', busca))
 
   const res = await client.get(`/api/resource/${DOCTYPE}`, {
     params: {

@@ -225,8 +225,10 @@ export default function ModeloFichaListagem() {
     setLoading(true)
     setError(null)
     try {
-      const { list } = await listarModelosFicha({ busca: query, categoria, limit: 200 })
-      const filtrada = query ? list.filter(m => buscarSmart(m.titulo, query)) : list
+      // Lista pequena: busca no servidor depende da collation (acento). Buscamos
+      // tudo da categoria e filtramos local com buscarSmart (acento + coringa garantidos).
+      const { list } = await listarModelosFicha({ categoria, limit: 200 })
+      const filtrada = query ? list.filter(m => buscarSmart([m.titulo, m.descricao], query)) : list
       setModelos(filtrada)
     } catch (err) {
       setError(err?.message || 'Erro ao buscar modelos')

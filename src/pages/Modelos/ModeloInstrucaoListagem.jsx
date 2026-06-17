@@ -185,8 +185,9 @@ export default function ModeloInstrucaoListagem() {
     setLoading(true)
     setError(null)
     try {
-      const { list } = await listarModelosInstrucao({ busca: query, limit: 200 })
-      const filtrada = query ? list.filter(m => buscarSmart(m.titulo, query)) : list
+      // Lista pequena: filtro local com buscarSmart garante acento + coringa.
+      const { list } = await listarModelosInstrucao({ limit: 200 })
+      const filtrada = query ? list.filter(m => buscarSmart([m.titulo, m.descricao], query)) : list
       setModelos(filtrada)
     } catch (err) {
       setError(err?.message || 'Erro ao buscar modelos')

@@ -1,4 +1,5 @@
 import client from './client'
+import { filtrosBusca } from '../utils/strings'
 
 const DOCTYPE = 'Avaliacao%20da%20Composicao%20Corporal'
 const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
@@ -12,7 +13,7 @@ const LIST_FIELDS = [
 
 export const listarAvaliacoes = async ({ busca, page = 1, limit = 50 } = {}) => {
   const filters = [['profissional', '=', profissionalLogado()]]
-  if (busca) filters.push(['nome_completo', 'like', `%${busca}%`])
+  if (busca) filters.push(...filtrosBusca('nome_completo', busca))
   const params = {
     fields: JSON.stringify(LIST_FIELDS),
     filters: JSON.stringify(filters),

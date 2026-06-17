@@ -1,5 +1,6 @@
 import client from './client'
 import { buscarAluno } from './alunos'
+import { filtrosBusca } from '../utils/strings'
 
 // Normaliza altura pra cm — aceita entrada em metros (1.70) ou cm (170) e
 // devolve sempre cm. Aplicar em TODO ponto de save/load de altura pra que o
@@ -41,7 +42,7 @@ export const listarDietas = async ({ alunoId, busca, kcalMin, kcalMax, page = 1,
   }
   const filtros = []
   if (alunoId) filtros.push(["aluno", "=", alunoId])
-  if (busca) filtros.push(["nome_completo", "like", `%${busca}%`])
+  if (busca) filtros.push(...filtrosBusca('nome_completo', busca))
   if (kcalMin) filtros.push(["total_calories", ">=", Number(kcalMin)])
   if (kcalMax) filtros.push(["total_calories", "<=", Number(kcalMax)])
   if (filtros.length) params.filters = JSON.stringify(filtros)
@@ -105,7 +106,7 @@ export const duplicarDieta = async (id, novoAluno = null, dataInicial = null, da
 export const listarAlimentos = async ({ busca = '', grupo = '', page = 1, limit = 50 } = {}) => {
   const owner = frappeOwner()
   const filters = [['enabled', '=', 1], ['owner', '=', owner]]
-  if (busca) filters.push(["food", "like", `%${busca}%`])
+  if (busca) filters.push(...filtrosBusca('food', busca))
   if (grupo) filters.push(["food_group", "=", grupo])
 
   const data = new URLSearchParams({
@@ -152,7 +153,7 @@ export const listarRefeicoesProntas = async ({ busca = '', enabled = '', page = 
   const owner = frappeOwner()
 
   const filters = []
-  if (busca) filters.push(['full_name', 'like', `%${busca}%`])
+  if (busca) filters.push(...filtrosBusca('full_name', busca))
   if (enabled !== '') filters.push(['enabled', '=', Number(enabled)])
 
   // Mostra refeições do usuário atual OU refeições públicas (base do sistema)

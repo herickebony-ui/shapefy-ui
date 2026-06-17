@@ -11,6 +11,7 @@ import { TUTORIAIS_EXERCICIOS } from '../../data/tutoriais'
 import ListPage from '../../components/templates/ListPage'
 import ExplorarBibliotecaModal from '../../components/ExplorarBibliotecaModal'
 import { extractVideoId } from '../../utils/video'
+import { buscarSmart } from '../../utils/strings'
 import useErrorModal from '../../hooks/useErrorModal'
 
 const PLATAFORMAS = ['YouTube', 'Google Drive', 'Vimeo']
@@ -206,11 +207,8 @@ export default function GerenciarAlongamentos() {
   }
 
   const filtrados = useMemo(() => {
-    const q = busca.toLowerCase().trim()
-    if (!q) return alongamentos
-    return alongamentos.filter(a =>
-      (a['nome_do_exercício'] || '').toLowerCase().includes(q)
-    )
+    if (!busca.trim()) return alongamentos
+    return alongamentos.filter(a => buscarSmart(a['nome_do_exercício'], busca))
   }, [alongamentos, busca])
 
   useEffect(() => { setPage(1) }, [busca])

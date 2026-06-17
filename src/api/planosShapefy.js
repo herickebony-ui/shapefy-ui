@@ -1,11 +1,12 @@
 import client from './client'
+import { filtrosBusca } from '../utils/strings'
 
 const ENC_DOCTYPE = encodeURIComponent('Plano Shapefy')
 const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
 
 export const listarPlanos = async ({ search = '', page = 1, limit = 20, ativo = null } = {}) => {
   const filtros = [['profissional', '=', profissionalLogado()]]
-  if (search) filtros.push(['nome_plano', 'like', `%${search}%`])
+  if (search) filtros.push(...filtrosBusca('nome_plano', search))
   if (ativo !== null) filtros.push(['ativo', '=', ativo ? 1 : 0])
 
   const params = {

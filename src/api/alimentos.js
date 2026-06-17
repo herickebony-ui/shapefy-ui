@@ -1,4 +1,5 @@
 import client from './client'
+import { filtrosBusca } from '../utils/strings'
 
 const frappeOwner = () => localStorage.getItem('frappe_user') || ''
 export const listarAlimentos = async ({
@@ -7,7 +8,7 @@ export const listarAlimentos = async ({
   const owner = frappeOwner()
 
   const filters = [['owner', '=', owner]]
-  if (busca) filters.push(['food', 'like', `%${busca}%`])
+  if (busca) filters.push(...filtrosBusca('food', busca))
   if (grupo) filters.push(['food_group', '=', grupo])
   if (enabled !== '') filters.push(['enabled', '=', Number(enabled)])
 

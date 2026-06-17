@@ -1,4 +1,5 @@
 import client from './client'
+import { filtrosBusca } from '../utils/strings'
 
 const frappeOwner = () => localStorage.getItem('frappe_user') || ''
 
@@ -6,7 +7,7 @@ const frappeOwner = () => localStorage.getItem('frappe_user') || ''
 
 export const listarFichas = async ({ busca, nivel, aluno, page = 1, limit = 50 } = {}) => {
   const filters = []
-  if (busca) filters.push(['nome_completo', 'like', `%${busca}%`])
+  if (busca) filters.push(...filtrosBusca('nome_completo', busca))
   if (nivel) filters.push(['nivel', '=', nivel])
   if (aluno) filters.push(['aluno', '=', aluno])
 

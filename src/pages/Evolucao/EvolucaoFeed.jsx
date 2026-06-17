@@ -7,6 +7,7 @@ import RegistrarEvolucaoModal from '../../components/evolucao/RegistrarEvolucaoM
 import { listarRegistros, listarRegistrosFeed, buscarRegistro, salvarRegistro, excluirRegistro } from '../../api/evolucao'
 import { listarAlunosByIds, listarAlunos } from '../../api/alunos'
 import { listarConjuntos } from '../../api/conjuntos'
+import { buscarSmart } from '../../utils/strings'
 import { GraficoPeso } from './EvolucaoAluno'
 import useErrorModal from '../../hooks/useErrorModal'
 
@@ -420,9 +421,8 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
 
   // origem/busca/modo já filtrados no servidor; aqui só o nome (transitório do debounce)
   const filtrados = useMemo(() => {
-    const q = busca.trim().toLowerCase()
-    if (!q) return registros
-    return registros.filter(r => (nomes[r.aluno] || '').toLowerCase().includes(q))
+    if (!busca.trim()) return registros
+    return registros.filter(r => buscarSmart(nomes[r.aluno], busca))
   }, [registros, nomes, busca])
 
   // Só compara registros do MESMO aluno.

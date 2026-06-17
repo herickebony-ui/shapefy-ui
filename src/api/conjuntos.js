@@ -1,4 +1,5 @@
 import client from './client'
+import { filtrosBusca } from '../utils/strings'
 
 // CRUD de Conjunto de Fotos (template de slots do profissional).
 // Doctype: "Conjunto de Fotos" (+ child "Conjunto de Fotos Slot").
@@ -8,7 +9,7 @@ const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
 
 export const listarConjuntos = async ({ busca, page = 1, limit = 50 } = {}) => {
   const filters = [['profissional', '=', profissionalLogado()]]
-  if (busca) filters.push(['titulo', 'like', `%${busca}%`])
+  if (busca) filters.push(...filtrosBusca('titulo', busca))
   const params = {
     fields: JSON.stringify(['name', 'titulo', 'enabled', 'profissional']),
     filters: JSON.stringify(filters),

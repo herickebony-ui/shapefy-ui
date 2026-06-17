@@ -1,10 +1,11 @@
 import client from './client'
+import { filtrosBusca } from '../utils/strings'
 
 const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
 
 export const listarPrescricoes = async ({ busca, page = 1, limit = 50 } = {}) => {
   const filters = [['profissional', '=', profissionalLogado()]]
-  if (busca) filters.push(['nome_completo', 'like', `%${busca}%`])
+  if (busca) filters.push(...filtrosBusca('nome_completo', busca))
 
   const res = await client.get('/api/resource/Prescricao%20Paciente', {
     params: {

@@ -235,8 +235,10 @@ export default function ModeloDietaListagem() {
     setLoading(true)
     setError(null)
     try {
-      const { list } = await listarModelosDieta({ busca: query, categoria, limit: 200 })
-      const filtrada = query ? list.filter(m => buscarSmart(m.titulo, query)) : list
+      // Lista pequena: busca no servidor depende da collation (acento). Buscamos
+      // tudo da categoria e filtramos local com buscarSmart (acento + coringa garantidos).
+      const { list } = await listarModelosDieta({ categoria, limit: 200 })
+      const filtrada = query ? list.filter(m => buscarSmart([m.titulo, m.descricao], query)) : list
       setModelos(filtrada)
     } catch (err) {
       setError(err?.message || 'Erro ao buscar modelos')
