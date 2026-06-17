@@ -38,6 +38,7 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
   const [mostrarEdicao, setMostrarEdicao] = useState(false)
   const [editId, setEditId] = useState(null)
   const [pesoInput, setPesoInput] = useState('')
+  const [dataInput, setDataInput] = useState('')
   const [salvando, setSalvando] = useState(false)
   const slotMap = new Map()
   registros.forEach(r => (r.fotos || []).forEach(f => {
@@ -50,13 +51,25 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
   const temTodos = pontosPeso.length > pontosSelecionados.length
   const urlSlot = (r, sid) => (r.fotos || []).find(x => x.slot_id === sid)?.url || null
 
-  // Edita só o peso (peso_revisado=1). NUNCA muda a data do registro.
-  const salvarPeso = async (regName) => {
+  // Edita peso (peso_revisado=1) e/ou a data (campo `data`, manual). O display
+  // sempre usa `data`, nunca `modified` — então editar peso não muda a data.
+  const abrirEdicao = (r) => {
+    setPesoInput(r.peso != null && r.peso > 0 ? String(r.peso).replace('.', ',') : '')
+    setDataInput(String(r.data || '').split(' ')[0])
+    setEditId(r.name)
+  }
+  const salvarEdit = async (regName) => {
     const p = parseFloat(String(pesoInput).replace(',', '.'))
-    if (!(p >= 20 && p <= 400)) { setEditId(null); return }
+    const payload = {}
+    if (pesoInput !== '' ) {
+      if (!(p >= 20 && p <= 400)) { return } // peso inválido: não salva
+      payload.peso = p
+    }
+    if (dataInput) payload.data = dataInput
+    if (!payload.peso && !payload.data) { setEditId(null); return }
     setSalvando(true)
     try {
-      await onPesoSalvo?.(regName, p)
+      await onPesoSalvo?.(regName, payload)
       setEditId(null)
     } finally {
       setSalvando(false)
@@ -92,21 +105,25 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
             <GraficoPeso pontos={pontosGrafico} />
             {mostrarEdicao && (
               <div className="mt-4 pt-4 border-t border-[#323238]">
-                <p className="text-gray-500 text-[10px] uppercase tracking-wider font-bold mb-2">Editar peso por data · todos os registros · não altera a data</p>
-                <div className="space-y-1 max-h-72 overflow-auto pr-1">
+                <p className="text-gray-500 text-[10px] uppercase tracking-wider font-bold mb-2">Editar data e peso · {listaEdicao.length} registro(s)</p>
+                <div className="space-y-1 max-h-80 overflow-auto pr-1">
                   {[...listaEdicao].sort((a, b) => (b.data || '').localeCompare(a.data || '')).map((r) => (
                     <div key={r.name} className="flex items-center justify-between gap-3 px-2 py-1.5 rounded hover:bg-white/5">
-                      <span className="text-gray-300 text-xs font-medium w-24 shrink-0">{fmtData(r.data)}</span>
                       {editId === r.name ? (
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <input
+                            type="date" value={dataInput}
+                            onChange={e => setDataInput(e.target.value)}
+                            className="h-8 px-2 bg-[#29292e] border border-[#2563eb]/60 text-white rounded-lg text-xs outline-none"
+                          />
                           <input
                             type="number" step="0.1" autoFocus value={pesoInput}
                             onChange={e => setPesoInput(e.target.value)}
-                            onKeyDown={e => { if (e.key === 'Enter') salvarPeso(r.name); if (e.key === 'Escape') setEditId(null) }}
+                            onKeyDown={e => { if (e.key === 'Enter') salvarEdit(r.name); if (e.key === 'Escape') setEditId(null) }}
                             placeholder="kg"
                             className="w-20 h-8 px-2 bg-[#29292e] border border-[#2563eb]/60 text-white rounded-lg text-sm outline-none text-center"
                           />
-                          <button onClick={() => salvarPeso(r.name)} disabled={salvando} title="Salvar"
+                          <button onClick={() => salvarEdit(r.name)} disabled={salvando} title="Salvar"
                             className="h-8 w-8 flex items-center justify-center text-green-400 hover:text-white border border-green-500/30 hover:bg-green-700 rounded-lg transition-colors">
                             {salvando ? <span className="w-3 h-3 border-2 border-green-400 border-t-transparent rounded-full animate-spin" /> : <Check size={14} />}
                           </button>
@@ -116,15 +133,15 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
                           </button>
                         </div>
                       ) : (
-                        <button
-                          onClick={() => { setPesoInput(r.peso != null && r.peso > 0 ? String(r.peso).replace('.', ',') : ''); setEditId(r.name) }}
-                          className="flex items-center gap-2 text-sm group"
-                        >
-                          {r.peso != null && r.peso > 0
-                            ? <span className="text-white font-semibold">{numBR(r.peso)} kg</span>
-                            : <span className="text-gray-600 italic">sem peso</span>}
-                          <Pencil size={12} className="text-gray-600 group-hover:text-[#2563eb] transition-colors" />
-                        </button>
+                        <>
+                          <span className="text-gray-300 text-xs font-medium w-24 shrink-0">{fmtData(r.data)}</span>
+                          <button onClick={() => abrirEdicao(r)} className="flex items-center gap-2 text-sm group">
+                            {r.peso != null && r.peso > 0
+                              ? <span className="text-white font-semibold">{numBR(r.peso)} kg</span>
+                              : <span className="text-gray-600 italic">sem peso</span>}
+                            <Pencil size={12} className="text-gray-600 group-hover:text-[#2563eb] transition-colors" />
+                          </button>
+                        </>
                       )}
                     </div>
                   ))}
@@ -355,21 +372,25 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
     const pontosPeso = pontosTodos.length ? pontosTodos : pontosLocais
     // "Editar peso" lista TODO o histórico do aluno (com name). Fallback: comparados.
     const todosRegistros = registrosDoAluno.length ? registrosDoAluno : comparando
-    const onPesoSalvo = async (regName, peso) => {
+    // payload: { data?, peso? }. salva no campo `data` (manual) e/ou peso.
+    const onPesoSalvo = async (regName, payload) => {
       try {
-        await salvarRegistro(regName, { peso, peso_revisado: 1 })
-        // atualiza local sem recarregar (e sem tocar na data)
-        setComparando(cs => cs.map(c => c.name === regName ? { ...c, peso } : c))
-        setRegistros(rs => rs.map(r => r.name === regName ? { ...r, peso } : r))
-        setRegistrosDoAluno(rs => rs.map(r => r.name === regName ? { ...r, peso } : r))
-        setPontosTodos(pts => {
-          const alvo = (registrosDoAluno.length ? registrosDoAluno : comparando).find(c => c.name === regName)
-          if (!alvo) return pts
-          const semEsse = pts.filter(p => p.data !== alvo.data)
-          return [...semEsse, { data: alvo.data, peso }].sort((a, b) => (a.data || '').localeCompare(b.data || ''))
-        })
+        await salvarRegistro(regName, { ...payload, peso_revisado: 1 })
+        const upd = (r) => r.name === regName
+          ? { ...r, ...(payload.data ? { data: payload.data } : {}), ...(payload.peso != null ? { peso: payload.peso } : {}) }
+          : r
+        setComparando(cs => cs.map(upd))
+        setRegistros(rs => rs.map(upd))
+        const baseAluno = (registrosDoAluno.length ? registrosDoAluno : comparando).map(upd)
+        setRegistrosDoAluno(baseAluno)
+        setPontosTodos(
+          baseAluno
+            .filter(r => r.peso != null && r.peso > 0)
+            .map(r => ({ data: r.data, peso: r.peso }))
+            .sort((a, b) => (a.data || '').localeCompare(b.data || ''))
+        )
       } catch (e) {
-        errorModal.show(e, 'Editar peso')
+        errorModal.show(e, 'Editar registro')
       }
     }
     return (
