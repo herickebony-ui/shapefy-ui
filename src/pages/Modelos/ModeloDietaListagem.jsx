@@ -269,13 +269,13 @@ export default function ModeloDietaListagem() {
   const colunas = [
     {
       label: 'Título',
-      headerClass: 'min-w-[240px]',
+      headerClass: 'min-w-[200px]',
       render: (m) => (
-        <>
+        <div className="max-w-[240px] lg:max-w-[460px]">
           <p className="text-white font-semibold text-sm truncate">{m.titulo || '—'}</p>
           {m.descricao && <p className="text-gray-500 text-xs mt-0.5 truncate">{m.descricao}</p>}
           <p className="text-gray-600 text-[10px] mt-0.5">modificado em: {formatDate(m.modified)}</p>
-        </>
+        </div>
       ),
     },
     {
