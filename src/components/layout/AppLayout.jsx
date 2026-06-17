@@ -34,7 +34,6 @@ const NAV_ITEMS = [
   { id: 'feedbacks',            label: 'Feedbacks Recebidos',          icon: Inbox,           path: '/feedbacks' },
   { id: 'cronograma-feedbacks', label: 'Planejar Feedbacks do Aluno', icon: CalendarClock,   path: '/cronograma-feedbacks' },
   { id: 'evolucao',             label: 'Evolução do Aluno',            icon: TrendingUp,      path: '/evolucao' },
-  { id: 'pendencias-evolucao',  label: 'Pendências de Peso',           icon: FileQuestion,    path: '/pendencias-evolucao' },
   { id: 'treinos',              label: 'Treinos Realizados',           icon: Activity,        path: '/treinos',           modulo: 'treino' },
   { id: 'progressao-cargas',    label: 'Progressão de Cargas',         icon: TrendingUp,      path: '/progressao-cargas', modulo: 'treino' },
 
