@@ -55,16 +55,8 @@ export const buscarRegistro = async (id) => {
 // Retorna { [registroName]: qtdFotos }.
 export const contarFotos = async (registroNames = []) => {
   if (!registroNames.length) return {}
-  const res = await client.get('/api/resource/Registro%20Evolucao%20Foto', {
-    params: {
-      fields: JSON.stringify(['parent']),
-      filters: JSON.stringify([['parent', 'in', registroNames]]),
-      limit: 0,
-    },
-  })
-  const counts = {}
-  for (const r of res.data.data || []) counts[r.parent] = (counts[r.parent] || 0) + 1
-  return counts
+  const res = await client.post('/api/method/shapefy.evolucao.api.contar_fotos', { registros: registroNames })
+  return res.data?.message || {}
 }
 
 // Lançamento manual retroativo (origem=manual): aluno + data passada + peso + fotos.
