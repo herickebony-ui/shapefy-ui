@@ -16,7 +16,7 @@ import useErrorModal from '../../hooks/useErrorModal'
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 
 const ORIGEM_BADGE = {
-  avaliacao: { label: 'Avaliação', variant: 'purple' },
+  avaliacao: { label: 'Avaliação Corporal', variant: 'purple' },
   feedback:  { label: 'Feedback', variant: 'info' },
   anamnese:  { label: 'Anamnese', variant: 'warning' },
   manual:    { label: 'Manual', variant: 'default' },
@@ -654,7 +654,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
           { type: 'search', value: busca, onChange: setBusca, placeholder: 'Buscar aluno...', icon: Search },
           { type: 'select', value: filtroOrigem, onChange: setFiltroOrigem, options: [
             { value: '', label: 'Todas as origens' },
-            { value: 'avaliacao', label: 'Avaliação' },
+            { value: 'avaliacao', label: 'Avaliação Corporal' },
             { value: 'feedback', label: 'Feedback' },
             { value: 'anamnese', label: 'Anamnese' },
             { value: 'manual', label: 'Manual' },
