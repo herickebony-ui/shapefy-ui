@@ -58,6 +58,7 @@ export default function ErrorModal({ open, onClose, detail, context }) {
   return (
     <Modal
       open
+      overlay
       onClose={onClose}
       size="md"
       title={title}

@@ -14,6 +14,8 @@ const useAuthStore = create(
       tipo: 'profissional',
       aluno: null,
       profissional: null,
+      isFuncionario: false,
+      funcPermissoes: null,
 
       setAuth: (user, token) => {
         localStorage.setItem('frappe_token', token)
@@ -38,6 +40,11 @@ const useAuthStore = create(
 
       setModulos: (modulos) => set({ modulos: { ...MODULOS_DEFAULT, ...modulos } }),
 
+      setFuncPermissoes: (permissoes) => set({
+        isFuncionario: true,
+        funcPermissoes: permissoes,
+      }),
+
       clearAuth: () => {
         localStorage.removeItem('frappe_token')
         localStorage.removeItem('frappe_user')
@@ -53,12 +60,14 @@ const useAuthStore = create(
           aluno: null,
           profissional: null,
           modulos: { ...MODULOS_DEFAULT },
+          isFuncionario: false,
+          funcPermissoes: null,
         })
       },
     }),
     {
       name: 'shapefy-auth',
-      version: 3,
+      version: 4,
       migrate: (state, version) => {
         if (!state) return state
         if (!state.modulos || version < 1) {
@@ -75,6 +84,10 @@ const useAuthStore = create(
           state.tipo = state.tipo || 'profissional'
           state.aluno = state.aluno || null
         }
+        if (version < 4) {
+          state.isFuncionario = state.isFuncionario || false
+          state.funcPermissoes = state.funcPermissoes || null
+        }
         return state
       },
       merge: (persisted, current) => {
@@ -87,6 +100,8 @@ const useAuthStore = create(
           modulos: { ...MODULOS_DEFAULT, ...persistedModulos },
           tipo: persisted?.tipo || 'profissional',
           aluno: persisted?.aluno || null,
+          isFuncionario: persisted?.isFuncionario || false,
+          funcPermissoes: persisted?.funcPermissoes || null,
         }
       },
     }

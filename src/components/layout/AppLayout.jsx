@@ -14,51 +14,51 @@ import SinhoNotificacoes from '../ui/SinhoNotificacoes'
 
 const NAV_ITEMS = [
   { type: 'divider', label: 'Início' },
-  { id: 'main',         label: 'Meus Alunos',         icon: Users,           path: '/' },
-  { id: 'anamneses',    label: 'Gestão de Anamnese',   icon: ClipboardList,  path: '/anamneses' },
+  { id: 'main',         label: 'Meus Alunos',         icon: Users,           path: '/',                   funcPerm: 'aluno' },
+  { id: 'anamneses',    label: 'Gestão de Anamnese',   icon: ClipboardList,  path: '/anamneses',          funcPerm: 'anamnese' },
 
   { type: 'divider', label: 'Prescrições' },
-  { id: 'fichas',       label: 'Fichas de Treino',    icon: Dumbbell,        path: '/fichas',       modulo: 'treino' },
-  { id: 'dietas',       label: 'Dietas',              icon: ClipboardList,   path: '/dietas',       modulo: 'dieta' },
-  { id: 'prescricoes',  label: 'Prescrição Paciente', icon: Pill,            path: '/prescricoes' },
+  { id: 'fichas',       label: 'Fichas de Treino',    icon: Dumbbell,        path: '/fichas',       modulo: 'treino',  funcPerm: 'treino' },
+  { id: 'dietas',       label: 'Dietas',              icon: ClipboardList,   path: '/dietas',       modulo: 'dieta',   funcPerm: 'dieta' },
+  { id: 'prescricoes',  label: 'Prescrição Paciente', icon: Pill,            path: '/prescricoes',                     funcPerm: 'prescricao' },
 
   { type: 'divider', label: 'Modelos' },
-  { id: 'modelos-fichas', label: 'Modelos de Ficha',  icon: Bookmark,        path: '/modelos/fichas', modulo: 'treino' },
-  { id: 'modelos-dietas', label: 'Modelos de Dieta',  icon: Bookmark,        path: '/modelos/dietas', modulo: 'dieta' },
-  { id: 'modelos-instrucoes', label: 'Modelos de Instrução', icon: Bookmark, path: '/modelos/instrucoes' },
+  { id: 'modelos-fichas', label: 'Modelos de Ficha',  icon: Bookmark,        path: '/modelos/fichas', modulo: 'treino', funcPerm: 'treino' },
+  { id: 'modelos-dietas', label: 'Modelos de Dieta',  icon: Bookmark,        path: '/modelos/dietas', modulo: 'dieta',  funcPerm: 'dieta' },
+  { id: 'modelos-instrucoes', label: 'Modelos de Instrução', icon: Bookmark, path: '/modelos/instrucoes',              funcPerm: 'treino' },
 
   { type: 'divider', label: 'Avaliação' },
-  { id: 'avaliacoes',   label: 'Avaliações Corporais', icon: BarChart2,      path: '/avaliacoes' },
+  { id: 'avaliacoes',   label: 'Avaliações Corporais', icon: BarChart2,      path: '/avaliacoes',                      funcPerm: 'avaliacao' },
 
   { type: 'divider', label: 'Acompanhamento' },
-  { id: 'painel-feedbacks',     label: 'Central de Feedbacks',         icon: LayoutDashboard, path: '/painel-feedbacks' },
-  { id: 'feedbacks',            label: 'Feedbacks Recebidos',          icon: Inbox,           path: '/feedbacks' },
-  { id: 'cronograma-feedbacks', label: 'Planejar Feedbacks do Aluno', icon: CalendarClock,   path: '/cronograma-feedbacks' },
-  { id: 'evolucao',             label: 'Evolução do Aluno',            icon: TrendingUp,      path: '/evolucao' },
-  { id: 'treinos',              label: 'Treinos Realizados',           icon: Activity,        path: '/treinos',           modulo: 'treino' },
-  { id: 'progressao-cargas',    label: 'Progressão de Cargas',         icon: TrendingUp,      path: '/progressao-cargas', modulo: 'treino' },
+  { id: 'painel-feedbacks',     label: 'Central de Feedbacks',         icon: LayoutDashboard, path: '/painel-feedbacks',        funcPerm: 'feedback' },
+  { id: 'feedbacks',            label: 'Feedbacks Recebidos',          icon: Inbox,           path: '/feedbacks',               funcPerm: 'feedback' },
+  { id: 'cronograma-feedbacks', label: 'Planejar Feedbacks do Aluno', icon: CalendarClock,   path: '/cronograma-feedbacks',    funcPerm: 'feedback' },
+  { id: 'evolucao',             label: 'Evolução do Aluno',            icon: TrendingUp,      path: '/evolucao',                funcPerm: 'avaliacao' },
+  { id: 'treinos',              label: 'Treinos Realizados',           icon: Activity,        path: '/treinos',           modulo: 'treino',  funcPerm: 'treino' },
+  { id: 'progressao-cargas',    label: 'Progressão de Cargas',         icon: TrendingUp,      path: '/progressao-cargas', modulo: 'treino',  funcPerm: 'treino' },
 
   { type: 'divider', label: 'Financeiro' },
-  { id: 'financeiro',   label: 'Pagamentos',          icon: Wallet,          path: '/financeiro' },
-  { id: 'planos',       label: 'Planos',              icon: Layers,          path: '/planos' },
+  { id: 'financeiro',   label: 'Pagamentos',          icon: Wallet,          path: '/financeiro',                      funcPerm: 'pagamentos' },
+  { id: 'planos',       label: 'Planos',              icon: Layers,          path: '/planos',                          funcPerm: 'planos' },
 
   { type: 'divider', label: 'Catálogos' },
-  { id: 'conjuntos-fotos',    label: 'Conjuntos de Fotos', icon: Layers,         path: '/conjuntos-fotos' },
-  { id: 'exercicios',         label: 'Exercícios',        icon: ListChecks,      path: '/exercicios',         modulo: 'treino' },
-  { id: 'alongamentos',       label: 'Alongamentos',      icon: Waves,           path: '/alongamentos',       modulo: 'treino' },
-  { id: 'aerobicos',          label: 'Aeróbicos',         icon: Wind,            path: '/aerobicos',          modulo: 'treino' },
-  { id: 'alimentos',          label: 'Alimentos',         icon: UtensilsCrossed, path: '/alimentos',          modulo: 'dieta' },
-  { id: 'refeicoes-prontas',  label: 'Refeições Prontas', icon: BookOpen,        path: '/refeicoes-prontas',  modulo: 'dieta' },
+  { id: 'conjuntos-fotos',    label: 'Conjuntos de Fotos', icon: Layers,         path: '/conjuntos-fotos',              funcPerm: 'feedback' },
+  { id: 'exercicios',         label: 'Exercícios',        icon: ListChecks,      path: '/exercicios',         modulo: 'treino',  funcPerm: 'treino' },
+  { id: 'alongamentos',       label: 'Alongamentos',      icon: Waves,           path: '/alongamentos',       modulo: 'treino',  funcPerm: 'treino' },
+  { id: 'aerobicos',          label: 'Aeróbicos',         icon: Wind,            path: '/aerobicos',          modulo: 'treino',  funcPerm: 'treino' },
+  { id: 'alimentos',          label: 'Alimentos',         icon: UtensilsCrossed, path: '/alimentos',          modulo: 'dieta',   funcPerm: 'alimentos' },
+  { id: 'refeicoes-prontas',  label: 'Refeições Prontas', icon: BookOpen,        path: '/refeicoes-prontas',  modulo: 'dieta',   funcPerm: 'dieta' },
 
   { type: 'divider', label: 'Conteúdo' },
-  { id: 'textos',          label: 'Banco de Textos',          icon: FileText,     path: '/banco-textos' },
-  { id: 'form-feedback',   label: 'Formulários de Feedback',  icon: FileEdit,     path: '/formularios/feedback' },
-  { id: 'form-anamnese',   label: 'Formulários de Anamnese',  icon: FileQuestion, path: '/formularios/anamnese' },
+  { id: 'textos',          label: 'Banco de Textos',          icon: FileText,     path: '/banco-textos',                funcPerm: 'banco_textos' },
+  { id: 'form-feedback',   label: 'Formulários de Feedback',  icon: FileEdit,     path: '/formularios/feedback',        funcPerm: 'feedback' },
+  { id: 'form-anamnese',   label: 'Formulários de Anamnese',  icon: FileQuestion, path: '/formularios/anamnese',        funcPerm: 'anamnese' },
 
   { type: 'divider', label: 'Conta' },
-  { id: 'funcionarios', label: 'Funcionários',         icon: UserCog,         path: '/funcionarios' },
-  { id: 'perfil',       label: 'Perfil Profissional', icon: Briefcase,       path: '/perfil' },
-  { id: 'assinatura',   label: 'Minha Assinatura',    icon: CreditCard,      path: '/assinatura' },
+  { id: 'funcionarios', label: 'Funcionários',         icon: UserCog,         path: '/funcionarios',   funcPerm: '__profissional__' },
+  { id: 'perfil',       label: 'Perfil Profissional', icon: Briefcase,       path: '/perfil',         funcPerm: '__profissional__' },
+  { id: 'assinatura',   label: 'Minha Assinatura',    icon: CreditCard,      path: '/assinatura',     funcPerm: '__profissional__' },
   { id: 'me',           label: 'Usuário',             icon: UserCircle,      path: '/me' },
   { id: 'suporte',      label: 'Suporte',             icon: HelpCircle,      path: '/suporte' },
 ]
@@ -66,7 +66,7 @@ const NAV_ITEMS = [
 export default function AppLayout() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { user, clearAuth, modulos } = useAuthStore()
+  const { user, clearAuth, modulos, isFuncionario, funcPermissoes } = useAuthStore()
   const [expanded, setExpanded] = useState(false)
   const userName = localStorage.getItem('frappe_user_name') || 'Admin'
 
@@ -140,12 +140,24 @@ export default function AppLayout() {
           {NAV_ITEMS.map((item, idx) => {
             if (item.modulo && !modulos?.[item.modulo]) return null
 
+            if (isFuncionario && item.funcPerm) {
+              if (item.funcPerm === '__profissional__') return null
+              const mp = funcPermissoes?.[item.funcPerm]
+              if (!mp || !Object.values(mp).some(Boolean)) return null
+            }
+
             if (item.type === 'divider') {
               let hasChild = false
               for (let j = idx + 1; j < NAV_ITEMS.length; j++) {
                 const next = NAV_ITEMS[j]
                 if (next.type === 'divider') break
-                if (!next.modulo || modulos?.[next.modulo]) { hasChild = true; break }
+                if (next.modulo && !modulos?.[next.modulo]) continue
+                if (isFuncionario && next.funcPerm) {
+                  if (next.funcPerm === '__profissional__') continue
+                  const mp = funcPermissoes?.[next.funcPerm]
+                  if (!mp || !Object.values(mp).some(Boolean)) continue
+                }
+                hasChild = true; break
               }
               if (!hasChild) return null
 

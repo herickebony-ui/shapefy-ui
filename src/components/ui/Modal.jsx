@@ -21,13 +21,14 @@ export default function Modal({
   size = 'md',
   footer,
   closeOnOverlayClick = true,
+  overlay = false,
 }) {
   const visible = isOpen ?? open ?? true
   if (!visible) return null
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex flex-col md:items-center md:justify-center bg-black/75 backdrop-blur-sm md:p-4"
+      className={`fixed inset-0 ${overlay ? 'z-[200]' : 'z-[100]'} flex flex-col md:items-center md:justify-center bg-black/75 backdrop-blur-sm md:p-4`}
       onClick={closeOnOverlayClick ? onClose : undefined}
     >
       <div

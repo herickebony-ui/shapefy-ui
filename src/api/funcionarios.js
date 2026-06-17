@@ -37,3 +37,8 @@ export const reativarFuncionario = async (funcionario_name) => {
     params: { funcionario_name },
   })
 }
+
+export const minhasPermissoes = async () => {
+  const res = await client.get('/api/method/shapefy.api.funcionario.minhas_permissoes')
+  return res.data?.message || null
+}

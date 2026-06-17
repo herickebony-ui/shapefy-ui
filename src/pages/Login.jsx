@@ -5,6 +5,7 @@ import useAuthStore from '../store/authStore'
 import { login } from '../api/auth'
 import { autenticarAluno, homeAluno } from '../api/aluno'
 import { buscarAssinatura, buscarPlano } from '../api/assinatura'
+import { minhasPermissoes } from '../api/funcionarios'
 import { Input, Button } from '../components/ui'
 import { tw } from '../styles/tokens'
 import client from '../api/client'
@@ -15,6 +16,7 @@ export default function Login() {
   const setAuth = useAuthStore((s) => s.setAuth)
   const setAuthAluno = useAuthStore((s) => s.setAuthAluno)
   const setModulos = useAuthStore((s) => s.setModulos)
+  const setFuncPermissoes = useAuthStore((s) => s.setFuncPermissoes)
   const initialRole = searchParams.get('role') === 'aluno' ? 'aluno' : 'profissional'
   const [tipo, setTipo] = useState(initialRole)
   const [form, setForm] = useState({ usr: '', pwd: '' })
@@ -86,6 +88,15 @@ export default function Login() {
       localStorage.setItem('frappe_user_name', fullName.split(' ')[0])
       localStorage.setItem('frappe_professional', profissional)
       setAuth(form.usr, token)
+
+      try {
+        const funcPerms = await minhasPermissoes()
+        if (funcPerms?.permissoes) {
+          setFuncPermissoes(funcPerms.permissoes)
+        }
+      } catch (e) {
+        console.error('Erro ao buscar permissões de funcionário:', e)
+      }
 
       try {
         const assinatura = await buscarAssinatura()
