@@ -47,7 +47,9 @@ export const vincularFeedback = async (alunoId, formularioId, { conjunto_fotos, 
   return feedback
 }
 
-export const listarFeedbacks = async ({ busca = '', status = '', dataInicio = '', dataFim = '', page = 1, limit = 500 } = {}) => {
+// `status` aceita string ou array (multi-seleção → filtro `in`). O recorte de
+// data é feito no client (por data_resposta com fallback modified), não aqui.
+export const listarFeedbacks = async ({ busca = '', status = '', page = 1, limit = 500 } = {}) => {
   const profissional = profissionalLogado()
   const filtros = [
     ['profissional', 'in', [profissional, '']],
@@ -56,9 +58,8 @@ export const listarFeedbacks = async ({ busca = '', status = '', dataInicio = ''
   if (busca) {
     filtros.push(...filtrosBusca('nome_completo', busca))
   } else {
-    if (status) filtros.push(['status', '=', status])
-    if (dataInicio) filtros.push(['date', '>=', dataInicio])
-    if (dataFim) filtros.push(['date', '<=', dataFim])
+    const statusArr = (Array.isArray(status) ? status : [status]).filter(Boolean)
+    if (statusArr.length) filtros.push(['status', 'in', statusArr])
   }
 
   const params = {
