@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Activity, Search, Columns, X, ArrowLeft, CheckCircle, Plus, Image as ImageIcon, Scale, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Activity, Search, Columns, X, ArrowLeft, CheckCircle, Plus, Image as ImageIcon, Scale, ChevronLeft, ChevronRight, Pencil, Check } from 'lucide-react'
 import { Button, Badge, Spinner, EmptyState, DataTable } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 import ImagemInterativa from '../Feedbacks/ImagemInterativa'
 import RegistrarEvolucaoModal from '../../components/evolucao/RegistrarEvolucaoModal'
-import { listarRegistros, buscarRegistro, contarFotos } from '../../api/evolucao'
+import { listarRegistros, buscarRegistro, contarFotos, salvarRegistro } from '../../api/evolucao'
 import { listarAlunosByIds, listarAlunos } from '../../api/alunos'
 import { GraficoPeso } from './EvolucaoAluno'
 import useErrorModal from '../../hooks/useErrorModal'
@@ -32,18 +32,34 @@ const FEED_LIMIT = 1000 // teto de registros carregados pro feed (paginação é
 
 // Comparação de Registros — mesmo visual da comparação de feedbacks: tabela
 // datas × (peso + slots), fotos via ImagemInterativa, com gráfico de peso no topo.
-function RegistroComparacao({ registros, pontosPeso = [], nome, onVoltar }) {
+function RegistroComparacao({ registros, pontosPeso = [], nome, onVoltar, onPesoSalvo }) {
   const [verTodosPesos, setVerTodosPesos] = useState(registros.length < 2)
+  const [editId, setEditId] = useState(null)
+  const [pesoInput, setPesoInput] = useState('')
+  const [salvando, setSalvando] = useState(false)
   const slotMap = new Map()
   registros.forEach(r => (r.fotos || []).forEach(f => {
     if (f.slot_id) slotMap.set(f.slot_id, { slot_id: f.slot_id, rotulo: f.rotulo || '—', ordem: f.ordem ?? 999 })
   }))
   const slots = [...slotMap.values()].sort((a, b) => (a.ordem || 0) - (b.ordem || 0))
-  const temPeso = registros.some(r => r.peso != null)
-  const pontosSelecionados = registros.filter(r => r.peso != null).map(r => ({ data: r.data, peso: r.peso }))
+  const temPeso = true // sempre mostra a linha de Peso (pra poder editar/adicionar)
+  const pontosSelecionados = registros.filter(r => r.peso != null && r.peso > 0).map(r => ({ data: r.data, peso: r.peso }))
   const pontosGrafico = verTodosPesos ? pontosPeso : pontosSelecionados
   const temTodos = pontosPeso.length > pontosSelecionados.length
   const urlSlot = (r, sid) => (r.fotos || []).find(x => x.slot_id === sid)?.url || null
+
+  // Edita só o peso (peso_revisado=1). NUNCA muda a data do registro.
+  const salvarPeso = async (regName) => {
+    const p = parseFloat(String(pesoInput).replace(',', '.'))
+    if (!(p >= 20 && p <= 400)) { setEditId(null); return }
+    setSalvando(true)
+    try {
+      await onPesoSalvo?.(regName, p)
+      setEditId(null)
+    } finally {
+      setSalvando(false)
+    }
+  }
 
   return (
     <div className="w-full h-full flex flex-col bg-[#0a0a0a] text-white animate-in fade-in duration-300">
@@ -86,7 +102,35 @@ function RegistroComparacao({ registros, pontosPeso = [], nome, onVoltar }) {
                     <td className="p-2 md:p-3 sticky left-0 bg-[#1a1a1a] z-10"><span className="text-white text-xs font-bold">Peso</span></td>
                     {registros.map((r, i) => (
                       <td key={i} className="p-2 md:p-3 text-center">
-                        {r.peso != null ? <span className="text-white text-sm font-bold">{numBR(r.peso)} <span className="text-gray-500 text-xs">kg</span></span> : <span className="text-gray-600 text-xs">—</span>}
+                        {editId === r.name ? (
+                          <span className="inline-flex items-center gap-1">
+                            <input
+                              type="number" step="0.1" autoFocus value={pesoInput}
+                              onChange={e => setPesoInput(e.target.value)}
+                              onKeyDown={e => { if (e.key === 'Enter') salvarPeso(r.name); if (e.key === 'Escape') setEditId(null) }}
+                              className="w-16 h-7 px-2 bg-[#29292e] border border-[#2563eb]/60 text-white rounded text-xs outline-none text-center"
+                            />
+                            <button onClick={() => salvarPeso(r.name)} disabled={salvando} title="Salvar"
+                              className="h-7 w-7 flex items-center justify-center text-green-400 hover:text-white border border-green-500/30 hover:bg-green-700 rounded-lg transition-colors">
+                              {salvando ? <span className="w-3 h-3 border-2 border-green-400 border-t-transparent rounded-full animate-spin" /> : <Check size={12} />}
+                            </button>
+                            <button onClick={() => setEditId(null)} title="Cancelar"
+                              className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] rounded-lg transition-colors">
+                              <X size={12} />
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => { setPesoInput(r.peso != null && r.peso > 0 ? String(r.peso).replace('.', ',') : ''); setEditId(r.name) }}
+                            title="Editar peso (não altera a data)"
+                            className="group inline-flex items-center gap-1.5 hover:bg-white/5 rounded px-1.5 py-0.5 transition-colors"
+                          >
+                            {r.peso != null && r.peso > 0
+                              ? <span className="text-white text-sm font-bold">{numBR(r.peso)} <span className="text-gray-500 text-xs">kg</span></span>
+                              : <span className="text-gray-600 text-xs italic">sem peso</span>}
+                            <Pencil size={11} className="text-gray-600 group-hover:text-[#2563eb] transition-colors" />
+                          </button>
+                        )}
                       </td>
                     ))}
                   </tr>
@@ -276,12 +320,29 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
       .map(r => ({ data: r.data, peso: r.peso }))
       .sort((a, b) => (a.data || '').localeCompare(b.data || ''))
     const pontosPeso = pontosTodos.length ? pontosTodos : pontosLocais
+    const onPesoSalvo = async (regName, peso) => {
+      try {
+        await salvarRegistro(regName, { peso, peso_revisado: 1 })
+        // atualiza local sem recarregar (e sem tocar na data)
+        setComparando(cs => cs.map(c => c.name === regName ? { ...c, peso } : c))
+        setRegistros(rs => rs.map(r => r.name === regName ? { ...r, peso } : r))
+        setPontosTodos(pts => {
+          const alvo = comparando.find(c => c.name === regName)
+          if (!alvo) return pts
+          const semEsse = pts.filter(p => p.data !== alvo.data)
+          return [...semEsse, { data: alvo.data, peso }].sort((a, b) => (a.data || '').localeCompare(b.data || ''))
+        })
+      } catch (e) {
+        errorModal.show(e, 'Editar peso')
+      }
+    }
     return (
       <RegistroComparacao
         registros={comparando}
         pontosPeso={pontosPeso}
         nome={nome}
         onVoltar={() => { setComparando(null); setSelecionados([]); setModoComparar(false) }}
+        onPesoSalvo={onPesoSalvo}
       />
     )
   }

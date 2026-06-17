@@ -64,7 +64,7 @@ export function GraficoPeso({ pontos }) {
             <div
               key={i}
               title={`${fmtData(c.data)} · ${numBR(c.peso)} kg`}
-              className="absolute -translate-x-1/2 -translate-y-1/2 cursor-help"
+              className="absolute -translate-x-1/2 -translate-y-1/2 cursor-default"
               style={{ left: `${c.x}%`, top: `${c.y}%` }}
             >
               <div className={`rounded-full bg-[#3B82F6] border-2 border-[#1a1a1a] transition-transform hover:scale-150 ${denso ? 'h-1.5 w-1.5' : 'h-2 w-2'}`} />
