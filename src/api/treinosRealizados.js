@@ -7,7 +7,7 @@ const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
 const LIST_FIELDS = [
   'name', 'nome_completo', 'aluno', 'ficha', 'treino', 'treino_label',
   'data_e_hora_do_inicio', 'data_e_hora_do_conclusao', 'tempo_total_de_treino',
-  'status', 'intensidade_do_treino', 'entregue', 'data_entrega',
+  'status', 'intensidade_do_treino', 'entregue', 'data_entrega', 'tem_aerobico',
 ]
 
 const nowFrappeDatetime = () => {
