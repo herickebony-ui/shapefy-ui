@@ -36,7 +36,7 @@ import {
 } from '../../api/templates'
 import { listarAlunos, buscarAluno, salvarAluno } from '../../api/alunos'
 import { listarFormulariosFeedback } from '../../api/formularios'
-import { listarConjuntos } from '../../api/conjuntos'
+import { listarConjuntos, conjuntoPadraoAtual } from '../../api/conjuntos'
 import { listarContratos } from '../../api/contratosAluno'
 
 import {
@@ -80,6 +80,7 @@ export default function CronogramaFeedbacks() {
   const [todosAlunos, setTodosAlunos] = useState([])
   const [formularios, setFormularios] = useState([])
   const [conjuntos, setConjuntos] = useState([])
+  const [conjuntoPadrao, setConjuntoPadrao] = useState('') // padrão de fotos das próximas datas
   const [feriasList, setFeriasList] = useState([])
   const [carregandoBase, setCarregandoBase] = useState(true)
 
@@ -141,16 +142,18 @@ export default function CronogramaFeedbacks() {
   const carregarBase = useCallback(async () => {
     setCarregandoBase(true)
     try {
-      const [alunosRes, formsRes, feriasRes, conjuntosRes] = await Promise.all([
+      const [alunosRes, formsRes, feriasRes, conjuntosRes, padraoRes] = await Promise.all([
         listarAlunos({ limit: 500 }),
         listarFormulariosFeedback(),
         listarFerias(),
         listarConjuntos({ limit: 100 }).catch(() => ({ list: [] })),
+        conjuntoPadraoAtual().catch(() => null),
       ])
       setTodosAlunos(alunosRes.list || [])
       setFormularios(formsRes || [])
       setFeriasList(feriasRes || [])
       setConjuntos(conjuntosRes.list || [])
+      if (padraoRes) setConjuntoPadrao(padraoRes)
     } catch (e) {
       console.error(e)
       showToast('Falha ao carregar dados', 'error')
@@ -548,8 +551,8 @@ export default function CronogramaFeedbacks() {
       await sincronizarCronogramaDoAluno(alunoId, schedule.dates.map(d => {
         const fid = d.formulario || planForm.formulario_padrao
         const form = formularios.find(f => f.name === fid)
-        // Snapshot do conjunto/peso: override da data, senão herda do formulário.
-        const conjunto = d.conjunto_fotos ? d.conjunto_fotos : (form?.conjunto_fotos || '')
+        // Snapshot do conjunto/peso: override da data > Fotos padrão da barra > formulário.
+        const conjunto = d.conjunto_fotos ? d.conjunto_fotos : (conjuntoPadrao || form?.conjunto_fotos || '')
         const peso = d.incluir_peso != null
           ? d.incluir_peso
           : (form?.incluir_peso == null ? 1 : Number(form.incluir_peso))
@@ -1023,18 +1026,33 @@ export default function CronogramaFeedbacks() {
                   onClick={handleCopiarMensagem}>Copiar msg</Button>
               </div>
 
-              {/* Formulário padrão das próximas datas (movido do calendário) */}
-              <div className="px-3 py-2.5 border-b border-[#323238]/60 bg-[#1a1a1a]/40 flex flex-col sm:flex-row sm:items-center gap-2">
-                <span className="text-[10px] uppercase tracking-widest text-gray-500 font-bold shrink-0">Formulário padrão</span>
-                <select
-                  value={formularioSugerido || ''}
-                  onChange={(e) => setPlanForm(p => ({ ...p, formulario_padrao: e.target.value }))}
-                  title="Aplicado às próximas datas marcadas"
-                  className="w-full sm:flex-1 h-9 sm:h-8 px-2 bg-[#1a1a1a] border border-[#323238] hover:border-gray-500 focus:border-[#2563eb]/60 text-white rounded-lg text-xs outline-none transition-colors">
-                  {formularios.map(f => (
-                    <option key={f.name} value={f.name}>{f.titulo}</option>
-                  ))}
-                </select>
+              {/* Padrões das próximas datas marcadas (movido do calendário) */}
+              <div className="px-3 py-2.5 border-b border-[#323238]/60 bg-[#1a1a1a]/40 space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2">
+                  <span className="text-[10px] uppercase tracking-widest text-gray-500 font-bold sm:w-28 shrink-0">Formulário padrão</span>
+                  <select
+                    value={formularioSugerido || ''}
+                    onChange={(e) => setPlanForm(p => ({ ...p, formulario_padrao: e.target.value }))}
+                    title="Aplicado às próximas datas marcadas"
+                    className="w-full sm:flex-1 h-9 sm:h-8 px-2 bg-[#1a1a1a] border border-[#323238] hover:border-gray-500 focus:border-[#2563eb]/60 text-white rounded-lg text-xs outline-none transition-colors">
+                    {formularios.map(f => (
+                      <option key={f.name} value={f.name}>{f.titulo}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2">
+                  <span className="text-[10px] uppercase tracking-widest text-gray-500 font-bold sm:w-28 shrink-0">Fotos padrão</span>
+                  <select
+                    value={conjuntoPadrao}
+                    onChange={(e) => setConjuntoPadrao(e.target.value)}
+                    title="Padrão de fotos aplicado às próximas datas"
+                    className="w-full sm:flex-1 h-9 sm:h-8 px-2 bg-[#1a1a1a] border border-[#323238] hover:border-gray-500 focus:border-[#2563eb]/60 text-white rounded-lg text-xs outline-none transition-colors">
+                    <option value="">Não pedir</option>
+                    {conjuntos.map(c => (
+                      <option key={c.name} value={c.name}>{c.titulo}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="max-h-[520px] overflow-y-auto">
