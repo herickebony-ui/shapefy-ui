@@ -652,8 +652,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
         actions={toolbar}
         filters={[
           { type: 'search', value: busca, onChange: setBusca, placeholder: 'Buscar aluno...', icon: Search },
-          { type: 'select', value: filtroOrigem, onChange: setFiltroOrigem, options: [
-            { value: '', label: 'Todas as origens' },
+          { type: 'select', value: filtroOrigem, onChange: setFiltroOrigem, placeholder: 'Todas as origens', options: [
             { value: 'avaliacao', label: 'Avaliação Corporal' },
             { value: 'feedback', label: 'Feedback' },
             { value: 'anamnese', label: 'Anamnese' },
