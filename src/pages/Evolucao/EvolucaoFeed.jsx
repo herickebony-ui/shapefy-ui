@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Activity, Search, Columns, X, ArrowLeft, CheckCircle, Plus, Image as ImageIcon, Weight, ChevronLeft, ChevronRight, Pencil, Check } from 'lucide-react'
-import { Button, Badge, Spinner, EmptyState, DataTable, Tabs } from '../../components/ui'
+import { Activity, Search, Columns, X, ArrowLeft, CheckCircle, Plus, Image as ImageIcon, LineChart as LineChartIcon, ChevronLeft, ChevronRight, Pencil, Check } from 'lucide-react'
+import { Button, Badge, Spinner, EmptyState, DataTable } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 import ImagemInterativa from '../Feedbacks/ImagemInterativa'
 import RegistrarEvolucaoModal from '../../components/evolucao/RegistrarEvolucaoModal'
@@ -319,7 +319,6 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
   const [filtroOrigem, setFiltroOrigem] = useState('')
-  const [modo, setModo] = useState('foto') // 'foto' = compara fotos | 'peso' = lista de peso
   const [modoComparar, setModoComparar] = useState(false)
   const [selecionados, setSelecionados] = useState([])
   const [comparando, setComparando] = useState(null)
@@ -345,8 +344,8 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
     return () => clearTimeout(t)
   }, [busca])
 
-  // Volta pra página 1 ao trocar escopo (busca/origem/modo/aluno).
-  useEffect(() => { setPage(1) }, [buscaDebounced, filtroOrigem, modo, alunoId])
+  // Volta pra página 1 ao trocar escopo (busca/origem/aluno).
+  useEffect(() => { setPage(1) }, [buscaDebounced, filtroOrigem, alunoId])
 
   useEffect(() => {
     let cancelado = false
@@ -355,7 +354,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
       try {
         let regs, more = false
         if (alunoId) {
-          const r = await listarRegistrosFeed({ aluno: alunoId, origem: filtroOrigem, conteudo: modo, limit: FEED_LIMIT })
+          const r = await listarRegistrosFeed({ aluno: alunoId, origem: filtroOrigem, conteudo: 'foto', limit: FEED_LIMIT })
           regs = r.registros
         } else if (buscaDebounced) {
           const { list: al } = await listarAlunos({ search: buscaDebounced, limit: 50 })
@@ -363,12 +362,12 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
           if (!ids.length) {
             regs = []
           } else {
-            const r = await listarRegistrosFeed({ alunos: ids, origem: filtroOrigem, conteudo: modo, limit: FEED_LIMIT })
+            const r = await listarRegistrosFeed({ alunos: ids, origem: filtroOrigem, conteudo: 'foto', limit: FEED_LIMIT })
             regs = r.registros
             if (!cancelado) { const m = {}; al.forEach(a => { m[a.name] = a.nome_completo }); setNomes(prev => ({ ...prev, ...m })) }
           }
         } else {
-          const r = await listarRegistrosFeed({ origem: filtroOrigem, conteudo: modo, limit: PAGE_SIZE, limitStart: (page - 1) * PAGE_SIZE })
+          const r = await listarRegistrosFeed({ origem: filtroOrigem, conteudo: 'foto', limit: PAGE_SIZE, limitStart: (page - 1) * PAGE_SIZE })
           regs = r.registros
           more = r.hasMore
         }
@@ -392,7 +391,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
     carregar()
     return () => { cancelado = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [alunoId, refreshKey, buscaDebounced, filtroOrigem, modo, page])
+  }, [alunoId, refreshKey, buscaDebounced, filtroOrigem, page])
 
   // origem/busca/modo já filtrados no servidor; aqui só o nome (transitório do debounce)
   const filtrados = useMemo(() => {
@@ -455,13 +454,8 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
     return () => { cancel = true }
   }, [comparando])
 
-  // Clique na linha: modo Foto -> compara fotos+peso do registro; modo Peso ->
-  // abre a tela de peso do aluno (gráfico + lista editável).
+  // Clique na linha: compara fotos+peso do registro.
   const viewRegistro = async (row) => {
-    if (modo === 'peso') {
-      setPesoAluno({ aluno: row.aluno, nome: nomes[row.aluno] || row.aluno })
-      return
-    }
     setLoadingCmp(true)
     try {
       const doc = await buscarRegistro(row.name)
@@ -522,16 +516,23 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
 
   const columns = [
     {
-      label: 'Ações', headerClass: 'w-20 text-center', cellClass: 'text-center',
+      label: 'Ações', headerClass: 'w-28 text-center', cellClass: 'text-center',
       render: (row) => (
         <div className="flex items-center justify-center gap-1.5" onClick={e => e.stopPropagation()}>
           <button
             onClick={() => compararUltimos3(row)}
-            title="Comparar 3 últimos deste aluno"
+            title="Comparar 3 últimas fotos deste aluno"
             className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors relative group"
           >
             <Columns size={12} />
             <span className="absolute -top-1.5 -right-1.5 bg-[#2563eb] text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">3</span>
+          </button>
+          <button
+            onClick={() => setPesoAluno({ aluno: row.aluno, nome: nomes[row.aluno] || row.aluno })}
+            title="Ver evolução de peso deste aluno"
+            className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-[#2563eb] rounded-lg transition-colors"
+          >
+            <LineChartIcon size={12} />
           </button>
           <button
             onClick={() => toggleSelecionado(row)}
@@ -554,6 +555,15 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
     {
       label: 'Origem',
       render: (row) => { const b = ORIGEM_BADGE[row.origem] || ORIGEM_BADGE.manual; return <Badge variant={b.variant} size="sm">{b.label}</Badge> },
+    },
+    {
+      label: 'Fonte',
+      render: (row) => {
+        const fonte = row.fonte || row.conjunto || (row.origem === 'avaliacao' ? 'Avaliação Corporal' : '')
+        return fonte
+          ? <span className="text-gray-300 text-xs">{fonte}</span>
+          : <span className="text-gray-600 text-xs">—</span>
+      },
     },
     {
       label: 'Data',
@@ -580,24 +590,10 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
     </div>
   )
 
-  // Toggle de modo: Fotos (compara fotos) | Peso (lista de peso). Padrão do
-  // Treino Realizado → Progressão de Carga.
-  const modoTabs = (
-    <Tabs
-      tabs={[
-        { id: 'foto', label: 'Fotos', icon: <ImageIcon size={14} /> },
-        { id: 'peso', label: 'Peso', icon: <Weight size={14} /> },
-      ]}
-      active={modo}
-      onChange={setModo}
-      variant="pills"
-    />
-  )
-
   const tabela = loading ? (
     <div className="flex justify-center py-16"><Spinner /></div>
   ) : filtrados.length === 0 ? (
-    <EmptyState icon={modo === 'peso' ? Weight : ImageIcon} title={modo === 'peso' ? 'Sem registros de peso' : 'Sem registros com foto'} description={modo === 'peso' ? 'Aparecem aqui os registros que têm peso.' : 'Aparecem aqui os registros que têm foto (feedback, avaliação inicial/postural, conjunto). O peso você vê abrindo qualquer registro.'} />
+    <EmptyState icon={ImageIcon} title="Sem registros com foto" description="Aparecem aqui os registros que têm foto (feedback, avaliação inicial/postural, conjunto). O peso você vê no botão de peso ou abrindo o registro." />
   ) : (
     <>
       <DataTable
@@ -637,7 +633,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
         {errorModal.element}
         {registrarModal}
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          {modoTabs}
+          <p className="text-gray-500 text-xs">Selecione 2–3 registros pra comparar fotos. Use o ícone de peso pra ver a evolução de peso.</p>
           {toolbar}
         </div>
         {tabela}
@@ -651,7 +647,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
       {registrarModal}
       <ListPage
         title="Evolução do Aluno"
-        subtitle={modo === 'peso' ? 'Lista de peso dos seus alunos' : 'Fotos dos seus alunos · busque um nome pra ver todo o histórico'}
+        subtitle="Fotos dos seus alunos · busque um nome pra ver todo o histórico"
         actions={toolbar}
         filters={[
           { type: 'search', value: busca, onChange: setBusca, placeholder: 'Buscar aluno...', icon: Search },
@@ -666,10 +662,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
         loading={false}
         empty={null}
       >
-        <div className="space-y-3">
-          {modoTabs}
-          {tabela}
-        </div>
+        {tabela}
       </ListPage>
     </>
   )
