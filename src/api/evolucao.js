@@ -53,11 +53,12 @@ export const buscarRegistro = async (id) => {
 
 // Feed da tela Evolução do Aluno, paginado server-side. conteudo 'foto' (só com
 // foto) ou 'peso' (só com peso). Retorna { registros, hasMore }.
-export const listarRegistrosFeed = async ({ aluno = null, alunos = null, origem = '', conteudo = 'foto', limit = 30, limitStart = 0 } = {}) => {
+export const listarRegistrosFeed = async ({ aluno = null, alunos = null, origem = '', conjunto = '', conteudo = 'foto', limit = 30, limitStart = 0 } = {}) => {
   const res = await client.post('/api/method/shapefy.evolucao.api.listar_registros_feed', {
     aluno: aluno || undefined,
     alunos: alunos || undefined,
     origem: origem || undefined,
+    conjunto: conjunto || undefined,
     conteudo,
     limit,
     limit_start: limitStart,

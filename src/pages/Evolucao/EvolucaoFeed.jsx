@@ -6,6 +6,7 @@ import ImagemInterativa from '../Feedbacks/ImagemInterativa'
 import RegistrarEvolucaoModal from '../../components/evolucao/RegistrarEvolucaoModal'
 import { listarRegistros, listarRegistrosFeed, buscarRegistro, salvarRegistro } from '../../api/evolucao'
 import { listarAlunosByIds, listarAlunos } from '../../api/alunos'
+import { listarConjuntos } from '../../api/conjuntos'
 import { GraficoPeso } from './EvolucaoAluno'
 import useErrorModal from '../../hooks/useErrorModal'
 
@@ -319,6 +320,8 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
   const [filtroOrigem, setFiltroOrigem] = useState('')
+  const [filtroConjunto, setFiltroConjunto] = useState('')
+  const [conjuntos, setConjuntos] = useState([])
   const [modoComparar, setModoComparar] = useState(false)
   const [selecionados, setSelecionados] = useState([])
   const [comparando, setComparando] = useState(null)
@@ -344,8 +347,13 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
     return () => clearTimeout(t)
   }, [busca])
 
-  // Volta pra página 1 ao trocar escopo (busca/origem/aluno).
-  useEffect(() => { setPage(1) }, [buscaDebounced, filtroOrigem, alunoId])
+  // Conjuntos do profissional pro filtro "Padrão de fotos".
+  useEffect(() => {
+    listarConjuntos({ limit: 100 }).then(({ list }) => setConjuntos(list || [])).catch(() => {})
+  }, [])
+
+  // Volta pra página 1 ao trocar escopo (busca/origem/conjunto/aluno).
+  useEffect(() => { setPage(1) }, [buscaDebounced, filtroOrigem, filtroConjunto, alunoId])
 
   useEffect(() => {
     let cancelado = false
@@ -354,7 +362,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
       try {
         let regs, more = false
         if (alunoId) {
-          const r = await listarRegistrosFeed({ aluno: alunoId, origem: filtroOrigem, conteudo: 'foto', limit: FEED_LIMIT })
+          const r = await listarRegistrosFeed({ aluno: alunoId, origem: filtroOrigem, conjunto: filtroConjunto, conteudo: 'foto', limit: FEED_LIMIT })
           regs = r.registros
         } else if (buscaDebounced) {
           const { list: al } = await listarAlunos({ search: buscaDebounced, limit: 50 })
@@ -362,12 +370,12 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
           if (!ids.length) {
             regs = []
           } else {
-            const r = await listarRegistrosFeed({ alunos: ids, origem: filtroOrigem, conteudo: 'foto', limit: FEED_LIMIT })
+            const r = await listarRegistrosFeed({ alunos: ids, origem: filtroOrigem, conjunto: filtroConjunto, conteudo: 'foto', limit: FEED_LIMIT })
             regs = r.registros
             if (!cancelado) { const m = {}; al.forEach(a => { m[a.name] = a.nome_completo }); setNomes(prev => ({ ...prev, ...m })) }
           }
         } else {
-          const r = await listarRegistrosFeed({ origem: filtroOrigem, conteudo: 'foto', limit: PAGE_SIZE, limitStart: (page - 1) * PAGE_SIZE })
+          const r = await listarRegistrosFeed({ origem: filtroOrigem, conjunto: filtroConjunto, conteudo: 'foto', limit: PAGE_SIZE, limitStart: (page - 1) * PAGE_SIZE })
           regs = r.registros
           more = r.hasMore
         }
@@ -391,7 +399,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
     carregar()
     return () => { cancelado = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [alunoId, refreshKey, buscaDebounced, filtroOrigem, page])
+  }, [alunoId, refreshKey, buscaDebounced, filtroOrigem, filtroConjunto, page])
 
   // origem/busca/modo já filtrados no servidor; aqui só o nome (transitório do debounce)
   const filtrados = useMemo(() => {
@@ -658,6 +666,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
             { value: 'anamnese', label: 'Anamnese' },
             { value: 'manual', label: 'Manual' },
           ] },
+          { type: 'select', value: filtroConjunto, onChange: setFiltroConjunto, placeholder: 'Todos os padrões de fotos', options: conjuntos.map(c => ({ value: c.name, label: c.titulo })) },
         ]}
         loading={false}
         empty={null}
