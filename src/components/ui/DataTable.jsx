@@ -16,6 +16,12 @@ import { maybeOpenNewTab } from '../../utils/navigation'
  * mobileCard(row, onRowClick): função opcional que renderiza um card mobile.
  *   Se passada, em <768px usa cards empilhados; em ≥768px usa tabela.
  *   Se omitida, em mobile a tabela rola horizontalmente (overflow-x-auto).
+ *
+ * Seleção em lote (opt-in):
+ * selectable: true habilita a coluna de checkbox (header = selecionar a página)
+ * selected: Set de keys selecionadas (use o hook useSelection)
+ * onToggle(key): marca/desmarca uma linha
+ * onTogglePage(pageKeys): marca/desmarca todas as linhas da página atual
  */
 export default function DataTable({
   columns,
@@ -28,12 +34,30 @@ export default function DataTable({
   onPageSize,
   rowKey = 'name',
   mobileCard,
+  selectable = false,
+  selected,
+  onToggle,
+  onTogglePage,
 }) {
   const navigate = useNavigate()
   const paged = useMemo(() => {
     const start = (page - 1) * pageSize
     return rows.slice(start, start + pageSize)
   }, [rows, page, pageSize])
+
+  const keyOf = (row, i) => row[rowKey] ?? i
+  const pageKeys = useMemo(() => paged.map((r, i) => keyOf(r, i)), [paged]) // eslint-disable-line react-hooks/exhaustive-deps
+  const algumaMarcada = selectable && pageKeys.some((k) => selected?.has(k))
+  const todasMarcadas = selectable && pageKeys.length > 0 && pageKeys.every((k) => selected?.has(k))
+
+  const Checkbox = (props) => (
+    <input
+      type="checkbox"
+      className="h-4 w-4 accent-[#2563eb] cursor-pointer align-middle"
+      onClick={(e) => e.stopPropagation()}
+      {...props}
+    />
+  )
 
   const clickable = onRowClick || rowHref
   const rowHandlers = (row) => {
@@ -57,11 +81,23 @@ export default function DataTable({
         <div className="md:hidden divide-y divide-[#323238]">
           {paged.map((row, i) => (
             <div
-              key={row[rowKey] ?? i}
-              {...rowHandlers(row)}
-              className={`${i % 2 === 0 ? 'bg-[#1a1a1a]' : 'bg-[#1e1e22]'} ${clickable ? 'cursor-pointer active:bg-[#202024]' : ''}`}
+              key={keyOf(row, i)}
+              className={`flex items-stretch ${i % 2 === 0 ? 'bg-[#1a1a1a]' : 'bg-[#1e1e22]'}`}
             >
-              {mobileCard(row, onRowClick)}
+              {selectable && (
+                <label className="flex items-center pl-3 shrink-0">
+                  <Checkbox
+                    checked={selected?.has(keyOf(row, i)) || false}
+                    onChange={() => onToggle?.(keyOf(row, i))}
+                  />
+                </label>
+              )}
+              <div
+                {...rowHandlers(row)}
+                className={`flex-1 min-w-0 ${clickable ? 'cursor-pointer active:bg-[#202024]' : ''}`}
+              >
+                {mobileCard(row, onRowClick)}
+              </div>
             </div>
           ))}
         </div>
@@ -71,6 +107,17 @@ export default function DataTable({
         <table className="w-full">
           <thead>
             <tr className="border-b border-[#323238] bg-[#111113]">
+              {selectable && (
+                <th className="w-10 px-3 py-3">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-[#2563eb] cursor-pointer align-middle"
+                    checked={todasMarcadas}
+                    ref={(el) => { if (el) el.indeterminate = algumaMarcada && !todasMarcadas }}
+                    onChange={() => onTogglePage?.(pageKeys)}
+                  />
+                </th>
+              )}
               {columns.map((col, i) => (
                 <th
                   key={i}
@@ -84,12 +131,20 @@ export default function DataTable({
           <tbody>
             {paged.map((row, i) => (
               <tr
-                key={row[rowKey] ?? i}
+                key={keyOf(row, i)}
                 {...rowHandlers(row)}
                 className={`border-b border-[#323238] transition-colors group last:border-0
                   ${clickable ? 'cursor-pointer hover:bg-[#202024]' : ''}
-                  ${i % 2 === 0 ? 'bg-[#1a1a1a]' : 'bg-[#1e1e22]'}`}
+                  ${selectable && selected?.has(keyOf(row, i)) ? 'bg-[#2563eb]/10' : (i % 2 === 0 ? 'bg-[#1a1a1a]' : 'bg-[#1e1e22]')}`}
               >
+                {selectable && (
+                  <td className="w-10 px-3 py-3">
+                    <Checkbox
+                      checked={selected?.has(keyOf(row, i)) || false}
+                      onChange={() => onToggle?.(keyOf(row, i))}
+                    />
+                  </td>
+                )}
                 {columns.map((col, j) => (
                   <td key={j} className={`px-4 py-3 ${col.cellClass || ''}`}>
                     {col.render ? col.render(row) : row[col.key]}

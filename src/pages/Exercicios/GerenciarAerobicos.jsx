@@ -12,6 +12,8 @@ import ListPage from '../../components/templates/ListPage'
 import ExplorarBibliotecaModal from '../../components/ExplorarBibliotecaModal'
 import { extractVideoId } from '../../utils/video'
 import useErrorModal from '../../hooks/useErrorModal'
+import useSelection from '../../hooks/useSelection'
+import { excluirEmLote } from '../../utils/bulk'
 
 const PLATAFORMAS = ['YouTube', 'Google Drive', 'Vimeo']
 
@@ -166,6 +168,9 @@ export default function GerenciarAerobicos() {
   const [deleting, setDeleting] = useState(false)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const sel = useSelection()
+  const [confirmLote, setConfirmLote] = useState(false)
+  const [excluindoLote, setExcluindoLote] = useState(false)
 
   const carregar = async () => {
     setLoading(true)
@@ -249,6 +254,22 @@ export default function GerenciarAerobicos() {
     } finally { setDeleting(false) }
   }
 
+  const handleExcluirLote = async () => {
+    const ids = [...sel.selected]
+    if (!ids.length) return
+    setExcluindoLote(true)
+    try {
+      const { fail, erros } = await excluirEmLote(excluirAerobico, ids)
+      const data = await listarAerobicos({ limit: 1000, gerenciar: true })
+      setAerobicos(data)
+      sel.clear()
+      setConfirmLote(false)
+      if (fail) errorModal.show(erros[0]?.erro || new Error(`${fail} item(ns) não puderam ser excluídos`), `Excluir aeróbicos (${fail} falhou/falharam)`)
+    } catch (e) {
+      errorModal.show(e, 'Excluir aeróbicos em lote')
+    } finally { setExcluindoLote(false) }
+  }
+
   const columns = [
     {
       label: 'Nome',
@@ -318,6 +339,11 @@ export default function GerenciarAerobicos() {
         actions={
           <>
             <BotaoTutoriais videos={TUTORIAIS_EXERCICIOS} />
+            {sel.count > 0 && (
+              <Button variant="danger" size="sm" icon={Trash2} loading={excluindoLote} onClick={() => setConfirmLote(true)}>
+                Excluir {sel.count}
+              </Button>
+            )}
             <Button variant="secondary" size="sm" icon={RefreshCw} onClick={carregar} loading={loading} />
             <Button variant="secondary" size="sm" icon={BookOpen} onClick={() => setShowBiblioteca(true)}>
               Explorar Biblioteca
@@ -365,6 +391,10 @@ export default function GerenciarAerobicos() {
             pageSize={pageSize}
             onPage={setPage}
             onPageSize={(s) => { setPageSize(s); setPage(1) }}
+            selectable
+            selected={sel.selected}
+            onToggle={sel.toggle}
+            onTogglePage={sel.togglePage}
           />
         )}
       </ListPage>
@@ -404,6 +434,27 @@ export default function GerenciarAerobicos() {
           <div className="p-4">
             <p className="text-gray-300 text-sm">
               Tem certeza que deseja excluir <strong className="text-white">{deletando.exercicio_aerobico}</strong>?
+            </p>
+            <p className="text-gray-500 text-xs mt-1">Esta ação não pode ser desfeita.</p>
+          </div>
+        </Modal>
+      )}
+      {confirmLote && (
+        <Modal
+          isOpen
+          onClose={() => setConfirmLote(false)}
+          title="Excluir selecionados"
+          size="sm"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setConfirmLote(false)}>Cancelar</Button>
+              <Button variant="danger" onClick={handleExcluirLote} loading={excluindoLote}>Excluir {sel.count}</Button>
+            </>
+          }
+        >
+          <div className="p-4">
+            <p className="text-gray-300 text-sm">
+              Tem certeza que deseja excluir <strong className="text-white">{sel.count}</strong> aeróbico{sel.count !== 1 ? 's' : ''}?
             </p>
             <p className="text-gray-500 text-xs mt-1">Esta ação não pode ser desfeita.</p>
           </div>
