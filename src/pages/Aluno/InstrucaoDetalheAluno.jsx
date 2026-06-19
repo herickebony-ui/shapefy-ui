@@ -76,7 +76,7 @@ const Bloco = ({ bloco }) => {
   if (bloco.tipo === 'pdf') {
     if (!bloco.file_url) return null
     return (
-      <a href={`${BASE}${bloco.file_url}`} target="_blank" rel="noreferrer"
+      <a href={`${BASE}${encodeURI(bloco.file_url)}`} target="_blank" rel="noreferrer"
         className="flex items-center gap-3 px-4 h-12 rounded-xl bg-[var(--sf-surface-2)] border border-[var(--sf-border)] text-white text-sm hover:border-[var(--sf-blue)] transition-colors">
         <FileText size={16} className="text-[var(--sf-blue-light)] shrink-0" />
         <span className="flex-1 truncate">{bloco.label || 'Abrir PDF'}</span>
@@ -89,7 +89,7 @@ const Bloco = ({ bloco }) => {
     if (!bloco.file_url) return null
     return (
       <figure>
-        <img src={`${BASE}${bloco.file_url}`} alt={bloco.legenda || ''}
+        <img src={`${BASE}${encodeURI(bloco.file_url)}`} alt={bloco.legenda || ''}
           className="w-full rounded-xl border border-[var(--sf-border)]" />
         {bloco.legenda && (
           <figcaption className="text-[var(--sf-text-muted)] text-xs mt-1.5 text-center">{bloco.legenda}</figcaption>

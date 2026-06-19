@@ -118,7 +118,7 @@ const BlocoEditor = ({ bloco, onChange }) => {
               onChange={(e) => { handleUpload(e.target.files?.[0]); e.target.value = '' }} />
           </label>
           {bloco.file_url && (
-            <a href={`${BASE}${bloco.file_url}`} target="_blank" rel="noreferrer"
+            <a href={`${BASE}${encodeURI(bloco.file_url)}`} target="_blank" rel="noreferrer"
               className="text-[#2563eb] text-xs underline truncate max-w-[200px]">
               {bloco.file_url.split('/').pop()}
             </a>
@@ -140,7 +140,7 @@ const BlocoEditor = ({ bloco, onChange }) => {
           </label>
         </div>
         {bloco.file_url && (
-          <img src={`${BASE}${bloco.file_url}`} alt="" className="max-h-48 rounded-lg border border-[#323238]" />
+          <img src={`${BASE}${encodeURI(bloco.file_url)}`} alt="" className="max-h-48 rounded-lg border border-[#323238]" />
         )}
         <Input
           value={bloco.legenda || ''}
