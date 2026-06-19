@@ -53,7 +53,7 @@ export default function DataTable({
   const Checkbox = (props) => (
     <input
       type="checkbox"
-      className="h-4 w-4 accent-[#2563eb] cursor-pointer align-middle"
+      className="h-4 w-4 accent-[#2563eb] cursor-pointer align-middle [color-scheme:dark]"
       onClick={(e) => e.stopPropagation()}
       {...props}
     />
@@ -111,7 +111,7 @@ export default function DataTable({
                 <th className="w-10 px-3 py-3">
                   <input
                     type="checkbox"
-                    className="h-4 w-4 accent-[#2563eb] cursor-pointer align-middle"
+                    className="h-4 w-4 accent-[#2563eb] cursor-pointer align-middle [color-scheme:dark]"
                     checked={todasMarcadas}
                     ref={(el) => { if (el) el.indeterminate = algumaMarcada && !todasMarcadas }}
                     onChange={() => onTogglePage?.(pageKeys)}
