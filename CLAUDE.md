@@ -7,6 +7,32 @@ Backend: Frappe (Python). Comunicação exclusivamente via REST API nativa do Fr
 
 ---
 
+## Ambiente, Branches e Deploy (combinado com Marcos)
+
+Dois repositórios **separados**, cada um com sua branch canônica:
+
+| Repo | Branch | Ambiente de teste | Produção |
+|---|---|---|---|
+| **Front** (`shapefy-ui`) | **`main`** | **localhost** (dev server) — é um só, não tem beta | `shapefyapp.com` |
+| **Backend** (`shapefy-frappe-app`) | **`develop`** | **`beta.shapefyapp.com`** | `shapefy.online` |
+
+### Regra de ouro
+- **Front**: testa no **localhost** → commita/push na **`main`** → deploy no prod. Não tem ciclo de beta (testa local).
+- **Backend**: **SEMPRE** testa no **beta** primeiro, **valida**, e **só então** sobe pro prod. NUNCA editar direto no servidor. Trabalho vai na branch **`develop`**.
+
+### Deploy
+- **Front (prod)**: `cd /opt/shapefy-ui && git pull && docker compose up -d --build`.
+- **Backend (beta e depois prod)**: commit/push em `develop` → no servidor:
+  ```
+  cd /opt/shapefy/apps/shapefy
+  git pull && bench --site <site> migrate && bench restart
+  ```
+  (`<site>` = `beta.shapefy.online` no beta, `shapefy.online` no prod). `migrate` aplica mudança de doctype; `bench restart` recarrega o código Python.
+
+> Backend é deploy por **git pull no servidor** (não rsync). Commitar em `develop`, testar no beta, validar, depois prod.
+
+---
+
 ## Arquitetura
 
 ```
