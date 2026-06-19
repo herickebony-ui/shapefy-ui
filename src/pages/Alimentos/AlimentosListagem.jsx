@@ -11,6 +11,8 @@ import {
 import { TUTORIAIS_ALIMENTOS } from '../../data/tutoriais'
 import ListPage from '../../components/templates/ListPage'
 import ExplorarBibliotecaModal from '../../components/ExplorarBibliotecaModal'
+import useSelection from '../../hooks/useSelection'
+import { excluirEmLote } from '../../utils/bulk'
 
 const fmt = (v) => v != null ? Number(v).toFixed(1) : '—'
 
@@ -248,6 +250,9 @@ export default function AlimentosListagem() {
   const [deleting, setDeleting] = useState(false)
   const [showBiblioteca, setShowBiblioteca] = useState(false)
   const debounceRef = useRef(null)
+  const sel = useSelection()
+  const [confirmLote, setConfirmLote] = useState(false)
+  const [excluindoLote, setExcluindoLote] = useState(false)
 
   const carregar = async (opts = {}) => {
     setLoading(true)
@@ -331,6 +336,22 @@ export default function AlimentosListagem() {
       console.error(e)
       alert(e?.response?.data?.exception || 'Erro ao excluir.')
     } finally { setDeleting(false) }
+  }
+
+  const handleExcluirLote = async () => {
+    const ids = [...sel.selected]
+    if (!ids.length) return
+    setExcluindoLote(true)
+    try {
+      const { fail } = await excluirEmLote(excluirAlimento, ids)
+      sel.clear()
+      setConfirmLote(false)
+      await carregar()
+      if (fail) alert(`${fail} alimento(s) não puderam ser excluídos.`)
+    } catch (e) {
+      console.error(e)
+      alert(e?.response?.data?.exception || 'Erro ao excluir em lote.')
+    } finally { setExcluindoLote(false) }
   }
 
   const grupoOpts = useMemo(() => [
@@ -421,6 +442,11 @@ export default function AlimentosListagem() {
         actions={
           <>
             <BotaoTutoriais videos={TUTORIAIS_ALIMENTOS} />
+            {sel.count > 0 && (
+              <Button variant="danger" size="sm" icon={Trash2} loading={excluindoLote} onClick={() => setConfirmLote(true)}>
+                Excluir {sel.count}
+              </Button>
+            )}
             <Button variant="secondary" size="sm" icon={RefreshCw} onClick={() => carregar()} />
             <Button variant="secondary" size="sm" icon={BookOpen} onClick={() => setShowBiblioteca(true)}>
               Explorar Biblioteca
@@ -459,7 +485,8 @@ export default function AlimentosListagem() {
       >
         {!loading && alimentos.length > 0 && (
           <DataTable columns={columns} rows={alimentos} rowKey="name"
-            page={page} pageSize={30} onPage={setPage} />
+            page={page} pageSize={30} onPage={setPage}
+            selectable selected={sel.selected} onToggle={sel.toggle} onTogglePage={sel.togglePage} />
         )}
       </ListPage>
 
@@ -497,6 +524,24 @@ export default function AlimentosListagem() {
           <div className="p-4">
             <p className="text-gray-300 text-sm">
               Tem certeza que deseja excluir <strong className="text-white">{confirmDelete.food}</strong>?
+            </p>
+            <p className="text-gray-500 text-xs mt-2">Esta ação não pode ser desfeita.</p>
+          </div>
+        </Modal>
+      )}
+
+      {confirmLote && (
+        <Modal isOpen onClose={() => setConfirmLote(false)} title="Excluir selecionados" size="sm"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setConfirmLote(false)}>Cancelar</Button>
+              <Button variant="danger" onClick={handleExcluirLote} loading={excluindoLote}>Excluir {sel.count}</Button>
+            </>
+          }
+        >
+          <div className="p-4">
+            <p className="text-gray-300 text-sm">
+              Tem certeza que deseja excluir <strong className="text-white">{sel.count}</strong> alimento{sel.count !== 1 ? 's' : ''}?
             </p>
             <p className="text-gray-500 text-xs mt-2">Esta ação não pode ser desfeita.</p>
           </div>
