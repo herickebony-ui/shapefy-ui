@@ -1935,7 +1935,7 @@ export default function DietaDetalhe() {
                               </p>
                             </div>
                             <div>
-                              <p className="text-[9px] uppercase tracking-wider text-gray-500 font-bold mb-0.5">GCDT</p>
+                              <p className="text-[9px] uppercase tracking-wider text-gray-500 font-bold mb-0.5">Gasto Calórico Diário Total</p>
                               <p className={`text-xl font-bold leading-none ${gcdt ? 'text-[#2563eb]' : 'text-gray-600'}`}>
                                 {gcdt ? gcdt.toLocaleString('pt-BR') : '—'} <span className="text-[10px] font-medium text-gray-400">{gcdt ? 'kcal' : ''}</span>
                               </p>
@@ -1948,7 +1948,7 @@ export default function DietaDetalhe() {
                               diff < 0 ? 'bg-blue-500/10 border border-blue-500/20' :
                               'bg-[#323238] border border-[#323238]'
                             }`}>
-                              <p className="text-[9px] uppercase tracking-wider font-bold text-gray-500">Dieta vs GCDT</p>
+                              <p className="text-[9px] uppercase tracking-wider font-bold text-gray-500">Dieta vs Gasto Diário Total</p>
                               <div className="text-right">
                                 <p className={`text-sm font-bold leading-none ${diff > 0 ? 'text-green-400' : diff < 0 ? 'text-blue-400' : 'text-gray-400'}`}>
                                   {diff > 0 ? '+' : ''}{diff.toLocaleString('pt-BR')} <span className="text-[9px] font-medium">kcal</span>
