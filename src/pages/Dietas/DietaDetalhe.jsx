@@ -1860,24 +1860,23 @@ export default function DietaDetalhe() {
             )}
 
             {/* Seletor de fator de atividade */}
-            <div className="bg-[#29292e] border border-[#323238] rounded-xl p-4 md:p-6">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-4">Fator de Atividade Física (PAL)</p>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            <div className="bg-[#29292e] border border-[#323238] rounded-xl p-3 md:p-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2.5">Fator de Atividade Física (PAL)</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
                 {FATORES_PAL.map(f => {
                   const ativo = pal === f.valor
                   return (
                     <button
                       key={f.valor}
                       onClick={() => salvarFatorNoAluno(f.valor)}
-                      className={`flex flex-col items-start gap-0.5 px-3 py-2.5 rounded-lg border text-left transition-colors ${
+                      className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg border text-left transition-colors ${
                         ativo
                           ? 'bg-[#2563eb] border-[#2563eb] text-white'
                           : 'bg-[#1a1a1a] border-[#323238] text-gray-400 hover:border-[#2563eb]/50 hover:text-white'
                       }`}
                     >
-                      <span className="text-base font-bold leading-none">{f.valor === 1.85 ? '1.8–1.9' : f.valor === 2.0 ? '2.0+' : f.valor}</span>
-                      <span className={`text-[10px] font-semibold ${ativo ? 'text-blue-100' : 'text-gray-500'}`}>{f.label}</span>
-                      <span className={`text-[10px] ${ativo ? 'text-blue-200' : 'text-gray-600'}`}>{f.desc}</span>
+                      <span className="text-sm font-bold leading-none shrink-0">{f.valor === 1.85 ? '1.8–1.9' : f.valor === 2.0 ? '2.0+' : f.valor}</span>
+                      <span className={`text-[10px] font-semibold leading-tight ${ativo ? 'text-blue-100' : 'text-gray-500'}`}>{f.label}</span>
                     </button>
                   )
                 })}
