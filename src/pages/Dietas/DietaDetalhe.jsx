@@ -1892,10 +1892,19 @@ export default function DietaDetalhe() {
                     {kcalDieta.toLocaleString('pt-BR')} <span className="text-xs font-medium text-gray-400">kcal</span>
                   </p>
                 </div>
-                <div className="text-[10px] text-gray-500 text-right">
-                  <p>P: {Math.round(totais?.prot || 0)}g</p>
-                  <p>C: {Math.round(totais?.carb || 0)}g</p>
-                  <p>L: {Math.round(totais?.lip || 0)}g</p>
+                <div className="flex gap-2">
+                  <div className="flex flex-col items-center gap-0.5 px-2 py-1 bg-blue-500/10 border border-blue-500/20 rounded">
+                    <span className="text-[9px] font-bold text-blue-400 uppercase tracking-wider">PTN</span>
+                    <span className="text-xs font-bold text-blue-300 leading-none">{Math.round(totais?.prot || 0)}g</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-0.5 px-2 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded">
+                    <span className="text-[9px] font-bold text-yellow-400 uppercase tracking-wider">CHO</span>
+                    <span className="text-xs font-bold text-yellow-300 leading-none">{Math.round(totais?.carb || 0)}g</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-0.5 px-2 py-1 bg-orange-500/10 border border-orange-500/20 rounded">
+                    <span className="text-[9px] font-bold text-orange-400 uppercase tracking-wider">LIP</span>
+                    <span className="text-xs font-bold text-orange-300 leading-none">{Math.round(totais?.lip || 0)}g</span>
+                  </div>
                 </div>
               </div>
             )}
