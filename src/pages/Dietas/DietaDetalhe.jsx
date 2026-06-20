@@ -1909,8 +1909,8 @@ export default function DietaDetalhe() {
                   const semSexo = (fId !== 'tinsley') && !s
                   const diff = gcdt && kcalDieta ? kcalDieta - gcdt : null
                   return (
-                    <div key={fId} className="bg-[#29292e] border border-[#323238] rounded-xl p-4 flex flex-col gap-4">
-                      <div>
+                    <div key={fId} className="bg-[#29292e] border border-[#323238] rounded-xl p-3 flex flex-col gap-2">
+                      <div className="flex items-baseline gap-1.5">
                         <p className="text-xs font-bold text-white">{label}</p>
                         <p className="text-[10px] text-gray-500">{sub}</p>
                       </div>
@@ -1918,41 +1918,37 @@ export default function DietaDetalhe() {
                         <p className="text-[11px] text-yellow-400 italic">Informe o sexo em Dados Gerais</p>
                       ) : (
                         <>
-                          <div>
-                            <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">TMB</p>
-                            <p className="text-xl font-bold text-white leading-none">
-                              {tmb?.toLocaleString('pt-BR')} <span className="text-xs font-medium text-gray-400">kcal</span>
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">GCDT</p>
-                            <p className={`text-2xl font-bold leading-none ${gcdt ? 'text-[#2563eb]' : 'text-gray-600'}`}>
-                              {gcdt ? gcdt.toLocaleString('pt-BR') : '—'} <span className="text-xs font-medium text-gray-400">{gcdt ? 'kcal' : ''}</span>
-                            </p>
-                            {!pal && <p className="text-[10px] text-gray-600 mt-1">Selecione o fator PAL acima</p>}
+                          <div className="flex items-center gap-4">
+                            <div>
+                              <p className="text-[9px] uppercase tracking-wider text-gray-500 font-bold mb-0.5">TMB</p>
+                              <p className="text-base font-bold text-white leading-none">
+                                {tmb?.toLocaleString('pt-BR')} <span className="text-[10px] font-medium text-gray-400">kcal</span>
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[9px] uppercase tracking-wider text-gray-500 font-bold mb-0.5">GCDT</p>
+                              <p className={`text-xl font-bold leading-none ${gcdt ? 'text-[#2563eb]' : 'text-gray-600'}`}>
+                                {gcdt ? gcdt.toLocaleString('pt-BR') : '—'} <span className="text-[10px] font-medium text-gray-400">{gcdt ? 'kcal' : ''}</span>
+                              </p>
+                              {!pal && <p className="text-[9px] text-gray-600 mt-0.5">Selecione o PAL</p>}
+                            </div>
                           </div>
                           {diff !== null && (
-                            <div className={`rounded-lg px-3 py-2 text-center ${
+                            <div className={`rounded-lg px-3 py-1.5 flex items-center justify-between ${
                               diff > 0 ? 'bg-green-500/10 border border-green-500/20' :
                               diff < 0 ? 'bg-blue-500/10 border border-blue-500/20' :
                               'bg-[#323238] border border-[#323238]'
                             }`}>
-                              <p className="text-[10px] uppercase tracking-wider font-bold text-gray-500 mb-0.5">Dieta vs GCDT</p>
-                              <p className={`text-base font-bold leading-none ${diff > 0 ? 'text-green-400' : diff < 0 ? 'text-blue-400' : 'text-gray-400'}`}>
-                                {diff > 0 ? '+' : ''}{diff.toLocaleString('pt-BR')} <span className="text-[10px] font-medium">kcal</span>
-                              </p>
-                              <p className="text-[10px] text-gray-500 mt-0.5">
-                                {diff > 0 ? 'superávit calórico' : diff < 0 ? 'déficit calórico' : 'dieta isocalórica'}
-                              </p>
+                              <p className="text-[9px] uppercase tracking-wider font-bold text-gray-500">Dieta vs GCDT</p>
+                              <div className="text-right">
+                                <p className={`text-sm font-bold leading-none ${diff > 0 ? 'text-green-400' : diff < 0 ? 'text-blue-400' : 'text-gray-400'}`}>
+                                  {diff > 0 ? '+' : ''}{diff.toLocaleString('pt-BR')} <span className="text-[9px] font-medium">kcal</span>
+                                </p>
+                                <p className="text-[9px] text-gray-500">
+                                  {diff > 0 ? 'superávit' : diff < 0 ? 'déficit' : 'isocalórico'}
+                                </p>
+                              </div>
                             </div>
-                          )}
-                          {gcdt && !kcalDieta && (
-                            <button
-                              onClick={() => handleChange('calorie_goal', String(gcdt))}
-                              className="mt-auto text-xs font-semibold text-[#2563eb] hover:text-white border border-[#2563eb]/30 hover:bg-[#2563eb] rounded-lg px-3 py-1.5 transition-colors text-left"
-                            >
-                              Aplicar como meta →
-                            </button>
                           )}
                         </>
                       )}
