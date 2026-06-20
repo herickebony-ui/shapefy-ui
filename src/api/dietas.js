@@ -21,6 +21,17 @@ const FREQ_PAL = {
   'Extremamente Ativo': 2.0,
 }
 
+// Mapeamento inverso: PAL numérico → frequencia_atividade (texto)
+export const palParaFrequencia = (pal) => {
+  const num = Number(pal)
+  if (!num) return null
+  if (num <= 1.4) return 'Sedentário'
+  if (num <= 1.5) return 'Levemente Ativo'
+  if (num <= 1.7) return 'Moderadamente Ativo'
+  if (num <= 1.9) return 'Muito Ativo'
+  return 'Extremamente Ativo'
+}
+
 // Extrai os campos antropométricos + PAL de um doc Aluno pra payload de Dieta.
 export const dadosAntropometricosFromAluno = (alunoDoc = {}) => ({
   sexo: alunoDoc.sexo || '',

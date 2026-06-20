@@ -12,7 +12,7 @@ import {
   buscarDieta, salvarDieta, listarAlimentos, normalizarAlturaCm,
   listarRefeicoesProntas, buscarRefeicaoPronta,
   criarRefeicaoPronta, excluirDieta, duplicarDieta,
-  dadosAntropometricosFromAluno,
+  dadosAntropometricosFromAluno, palParaFrequencia,
 } from '../../api/dietas'
 import { listarAlunos, buscarAluno, salvarAluno } from '../../api/alunos'
 import {
@@ -1828,7 +1828,11 @@ export default function DietaDetalhe() {
         const salvarFatorNoAluno = async (valor) => {
           handleChange('fator_atividade', String(valor))
           if (draft.aluno) {
-            try { await salvarAluno(draft.aluno, { fator_atividade: valor }) } catch (e) { console.error(e) }
+            const freq = palParaFrequencia(valor)
+            try {
+              await salvarAluno(draft.aluno, { frequencia_atividade: freq })
+              handleChange('frequencia_atividade', freq)
+            } catch (e) { console.error(e) }
           }
         }
         return (
