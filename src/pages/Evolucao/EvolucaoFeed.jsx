@@ -1,12 +1,13 @@
-import { useState, useEffect, useMemo } from 'react'
-import { Activity, Search, Columns, X, ArrowLeft, CheckCircle, Plus, Image as ImageIcon, LineChart as LineChartIcon, ChevronLeft, ChevronRight, Pencil, Check, Trash2 } from 'lucide-react'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { Activity, Search, Columns, X, ArrowLeft, CheckCircle, Plus, Image as ImageIcon, LineChart as LineChartIcon, ChevronLeft, ChevronRight, Pencil, Check, Trash2, Eraser, ArrowLeftRight, Camera, Save } from 'lucide-react'
 import { Button, Badge, Spinner, EmptyState, DataTable } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 import ImagemInterativa from '../Feedbacks/ImagemInterativa'
 import RegistrarEvolucaoModal from '../../components/evolucao/RegistrarEvolucaoModal'
 import { listarRegistros, listarRegistrosFeed, buscarRegistro, salvarRegistro, excluirRegistro } from '../../api/evolucao'
+import { uploadArquivo } from '../../api/modelos'
 import { listarAlunosByIds, listarAlunos } from '../../api/alunos'
-import { listarConjuntos } from '../../api/conjuntos'
+import { listarConjuntos, buscarConjunto } from '../../api/conjuntos'
 import { buscarSmart } from '../../utils/strings'
 import { GraficoPeso } from './EvolucaoAluno'
 import useErrorModal from '../../hooks/useErrorModal'
@@ -34,7 +35,7 @@ const FEED_LIMIT = 1000 // teto de registros carregados pro feed (paginação é
 
 // Comparação de Registros — mesmo visual da comparação de feedbacks: tabela
 // datas × (peso + slots), fotos via ImagemInterativa, com gráfico de peso no topo.
-function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, onVoltar, onPesoSalvo }) {
+function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, onVoltar, onPesoSalvo, onExcluir, onFotosSalvas }) {
   const listaEdicao = (todosRegistros && todosRegistros.length) ? todosRegistros : registros
   const [verTodosPesos, setVerTodosPesos] = useState(registros.length < 2)
   const [mostrarEdicao, setMostrarEdicao] = useState(false)
@@ -42,18 +43,97 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
   const [pesoInput, setPesoInput] = useState('')
   const [dataInput, setDataInput] = useState('')
   const [salvando, setSalvando] = useState(false)
-  // Rótulo/ordem de cada slot (os tópicos da coluna esquerda) prevalece do registro
-  // MAIS RECENTE — itera do mais novo pro mais antigo e não sobrescreve.
+  const [swapSlot, setSwapSlot] = useState(null)  // slot_id aguardando para troca
+  const [uploadingSlot, setUploadingSlot] = useState(null)  // slot_id com upload em progresso
+  const [excluindo, setExcluindo] = useState(false)
+  const fileInputRef = useRef(null)
+  const pendingUploadSlot = useRef(null)
+
+  const isSingle = registros.length === 1
+  const reg = isSingle ? registros[0] : null
+
+  // Cópia local das fotos editável (somente no modo single-registro).
+  const [fotosLocais, setFotosLocais] = useState(reg?.fotos || [])
+  useEffect(() => { if (reg) setFotosLocais(reg.fotos || []) }, [reg?.name])
+
+  // Slots definidos no conjunto de fotos — garante que slots SEM foto também aparecem,
+  // permitindo upload para posições ainda vazias.
+  const [conjuntoSlots, setConjuntoSlots] = useState([])
+  useEffect(() => {
+    if (!isSingle || !reg?.conjunto_origem) { setConjuntoSlots([]); return }
+    buscarConjunto(reg.conjunto_origem)
+      .then(doc => setConjuntoSlots([...(doc.slots || [])].sort((a, b) => (a.ordem || 0) - (b.ordem || 0))))
+      .catch(() => setConjuntoSlots([]))
+  }, [reg?.name, reg?.conjunto_origem, isSingle])
+
+  // Rótulo/ordem de cada slot: começa pelos slots com fotos reais, depois
+  // completa com slots do conjunto que ainda não têm foto.
   const slotMap = new Map()
   ;[...registros].sort((a, b) => (b.data || '').localeCompare(a.data || '')).forEach(r => (r.fotos || []).forEach(f => {
     if (f.slot_id && !slotMap.has(f.slot_id)) slotMap.set(f.slot_id, { slot_id: f.slot_id, rotulo: f.rotulo || '—', ordem: f.ordem ?? 999 })
   }))
+  conjuntoSlots.forEach(s => {
+    if (s.slot_id && !slotMap.has(s.slot_id)) slotMap.set(s.slot_id, { slot_id: s.slot_id, rotulo: s.rotulo || s.slot_id, ordem: s.ordem ?? 999 })
+  })
   const slots = [...slotMap.values()].sort((a, b) => (a.ordem || 0) - (b.ordem || 0))
   const temPeso = true // sempre mostra a linha de Peso (pra poder editar/adicionar)
   const pontosSelecionados = registros.filter(r => r.peso != null && r.peso > 0).map(r => ({ data: r.data, peso: r.peso }))
   const pontosGrafico = verTodosPesos ? pontosPeso : pontosSelecionados
   const temTodos = pontosPeso.length > pontosSelecionados.length
-  const urlSlot = (r, sid) => (r.fotos || []).find(x => x.slot_id === sid)?.url || null
+  const urlSlot = (r, sid) => {
+    if (isSingle) return fotosLocais.find(x => x.slot_id === sid)?.url || null
+    return (r.fotos || []).find(x => x.slot_id === sid)?.url || null
+  }
+
+  const salvarFotos = async (novasFotos) => {
+    await salvarRegistro(reg.name, { fotos: novasFotos })
+    setFotosLocais(novasFotos)
+    onFotosSalvas?.(novasFotos)
+  }
+
+  const handleSwap = async (slot_id) => {
+    if (!swapSlot) { setSwapSlot(slot_id); return }
+    if (swapSlot === slot_id) { setSwapSlot(null); return }
+    const urlA = fotosLocais.find(f => f.slot_id === swapSlot)?.url || null
+    const urlB = fotosLocais.find(f => f.slot_id === slot_id)?.url || null
+    const novasFotos = fotosLocais.map(f => {
+      if (f.slot_id === swapSlot) return { ...f, url: urlB }
+      if (f.slot_id === slot_id) return { ...f, url: urlA }
+      return f
+    })
+    setSwapSlot(null)
+    try { await salvarFotos(novasFotos) } catch { setFotosLocais(fotosLocais) }
+  }
+
+  const triggerUpload = (slot_id) => {
+    pendingUploadSlot.current = slot_id
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file || !pendingUploadSlot.current || !reg) return
+    e.target.value = ''
+    const slot_id = pendingUploadSlot.current
+    setUploadingSlot(slot_id)
+    try {
+      const url = await uploadArquivo(file)
+      const existing = fotosLocais.find(f => f.slot_id === slot_id)
+      const novasFotos = existing
+        ? fotosLocais.map(f => f.slot_id === slot_id ? { ...f, url } : f)
+        : [...fotosLocais, { slot_id, rotulo: slots.find(s => s.slot_id === slot_id)?.rotulo || slot_id, url, ordem: slots.find(s => s.slot_id === slot_id)?.ordem || 999 }]
+      await salvarFotos(novasFotos)
+    } catch { /* error é silencioso — usuário pode tentar de novo */ } finally {
+      setUploadingSlot(null)
+    }
+  }
+
+  const handleExcluir = async () => {
+    if (!reg) return
+    if (!window.confirm(`Excluir o registro de ${fmtData(reg.data)} (foto + peso)? Não dá pra desfazer.`)) return
+    setExcluindo(true)
+    try { await excluirRegistro(reg.name); onExcluir?.() } catch { setExcluindo(false) }
+  }
 
   // Edita peso (peso_revisado=1) e/ou a data (campo `data`, manual). O display
   // sempre usa `data`, nunca `modified` — então editar peso não muda a data.
@@ -66,7 +146,7 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
     const p = parseFloat(String(pesoInput).replace(',', '.'))
     const payload = {}
     if (pesoInput !== '' ) {
-      if (!(p >= 20 && p <= 400)) { return } // peso inválido: não salva
+      if (!(p >= 20 && p <= 400)) { return }
       payload.peso = p
     }
     if (dataInput) payload.data = dataInput
@@ -79,18 +159,43 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
       setSalvando(false)
     }
   }
+  const limparPeso = async (regName) => {
+    setSalvando(true)
+    try {
+      await onPesoSalvo?.(regName, { peso: 0, peso_revisado: 1 })
+      setEditId(null)
+    } finally {
+      setSalvando(false)
+    }
+  }
 
   return (
     <div className="w-full h-full flex flex-col bg-[#0a0a0a] text-white animate-in fade-in duration-300">
+      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
       <div className="shrink-0 bg-[#0a0a0a]/95 backdrop-blur-md z-20 border-b border-[#323238] px-6 py-3 flex items-center justify-between">
         <button onClick={onVoltar} className="flex items-center gap-2 text-gray-500 hover:text-white transition-colors text-xs font-bold uppercase tracking-wide">
           <ArrowLeft size={16} /> Voltar
         </button>
-        <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">{nome} · {registros.length} registros</span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">{nome} · {registros.length} registro{registros.length !== 1 ? 's' : ''}</span>
+          {isSingle && swapSlot && (
+            <button onClick={() => setSwapSlot(null)}
+              className="h-7 px-2.5 flex items-center gap-1.5 text-amber-400 border border-amber-500/30 rounded-lg text-xs transition-colors hover:bg-amber-700/30">
+              <X size={12} /> Cancelar troca
+            </button>
+          )}
+          {isSingle && (
+            <button onClick={handleExcluir} disabled={excluindo}
+              className="h-7 px-2.5 flex items-center gap-1.5 text-red-400 hover:text-white border border-red-500/30 hover:bg-red-700 rounded-lg text-xs transition-colors disabled:opacity-50">
+              <Trash2 size={12} /> {excluindo ? 'Excluindo...' : 'Excluir'}
+            </button>
+          )}
+        </div>
       </div>
       <div className="flex-1 overflow-auto p-4 md:p-6">
         <div className="max-w-7xl mx-auto space-y-4">
-          <div className="bg-[#1a1a1a] rounded-lg border border-[#323238] p-4">
+
+          <div className="bg-[#1a1a1a] rounded-xl border border-[#323238] p-4">
             <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
               <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
                 Peso ao longo do tempo{verTodosPesos ? ' · todos os registros' : ' · selecionados'}
@@ -101,8 +206,12 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
                     {verTodosPesos ? 'Só selecionados' : 'Comparar todos os pesos'}
                   </Button>
                 )}
-                <Button variant={mostrarEdicao ? 'info' : 'ghost'} size="xs" icon={Pencil} onClick={() => setMostrarEdicao(v => !v)}>
-                  Editar peso
+                <Button variant={mostrarEdicao ? 'info' : 'ghost'} size="xs" icon={Pencil} onClick={() => {
+                  const abrindo = !mostrarEdicao
+                  setMostrarEdicao(abrindo)
+                  if (abrindo && isSingle && reg) abrirEdicao(reg)
+                }}>
+                  Editar peso e data
                 </Button>
               </div>
             </div>
@@ -130,6 +239,10 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
                           <button onClick={() => salvarEdit(r.name)} disabled={salvando} title="Salvar"
                             className="h-8 w-8 flex items-center justify-center text-green-400 hover:text-white border border-green-500/30 hover:bg-green-700 rounded-lg transition-colors">
                             {salvando ? <span className="w-3 h-3 border-2 border-green-400 border-t-transparent rounded-full animate-spin" /> : <Check size={14} />}
+                          </button>
+                          <button onClick={() => limparPeso(r.name)} disabled={salvando} title="Limpar peso"
+                            className="h-8 w-8 flex items-center justify-center text-amber-500 hover:text-white border border-amber-500/30 hover:bg-amber-600 rounded-lg transition-colors">
+                            <Eraser size={13} />
                           </button>
                           <button onClick={() => setEditId(null)} title="Cancelar"
                             className="h-8 w-8 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] rounded-lg transition-colors">
@@ -178,15 +291,64 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
                 )}
                 {slots.map(slot => (
                   <tr key={slot.slot_id} className="hover:bg-white/5">
-                    <td className="p-2 md:p-3 sticky left-0 bg-[#1a1a1a] z-10"><span className="text-[#93C5FD] text-[10px] font-bold uppercase tracking-wider">{slot.rotulo}</span></td>
+                    <td className="p-2 md:p-3 sticky left-0 bg-[#1a1a1a] z-10">
+                      <span className="text-[#93C5FD] text-[10px] font-bold uppercase tracking-wider">{slot.rotulo}</span>
+                    </td>
                     {registros.map((r, i) => {
                       const url = urlSlot(r, slot.slot_id)
+                      const isUploading = isSingle && uploadingSlot === slot.slot_id
+                      const fotoActions = isSingle ? (
+                        <>
+                          <button
+                            onClick={() => triggerUpload(slot.slot_id)}
+                            disabled={isUploading}
+                            title={url ? 'Substituir foto' : 'Adicionar foto'}
+                            className="h-7 px-2 flex items-center gap-1 text-white bg-[#2563eb] hover:bg-[#1d4ed8] rounded-lg text-[10px] font-bold transition-colors disabled:opacity-50 shrink-0"
+                          >
+                            {isUploading
+                              ? <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              : <Camera size={11} />}
+                            {url ? 'Trocar foto' : 'Upload'}
+                          </button>
+                          {url && (
+                            <button
+                              onClick={() => handleSwap(slot.slot_id)}
+                              title={swapSlot ? (swapSlot === slot.slot_id ? 'Cancelar troca' : 'Trocar com esta posição') : 'Trocar posição desta foto com outra'}
+                              className={`h-7 px-2 flex items-center gap-1 border rounded-lg text-[10px] font-bold transition-colors shrink-0 ${
+                                swapSlot === slot.slot_id
+                                  ? 'bg-amber-500 border-amber-500 text-white'
+                                  : swapSlot
+                                  ? 'bg-amber-500/20 border-amber-500/40 text-amber-300 animate-pulse'
+                                  : 'text-gray-300 border-[#323238] hover:bg-amber-600 hover:border-amber-600 hover:text-white'
+                              }`}
+                            >
+                              <ArrowLeftRight size={11} />
+                              {swapSlot === slot.slot_id ? 'Cancelar' : 'Reordenar foto'}
+                            </button>
+                          )}
+                        </>
+                      ) : null
                       return (
                         <td key={i} className="p-0 text-center align-top">
                           {url ? (
-                            <ImagemInterativa src={`${FRAPPE_URL}${encodeURI(url)}`} feedbackId={r.name} idx={`reg_${slot.slot_id}`} />
+                            <ImagemInterativa
+                              src={`${FRAPPE_URL}${encodeURI(url)}`}
+                              feedbackId={r.name}
+                              idx={`reg_${slot.slot_id}`}
+                              extraActions={fotoActions}
+                            />
                           ) : (
-                            <span className="text-gray-600 text-xs">—</span>
+                            isSingle ? (
+                              <div className="p-3 flex justify-center">
+                                <button onClick={() => triggerUpload(slot.slot_id)} disabled={isUploading}
+                                  className="h-8 px-3 flex items-center gap-1.5 text-gray-500 hover:text-white border border-dashed border-[#323238] hover:border-[#2563eb]/50 rounded-lg text-xs transition-colors disabled:opacity-50">
+                                  {isUploading ? <span className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" /> : <Camera size={12} />}
+                                  Adicionar foto
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-gray-600 text-xs">—</span>
+                            )
                           )}
                         </td>
                       )
@@ -535,6 +697,14 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
         nome={nome}
         onVoltar={() => { setComparando(null); setSelecionados([]); setModoComparar(false) }}
         onPesoSalvo={onPesoSalvo}
+        onExcluir={() => {
+          const name = comparando[0]?.name
+          setComparando(null); setSelecionados([]); setModoComparar(false)
+          if (name) { setRegistros(rs => rs.filter(r => r.name !== name)); setRefreshKey(k => k + 1) }
+        }}
+        onFotosSalvas={(novasFotos) => {
+          setComparando(cs => cs.map((r, i) => i === 0 ? { ...r, fotos: novasFotos } : r))
+        }}
       />
     )
   }
@@ -552,7 +722,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
 
   const columns = [
     {
-      label: 'Ações', headerClass: 'w-36 text-center', cellClass: 'text-center',
+      label: 'Ações', headerClass: 'w-44 text-center', cellClass: 'text-center',
       render: (row) => (
         <div className="flex items-center justify-center gap-1.5" onClick={e => e.stopPropagation()}>
           <button
@@ -580,6 +750,13 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
             }`}
           >
             <CheckCircle size={12} />
+          </button>
+          <button
+            onClick={() => viewRegistro(row)}
+            title="Editar peso, data e fotos"
+            className="h-7 w-7 flex items-center justify-center text-blue-400 hover:text-white border border-[#2563eb]/30 hover:bg-[#2563eb] rounded-lg transition-colors"
+          >
+            <Pencil size={12} />
           </button>
           <button
             onClick={() => excluirLinha(row)}

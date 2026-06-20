@@ -2,10 +2,12 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import {
-  ArrowLeft, Save, AlertCircle, Loader, ChevronUp, ChevronDown, Plus,
+  ArrowLeft, Save, AlertCircle, Loader, Plus, Zap,
   FileText, UtensilsCrossed, Edit, Copy, Trash2, ArrowLeftRight, X,
-  BookmarkPlus, BookmarkCheck, Bookmark,
+  BookmarkPlus, BookmarkCheck, Bookmark, GripVertical, ChevronUp, ChevronDown,
 } from 'lucide-react'
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
+import { lockRowWidths, unlockRowWidths, dragRowStyle, reorderList } from '../../utils/dndLinhas'
 import {
   buscarDieta, salvarDieta, listarAlimentos, normalizarAlturaCm,
   listarRefeicoesProntas, buscarRefeicaoPronta,
@@ -597,10 +599,59 @@ const ModalAdicionarRefeicaoPronta = ({ onClose, onSelectMeal }) => {
 }
 
 // ─── TabelaAlimentos ──────────────────────────────────────────────────────────
-const TabelaAlimentos = ({ items, onUpdateItem, onAddItem, onDeleteItem, onDuplicateItem, onMoveItem, onMoveGroup, onAddRefeicaoPronta, onAddSubstituteBelow, macrosReferencia }) => {
+// Move grupos (principal + substitutos contíguos) respeitando a hierarquia visual.
+// from/to são índices na lista de GRUPOS (= índices dos itens principais, sem substitutos visíveis).
+const reorderByGroups = (items, from, to) => {
+  const groups = []
+  for (const item of items) {
+    if (item.substitute) { if (groups.length) groups[groups.length - 1].push(item) }
+    else groups.push([item])
+  }
+  const ng = [...groups]
+  const [m] = ng.splice(from, 1)
+  ng.splice(to, 0, m)
+  return ng.flat()
+}
+
+// from/to são índices em TODOS os itens (inclusive substitutos visíveis).
+// Encontra o grupo de cada índice e move o grupo inteiro.
+const reorderByGroupsFull = (items, from, to) => {
+  const groups = []
+  for (const item of items) {
+    if (item.substitute) { if (groups.length) groups[groups.length - 1].push(item) }
+    else groups.push([item])
+  }
+  let idx = 0, fromGroup = 0, toGroup = 0
+  for (let g = 0; g < groups.length; g++) {
+    const end = idx + groups[g].length - 1
+    if (from >= idx && from <= end) fromGroup = g
+    if (to >= idx && to <= end) toGroup = g
+    idx += groups[g].length
+  }
+  if (fromGroup === toGroup) return items
+  const ng = [...groups]
+  const [m] = ng.splice(fromGroup, 1)
+  ng.splice(toGroup, 0, m)
+  return ng.flat()
+}
+
+const TabelaAlimentos = ({ items, onUpdateItem, onAddItem, onDeleteItem, onDuplicateItem, onMoveItem, onMoveGroup, onAddRefeicaoPronta, onAddSubstituteBelow, onReorderItems, macrosReferencia }) => {
   const [exibirSubs, setExibirSubs] = useState(false)
   const [editingIdx, setEditingIdx] = useState(null)
+  const dndScope = useRef(`dieta-${uid()}`).current
   const visiveis = exibirSubs ? items : items.filter(i => !i.substitute)
+
+  const onDragEnd = (result) => {
+    unlockRowWidths()
+    if (!result.destination || result.destination.index === result.source.index) return
+    const { index: from } = result.source
+    const { index: to } = result.destination
+    if (onReorderItems) {
+      onReorderItems(exibirSubs
+        ? reorderByGroupsFull(items, from, to)
+        : reorderByGroups(items, from, to))
+    }
+  }
 
   const macrosOpcao = items.reduce((acc, item) => {
     if (!item.substitute) {
@@ -619,7 +670,15 @@ const TabelaAlimentos = ({ items, onUpdateItem, onAddItem, onDeleteItem, onDupli
         <ModalEditarAlimento
           item={items[editingIdx]}
           onClose={() => setEditingIdx(null)}
-          onSave={(updatedItem) => { onUpdateItem(editingIdx, '__selecionarAlimento', updatedItem); setEditingIdx(null) }}
+          onSave={(updatedItem) => {
+            const isPrincipal = items[editingIdx]?.substitute !== 1
+            onUpdateItem(editingIdx, '__selecionarAlimento', {
+              ...updatedItem,
+              _base: updatedItem,                              // fix #3: ancora novo _base nos valores editados
+              ...(isPrincipal ? { __autoMatch: true } : {}),  // fix #1: cascateia substitutos se for principal
+            })
+            setEditingIdx(null)
+          }}
         />
       )}
 
@@ -632,6 +691,7 @@ const TabelaAlimentos = ({ items, onUpdateItem, onAddItem, onDeleteItem, onDupli
         <>
           {/* Desktop table */}
           <div className="hidden md:block w-full overflow-x-auto">
+            <DragDropContext onBeforeDragStart={lockRowWidths} onDragEnd={onDragEnd}>
             <table className="w-full text-xs border-separate border-spacing-y-0.5">
               <thead className="text-gray-500 uppercase bg-[#29292e] border-b border-[#323238]">
                 <tr>
@@ -648,32 +708,34 @@ const TabelaAlimentos = ({ items, onUpdateItem, onAddItem, onDeleteItem, onDupli
                   <th className="px-2 py-2 w-24 text-center">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#323238]/50">
+              <Droppable droppableId={dndScope}>
+                {(dropProvided) => (
+              <tbody ref={dropProvided.innerRef} {...dropProvided.droppableProps} className="divide-y divide-[#323238]/50">
                 {visiveis.map((item, itemIdx) => {
                   const realIdx = item.__uid ? items.findIndex(i => i.__uid === item.__uid) : items.indexOf(item)
                   const temSubstitutoOculto = !exibirSubs && !item.substitute && items[realIdx + 1]?.substitute === 1
-                  // Subs ocultos + item principal: mover em bloco (imanta substitutos abaixo).
-                  const moveAsGroup = !exibirSubs && !item.substitute
-                  const handleMove = (dir) => (moveAsGroup ? onMoveGroup(realIdx, dir) : onMoveItem(realIdx, dir))
-                  let groupSize = 1
-                  if (moveAsGroup) while (items[realIdx + groupSize]?.substitute === 1) groupSize++
-                  const upDisabled = realIdx === 0
-                  const downDisabled = moveAsGroup ? realIdx + groupSize >= items.length : realIdx === items.length - 1
+                  const rowId = item.__uid || item.name || `row-${dndScope}-${itemIdx}`
+                  // Substitutos visíveis não têm drag handle — apenas o alimento principal
+                  // pode ser arrastado (move o grupo inteiro via reorderByGroupsFull).
+                  const isSubVisible = exibirSubs && item.substitute
                   return (
-                    <tr key={item.__uid || itemIdx}
+                    <Draggable key={rowId} draggableId={rowId} index={itemIdx} isDragDisabled={isSubVisible}>
+                      {(dragProvided, dragSnapshot) => (
+                    <tr
+                      ref={dragProvided.innerRef}
+                      {...dragProvided.draggableProps}
+                      style={dragRowStyle(dragProvided, dragSnapshot)}
                       className={`transition-colors ${item.substitute ? 'bg-red-500/10' : temSubstitutoOculto ? 'bg-[#2c2c31]' : 'bg-[#222226]'} hover:bg-[#2f2f35]`}>
                       <td className="px-2 py-2 rounded-l-lg">
                         <div className="flex items-center gap-1 justify-center">
-                          <div className="flex flex-col items-center">
-                            <button onClick={() => handleMove(-1)} disabled={upDisabled}
-                              className="h-4 w-5 flex items-center justify-center text-gray-500 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
-                              <ChevronUp size={11} />
-                            </button>
-                            <button onClick={() => handleMove(+1)} disabled={downDisabled}
-                              className="h-4 w-5 flex items-center justify-center text-gray-500 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
-                              <ChevronDown size={11} />
-                            </button>
-                          </div>
+                          {!isSubVisible ? (
+                            <span {...dragProvided.dragHandleProps} title="Arrastar para reordenar"
+                              className="text-gray-600 hover:text-gray-300 cursor-grab active:cursor-grabbing">
+                              <GripVertical size={13} />
+                            </span>
+                          ) : (
+                            <span className="w-[13px]" />
+                          )}
                           <span className="text-gray-600 font-mono text-xs">{realIdx + 1}</span>
                         </div>
                       </td>
@@ -739,10 +801,16 @@ const TabelaAlimentos = ({ items, onUpdateItem, onAddItem, onDeleteItem, onDupli
                         </div>
                       </td>
                     </tr>
+                      )}
+                    </Draggable>
                   )
                 })}
+                {dropProvided.placeholder}
               </tbody>
+                )}
+              </Droppable>
             </table>
+            </DragDropContext>
           </div>
 
           {/* Mobile: card stack minimalista */}
@@ -1099,6 +1167,7 @@ const RefeicaoBlock = ({ n, draft, setDraft }) => {
         return { ...prev, [field]: arr }
       }),
       onAddRefeicaoPronta: () => setModalRefeicaoPronta({ optNum }),
+      onReorderItems: (newItems) => setDraft(prev => ({ ...prev, [field]: newItems })),
     }
   }
 
@@ -1308,6 +1377,40 @@ export const ModalDuplicarDieta = ({ dietaId, nomeAtual, onClose, onDuplicado })
 const TABS_CONFIG = [
   { id: 'gerais',    label: 'Dados Gerais', icon: <FileText size={15} /> },
   { id: 'refeicoes', label: 'Refeições',    icon: <UtensilsCrossed size={15} /> },
+  { id: 'tdee',      label: 'TDEE',         icon: <Zap size={15} /> },
+]
+
+const FATORES_PAL = [
+  { valor: 1.4,  label: 'Muito sedentário',         desc: '1x semana' },
+  { valor: 1.5,  label: 'Sedentário pouco ativo',   desc: '3-4x semana' },
+  { valor: 1.6,  label: 'Sedentário mais ativo',    desc: '4-5x semana' },
+  { valor: 1.7,  label: 'Moderadamente ativo',      desc: '6-7x semana' },
+  { valor: 1.85, label: 'Muito ativo',              desc: '1.8 – 1.9' },
+  { valor: 2.0,  label: 'Atividade intensa',        desc: '2.0 ou +' },
+]
+
+const calcTMB = (formula, peso, altura, idade, sexo) => {
+  if (!peso || !altura || !idade) return null
+  if (formula === 'tinsley') return Math.round(24.8 * peso + 10)
+  if (formula === 'mifflin') {
+    if (!sexo) return null
+    return sexo === 'Masculino'
+      ? Math.round(10 * peso + 6.25 * altura - 5 * idade + 5)
+      : Math.round(10 * peso + 6.25 * altura - 5 * idade - 161)
+  }
+  if (formula === 'harris') {
+    if (!sexo) return null
+    return sexo === 'Masculino'
+      ? Math.round(66 + 13.8 * peso + 5 * altura - 6.8 * idade)
+      : Math.round(655 + 9.6 * peso + 1.9 * altura - 4.7 * idade)
+  }
+  return null
+}
+
+const FORMULAS = [
+  { id: 'tinsley', label: 'Tinsley',         sub: 'Atletas' },
+  { id: 'mifflin', label: 'Mifflin-St Jeor', sub: 'Obesos' },
+  { id: 'harris',  label: 'Harris-Benedict', sub: 'Eutróficos' },
 ]
 
 export default function DietaDetalhe() {
@@ -1361,7 +1464,21 @@ export default function DietaDetalhe() {
           })
         } else {
           const data = await buscarDieta(id)
-          setDraft(addUids(data))
+          let dietaDraft = addUids(data)
+          if (data.aluno) {
+            try {
+              const alunoDoc = await buscarAluno(data.aluno)
+              const dadosAluno = dadosAntropometricosFromAluno(alunoDoc)
+              // fator_atividade sempre vem do perfil atual do aluno (é bidirrecional)
+              if (dadosAluno.fator_atividade) dietaDraft = { ...dietaDraft, fator_atividade: dadosAluno.fator_atividade }
+              // demais campos antropométricos: só preenche se a dieta estiver vazia
+              if (!dietaDraft.weight  && dadosAluno.weight)  dietaDraft = { ...dietaDraft, weight:  dadosAluno.weight }
+              if (!dietaDraft.height  && dadosAluno.height)  dietaDraft = { ...dietaDraft, height:  dadosAluno.height }
+              if (!dietaDraft.age     && dadosAluno.age)     dietaDraft = { ...dietaDraft, age:     dadosAluno.age }
+              if (!dietaDraft.sexo    && dadosAluno.sexo)    dietaDraft = { ...dietaDraft, sexo:    dadosAluno.sexo }
+            } catch (e) { console.warn('Erro ao sincronizar perfil do aluno:', e) }
+          }
+          setDraft(dietaDraft)
         }
       } catch (err) {
         setError(err.message ?? 'Erro ao carregar dieta')
@@ -1587,6 +1704,7 @@ export default function DietaDetalhe() {
                           handleChange('weight', d.weight)
                           handleChange('height', d.height)
                           handleChange('frequencia_atividade', d.frequencia_atividade)
+                          if (d.fator_atividade) handleChange('fator_atividade', String(d.fator_atividade))
                         } catch (e) { console.error(e) }
                       }}
                       searchFn={buscarAlunosFn}
@@ -1643,6 +1761,7 @@ export default function DietaDetalhe() {
             </div>
           )}
 
+
           <div className="bg-[#29292e] border border-[#323238] rounded-lg p-4 md:p-6 space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <FormGroup label="Descrições Gerais">
@@ -1697,6 +1816,151 @@ export default function DietaDetalhe() {
           </div>
         </div>
       )}
+
+      {tab === 'tdee' && (() => {
+        const w = parseFloat(draft.weight)
+        const h = parseFloat(draft.height)
+        const a = parseInt(draft.age, 10)
+        const s = draft.sexo
+        const pal = parseFloat(draft.fator_atividade) || null
+        const semDados = !w || !h || !a
+        const kcalDieta = Math.round(totais?.kcal || 0)
+        const salvarFatorNoAluno = async (valor) => {
+          handleChange('fator_atividade', String(valor))
+          if (draft.aluno) {
+            try { await salvarAluno(draft.aluno, { fator_atividade: valor }) } catch (e) { console.error(e) }
+          }
+        }
+        return (
+          <div className="animate-in fade-in duration-300 space-y-6">
+            {/* Resumo dos dados usados */}
+            <div className="flex flex-wrap gap-2 text-[11px]">
+              {[
+                { label: 'Peso', val: w ? `${w} kg` : null },
+                { label: 'Altura', val: h ? `${h} cm` : null },
+                { label: 'Idade', val: a ? `${a} anos` : null },
+                { label: 'Sexo', val: s || null },
+              ].map(({ label, val }) => (
+                <span key={label} className={`px-2.5 py-1 rounded border text-xs font-medium ${val ? 'border-[#323238] text-gray-300 bg-[#29292e]' : 'border-yellow-500/30 text-yellow-500 bg-yellow-500/10'}`}>
+                  {label}: {val ?? <span className="italic">não informado</span>}
+                </span>
+              ))}
+              {!s && <span className="text-[10px] text-yellow-400 self-center">Sexo necessário para Mifflin e Harris-Benedict</span>}
+            </div>
+
+            {/* Aviso se faltar dados base */}
+            {semDados && (
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 text-sm text-yellow-300">
+                Preencha peso, altura e idade na aba Dados Gerais para calcular.
+              </div>
+            )}
+
+            {/* Seletor de fator de atividade */}
+            <div className="bg-[#29292e] border border-[#323238] rounded-xl p-4 md:p-6">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-4">Fator de Atividade Física (PAL)</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {FATORES_PAL.map(f => {
+                  const ativo = pal === f.valor
+                  return (
+                    <button
+                      key={f.valor}
+                      onClick={() => salvarFatorNoAluno(f.valor)}
+                      className={`flex flex-col items-start gap-0.5 px-3 py-2.5 rounded-lg border text-left transition-colors ${
+                        ativo
+                          ? 'bg-[#2563eb] border-[#2563eb] text-white'
+                          : 'bg-[#1a1a1a] border-[#323238] text-gray-400 hover:border-[#2563eb]/50 hover:text-white'
+                      }`}
+                    >
+                      <span className="text-base font-bold leading-none">{f.valor === 1.85 ? '1.8–1.9' : f.valor === 2.0 ? '2.0+' : f.valor}</span>
+                      <span className={`text-[10px] font-semibold ${ativo ? 'text-blue-100' : 'text-gray-500'}`}>{f.label}</span>
+                      <span className={`text-[10px] ${ativo ? 'text-blue-200' : 'text-gray-600'}`}>{f.desc}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Kcal da dieta atual */}
+            {kcalDieta > 0 && (
+              <div className="flex items-center gap-3 bg-[#1a1a1a] border border-[#323238] rounded-xl px-4 py-3">
+                <div className="flex-1">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-0.5">Kcal desta dieta</p>
+                  <p className="text-lg font-bold text-white leading-none">
+                    {kcalDieta.toLocaleString('pt-BR')} <span className="text-xs font-medium text-gray-400">kcal</span>
+                  </p>
+                </div>
+                <div className="text-[10px] text-gray-500 text-right">
+                  <p>P: {Math.round(totais?.prot || 0)}g</p>
+                  <p>C: {Math.round(totais?.carb || 0)}g</p>
+                  <p>L: {Math.round(totais?.lip || 0)}g</p>
+                </div>
+              </div>
+            )}
+
+            {/* Resultados das 3 fórmulas */}
+            {!semDados && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {FORMULAS.map(({ id: fId, label, sub }) => {
+                  const tmb = calcTMB(fId, w, h, a, s)
+                  const gcdt = tmb && pal ? Math.round(tmb * pal) : null
+                  const semSexo = (fId !== 'tinsley') && !s
+                  const diff = gcdt && kcalDieta ? kcalDieta - gcdt : null
+                  return (
+                    <div key={fId} className="bg-[#29292e] border border-[#323238] rounded-xl p-4 flex flex-col gap-4">
+                      <div>
+                        <p className="text-xs font-bold text-white">{label}</p>
+                        <p className="text-[10px] text-gray-500">{sub}</p>
+                      </div>
+                      {semSexo ? (
+                        <p className="text-[11px] text-yellow-400 italic">Informe o sexo em Dados Gerais</p>
+                      ) : (
+                        <>
+                          <div>
+                            <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">TMB</p>
+                            <p className="text-xl font-bold text-white leading-none">
+                              {tmb?.toLocaleString('pt-BR')} <span className="text-xs font-medium text-gray-400">kcal</span>
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">GCDT</p>
+                            <p className={`text-2xl font-bold leading-none ${gcdt ? 'text-[#2563eb]' : 'text-gray-600'}`}>
+                              {gcdt ? gcdt.toLocaleString('pt-BR') : '—'} <span className="text-xs font-medium text-gray-400">{gcdt ? 'kcal' : ''}</span>
+                            </p>
+                            {!pal && <p className="text-[10px] text-gray-600 mt-1">Selecione o fator PAL acima</p>}
+                          </div>
+                          {diff !== null && (
+                            <div className={`rounded-lg px-3 py-2 text-center ${
+                              diff > 0 ? 'bg-green-500/10 border border-green-500/20' :
+                              diff < 0 ? 'bg-blue-500/10 border border-blue-500/20' :
+                              'bg-[#323238] border border-[#323238]'
+                            }`}>
+                              <p className="text-[10px] uppercase tracking-wider font-bold text-gray-500 mb-0.5">Dieta vs GCDT</p>
+                              <p className={`text-base font-bold leading-none ${diff > 0 ? 'text-green-400' : diff < 0 ? 'text-blue-400' : 'text-gray-400'}`}>
+                                {diff > 0 ? '+' : ''}{diff.toLocaleString('pt-BR')} <span className="text-[10px] font-medium">kcal</span>
+                              </p>
+                              <p className="text-[10px] text-gray-500 mt-0.5">
+                                {diff > 0 ? 'superávit calórico' : diff < 0 ? 'déficit calórico' : 'dieta isocalórica'}
+                              </p>
+                            </div>
+                          )}
+                          {gcdt && !kcalDieta && (
+                            <button
+                              onClick={() => handleChange('calorie_goal', String(gcdt))}
+                              className="mt-auto text-xs font-semibold text-[#2563eb] hover:text-white border border-[#2563eb]/30 hover:bg-[#2563eb] rounded-lg px-3 py-1.5 transition-colors text-left"
+                            >
+                              Aplicar como meta →
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Modal duplicar */}
       {modalDuplicar && (

@@ -13,6 +13,14 @@ export const normalizarAlturaCm = (h) => {
   return Math.round(n)
 }
 
+const FREQ_PAL = {
+  'Sedentário': 1.4,
+  'Levemente Ativo': 1.5,
+  'Moderadamente Ativo': 1.6,
+  'Muito Ativo': 1.85,
+  'Extremamente Ativo': 2.0,
+}
+
 // Extrai os campos antropométricos + PAL de um doc Aluno pra payload de Dieta.
 export const dadosAntropometricosFromAluno = (alunoDoc = {}) => ({
   sexo: alunoDoc.sexo || '',
@@ -20,6 +28,7 @@ export const dadosAntropometricosFromAluno = (alunoDoc = {}) => ({
   weight: Number(alunoDoc.weight) || 0,
   height: normalizarAlturaCm(alunoDoc.height),
   frequencia_atividade: alunoDoc.frequencia_atividade || '',
+  fator_atividade: Number(alunoDoc.fator_atividade) || FREQ_PAL[alunoDoc.frequencia_atividade] || null,
 })
 
 

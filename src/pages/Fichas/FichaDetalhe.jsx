@@ -5,8 +5,10 @@ import {
   ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Save,
   Plus, X, Trash2, Copy, Info, Loader, Check,
   Zap, Bookmark,
-  Link2, ListOrdered, Play,
+  Link2, ListOrdered, Play, GripVertical,
 } from 'lucide-react'
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
+import { lockRowWidths, unlockRowWidths, dragRowStyle, makeOnDragEnd } from '../../utils/dndLinhas'
 import {
   listarFichas, buscarFicha, criarFicha, salvarFicha,
   listarExercicios, listarAlongamentos, listarAerobicos, listarGruposMusculares,
@@ -14,6 +16,7 @@ import {
 import { listarAlunos, buscarAluno, salvarAluno } from '../../api/alunos'
 import { buscarModeloFicha, salvarModeloFicha, fichaParaSnapshot } from '../../api/modelos'
 import { listarTextos, salvarNoBancoSeNovo, excluirTexto } from '../../api/bancoTextos'
+import { buscarComCoringa } from '../../utils/strings'
 import {
   Button, FormGroup, Input, Select, Textarea,
   Autocomplete, Modal, Spinner, TextareaComSugestoes, BotaoAjuda,
@@ -39,6 +42,45 @@ const arrayMove = (arr, from, to) => {
   const [item] = a.splice(from, 1)
   a.splice(to, 0, item)
   return a
+}
+
+// Agrupa exercícios em blocos: um combo (de `primeiro` até `ultimo`) vira um
+// bloco único; soltos viram blocos de 1. Combo sem `ultimo` segue até o fim.
+const agruparCombos = (exercicios) => {
+  const blocos = []
+  let combo = null
+  for (const ex of exercicios) {
+    if (combo) {
+      combo.push(ex)
+      if (ex.ultimo) { blocos.push(combo); combo = null }
+    } else if (ex.primeiro) {
+      combo = [ex]
+      if (ex.ultimo) { blocos.push(combo); combo = null }
+    } else {
+      blocos.push([ex])
+    }
+  }
+  if (combo) blocos.push(combo)
+  return blocos
+}
+
+// Reordena exercícios respeitando os combos: arrastar qualquer linha de um combo
+// move o combo inteiro. `from`/`to` são índices de linha. Retorna null se não move.
+const reordenarTreino = (exercicios, from, to) => {
+  const blocos = agruparCombos(exercicios)
+  const starts = []
+  let acc = 0
+  for (const b of blocos) { starts.push(acc); acc += b.length }
+  const ends = starts.map((s, i) => s + blocos[i].length - 1)
+  const biFrom = blocos.findIndex((_, i) => from >= starts[i] && from <= ends[i])
+  if (biFrom < 0) return null
+  let biTo = blocos.findIndex((_, i) => to >= starts[i] && to <= ends[i])
+  if (biTo < 0) biTo = blocos.length - 1
+  if (biFrom === biTo) return null // mesmo combo → nada a reordenar
+  const nb = [...blocos]
+  const [m] = nb.splice(biFrom, 1)
+  nb.splice(biTo, 0, m)
+  return nb.flat()
 }
 
 const somarDias = (dataStr, dias) => {
@@ -591,80 +633,138 @@ const InputSug = ({ value, onChange, doctype, campo, className = '', extra = nul
 }
 
 // ─── SearchableCombo ──────────────────────────────────────────────────────────
-// Input de tabela com dropdown local — h-7, bg visível, estilo consistente com
-// os outros inputs da tabela (exceção documentada: não usa Autocomplete DS).
 
-const SearchableCombo = ({ value, onChange, options = [], placeholder = '', getOptionMeta, onPreviewVideo }) => {
+const _CLOSE_SC_EV = 'shapefy:close-searchable-combos'
+const _dispatchCloseCombo = (exceptId) =>
+  document.dispatchEvent(new CustomEvent(_CLOSE_SC_EV, { detail: { exceptId } }))
+
+const SearchableCombo = ({ value, onChange = () => {}, options = [], placeholder = '', getOptionMeta, onPreviewVideo, disabled = false }) => {
   const [open, setOpen] = useState(false)
-  const [q, setQ] = useState(value)
-  const [rect, setRect] = useState(null)
+  const [q, setQ] = useState(value || '')
+  const [pos, setPos] = useState({ top: 0, bottom: 0, left: 0, width: 0, dropUp: false, listMaxH: 224 })
   const inputRef = useRef(null)
+  const containerRef = useRef(null)
+  const mouseDownInside = useRef(false)
+  const instanceId = useRef(`sc_${Math.random().toString(36).slice(2)}`)
 
-  useEffect(() => { setQ(value) }, [value])
+  // Ressincroniza quando valor muda externamente (não sobrescreve digitação ativa)
+  useEffect(() => {
+    if (document.activeElement === inputRef.current) return
+    setQ(value || '')
+  }, [value])
 
-  const filtered = useMemo(() => {
-    if (!q) return options.slice(0, 40)
-    // Pesquisa com coringa: tokeniza por espaços, `*` ou `%`. Cada token precisa
-    // aparecer no nome em qualquer ordem (AND). Ex: "%ros%hal" → ["ros","hal"]
-    // casa com "Rosca com halteres". "puxa pega" → casa com "Puxada pegada...".
-    const tokens = normalizar(q).split(/[\s*%]+/).filter(Boolean)
-    if (!tokens.length) return options.slice(0, 40)
-    return options.filter(o => {
-      const n = normalizar(o)
-      return tokens.every(t => n.includes(t))
-    }).slice(0, 40)
-  }, [q, options])
+  // Fecha quando outro SearchableCombo abre
+  useEffect(() => {
+    const h = (e) => { if (e.detail?.exceptId !== instanceId.current) setOpen(false) }
+    document.addEventListener(_CLOSE_SC_EV, h)
+    return () => document.removeEventListener(_CLOSE_SC_EV, h)
+  }, [])
 
-  const openDropdown = () => {
-    if (inputRef.current) setRect(inputRef.current.getBoundingClientRect())
-    setOpen(true)
-  }
+  // Fecha ao clicar fora
+  useEffect(() => {
+    const h = (e) => {
+      if (mouseDownInside.current) { mouseDownInside.current = false; return }
+      if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
 
-  // Atualiza posição do dropdown ao scrollar (position:fixed precisa de rect atualizado)
+  const calcPos = useCallback(() => {
+    if (!inputRef.current) return
+    const rect = inputRef.current.getBoundingClientRect()
+    const spaceBelow = window.innerHeight - rect.bottom - 8
+    const listMaxH = Math.max(120, Math.min(224, spaceBelow - 37))
+    setPos({ top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 280), listMaxH })
+  }, [])
+
+  // Acompanha o input ao scrollar enquanto dropdown está aberto
   useEffect(() => {
     if (!open) return
-    const update = () => {
-      if (inputRef.current) setRect(inputRef.current.getBoundingClientRect())
+    window.addEventListener('scroll', calcPos, true)
+    window.addEventListener('resize', calcPos)
+    return () => {
+      window.removeEventListener('scroll', calcPos, true)
+      window.removeEventListener('resize', calcPos)
     }
-    window.addEventListener('scroll', update, true)
-    return () => window.removeEventListener('scroll', update, true)
-  }, [open])
+  }, [open, calcPos])
+
+  const filtered = useMemo(() => {
+    const list = !q
+      ? options
+      : options.filter(o => q.includes('%') ? buscarComCoringa(o, q) : normalizar(o).includes(normalizar(q)))
+    return list.slice(0, 50)
+  }, [q, options])
+
+  const select = (o) => { onChange(o); setQ(o); setOpen(false) }
 
   return (
-    <div className="relative w-full">
+    <div ref={containerRef} className="relative w-full h-full">
       <input
         ref={inputRef}
+        disabled={disabled}
         value={q}
-        onChange={e => { setQ(e.target.value); openDropdown() }}
-        onFocus={openDropdown}
+        onChange={e => {
+          const val = e.target.value
+          setQ(val)
+          calcPos()
+          setOpen(true)
+          if (val === '') onChange('')
+        }}
+        onFocus={() => {
+          if (disabled) return
+          _dispatchCloseCombo(instanceId.current)
+          calcPos()
+          setOpen(true)
+        }}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         placeholder={placeholder}
-        className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 transition-colors placeholder-gray-600 truncate"
+        title={q || placeholder}
+        autoComplete="off"
+        className="w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 transition-colors placeholder-gray-600 truncate disabled:opacity-50"
       />
-      {open && filtered.length > 0 && rect && createPortal(
-        <div style={{ position: 'fixed', top: rect.bottom + 2, left: rect.left, width: rect.width, zIndex: 9999 }}
-          className="bg-[#1a1a1a] border border-[#323238] rounded shadow-xl max-h-48 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {filtered.map((o, i) => {
-            const meta = getOptionMeta?.(o)
-            const hasVideo = !!meta?.id && !!onPreviewVideo
-            return (
-              <div key={i} className="flex items-center hover:bg-[#323238] transition-colors group/opt">
-                <button onMouseDown={() => { onChange(o); setQ(o); setOpen(false) }}
-                  className="flex-1 text-left px-3 py-1.5 text-xs text-gray-200 truncate min-w-0">
-                  {o}
-                </button>
-                {hasVideo && (
-                  <button
-                    onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onPreviewVideo({ ...meta, titulo: o }) }}
-                    title="Visualizar exercício"
-                    className="h-7 w-7 mr-1 flex items-center justify-center text-blue-400 hover:text-white hover:bg-[#2563eb] rounded transition-colors shrink-0"
-                  >
-                    <Play size={11} />
+      {open && filtered.length > 0 && createPortal(
+        <div
+          onMouseDown={() => { mouseDownInside.current = true }}
+          style={{
+            position: 'fixed',
+            top: pos.top,
+            left: pos.left,
+            width: pos.width,
+            zIndex: 99999,
+          }}
+          className="bg-[#1c1c1f] border border-[#323238] rounded-xl shadow-2xl overflow-hidden"
+        >
+          {/* Header com contagem */}
+          <div className="px-3 py-2 border-b border-[#323238]/60 bg-[#29292e] flex items-center justify-between">
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{filtered.length} opções</span>
+          </div>
+          {/* Lista */}
+          <div className="overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" style={{ maxHeight: pos.listMaxH }}>
+            {filtered.map((o, idx) => {
+              const meta = getOptionMeta?.(o)
+              const hasVideo = !!meta?.id && !!onPreviewVideo
+              return (
+                <div key={o}
+                  className={`flex items-center border-b border-[#323238]/30 last:border-0 hover:bg-[#2563eb]/15 hover:text-white transition-all group/opt ${idx % 2 === 0 ? 'bg-[#1c1c1f]' : 'bg-[#202024]'}`}>
+                  <button onMouseDown={e => { e.stopPropagation(); select(o) }}
+                    className="flex-1 text-left px-3 py-2 text-xs text-gray-200 flex items-center gap-2 min-w-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#2563eb]/60 shrink-0" />
+                    <span className="truncate">{o}</span>
                   </button>
-                )}
-              </div>
-            )
-          })}
+                  {hasVideo && (
+                    <button
+                      onMouseDown={e => { e.preventDefault(); e.stopPropagation(); onPreviewVideo({ ...meta, titulo: o }) }}
+                      title="Visualizar exercício"
+                      className="h-7 w-7 mr-1 flex items-center justify-center text-blue-400 hover:text-white hover:bg-[#2563eb] rounded transition-colors shrink-0"
+                    >
+                      <Play size={11} />
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>,
         document.body
       )}
@@ -1142,6 +1242,17 @@ const GRUPOS_BASE = [
 const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, intensidadeMap = {}, mapaDetalhes = {}, gruposBase = GRUPOS_BASE }) => {
   const [detalheIdx, setDetalheIdx] = useState(null)
   const [videoPreview, setVideoPreview] = useState(null)
+  // Escopo único por instância (Treino A–F) pra os IDs de drag não colidirem entre tabelas.
+  const dndScope = useRef(`treino-${uid()}`).current
+
+  // Drag-and-drop: arrastar uma linha de combo (1º…Últ) move o combo inteiro junto.
+  const onDragEnd = (result) => {
+    unlockRowWidths()
+    const { source, destination } = result
+    if (!destination || destination.index === source.index) return
+    const novo = reordenarTreino(exercicios, source.index, destination.index)
+    if (novo) onChange(novo)
+  }
 
   // Resolve { id, platform, titulo } a partir do nome do exercício.
   const getOptionMeta = useCallback((nome) => {
@@ -1155,6 +1266,18 @@ const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, inten
     const daPlanilha = exercicios.map(e => e.grupo_muscular).filter(Boolean)
     return [...new Set([...gruposBase, ...daPlanilha])].sort((a, b) => a.localeCompare(b, 'pt-BR'))
   }, [gruposBase, exercicios])
+
+  // índice por grupo com chave normalizada (sem acento/maiúscula) → lookup rápido
+  const exerciciosMapNorm = useMemo(() => {
+    const m = {}
+    Object.entries(exerciciosPorGrupo).forEach(([g, nomes]) => { m[normalizar(g)] = nomes })
+    return m
+  }, [exerciciosPorGrupo])
+
+  // fallback = TODOS os exercícios, deduplicado, derivado de exerciciosPorGrupo
+  const todosExercicios = useMemo(() =>
+    [...new Set(Object.values(exerciciosPorGrupo).flat())]
+  , [exerciciosPorGrupo])
 
   const upd = (i, field, val) => {
     const arr = [...exercicios]
@@ -1171,6 +1294,16 @@ const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, inten
     onChange(arr)
   }
 
+  // Atualiza vários campos de uma linha numa ÚNICA chamada. Necessário porque
+  // dois upd() sequenciais leem o mesmo array do closure e o segundo sobrescreve
+  // o primeiro (ex.: selecionar uma sugestão de repetição que também preenche o
+  // descanso — sem isso, só o descanso ficava e as reps sumiam).
+  const updMany = (i, patch) => {
+    const arr = [...exercicios]
+    arr[i] = { ...arr[i], ...patch }
+    onChange(arr)
+  }
+
   const addRow = () => onChange([...exercicios, { _id: uid(), grupo_muscular: '', exercicio: '', series: '3', repeticoes: '', descanso: '', observacao: '' }])
   const dupe = (i) => {
     const arr = [...exercicios]
@@ -1184,16 +1317,9 @@ const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, inten
   const remove = (i) => onChange(exercicios.filter((_, idx) => idx !== i))
   const move = (i, dir) => onChange(arrayMove(exercicios, i, i + dir))
 
-  // Exercícios disponíveis: todos quando sem grupo; filtrados por grupo quando selecionado
   const exerciciosDoGrupo = (grupo, exercicioAtual) => {
-    let deAPI
-    if (!grupo) {
-      deAPI = [...new Set(Object.values(exerciciosPorGrupo).flat())]
-    } else {
-      const n = normalizar(grupo)
-      const key = Object.keys(exerciciosPorGrupo).find(k => normalizar(k) === n) || grupo
-      deAPI = exerciciosPorGrupo[key] || []
-    }
+    if (!grupo) return todosExercicios
+    const deAPI = exerciciosMapNorm[normalizar(grupo)] || []
     if (exercicioAtual && !deAPI.includes(exercicioAtual)) return [...deAPI, exercicioAtual]
     return deAPI
   }
@@ -1227,13 +1353,14 @@ const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, inten
 
       <div className="rounded-xl border border-[#323238] bg-[#1a1a1a] overflow-hidden">
         <div className="overflow-x-auto">
+          <DragDropContext onBeforeDragStart={lockRowWidths} onDragEnd={onDragEnd}>
           <table className="w-full text-sm min-w-[700px]">
             <thead>
               <tr className="text-gray-500 text-[10px] uppercase tracking-wider border-b border-[#323238] bg-[#19191d]">
                 <th className="w-[3px] p-0" />
                 <th className="w-8 py-2.5 px-2" />
                 <th className="text-left py-2.5 px-2 w-32">Grupo Muscular</th>
-                <th className="text-left py-2.5 px-2 w-64">Exercício</th>
+                <th className="text-left py-2.5 px-2 w-56">Exercício</th>
                 <th className="text-center py-2.5 px-2 w-[88px]">Séries</th>
                 <th className="text-center py-2.5 px-2 w-24">Reps</th>
                 <th className="text-center py-2.5 px-2 w-24">Descanso</th>
@@ -1241,28 +1368,41 @@ const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, inten
                 <th className="text-right py-2.5 px-2 w-32">Ações</th>
               </tr>
             </thead>
-            <tbody>
-              {exercicios.map((ex, i) => {
-                const { isPart, position } = combinadosMap[i]
-                return (
-                  <ExRow key={ex._id || i}
-                    ex={ex} i={i} total={exercicios.length}
-                    isPart={isPart} position={position}
-                    onChange={e => { const arr = [...exercicios]; arr[i] = e; onChange(arr) }}
-                    onMove={dir => move(i, dir)}
-                    onDup={() => dupe(i)}
-                    onRemove={() => remove(i)}
-                    onOpenDetails={() => setDetalheIdx(i)}
-                    grupos={grupos}
-                    opcoesExercicio={exerciciosDoGrupo(ex.grupo_muscular, ex.exercicio)}
-                    upd={(f, v) => upd(i, f, v)}
-                    getOptionMeta={getOptionMeta}
-                    onPreviewVideo={setVideoPreview}
-                  />
-                )
-              })}
-            </tbody>
+            <Droppable droppableId={dndScope}>
+              {(dropProvided) => (
+                <tbody ref={dropProvided.innerRef} {...dropProvided.droppableProps}>
+                  {exercicios.map((ex, i) => {
+                    const { isPart, position } = combinadosMap[i]
+                    const rowId = ex._id ? `e${ex._id}` : `p${dndScope}-${i}`
+                    return (
+                      <Draggable key={rowId} draggableId={rowId} index={i}>
+                        {(dragProvided, dragSnapshot) => (
+                          <ExRow
+                            ex={ex} i={i} total={exercicios.length}
+                            isPart={isPart} position={position}
+                            onChange={e => { const arr = [...exercicios]; arr[i] = e; onChange(arr) }}
+                            onDup={() => dupe(i)}
+                            onRemove={() => remove(i)}
+                            onOpenDetails={() => setDetalheIdx(i)}
+                            grupos={grupos}
+                            opcoesExercicio={exerciciosDoGrupo(ex.grupo_muscular, ex.exercicio)}
+                            upd={(f, v) => upd(i, f, v)}
+                            updMany={(patch) => updMany(i, patch)}
+                            getOptionMeta={getOptionMeta}
+                            onPreviewVideo={setVideoPreview}
+                            dragProvided={dragProvided}
+                            dragSnapshot={dragSnapshot}
+                          />
+                        )}
+                      </Draggable>
+                    )
+                  })}
+                  {dropProvided.placeholder}
+                </tbody>
+              )}
+            </Droppable>
           </table>
+          </DragDropContext>
         </div>
       </div>
 
@@ -1276,7 +1416,7 @@ const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, inten
 
 // ─── ExRow — linha de exercício com novo visual ───────────────────────────────
 
-const ExRow = ({ ex, i, total, isPart, position, onChange, onMove, onDup, onRemove, onOpenDetails, grupos, opcoesExercicio, upd, getOptionMeta, onPreviewVideo }) => {
+const ExRow = ({ ex, i, total, isPart, position, onChange, onDup, onRemove, onOpenDetails, grupos, opcoesExercicio, upd, updMany, getOptionMeta, onPreviewVideo, dragProvided, dragSnapshot }) => {
   const [comboOpen, setComboOpen] = useState(false)
   const [seriesOpen, setSeriesOpen] = useState(false)
   const comboBtnRef = useRef(null)
@@ -1285,32 +1425,40 @@ const ExRow = ({ ex, i, total, isPart, position, onChange, onMove, onDup, onRemo
   const hasSeriesNames = (ex.tipo_de_serie || '').split(',').some(s => s.trim())
 
   return (
-    <tr className={`border-b border-[#323238] transition group hover:bg-[#202024] relative ${isPart ? 'bg-blue-500/[0.05]' : ''}`}>
+    <tr
+      ref={dragProvided.innerRef}
+      {...dragProvided.draggableProps}
+      style={dragRowStyle(dragProvided, dragSnapshot)}
+      className={`border-b border-[#323238] transition group hover:bg-[#202024] relative ${isPart ? 'bg-blue-500/[0.05]' : ''}`}>
       {/* Barra colorida de combinado */}
       <td className="p-0 w-[3px] relative">
         {isPart && <div className="absolute inset-y-0 left-0 w-[3px] bg-blue-500/70" />}
       </td>
-      {/* Ordem */}
+      {/* Ordem / alça de arrastar */}
       <td className="px-2 w-10 align-middle">
         <div className="flex items-center gap-1">
-          <div className="flex flex-col">
-            <button onClick={() => i > 0 && onMove(-1)} disabled={i === 0}
-              className="text-gray-600 hover:text-white disabled:opacity-20 leading-none"><ChevronUp size={11} /></button>
-            <button onClick={() => i < total - 1 && onMove(1)} disabled={i === total - 1}
-              className="text-gray-600 hover:text-white disabled:opacity-20 leading-none"><ChevronDown size={11} /></button>
-          </div>
+          <span {...dragProvided.dragHandleProps} title="Arrastar para reordenar"
+            className="text-gray-600 hover:text-gray-200 cursor-grab active:cursor-grabbing">
+            <GripVertical size={13} />
+          </span>
           <span className="text-[10px] font-bold font-mono text-gray-500">{i + 1}</span>
         </div>
       </td>
       {/* Grupo */}
       <td className="px-2 py-1 align-middle">
-        <SearchableCombo value={ex.grupo_muscular || ''} onChange={v => upd('grupo_muscular', v)} options={grupos} placeholder="Grupo..." />
+        <SearchableCombo value={ex.grupo_muscular || ''}
+          onChange={v => !v
+            ? updMany({ grupo_muscular: '', exercicio: '', video: '', 'plataforma_do_vídeo': '' })
+            : upd('grupo_muscular', v)
+          }
+          options={grupos} placeholder="Grupo..." />
       </td>
       {/* Exercício */}
       <td className="px-2 py-1 align-middle">
         <div className="flex items-center gap-1">
           <div className="flex-1 min-w-0">
             <SearchableCombo
+              key={`ex-${i}-${ex.grupo_muscular}`}
               value={ex.exercicio || ''}
               onChange={v => upd('exercicio', v)}
               options={opcoesExercicio}
@@ -1347,7 +1495,7 @@ const ExRow = ({ ex, i, total, isPart, position, onChange, onMove, onDup, onRemo
       {/* Reps — banco "Repeticao Treino" com auto-fill de descanso quando vinculado */}
       <td className="px-2 py-1 align-middle">
         <InputSug value={ex.repeticoes || ''} onChange={v => upd('repeticoes', v)}
-          onSelect={item => { if (item.descanso_vinculado) upd('descanso', item.descanso_vinculado) }}
+          onSelect={item => updMany({ repeticoes: item.repeticao_treino, ...(item.descanso_vinculado ? { descanso: item.descanso_vinculado } : {}) })}
           doctype="Repeticao Treino" campo="repeticao_treino" extra="descanso_vinculado"
           className="text-center" />
       </td>
@@ -1456,7 +1604,7 @@ const GerenciadorTreinos = ({ ficha, upd, onClose }) => {
 
   return (
     <Modal
-      open
+      isOpen
       onClose={onClose}
       title="Gerenciador de Treinos"
       size="sm"
@@ -1916,7 +2064,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
                         <td className="px-2 py-1">
                           <InputSug value={p.repeticoes || ''}
                             onChange={v => { const a = [...ficha.periodizacao]; a[i] = { ...a[i], repeticoes: v }; upd('periodizacao', a) }}
-                            onSelect={item => { if (item.descanso_vinculado) { const a = [...ficha.periodizacao]; a[i] = { ...a[i], descanso: item.descanso_vinculado }; upd('periodizacao', a) } }}
+                            onSelect={item => { const a = [...ficha.periodizacao]; a[i] = { ...a[i], repeticoes: item.repeticao_treino, ...(item.descanso_vinculado ? { descanso: item.descanso_vinculado } : {}) }; upd('periodizacao', a) }}
                             doctype="Repeticao Treino" campo="repeticao_treino" extra="descanso_vinculado"
                             className="text-center" />
                         </td>
@@ -1968,30 +2116,37 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
         </FormGroup>
         <div className="rounded-xl border border-[#323238] bg-[#1a1a1a] overflow-hidden">
           <div className="overflow-x-auto">
+            <DragDropContext onBeforeDragStart={lockRowWidths} onDragEnd={makeOnDragEnd(ficha.periodizacao_dos_aerobicos || [], v => upd('periodizacao_dos_aerobicos', v))}>
             <table className="w-full text-sm min-w-[760px]">
               <thead>
                 <tr className="text-gray-500 text-[10px] uppercase tracking-wider border-b border-[#323238] bg-[#19191d]">
-                  <th className="w-8 py-2.5 px-2" />
-                  <th className="text-left py-2.5 px-2 w-56">Exercício</th>
-                  <th className="text-left py-2.5 px-2 w-36">Frequência</th>
-                  <th className="text-left py-2.5 px-2">Instruções</th>
-                  <th className="text-right py-2.5 px-2 w-28">Ações</th>
+                  <th className="w-10 py-2.5 px-2" />
+                  <th className="text-left py-2.5 px-2 w-[25%]">Exercício</th>
+                  <th className="text-left py-2.5 px-2 w-[15%]">Frequência</th>
+                  <th className="text-left py-2.5 px-2 w-[50%]">Instruções</th>
+                  <th className="text-right py-2.5 px-2 w-[10%]">Ações</th>
                 </tr>
               </thead>
-              <tbody>
+              <Droppable droppableId="aero-drop">
+                {(dropProvided) => (
+                <tbody ref={dropProvided.innerRef} {...dropProvided.droppableProps}>
                 {(ficha.periodizacao_dos_aerobicos || []).map((a, i) => {
                   const set = (f, v) => {
                     const arr = [...ficha.periodizacao_dos_aerobicos]; arr[i] = { ...arr[i], [f]: v }
                     if (f === 'exercicios') { const info = mapaAerob[v]; if (info) { arr[i].video = info.video || ''; arr[i]['plataforma_do_vídeo'] = info['plataforma_do_vídeo'] || 'YouTube'; if (!arr[i].instrucao?.trim()) arr[i].instrucao = info.instrucao || '' } }
                     upd('periodizacao_dos_aerobicos', arr)
                   }
+                  const rowId = `aero-${a._id || i}`
                   return (
-                    <tr key={a._id || i} className="border-b border-[#323238] hover:bg-[#202024] transition group">
-                      <td className="px-2 text-center w-12 align-middle">
-                        <div className="flex flex-col items-center">
-                          <button onClick={() => { const arr = [...ficha.periodizacao_dos_aerobicos]; if (i === 0) return; [arr[i], arr[i-1]] = [arr[i-1], arr[i]]; upd('periodizacao_dos_aerobicos', arr) }} disabled={i === 0} className="text-gray-600 hover:text-white disabled:opacity-20"><ChevronUp size={12} /></button>
+                    <Draggable key={rowId} draggableId={rowId} index={i}>
+                      {(dragProvided, dragSnapshot) => (
+                      <tr ref={dragProvided.innerRef} {...dragProvided.draggableProps} style={dragRowStyle(dragProvided, dragSnapshot)}
+                        className="border-b border-[#323238] hover:bg-[#202024] transition group">
+                      <td className="px-2 text-center w-10 align-middle">
+                        <div className="flex items-center justify-center gap-1">
+                          <span {...dragProvided.dragHandleProps} title="Arrastar para reordenar"
+                            className="text-gray-600 hover:text-gray-200 cursor-grab active:cursor-grabbing"><GripVertical size={13} /></span>
                           <span className="text-[10px] font-mono text-gray-600">{i + 1}</span>
-                          <button onClick={() => { const arr = [...ficha.periodizacao_dos_aerobicos]; if (i === arr.length - 1) return; [arr[i], arr[i+1]] = [arr[i+1], arr[i]]; upd('periodizacao_dos_aerobicos', arr) }} disabled={i === ficha.periodizacao_dos_aerobicos.length - 1} className="text-gray-600 hover:text-white disabled:opacity-20"><ChevronDown size={12} /></button>
                         </div>
                       </td>
                       <td className="px-2 py-1 align-middle"><SearchableCombo value={a.exercicios || ''} onChange={v => set('exercicios', v)} options={aerobs} placeholder="Buscar..." /></td>
@@ -2015,10 +2170,16 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
                         </div>
                       </td>
                     </tr>
+                      )}
+                    </Draggable>
                   )
                 })}
-              </tbody>
+                {dropProvided.placeholder}
+                </tbody>
+                )}
+              </Droppable>
             </table>
+            </DragDropContext>
           </div>
         </div>
         <button onClick={() => { upd('periodizacao_dos_aerobicos', [...(ficha.periodizacao_dos_aerobicos || []), { _id: uid(), exercicios: '', frequencia: '', instrucao: '' }]); setAerobicoResetKey(k => k + 1) }}
@@ -2044,30 +2205,37 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
         </FormGroup>
         <div className="rounded-xl border border-[#323238] bg-[#1a1a1a] overflow-hidden">
           <div className="overflow-x-auto">
+            <DragDropContext onBeforeDragStart={lockRowWidths} onDragEnd={makeOnDragEnd(ficha.planilha_de_alongamentos_e_mobilidade || [], v => upd('planilha_de_alongamentos_e_mobilidade', v))}>
             <table className="w-full text-sm min-w-[680px]">
               <thead>
                 <tr className="text-gray-500 text-[10px] uppercase tracking-wider border-b border-[#323238] bg-[#19191d]">
-                  <th className="w-8 py-2.5 px-2" />
-                  <th className="text-left py-2.5 px-2 w-56">Exercício</th>
-                  <th className="text-center py-2.5 px-2 w-20">Séries</th>
-                  <th className="text-left py-2.5 px-2">Observação</th>
-                  <th className="text-right py-2.5 px-2 w-28">Ações</th>
+                  <th className="w-10 py-2.5 px-2" />
+                  <th className="text-left py-2.5 px-2 w-[35%]">Exercício</th>
+                  <th className="text-center py-2.5 px-2 w-[10%]">Séries</th>
+                  <th className="text-left py-2.5 px-2 w-[45%]">Observação</th>
+                  <th className="text-right py-2.5 px-2 w-[10%]">Ações</th>
                 </tr>
               </thead>
-              <tbody>
+              <Droppable droppableId="along-drop">
+                {(dropProvided) => (
+                <tbody ref={dropProvided.innerRef} {...dropProvided.droppableProps}>
                 {(ficha.planilha_de_alongamentos_e_mobilidade || []).map((a, i) => {
                   const set = (f, v) => {
                     const arr = [...ficha.planilha_de_alongamentos_e_mobilidade]; arr[i] = { ...arr[i], [f]: v }
                     if (f === 'exercicio') { const info = mapaAlong[v]; if (info) { arr[i].video = info.video || ''; arr[i]['plataforma_do_vídeo'] = info['plataforma_do_vídeo'] || 'YouTube' } }
                     upd('planilha_de_alongamentos_e_mobilidade', arr)
                   }
+                  const rowId = `along-${a._id || i}`
                   return (
-                    <tr key={a._id || i} className="border-b border-[#323238] hover:bg-[#202024] transition group">
-                      <td className="px-2 text-center w-12 align-middle">
-                        <div className="flex flex-col items-center">
-                          <button onClick={() => { const arr = [...ficha.planilha_de_alongamentos_e_mobilidade]; if (i === 0) return; [arr[i], arr[i-1]] = [arr[i-1], arr[i]]; upd('planilha_de_alongamentos_e_mobilidade', arr) }} disabled={i === 0} className="text-gray-600 hover:text-white disabled:opacity-20"><ChevronUp size={12} /></button>
+                    <Draggable key={rowId} draggableId={rowId} index={i}>
+                      {(dragProvided, dragSnapshot) => (
+                      <tr ref={dragProvided.innerRef} {...dragProvided.draggableProps} style={dragRowStyle(dragProvided, dragSnapshot)}
+                        className="border-b border-[#323238] hover:bg-[#202024] transition group">
+                      <td className="px-2 text-center w-10 align-middle">
+                        <div className="flex items-center justify-center gap-1">
+                          <span {...dragProvided.dragHandleProps} title="Arrastar para reordenar"
+                            className="text-gray-600 hover:text-gray-200 cursor-grab active:cursor-grabbing"><GripVertical size={13} /></span>
                           <span className="text-[10px] font-mono text-gray-600">{i + 1}</span>
-                          <button onClick={() => { const arr = [...ficha.planilha_de_alongamentos_e_mobilidade]; if (i === arr.length - 1) return; [arr[i], arr[i+1]] = [arr[i+1], arr[i]]; upd('planilha_de_alongamentos_e_mobilidade', arr) }} disabled={i === ficha.planilha_de_alongamentos_e_mobilidade.length - 1} className="text-gray-600 hover:text-white disabled:opacity-20"><ChevronDown size={12} /></button>
                         </div>
                       </td>
                       <td className="px-2 py-1 align-middle"><SearchableCombo value={a.exercicio || ''} onChange={v => set('exercicio', v)} options={alongs} placeholder="Buscar..." /></td>
@@ -2091,10 +2259,16 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
                         </div>
                       </td>
                     </tr>
+                      )}
+                    </Draggable>
                   )
                 })}
-              </tbody>
+                {dropProvided.placeholder}
+                </tbody>
+                )}
+              </Droppable>
             </table>
+            </DragDropContext>
           </div>
         </div>
         <button onClick={() => upd('planilha_de_alongamentos_e_mobilidade', [...(ficha.planilha_de_alongamentos_e_mobilidade || []), { _id: uid(), exercicio: '', series: 3, observacoes: '' }])}
