@@ -268,11 +268,12 @@ export default function AnamneseListagem() {
       label: 'Respondida em',
       headerClass: 'w-32 text-center whitespace-nowrap',
       cellClass: 'text-center',
-      render: (a) => (
-        a.data_resposta
-          ? <span className="text-green-300/90 text-xs">{fmtData(a.data_resposta)}</span>
+      render: (a) => {
+        const dt = a.data_resposta || (respondidaAnamnese(a) ? a.modified : null)
+        return dt
+          ? <span className="text-green-300/90 text-xs">{fmtData(dt)}</span>
           : <span className="text-gray-700 text-xs">—</span>
-      ),
+      },
     },
     {
       label: 'Entrega',

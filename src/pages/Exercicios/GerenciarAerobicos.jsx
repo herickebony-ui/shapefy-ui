@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Edit, Trash2, RefreshCw, BookOpen, ExternalLink } from 'lucide-react'
+import { Plus, Edit, Trash2, RefreshCw, BookOpen, ExternalLink, Play, ToggleLeft, ToggleRight } from 'lucide-react'
 import {
   listarAerobicos, salvarAerobico, excluirAerobico, toggleAerobico,
 } from '../../api/fichas'
@@ -14,6 +14,32 @@ import { extractVideoId } from '../../utils/video'
 import useErrorModal from '../../hooks/useErrorModal'
 import useSelection from '../../hooks/useSelection'
 import { excluirEmLote } from '../../utils/bulk'
+
+const getEmbedUrl = (id, platform) => {
+  const plat = String(platform || '').toLowerCase()
+  if (plat.includes('vimeo')) return `https://player.vimeo.com/video/${id}?autoplay=1`
+  if (plat.includes('drive')) return `https://drive.google.com/file/d/${id}/preview`
+  return `https://www.youtube.com/embed/${id}?rel=0&autoplay=1&modestbranding=1`
+}
+
+const VideoPreviewModal = ({ video, onClose }) => {
+  if (!video?.id) return null
+  return (
+    <Modal isOpen onClose={onClose} title={video.titulo || 'Pré-visualização'} size="lg">
+      <div className="p-3">
+        <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-[#323238] bg-black">
+          <iframe
+            src={getEmbedUrl(video.id, video.platform)}
+            title={video.titulo || 'Aeróbico'}
+            allow="autoplay; encrypted-media; picture-in-picture"
+            allowFullScreen
+            className="w-full h-full"
+          />
+        </div>
+      </div>
+    </Modal>
+  )
+}
 
 const PLATAFORMAS = ['YouTube', 'Google Drive', 'Vimeo']
 
@@ -171,6 +197,7 @@ export default function GerenciarAerobicos() {
   const sel = useSelection()
   const [confirmLote, setConfirmLote] = useState(false)
   const [excluindoLote, setExcluindoLote] = useState(false)
+  const [videoAberto, setVideoAberto] = useState(null)
 
   const carregar = async () => {
     setLoading(true)
@@ -301,6 +328,15 @@ export default function GerenciarAerobicos() {
       cellClass: 'text-right',
       render: (row) => (
         <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
+          {row.video && (
+            <button
+              onClick={() => setVideoAberto({ id: row.video, platform: row['plataforma_do_vídeo'] || 'YouTube', titulo: row.exercicio_aerobico })}
+              className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors"
+              title="Visualizar vídeo"
+            >
+              <Play size={12} />
+            </button>
+          )}
           <button
             onClick={() => handleToggle(row)}
             title={row.enabled ? 'Desativar' : 'Ativar'}
@@ -310,7 +346,7 @@ export default function GerenciarAerobicos() {
                 : 'text-gray-500 border-[#323238] hover:border-gray-500 hover:text-white'
               }`}
           >
-            {row.enabled ? '●' : '○'}
+            {row.enabled ? <ToggleRight size={12} /> : <ToggleLeft size={12} />}
           </button>
           <button
             onClick={() => { setEditando(row); setModalOpen(true) }}
@@ -461,6 +497,7 @@ export default function GerenciarAerobicos() {
         </Modal>
       )}
       {errorModal.element}
+      <VideoPreviewModal video={videoAberto} onClose={() => setVideoAberto(null)} />
     </>
   )
 }

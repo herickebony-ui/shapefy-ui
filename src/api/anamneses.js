@@ -2,11 +2,17 @@ import client from './client'
 import { criarNotificacaoAluno } from './notificacoes'
 import { profissionalLogado } from './helpers'
 
+const nowFrappeDatetime = () => {
+  const d = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
+
 export const listarAnamneses = async ({ alunoId, page = 1, limit = 50 } = {}) => {
   const params = {
     fields: JSON.stringify([
       "name","titulo","status","date","enviar_aluno","aluno_preencheu","aluno",
-      "nome_completo","entregue","data_entrega","formulario","creation","data_resposta",
+      "nome_completo","entregue","data_entrega","formulario","creation","modified","data_resposta",
     ]),
     limit,
     limit_start: (page - 1) * limit,
@@ -36,7 +42,16 @@ export const excluirAnamnese = async (id) => {
 
 export const buscarAnamnese = async (id) => {
   const res = await client.get(`/api/resource/Anamnese/${id}`)
-  return res.data.data
+  const doc = res.data.data
+  // Anamneses respondidas via app (aluno_preencheu=1) nunca tiveram data_resposta
+  // setado pelo backend. Ao abrir, patchear silenciosamente usando modified como
+  // best-guess — popula o DB gradualmente sem precisar de migração em massa.
+  if (!doc.data_resposta && (doc.aluno_preencheu || doc.status === 'Respondido' || doc.status === 'Finalizado')) {
+    const dataFallback = doc.modified || nowFrappeDatetime()
+    doc.data_resposta = dataFallback
+    client.put(`/api/resource/Anamnese/${encodeURIComponent(id)}`, { data_resposta: dataFallback }).catch(() => {})
+  }
+  return doc
 }
 
 // Considera "respondida" se pelo menos uma pergunta tem resposta preenchida.
@@ -58,7 +73,10 @@ export const salvarAnamnese = async (id, perguntas) => {
   // manualmente, onde aluno_preencheu permanece 0 e o backend não atualiza
   // o status sozinho.
   const payload = { perguntas_e_respostas: perguntas }
-  if (temAlgumaResposta(perguntas)) payload.status = 'Respondido'
+  if (temAlgumaResposta(perguntas)) {
+    payload.status = 'Respondido'
+    payload.data_resposta = nowFrappeDatetime()
+  }
   const res = await client.put(`/api/resource/Anamnese/${id}`, payload)
   return res.data.data
 }
@@ -130,12 +148,6 @@ export const rotarImagemAnamnese = async (anamneseId, fileUrl, direction = 'righ
   await client.post('/api/method/shapefy.www.compare_feedback.rotate_image', data, {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
   })
-}
-
-const nowFrappeDatetime = () => {
-  const d = new Date()
-  const pad = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
 }
 
 export const marcarEntregueAnamnese = async (id, entregue = true) => {

@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Save, Plus, Trash2, BookmarkPlus, Edit2, Check, X, ChevronUp, ChevronDown, Database, Clock } from 'lucide-react'
+import { Save, Plus, Trash2, BookmarkPlus, Edit2, Check, X, ChevronUp, ChevronDown, Database, Clock, GripVertical } from 'lucide-react'
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
+import { lockRowWidths, unlockRowWidths, dragRowStyle, reorderList } from '../../utils/dndLinhas'
 import { buscarPrescricao, criarPrescricao, salvarPrescricao } from '../../api/prescricoes'
 import {
   buscarManipulados, listarManipulados,
@@ -20,6 +22,8 @@ import NotificarAlunoModal from '../../components/NotificarAlunoModal'
 import useErrorModal from '../../hooks/useErrorModal'
 
 const profissionalLogado = () => localStorage.getItem('frappe_user') || ''
+const uid = () => `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+const addUid = (item) => ({ __uid: uid(), ...item })
 
 const formatarDataBr = (iso) => {
   if (!iso) return ''
@@ -38,25 +42,16 @@ const OPCOES_DIAS = [
 
 // ─── Item row compacta ────────────────────────────────────────────────────────
 
-const ItemRow = ({ item, idx, total, onChange, onRemove, onSaveItem, onMoveUp, onMoveDown, savingItem }) => (
-  <tr className="border-b border-[#323238] last:border-0">
+const ItemRow = ({ item, idx, onChange, onRemove, onSaveItem, savingItem, innerRef, draggableProps, dragHandleProps, isDragging }) => (
+  <tr ref={innerRef} {...draggableProps}
+    className={`border-b border-[#323238] last:border-0 ${isDragging ? 'bg-[#202024] table' : ''}`}>
     <td className="pl-2 pr-1 py-1.5 w-8">
-      <div className="flex flex-col items-center gap-0.5">
-        <button
-          onClick={onMoveUp}
-          disabled={idx === 0}
-          className="h-4 w-5 flex items-center justify-center text-gray-600 hover:text-white disabled:opacity-20 transition-colors"
-        >
-          <ChevronUp size={10} />
-        </button>
+      <div className="flex items-center justify-center gap-0.5">
+        <span {...dragHandleProps} title="Arrastar para reordenar"
+          className="text-gray-600 hover:text-gray-300 cursor-grab active:cursor-grabbing">
+          <GripVertical size={13} />
+        </span>
         <span className="text-gray-600 text-[10px] leading-none select-none">{idx + 1}</span>
-        <button
-          onClick={onMoveDown}
-          disabled={idx === total - 1}
-          className="h-4 w-5 flex items-center justify-center text-gray-600 hover:text-white disabled:opacity-20 transition-colors"
-        >
-          <ChevronDown size={10} />
-        </button>
       </div>
     </td>
     <td className="px-1 py-1.5 min-w-[140px]">
@@ -520,7 +515,7 @@ export default function PrescricaoDetalhe() {
         setValidadeDias(data.validade_dias || '')
         setAviarPara(data.aviar_para || '')
         setDataFim(data.data_fim || '')
-        setPrescriptions((data.prescriptions || []).map(item => ({
+        setPrescriptions((data.prescriptions || []).map(item => addUid({
           manipulated: item.manipulated || '',
           description: item.description || '',
           momento_de_uso: item.momento_de_uso || '',
@@ -659,17 +654,18 @@ export default function PrescricaoDetalhe() {
     }
   }
 
-  const addItem = () => setPrescriptions(prev => [...prev, { manipulated: '', description: '', momento_de_uso: '' }])
+  const dndScope = useRef(`prescricao-${uid()}`).current
+
+  const handleDragEnd = (result) => {
+    unlockRowWidths()
+    if (!result.destination || result.destination.index === result.source.index) return
+    setPrescriptions(prev => reorderList(prev, result.source.index, result.destination.index))
+  }
+
+  const addItem = () => setPrescriptions(prev => [...prev, addUid({ manipulated: '', description: '', momento_de_uso: '' })])
   const updateItem = (idx, field, value) =>
     setPrescriptions(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item))
   const removeItem = (idx) => setPrescriptions(prev => prev.filter((_, i) => i !== idx))
-  const moveItem = (idx, dir) => setPrescriptions(prev => {
-    const next = [...prev]
-    const target = idx + dir
-    if (target < 0 || target >= next.length) return prev
-    ;[next[idx], next[target]] = [next[target], next[idx]]
-    return next
-  })
 
   if (loading) {
     return <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center"><Spinner size="lg" /></div>
@@ -760,49 +756,60 @@ export default function PrescricaoDetalhe() {
 
             {prescriptions.length > 0 && (
               <>
-                {/* Desktop: tabela */}
+                {/* Desktop: tabela com D&D */}
                 <div className="hidden md:block overflow-x-auto">
+                  <DragDropContext onBeforeDragStart={lockRowWidths} onDragEnd={handleDragEnd}>
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-[#323238] bg-[#111113]">
-                        <th className="pl-3 pr-1 py-2 w-7 text-left text-[10px] text-gray-600">#</th>
+                        <th className="pl-2 pr-1 py-2 w-8 text-left text-[10px] text-gray-600">#</th>
                         <th className="px-1 py-2 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Horário de Uso</th>
                         <th className="px-1 py-2 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Manipulado</th>
                         <th className="px-1 py-2 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Posologia / Descrição</th>
                         <th className="px-2 py-2 w-16"></th>
                       </tr>
                     </thead>
-                    <tbody>
-                      {prescriptions.map((item, idx) => (
-                        <ItemRow
-                          key={idx}
-                          item={item}
-                          idx={idx}
-                          total={prescriptions.length}
-                          onChange={(field, value) => updateItem(idx, field, value)}
-                          onRemove={() => removeItem(idx)}
-                          onSaveItem={() => handleSaveItem(idx)}
-                          onMoveUp={() => moveItem(idx, -1)}
-                          onMoveDown={() => moveItem(idx, 1)}
-                          savingItem={savingItem === idx}
-                        />
-                      ))}
-                    </tbody>
+                    <Droppable droppableId={dndScope}>
+                      {(dropProvided) => (
+                        <tbody ref={dropProvided.innerRef} {...dropProvided.droppableProps}>
+                          {prescriptions.map((item, idx) => (
+                            <Draggable key={item.__uid || idx} draggableId={item.__uid || String(idx)} index={idx}>
+                              {(dragProvided, dragSnapshot) => (
+                                <ItemRow
+                                  innerRef={dragProvided.innerRef}
+                                  draggableProps={dragProvided.draggableProps}
+                                  dragHandleProps={dragProvided.dragHandleProps}
+                                  isDragging={dragSnapshot.isDragging}
+                                  item={item}
+                                  idx={idx}
+                                  onChange={(field, value) => updateItem(idx, field, value)}
+                                  onRemove={() => removeItem(idx)}
+                                  onSaveItem={() => handleSaveItem(idx)}
+                                  savingItem={savingItem === idx}
+                                />
+                              )}
+                            </Draggable>
+                          ))}
+                          {dropProvided.placeholder}
+                        </tbody>
+                      )}
+                    </Droppable>
                   </table>
+                  </DragDropContext>
                 </div>
-                {/* Mobile: cards */}
+                {/* Mobile: cards com chevrons */}
                 <div className="md:hidden">
                   {prescriptions.map((item, idx) => (
                     <ItemCard
-                      key={idx}
+                      key={item.__uid || idx}
                       item={item}
                       idx={idx}
                       total={prescriptions.length}
                       onChange={(field, value) => updateItem(idx, field, value)}
                       onRemove={() => removeItem(idx)}
                       onSaveItem={() => handleSaveItem(idx)}
-                      onMoveUp={() => moveItem(idx, -1)}
-                      onMoveDown={() => moveItem(idx, 1)}
+                      onMoveUp={() => setPrescriptions(prev => reorderList(prev, idx, idx - 1))}
+                      onMoveDown={() => setPrescriptions(prev => reorderList(prev, idx, idx + 1))}
                       savingItem={savingItem === idx}
                     />
                   ))}

@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import {
   Plus, Search, Edit, Trash2, ToggleLeft, ToggleRight, RefreshCw, Copy,
-  ChevronUp, ChevronDown, ArrowLeftRight,
+  ChevronUp, ChevronDown, ArrowLeftRight, GripVertical,
 } from 'lucide-react'
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
+import { lockRowWidths, unlockRowWidths, dragRowStyle, reorderList } from '../../utils/dndLinhas'
 import {
   listarRefeicoesProntas, buscarRefeicaoPronta,
   criarRefeicaoPronta, salvarRefeicaoPronta,
@@ -143,6 +145,7 @@ function ModalEditarAlimento({ item, onSave, onClose }) {
 function EditorItens({ items, onChange }) {
   const [exibirSubs, setExibirSubs] = useState(false)
   const [editingIdx, setEditingIdx] = useState(null)
+  const dndScope = useRef(`ref-pronta-${uid()}`).current
   const visiveis = exibirSubs ? items : items.filter(i => !i.substitute)
 
   const addItem = (isSubstitute = false) => {
@@ -176,6 +179,17 @@ function EditorItens({ items, onChange }) {
     if (target < 0 || target >= arr.length) return
     ;[arr[idx], arr[target]] = [arr[target], arr[idx]]
     onChange(arr)
+  }
+
+  const onDragEnd = (result) => {
+    unlockRowWidths()
+    if (!result.destination || result.destination.index === result.source.index) return
+    // Mapeia índice visual (visiveis) para índice real (items)
+    const fromReal = items.findIndex(i => (i.__uid || '') === result.draggableId)
+    const toVisItem = visiveis[result.destination.index]
+    const toReal = toVisItem ? items.findIndex(i => (i.__uid || '') === (toVisItem.__uid || '')) : -1
+    if (fromReal < 0 || toReal < 0) return
+    onChange(reorderList(items, fromReal, toReal))
   }
 
   const updateItem = (idx, key, value) => {
@@ -236,8 +250,9 @@ function EditorItens({ items, onChange }) {
         </div>
       ) : (
         <>
-          {/* Desktop: tabela */}
+          {/* Desktop: tabela com D&D */}
           <div className="hidden md:block w-full overflow-x-auto">
+            <DragDropContext onBeforeDragStart={lockRowWidths} onDragEnd={onDragEnd}>
             <table className="w-full text-xs border-separate border-spacing-y-0.5">
               <thead className="text-gray-500 uppercase bg-[#29292e] border-b border-[#323238]">
                 <tr>
@@ -254,25 +269,30 @@ function EditorItens({ items, onChange }) {
                   <th className="px-2 py-2 w-24 text-center">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#323238]/50">
+              <Droppable droppableId={dndScope}>
+                {(dropProvided) => (
+              <tbody ref={dropProvided.innerRef} {...dropProvided.droppableProps} className="divide-y divide-[#323238]/50">
                 {visiveis.map((item, itemIdx) => {
                   const realIdx = item.__uid ? items.findIndex(i => i.__uid === item.__uid) : items.indexOf(item)
                   const temSubstitutoOculto = !exibirSubs && !item.substitute && items[realIdx + 1]?.substitute === 1
+                  const isSubVisible = exibirSubs && item.substitute
+                  const rowId = item.__uid || `row-${dndScope}-${itemIdx}`
                   return (
-                    <tr key={item.__uid || itemIdx}
+                    <Draggable key={rowId} draggableId={rowId} index={itemIdx} isDragDisabled={isSubVisible}>
+                      {(dragProvided, dragSnapshot) => (
+                    <tr ref={dragProvided.innerRef} {...dragProvided.draggableProps}
+                      style={dragRowStyle(dragProvided, dragSnapshot)}
                       className={`transition-colors ${item.substitute ? 'bg-red-500/10' : temSubstitutoOculto ? 'bg-[#2c2c31]' : 'bg-[#222226]'} hover:bg-[#2f2f35]`}>
                       <td className="px-2 py-2 rounded-l-lg">
                         <div className="flex items-center gap-1 justify-center">
-                          <div className="flex flex-col items-center">
-                            <button onClick={() => moveItem(realIdx, -1)} disabled={realIdx === 0}
-                              className="h-4 w-5 flex items-center justify-center text-gray-500 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
-                              <ChevronUp size={11} />
-                            </button>
-                            <button onClick={() => moveItem(realIdx, +1)} disabled={realIdx === items.length - 1}
-                              className="h-4 w-5 flex items-center justify-center text-gray-500 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
-                              <ChevronDown size={11} />
-                            </button>
-                          </div>
+                          {!isSubVisible ? (
+                            <span {...dragProvided.dragHandleProps} title="Arrastar para reordenar"
+                              className="text-gray-600 hover:text-gray-300 cursor-grab active:cursor-grabbing">
+                              <GripVertical size={13} />
+                            </span>
+                          ) : (
+                            <span className="w-[13px]" />
+                          )}
                           <span className="text-gray-600 font-mono text-xs">{realIdx + 1}</span>
                         </div>
                       </td>
@@ -349,10 +369,16 @@ function EditorItens({ items, onChange }) {
                         </div>
                       </td>
                     </tr>
+                      )}
+                    </Draggable>
                   )
                 })}
+                {dropProvided.placeholder}
               </tbody>
+                )}
+              </Droppable>
             </table>
+            </DragDropContext>
           </div>
 
           {/* Mobile: cards */}

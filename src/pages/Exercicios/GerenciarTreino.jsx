@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Plus, Edit, Trash2, X, RefreshCw, BookOpen, ExternalLink } from 'lucide-react'
+import { Plus, Edit, Trash2, X, RefreshCw, BookOpen, ExternalLink, Play } from 'lucide-react'
 import {
   listarExercicios, salvarTreinoExercicio, excluirTreinoExercicio, listarGruposMusculares,
 } from '../../api/fichas'
@@ -14,6 +14,32 @@ import { extractVideoId } from '../../utils/video'
 import useErrorModal from '../../hooks/useErrorModal'
 import useSelection from '../../hooks/useSelection'
 import { excluirEmLote } from '../../utils/bulk'
+
+const getEmbedUrl = (id, platform) => {
+  const plat = String(platform || '').toLowerCase()
+  if (plat.includes('vimeo')) return `https://player.vimeo.com/video/${id}?autoplay=1`
+  if (plat.includes('drive')) return `https://drive.google.com/file/d/${id}/preview`
+  return `https://www.youtube.com/embed/${id}?rel=0&autoplay=1&modestbranding=1`
+}
+
+const VideoPreviewModal = ({ video, onClose }) => {
+  if (!video?.id) return null
+  return (
+    <Modal isOpen onClose={onClose} title={video.titulo || 'Pré-visualização'} size="lg">
+      <div className="p-3">
+        <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-[#323238] bg-black">
+          <iframe
+            src={getEmbedUrl(video.id, video.platform)}
+            title={video.titulo || 'Exercício'}
+            allow="autoplay; encrypted-media; picture-in-picture"
+            allowFullScreen
+            className="w-full h-full"
+          />
+        </div>
+      </div>
+    </Modal>
+  )
+}
 
 const normalizar = (s = '') =>
   String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
@@ -302,6 +328,7 @@ export default function GerenciarTreino() {
   const sel = useSelection()
   const [confirmLote, setConfirmLote] = useState(false)
   const [excluindoLote, setExcluindoLote] = useState(false)
+  const [videoAberto, setVideoAberto] = useState(null)
 
   const carregar = async () => {
     setLoading(true)
@@ -458,6 +485,15 @@ export default function GerenciarTreino() {
       cellClass: 'text-right',
       render: (ex) => (
         <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
+          {ex.video && (
+            <button
+              onClick={() => setVideoAberto({ id: ex.video, platform: ex['plataforma_do_vídeo'] || 'YouTube', titulo: ex.nome_do_exercicio })}
+              className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors"
+              title="Visualizar vídeo"
+            >
+              <Play size={12} />
+            </button>
+          )}
           <button
             onClick={() => { setEditando(ex); setModalOpen(true) }}
             className="h-7 w-7 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors"
@@ -619,6 +655,7 @@ export default function GerenciarTreino() {
         </Modal>
       )}
       {errorModal.element}
+      <VideoPreviewModal video={videoAberto} onClose={() => setVideoAberto(null)} />
     </>
   )
 }
