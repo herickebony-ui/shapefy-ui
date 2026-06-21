@@ -3,7 +3,7 @@ import client from './client'
 const RESOURCE = 'Tipo de Serie'
 
 export const listarTiposDeSerie = async ({ apenasAtivos = true } = {}) => {
-  const filtros = [[RESOURCE, 'profissional', '!=', '']]
+  const filtros = []
   if (apenasAtivos) filtros.push([RESOURCE, 'enabled', '=', 1])
   const res = await client.get(`/api/resource/${encodeURIComponent(RESOURCE)}`, {
     params: {
