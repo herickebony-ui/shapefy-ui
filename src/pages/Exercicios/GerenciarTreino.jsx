@@ -7,7 +7,7 @@ import { listarTodasTecnicas, salvarTecnica, excluirTecnica } from '../../api/te
 import { listarTiposDeSerie, salvarTipoDeSerie, excluirTipoDeSerie } from '../../api/tiposDeSerie'
 import {
   Button, FormGroup, Input, Select, Modal, EmptyState, DataTable, Badge, Textarea,
-  ImportExcelButton, BotaoTutoriais, Autocomplete, Tabs,
+  ImportExcelButton, BotaoTutoriais, Autocomplete, Tabs, Spinner,
 } from '../../components/ui'
 import { buscarSmart } from '../../utils/strings'
 import { TUTORIAIS_EXERCICIOS } from '../../data/tutoriais'
@@ -456,7 +456,7 @@ const ModalTecnica = ({ tecnica, onSave, onClose }) => {
 
 // ─── AbaTecnicas ──────────────────────────────────────────────────────────────
 
-function AbaTecnicas() {
+function AbaTecnicas({ tabs }) {
   const errorModal = useErrorModal()
   const [tecnicas, setTecnicas] = useState([])
   const [loading, setLoading] = useState(true)
@@ -558,6 +558,7 @@ function AbaTecnicas() {
     <>
       <ListPage
         title="Técnicas Intensificadoras"
+        tabs={tabs}
         subtitle={`${tecnicas.length} técnica${tecnicas.length !== 1 ? 's' : ''} cadastrada${tecnicas.length !== 1 ? 's' : ''}`}
         actions={
           <>
@@ -685,7 +686,7 @@ function ModalTipoDeSerie({ tipo, onSave, onClose }) {
 
 // ─── AbaTiposSerie ────────────────────────────────────────────────────────────
 
-function AbaTiposSerie() {
+function AbaTiposSerie({ tabs }) {
   const errorModal = useErrorModal()
   const [tipos, setTipos] = useState([])
   const [loading, setLoading] = useState(true)
@@ -780,6 +781,7 @@ function AbaTiposSerie() {
     <>
       <ListPage
         title="Tipos de Série"
+        tabs={tabs}
         subtitle={`${tipos.length} tipo${tipos.length !== 1 ? 's' : ''} cadastrado${tipos.length !== 1 ? 's' : ''}`}
         actions={
           <>
@@ -1037,40 +1039,21 @@ export default function GerenciarTreino() {
   ]
 
   const TABS = [
-    { id: 'exercicios', label: 'Exercícios', icon: <span className="text-base">🏋️</span> },
-    { id: 'tecnicas', label: 'Técnicas Intensificadoras', icon: <Zap size={14} /> },
-    { id: 'tipos_serie', label: 'Tipos de Série', icon: <ListOrdered size={14} /> },
+    { id: 'exercicios', label: 'Exercícios' },
+    { id: 'tecnicas', label: 'Técnicas Intensificadoras' },
+    { id: 'tipos_serie', label: 'Tipos de Série' },
   ]
 
-  const NavTabs = () => (
-    <div className="px-6 pt-4 pb-0 border-b border-[#323238]">
-      <Tabs tabs={TABS} active={aba} onChange={setAba} variant="underline" />
-    </div>
-  )
+  const tabsBar = <Tabs tabs={TABS} active={aba} onChange={setAba} variant="underline" />
 
-  if (aba === 'tecnicas') {
-    return (
-      <div>
-        <NavTabs />
-        <AbaTecnicas />
-      </div>
-    )
-  }
-
-  if (aba === 'tipos_serie') {
-    return (
-      <div>
-        <NavTabs />
-        <AbaTiposSerie />
-      </div>
-    )
-  }
+  if (aba === 'tecnicas') return <AbaTecnicas tabs={tabsBar} />
+  if (aba === 'tipos_serie') return <AbaTiposSerie tabs={tabsBar} />
 
   return (
     <>
-      <NavTabs />
       <ListPage
         title="Gerenciar Exercícios"
+        tabs={tabsBar}
         subtitle={`${exercicios.length} exercício${exercicios.length !== 1 ? 's' : ''} cadastrado${exercicios.length !== 1 ? 's' : ''}`}
         actions={
           <>
