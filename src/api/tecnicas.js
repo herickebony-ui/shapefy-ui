@@ -13,9 +13,11 @@ export const listarTecnicas = async ({ limit = 1000 } = {}) => {
 }
 
 export const listarTodasTecnicas = async ({ limit = 1000 } = {}) => {
+  const user = localStorage.getItem('frappe_user')
   const res = await client.get('/api/resource/Tecnica Intensificadora', {
     params: {
       fields: JSON.stringify(['name', 'nome', 'descricao', 'video', 'plataforma_do_vídeo', 'enabled', 'biblioteca_source', 'profissional']),
+      filters: user ? JSON.stringify([['Tecnica Intensificadora', 'owner', '=', user]]) : undefined,
       limit,
       order_by: 'nome asc',
     },
