@@ -42,6 +42,11 @@ export const marcarNotificacoesVisualizadasAluno = async () => {
   return res.data?.message || { marcadas: 0 }
 }
 
+export const pollNotificacoesAluno = async () => {
+  const res = await client.get('/api/method/shapefy.api.aluno.notificacoes_poll')
+  return res.data?.message || { nao_visualizadas: 0, notificacoes: [] }
+}
+
 // Busca um feedback específico do aluno (validação de posse no backend).
 export const buscarFeedbackAluno = async (name) => {
   const res = await client.get('/api/method/shapefy.api.aluno.feedback', { params: { name } })

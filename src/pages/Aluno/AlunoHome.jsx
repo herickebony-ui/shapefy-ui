@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Dumbbell, Apple, ClipboardList, Scale, MessageSquare,
-  Bell, Calendar, ChevronRight, X, Pill, Repeat, User, BookOpen, Check,
+  Calendar, ChevronRight, Pill, Repeat, User, BookOpen, Check,
 } from 'lucide-react'
 import { Spinner } from '../../components/ui'
 import {
@@ -13,7 +13,6 @@ import useAuthStore from '../../store/authStore'
 import {
   homeAluno,
   listarProximosFeedbacksAluno,
-  marcarNotificacoesVisualizadasAluno,
 } from '../../api/aluno'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
@@ -70,36 +69,13 @@ function resolveCardLink(card, pendencias, flags) {
   }
 }
 
-const fmtRelativo = (iso) => {
-  if (!iso) return ''
-  const data = new Date(iso)
-  if (isNaN(data)) return ''
-  const diffSeg = Math.floor((Date.now() - data.getTime()) / 1000)
-  if (diffSeg < 60) return 'agora'
-  if (diffSeg < 3600) return `${Math.floor(diffSeg / 60)}min`
-  if (diffSeg < 86400) return `${Math.floor(diffSeg / 3600)}h`
-  if (diffSeg < 86400 * 7) return `${Math.floor(diffSeg / 86400)}d`
-  const partes = iso.split(/[T ]/)[0].split('-')
-  return `${partes[2]}/${partes[1]}`
-}
-
-const iconePorTitulo = (titulo = '') => {
-  const t = titulo.toLowerCase()
-  if (t.includes('feedback')) return { Icon: MessageSquare, cor: 'text-[#60A5FA]' }
-  if (t.includes('treino') || t.includes('ficha')) return { Icon: Dumbbell, cor: 'text-orange-400' }
-  if (t.includes('dieta')) return { Icon: Apple, cor: 'text-[#22C55E]' }
-  if (t.includes('anamnese')) return { Icon: ClipboardList, cor: 'text-purple-400' }
-  if (t.includes('prescri')) return { Icon: Pill, cor: 'text-[#38BDF8]' }
-  return { Icon: Bell, cor: 'text-[#94A3B8]' }
-}
-
 const fmtDataBR = (d) => {
   if (!d) return ''
   const partes = String(d).split(/[T ]/)[0].split('-')
   return `${partes[2]}/${partes[1]}/${partes[0]}`
 }
 
-function BannerProfissional({ profissional, naoVisualizadas, onAbrirNotificacoes }) {
+function BannerProfissional({ profissional }) {
   if (!profissional) return null
   const iniciais = (profissional.nome || '').split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase()
   const banner = profissional.banner_url || profissional.capa_url
@@ -161,22 +137,7 @@ function BannerProfissional({ profissional, naoVisualizadas, onAbrirNotificacoes
           )}
         </div>
 
-        <div className="flex items-center gap-3 mt-4">
-          <h2 className="text-white text-xl font-bold">{profissional.nome}</h2>
-          <button
-            type="button"
-            title="Notificações"
-            onClick={onAbrirNotificacoes}
-            className="relative h-10 w-10 flex items-center justify-center rounded-xl border border-[var(--sf-border-strong)] text-[#60A5FA] hover:bg-[#2563EB]/15 hover:border-[#60A5FA] transition-colors shadow-[0_0_12px_rgba(37,99,235,0.25)]"
-          >
-            <Bell size={15} />
-            {naoVisualizadas > 0 && (
-              <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-[var(--sf-red)] text-white text-[9px] font-bold flex items-center justify-center">
-                {naoVisualizadas}
-              </span>
-            )}
-          </button>
-        </div>
+        <h2 className="text-white text-xl font-bold mt-4">{profissional.nome}</h2>
 
         {profissional.area_atuacao && (
           <p className="text-[var(--sf-text-muted)] text-sm mt-1">{profissional.area_atuacao}</p>
@@ -204,7 +165,6 @@ export default function AlunoHome() {
   const [home, setHome] = useState(null)
   const [proximos, setProximos] = useState([])
   const [carregando, setCarregando] = useState(true)
-  const [notifAberto, setNotifAberto] = useState(false)
   // Modal informativo de status do próximo feedback (sem ação de criar registro).
   const [mostrarStatusFeedback, setMostrarStatusFeedback] = useState(false)
 
@@ -220,20 +180,10 @@ export default function AlunoHome() {
     return () => { cancelado = true }
   }, [])
 
-  const abrirNotificacoes = () => {
-    setNotifAberto(true)
-    if ((home?.nao_visualizadas || 0) > 0) {
-      marcarNotificacoesVisualizadasAluno()
-        .then(() => setHome(prev => prev ? { ...prev, nao_visualizadas: 0 } : prev))
-        .catch(err => console.warn('Falha ao marcar notificações visualizadas:', err))
-    }
-  }
-
   const profissional = home?.profissional || profissionalStore
   const dadosAluno = home?.aluno || aluno
   const pendencias = home?.pendencias || {}
   const flags = dadosAluno?.flags
-  const notificacoes = home?.notificacoes || []
   const cardsBackend = (home?.cards || []).filter(c => {
     if (c.id === 'anamnese' && !pendencias.anamnese) return false
     return true
@@ -280,11 +230,7 @@ export default function AlunoHome() {
 
   return (
     <div className="pb-8 bg-[var(--sf-bg)] min-h-full">
-      <BannerProfissional
-        profissional={profissional}
-        naoVisualizadas={home?.nao_visualizadas || 0}
-        onAbrirNotificacoes={abrirNotificacoes}
-      />
+      <BannerProfissional profissional={profissional} />
 
       {temPendencia && (
         <div className="px-4 mt-2">
@@ -395,97 +341,6 @@ export default function AlunoHome() {
             )
           })()}
         </section>
-      )}
-
-      {notifAberto && (
-        <>
-          <div
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
-            onClick={() => setNotifAberto(false)}
-          />
-          <div className="fixed left-3 right-3 top-16 z-50 max-h-[75vh] flex flex-col bg-[var(--sf-bg)] border border-[var(--sf-border)] rounded-2xl shadow-[0_0_40px_rgba(37,99,235,0.25)] overflow-hidden">
-            <div className="px-4 py-3 border-b border-[var(--sf-border)] flex items-center justify-between bg-gradient-to-r from-[var(--sf-bg)] to-[var(--sf-surface-2)]">
-              <div>
-                <h3 className="text-white text-sm font-bold">Notificações</h3>
-                <p className="text-[var(--sf-text-soft)] text-xs mt-0.5">
-                  {(home?.nao_visualizadas || 0) > 0
-                    ? `${home.nao_visualizadas} nova${home.nao_visualizadas > 1 ? 's' : ''}`
-                    : 'Nenhuma nova'}
-                </p>
-              </div>
-              <button
-                onClick={() => setNotifAberto(false)}
-                className="h-8 w-8 flex items-center justify-center text-gray-400 hover:text-white border border-[var(--sf-border)] hover:border-[var(--sf-border-strong)] rounded-lg transition-colors"
-              >
-                <X size={14} />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-3">
-              {notificacoes.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 text-center">
-                  <Bell size={32} className="text-[var(--sf-text-soft)] mb-3" />
-                  <p className="text-[var(--sf-text-muted)] text-sm">Nada por aqui ainda.</p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {notificacoes.map((n, i) => {
-                    const externa = n.url && !n.url.startsWith('/aluno') && !n.url.startsWith(window.location.origin)
-                    const { Icon, cor } = iconePorTitulo(n.titulo)
-                    const clicavel = !!n.url
-                    const onClick = () => {
-                      if (!n.url) return
-                      setNotifAberto(false)
-                      // Notificação de feedback agendado: só abre se houver Feedback
-                      // status=Enviado. Caso contrário, mostra modal informativo
-                      // (não chamar mais /verificar_feedback do legado).
-                      if (n.url.includes('/verificar_feedback')) {
-                        if (pendencias.feedback) navigate(`/aluno/feedbacks/${pendencias.feedback}`)
-                        else setMostrarStatusFeedback(true)
-                        return
-                      }
-                      if (externa) window.open(n.url, '_blank', 'noopener')
-                      else navigate(n.url.replace(window.location.origin, ''))
-                    }
-                    return (
-                      <div
-                        key={n.name || i}
-                        className={`relative px-3 py-2.5 rounded-xl border
-                          ${n.visualizado
-                            ? 'bg-[var(--sf-surface)] border-[var(--sf-border)]'
-                            : 'bg-[var(--sf-surface-2)] border-[var(--sf-border-strong)] shadow-[0_0_12px_rgba(37,99,235,0.15)]'
-                          }`}
-                      >
-                        <div className="flex items-start gap-2.5">
-                          <div className={`w-8 h-8 rounded-lg border border-[var(--sf-border)] bg-[var(--sf-bg)] flex items-center justify-center shrink-0 ${cor}`}>
-                            <Icon size={13} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-white text-xs font-bold leading-snug">{n.titulo}</p>
-                            {n.descricao && (
-                              <p className="text-[var(--sf-text-muted)] text-[11px] leading-relaxed mt-0.5">{n.descricao}</p>
-                            )}
-                            <div className="flex items-center justify-between mt-1.5">
-                              <span className="text-[#60A5FA] text-[10px] font-medium">{fmtRelativo(n.creation)}</span>
-                              {clicavel && (
-                                <button
-                                  onClick={onClick}
-                                  className="text-[#60A5FA] text-[11px] font-bold flex items-center gap-0.5 hover:underline"
-                                >
-                                  Abrir <ChevronRight size={11} />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        </>
       )}
 
       {mostrarStatusFeedback && (

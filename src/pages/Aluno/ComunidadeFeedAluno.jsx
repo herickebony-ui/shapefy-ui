@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, MessageCircle } from 'lucide-react'
+import { ArrowLeft, Plus, MessageCircle, Loader2 } from 'lucide-react'
 import { Spinner, EmptyState } from '../../components/ui'
 import PostCard from '../../components/comunidade/PostCard'
 import EnqueteCard from '../../components/comunidade/EnqueteCard'
@@ -23,10 +23,13 @@ export default function ComunidadeFeedAluno() {
   const [showCriar, setShowCriar] = useState(false)
   const [comunidade, setComunidade] = useState(null)
   const [poll, setPoll] = useState(null)
+  const [publicando, setPublicando] = useState(false)
+  const [totalComunidades, setTotalComunidades] = useState(null)
   const sentinelRef = useRef(null)
 
   useEffect(() => {
     api.alunoComunidades().then(list => {
+      setTotalComunidades(list.length)
       const found = list.find(c => c.name === name)
       if (found) setComunidade(found)
     }).catch(() => {})
@@ -79,7 +82,20 @@ export default function ComunidadeFeedAluno() {
     return () => observer.disconnect()
   }, [load])
 
-  const handleNewPost = async ({ caption, imagem }) => {
+  const handleNewPost = async ({ caption, imagem, file }) => {
+    if (file) {
+      setPublicando(true)
+      try {
+        const imageUrl = await api.uploadImagemComunidade(file)
+        await api.alunoCriarPost(name, { caption, imagem: imageUrl })
+        load(null)
+      } catch (e) {
+        errorModal.show(e, 'Criar post')
+      } finally {
+        setPublicando(false)
+      }
+      return
+    }
     await api.alunoCriarPost(name, { caption, imagem })
     load(null)
   }
@@ -96,7 +112,7 @@ export default function ComunidadeFeedAluno() {
       {errorModal.element}
       <div className="px-4 pt-4 pb-3 border-b border-[var(--sf-border,#323238)] bg-[var(--sf-bg,#121214)]/95 backdrop-blur-sm sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/aluno/comunidades')} title="Voltar"
+          <button onClick={() => navigate(totalComunidades === 1 ? '/aluno' : '/aluno/comunidades')} title="Voltar"
             className="h-9 w-9 flex items-center justify-center text-gray-400 hover:text-white border border-[var(--sf-border,#323238)] hover:border-[var(--sf-border-strong,#4a4a52)] rounded-lg transition-colors shrink-0">
             <ArrowLeft size={16} />
           </button>
@@ -119,6 +135,13 @@ export default function ComunidadeFeedAluno() {
           <Plus size={16} className="text-[var(--sf-blue,#2563eb)]" />
           Compartilhar algo...
         </button>
+
+        {publicando && (
+          <div className="flex items-center gap-2.5 px-4 py-2.5 bg-[var(--sf-blue,#2563eb)]/10 border border-[var(--sf-blue,#2563eb)]/20 rounded-xl">
+            <Loader2 size={14} className="text-[var(--sf-blue,#2563eb)] animate-spin" />
+            <span className="text-[var(--sf-blue,#2563eb)] text-xs font-medium">Publicando seu post...</span>
+          </div>
+        )}
 
         {/* Enquete ativa no topo */}
         {poll && (
@@ -159,7 +182,7 @@ export default function ComunidadeFeedAluno() {
         )}
       </div>
 
-      <CriarPostModal isOpen={showCriar} onClose={() => setShowCriar(false)} onSubmit={handleNewPost} />
+      <CriarPostModal isOpen={showCriar} onClose={() => setShowCriar(false)} onSubmit={handleNewPost} asyncMode />
     </div>
   )
 }

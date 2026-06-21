@@ -2,9 +2,10 @@ import { useState, useRef } from 'react'
 import { Image as ImageIcon, X, Upload } from 'lucide-react'
 import { Modal, Button, Spinner } from '../ui'
 import { uploadImagemComunidade } from '../../api/comunidade'
+import { toRenderableImage } from '../../utils/heicToJpeg'
 import useErrorModal from '../../hooks/useErrorModal'
 
-export default function CriarPostModal({ isOpen, onClose, onSubmit }) {
+export default function CriarPostModal({ isOpen, onClose, onSubmit, asyncMode }) {
   const [caption, setCaption] = useState('')
   const [file, setFile] = useState(null)
   const [preview, setPreview] = useState(null)
@@ -13,18 +14,20 @@ export default function CriarPostModal({ isOpen, onClose, onSubmit }) {
   const inputRef = useRef(null)
   const errorModal = useErrorModal()
 
-  const handleFile = (f) => {
+  const handleFile = async (f) => {
     if (!f) return
-    if (!f.type.startsWith('image/')) {
-      errorModal.show({ type: 'validation', title: 'Arquivo inválido', messages: ['Envie apenas imagens.'], statusCode: 0 }, 'Upload')
+    const ehImagem = f.type.startsWith('image/') || /\.(heic|heif)$/i.test(f.name || '')
+    if (!ehImagem) {
+      errorModal.show({ type: 'validation', title: 'Arquivo inválido', messages: ['Envie apenas imagens (PNG, JPG, WEBP, HEIC).'], statusCode: 0 }, 'Upload')
       return
     }
     if (f.size > 10 * 1024 * 1024) {
       errorModal.show({ type: 'validation', title: 'Arquivo muito grande', messages: ['Máximo 10MB.'], statusCode: 0 }, 'Upload')
       return
     }
-    setFile(f)
-    setPreview(URL.createObjectURL(f))
+    const preparado = await toRenderableImage(f)
+    setFile(preparado)
+    setPreview(URL.createObjectURL(preparado))
   }
 
   const removeImage = () => {
@@ -35,6 +38,17 @@ export default function CriarPostModal({ isOpen, onClose, onSubmit }) {
 
   const handleSubmit = async () => {
     if (!caption.trim() && !file) return
+
+    if (asyncMode && file) {
+      const captionTrimmed = caption.trim()
+      const rawFile = file
+      setCaption('')
+      removeImage()
+      onClose()
+      onSubmit({ caption: captionTrimmed, file: rawFile })
+      return
+    }
+
     setSubmitting(true)
     try {
       let imageUrl = null
@@ -92,7 +106,7 @@ export default function CriarPostModal({ isOpen, onClose, onSubmit }) {
             Adicionar foto
           </button>
         )}
-        <input ref={inputRef} type="file" accept="image/*" className="hidden"
+        <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/heic,image/heif" className="hidden"
           onChange={e => { handleFile(e.target.files?.[0]); e.target.value = '' }} />
 
         <p className="text-gray-600 text-[10px] text-right">{caption.length}/2000</p>

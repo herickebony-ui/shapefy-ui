@@ -46,10 +46,14 @@ export default function ComunidadesAluno() {
     setLoading(true)
     try {
       const res = await alunoComunidades()
+      if (res.length === 1) {
+        navigate(`/aluno/comunidades/${res[0].name}`, { replace: true })
+        return
+      }
       setComunidades(res)
     } catch { /* ignore */ }
     finally { setLoading(false) }
-  }, [])
+  }, [navigate])
 
   useEffect(() => { carregar() }, [carregar])
 

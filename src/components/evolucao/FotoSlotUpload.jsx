@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { Upload, Trash2, Camera } from 'lucide-react'
 import client from '../../api/client'
 import { cropImgStyle } from './ModeloCropper'
+import { toRenderableImage } from '../../utils/heicToJpeg'
 import useErrorModal from '../../hooks/useErrorModal'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
@@ -17,14 +18,16 @@ export default function FotoSlotUpload({ label, value, onChange, modelo = '', mo
 
   const enviarArquivo = async (file) => {
     if (!file) return
-    if (!file.type.startsWith('image/')) {
-      errorModal.show({ type: 'validation', title: 'Arquivo inválido', messages: ['Envie apenas imagens (PNG, JPG, WEBP).'], statusCode: 0 }, 'Upload de foto')
+    const ehImagem = file.type.startsWith('image/') || /\.(heic|heif)$/i.test(file.name || '')
+    if (!ehImagem) {
+      errorModal.show({ type: 'validation', title: 'Arquivo inválido', messages: ['Envie apenas imagens (PNG, JPG, WEBP, HEIC).'], statusCode: 0 }, 'Upload de foto')
       return
     }
     setUploading(true)
     try {
+      const preparado = await toRenderableImage(file)
       const fd = new FormData()
-      fd.append('file', file)
+      fd.append('file', preparado)
       fd.append('is_private', '0')
       fd.append('optimize', '0')
       const res = await client.post('/api/method/upload_file', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
@@ -107,7 +110,7 @@ export default function FotoSlotUpload({ label, value, onChange, modelo = '', mo
           </button>
         )}
       </div>
-      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; enviarArquivo(f) }} />
+      <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/heic,image/heif" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; enviarArquivo(f) }} />
     </div>
   )
 }
