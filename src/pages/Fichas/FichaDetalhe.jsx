@@ -1964,9 +1964,6 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
             <FormGroup label="Nível">
               <Select value={ficha.nivel || ''} onChange={v => upd('nivel', v)} options={['Iniciante', 'Intermediário', 'Avançado']} placeholder="Selecionar..." />
             </FormGroup>
-            <FormGroup label="Ciclo">
-              <Select value={ficha.tipo_de_ciclo || ''} onChange={v => upd('tipo_de_ciclo', v)} options={['Macrociclo', 'Mesociclo', 'Microciclo']} placeholder="Selecionar..." />
-            </FormGroup>
           </div>
 
           <FormGroup label="Orientações Gerais">
