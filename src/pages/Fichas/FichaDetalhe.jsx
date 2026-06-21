@@ -1909,10 +1909,9 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
     const s = steps[step]
 
     if (s.id === 'config') return (
-      <div className="flex flex-col gap-6 max-w-6xl mx-auto w-full">
-        <div className="space-y-4">
-          <h3 className="text-white font-semibold text-sm border-b border-[#323238] pb-2">Informações da Ficha</h3>
-          <div className={`grid grid-cols-1 ${isTemplate ? '' : 'md:grid-cols-2'} gap-4`}>
+      <div className="flex flex-col gap-4 max-w-6xl mx-auto w-full">
+        <div className="space-y-2">
+          <div className={`grid grid-cols-1 ${isTemplate ? '' : 'md:grid-cols-2'} gap-3`}>
             {!isTemplate && (
               <FormGroup label="Aluno" required>
                 {ficha.nome_completo ? (
@@ -1934,8 +1933,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
               <Input value={ficha.titulo || ''} onChange={v => upd('titulo', v)} placeholder="Ex: Fase 1 — Hipertrofia, Pós-lesão..." />
             </FormGroup>
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <FormGroup label="Objetivo">
               <Input value={ficha.objetivo || ''} onChange={v => upd('objetivo', v)} placeholder="Ex: Hipertrofia, Emagrecimento..." />
             </FormGroup>
@@ -1945,9 +1943,9 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
           </div>
 
           {!isTemplate && (
-            <div className="bg-[#1a1a1a] p-4 rounded-lg border border-[#323238] space-y-3">
+            <div className="bg-[#1a1a1a] p-3 rounded-lg border border-[#323238] space-y-2">
               <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">Planejamento Temporal</span>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
                 <FormGroup label="Data de Início">
                   <Input type="date" value={ficha.data_de_inicio || ''} onChange={v => upd('data_de_inicio', v)} />
                 </FormGroup>
