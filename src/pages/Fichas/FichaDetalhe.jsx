@@ -1226,8 +1226,12 @@ const SeriesModal = ({ ex, onChange, onClose }) => {
   return (
     <Modal isOpen onClose={onClose} title={ex.exercicio || 'Configurar Séries'} subtitle="Nomear e técnicas intensificadoras" size="sm">
       <div className="p-4 space-y-5">
+        <FormGroup label="Séries" hint="Número de séries do exercício">
+          <Input type="number" value={ex.series || ''} onChange={v => onChange({ ...ex, series: v })} />
+        </FormGroup>
+
         {n === 0 ? (
-          <p className="text-center text-xs text-gray-500 py-6">Defina o nº de séries no campo Séries primeiro.</p>
+          <p className="text-center text-xs text-gray-500 py-6">Defina o nº de séries acima primeiro.</p>
         ) : (
           <>
             {/* Nomear séries */}

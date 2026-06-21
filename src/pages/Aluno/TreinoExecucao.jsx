@@ -756,8 +756,18 @@ function TecnicaSheet({ tecnica, onClose }) {
             </p>
           )}
           {tecnica.video && (
-            <div className="mt-1">
-              <VideoEmbed id={tecnica.video} plataforma={tecnica.plataforma_video || 'YouTube'} />
+            <div className="mt-1 relative w-full aspect-video rounded-xl overflow-hidden border border-[var(--sf-border)] bg-black">
+              {(tecnica.plataforma_video || 'YouTube').toLowerCase().includes('drive') ? (
+                <video src={getDriveStream(tecnica.video)} controls playsInline preload="metadata" className="w-full h-full" />
+              ) : (
+                <iframe
+                  src={(tecnica.plataforma_video || '').toLowerCase().includes('vimeo') ? getVimeoEmbed(tecnica.video) : getYouTubeEmbed(tecnica.video)}
+                  title={tecnica.nome}
+                  allow="autoplay; encrypted-media; picture-in-picture"
+                  allowFullScreen
+                  className="w-full h-full"
+                />
+              )}
             </div>
           )}
         </div>
