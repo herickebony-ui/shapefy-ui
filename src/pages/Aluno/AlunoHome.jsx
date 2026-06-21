@@ -27,6 +27,7 @@ const ICON_POR_ID = {
   feedback: MessageSquare,
   prescricoes: Pill,
   perfil: User,
+  comunidade: MessageSquare,
 }
 
 const InstagramIcon = (props) => (
@@ -62,6 +63,8 @@ function resolveCardLink(card, pendencias, flags) {
       return { reactPath: '/aluno/prescricoes' }
     case 'perfil':
       return { reactPath: '/aluno/perfil' }
+    case 'comunidade':
+      return { reactPath: '/aluno/comunidades' }
     default:
       return { href: legado(card.url_legado || '/'), externa: true }
   }

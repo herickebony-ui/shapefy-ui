@@ -38,6 +38,9 @@ const NAV_ITEMS = [
   { id: 'treinos',              label: 'Treinos Realizados',           icon: Activity,        path: '/treinos',           modulo: 'treino',  funcPerm: 'treino' },
   { id: 'progressao-cargas',    label: 'Progressão de Cargas',         icon: TrendingUp,      path: '/progressao-cargas', modulo: 'treino',  funcPerm: 'treino' },
 
+  { type: 'divider', label: 'Social' },
+  { id: 'comunidade',  label: 'Comunidade',           icon: MessageSquare,   path: '/comunidade' },
+
   { type: 'divider', label: 'Financeiro' },
   { id: 'financeiro',   label: 'Pagamentos',          icon: Wallet,          path: '/financeiro',                      funcPerm: 'pagamentos' },
   { id: 'planos',       label: 'Planos',              icon: Layers,          path: '/planos',                          funcPerm: 'planos' },

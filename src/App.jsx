@@ -67,6 +67,12 @@ import AvaliacaoCompararAluno from './pages/Aluno/AvaliacaoComparar'
 import PerfilAluno from './pages/Aluno/PerfilAluno'
 import PerfilEditar from './pages/Aluno/PerfilEditar'
 import FeedbacksProximos from './pages/Aluno/FeedbacksProximos'
+import ComunidadeListagem from './pages/Comunidade/ComunidadeListagem'
+import ComunidadeDetalhe from './pages/Comunidade/ComunidadeDetalhe'
+import ComunidadesAluno from './pages/Aluno/ComunidadesAluno'
+import ComunidadeFeedAluno from './pages/Aluno/ComunidadeFeedAluno'
+import PostDetalhe from './pages/Comunidade/PostDetalhe'
+import PostDetalheAluno from './pages/Aluno/PostDetalheAluno'
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -144,6 +150,9 @@ function App() {
           <Route path="avaliacoes/:name" element={<AvaliacaoDetalheAluno />} />
           <Route path="perfil" element={<PerfilAluno />} />
           <Route path="perfil/editar" element={<PerfilEditar />} />
+          <Route path="comunidades" element={<ComunidadesAluno />} />
+          <Route path="comunidades/:name" element={<ComunidadeFeedAluno />} />
+          <Route path="comunidades/:name/post/:postName" element={<PostDetalheAluno />} />
         </Route>
 
         <Route
@@ -213,6 +222,9 @@ function App() {
           <Route path="assinatura" element={<MinhaAssinatura />} />
           <Route path="prescricoes" element={<PrescricaoListagem />} />
           <Route path="prescricoes/:id" element={<PrescricaoDetalhe />} />
+          <Route path="comunidade" element={<ComunidadeListagem />} />
+          <Route path="comunidade/:name" element={<ComunidadeDetalhe />} />
+          <Route path="comunidade/:name/post/:postName" element={<PostDetalhe />} />
           <Route path="financeiro" element={<FinanceiroListagem />} />
           <Route path="planos" element={<PlanosListagem />} />
           <Route path="meu-link-cadastro" element={<MeuLinkCadastro />} />
