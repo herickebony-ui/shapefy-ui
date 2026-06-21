@@ -52,16 +52,27 @@ export default function TextareaComSugestoes({
     return todasSugestoes.some(s => normalizar(s[campo]) === n)
   }, [todasSugestoes, value, campo])
 
+  // Reseta o cache quando o doctype/campo muda — a mesma instância é reusada
+  // ao trocar de aba (ex.: Aeróbicos↔Alongamentos), senão fica com as sugestões
+  // do contexto anterior.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTodasSugestoes(null)
+    setDropdownOpen(false)
+  }, [doctype, campo])
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (doctype && campo && value?.trim() && todasSugestoes === null) carregarTodas()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, doctype, campo])
 
-  const abrirDrop = async () => {
+  // Só abre o dropdown quando há texto digitado — focar o campo vazio não deve
+  // despejar todas as sugestões (poluía a tela sobrepondo a tabela abaixo).
+  const abrirDrop = async (q = value) => {
+    if (!q?.trim()) { setDropdownOpen(false); return }
     const lista = await carregarTodas()
-    const filtradas = filtrar(lista, value)
-    if (filtradas.length > 0) setDropdownOpen(true)
+    setDropdownOpen(filtrar(lista, q).length > 0)
   }
 
   const salvarNoBanco = async () => {
@@ -94,7 +105,7 @@ export default function TextareaComSugestoes({
     <div className="relative">
       <textarea
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => { onChange(e.target.value); abrirDrop(e.target.value) }}
         onBlur={handleBlur}
         onFocus={handleFocus}
         placeholder={placeholder}

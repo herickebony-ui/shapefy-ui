@@ -381,6 +381,12 @@ const TextareaExpansivel = ({ value, onChange, placeholder = '', resetKey, class
   }
   const handleFocus = async () => { clearTimeout(blurRef.current); grow(); await abrirDrop() }
 
+  // Reseta o cache quando o doctype/campo muda (instância reusada ao trocar de aba).
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTodasSugestoes(null)
+  }, [doctype, campo])
+
   // Carrega sugestões na primeira renderização com valor — necessário pra que
   // o check `jaExisteNoBanco` funcione sem precisar focar antes.
   useEffect(() => {
@@ -549,6 +555,14 @@ const InputSug = ({ value, onChange, doctype, campo, className = '', extra = nul
   useEffect(() => {
     if (dropOpen) posicionar()
   }, [value, dropOpen])
+
+  // Reseta o cache quando o doctype/campo muda (ex.: trocar aba Alongamento↔Aeróbico
+  // reusa a mesma instância do componente) — senão fica com sugestões da aba anterior.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTodasSugestoes(null)
+    setDropOpen(false)
+  }, [doctype, campo])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
