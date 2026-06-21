@@ -1176,8 +1176,8 @@ export default function FichaListagem() {
                 headerClass: 'min-w-[200px]',
                 render: (f) => (
                   <>
-                    <p className="text-white font-medium text-sm truncate">{f.nome_completo || '—'}</p>
-                    {f.titulo && <p className="text-blue-400/80 text-xs mt-0.5 truncate italic">{f.titulo}</p>}
+                    <p className="text-white font-bold text-sm truncate">{f.nome_completo || '—'}</p>
+                    {f.titulo && <p className="text-gray-300 font-medium text-sm truncate">{f.titulo}</p>}
                     <p className="text-gray-500 text-xs mt-0.5">criado em: {formatDate(f.creation)}</p>
                   </>
                 ),

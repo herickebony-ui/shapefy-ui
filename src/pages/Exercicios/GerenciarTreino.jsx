@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Plus, Edit, Trash2, X, RefreshCw, BookOpen, ExternalLink, Play } from 'lucide-react'
+import { Plus, Edit, Trash2, X, RefreshCw, BookOpen, ExternalLink, Play, Shuffle } from 'lucide-react'
 import {
   listarExercicios, salvarTreinoExercicio, excluirTreinoExercicio, listarGruposMusculares,
 } from '../../api/fichas'
 import {
   Button, FormGroup, Input, Select, Modal, EmptyState, DataTable, Badge,
-  ImportExcelButton, BotaoTutoriais,
+  ImportExcelButton, BotaoTutoriais, Autocomplete,
 } from '../../components/ui'
 import { TUTORIAIS_EXERCICIOS } from '../../data/tutoriais'
 import ListPage from '../../components/templates/ListPage'
@@ -97,7 +97,7 @@ const normIntensidade = (v) => String(v ?? '').replace('.', ',')
 
 // ─── ModalExercicio ───────────────────────────────────────────────────────────
 
-const ModalExercicio = ({ exercicio, grupos, onSave, onClose }) => {
+const ModalExercicio = ({ exercicio, grupos, exercicios: todosExercicios = [], onSave, onClose }) => {
   const isEdit = !!exercicio?.name
   const [saving, setSaving] = useState(false)
   const errorModal = useErrorModal()
@@ -107,6 +107,19 @@ const ModalExercicio = ({ exercicio, grupos, onSave, onClose }) => {
   const [video, setVideo] = useState(exercicio?.video || '')
   const [plataforma, setPlataforma] = useState(exercicio?.['plataforma_do_vídeo'] || 'YouTube')
   const [videoDetected, setVideoDetected] = useState(false)
+  const [substitutos, setSubstitutos] = useState([]) // [{name, nome}]
+
+  useEffect(() => {
+    if (!exercicio?.name) return
+    import('../../api/client').then(({ default: client }) => {
+      client.get(`/api/resource/Treino%20Exercicio/${encodeURIComponent(exercicio.name)}`)
+        .then(res => {
+          const subs = res.data?.data?.substitutos || []
+          setSubstitutos(subs.map(s => ({ name: s.exercicio, nome: s.nome_exercicio || s.exercicio })))
+        })
+        .catch(() => {})
+    })
+  }, [exercicio?.name])
 
   const handleVideoChange = (v) => {
     const info = extractVideoInfo(v)
@@ -157,6 +170,10 @@ const ModalExercicio = ({ exercicio, grupos, onSave, onClose }) => {
           doctype: 'Treino Exercicio Grupo Muscular',
           grupo_muscular: i.grupo_muscular,
           intensidade: normIntensidade(i.intensidade),
+        })),
+        substitutos: substitutos.map(s => ({
+          doctype: 'Treino Exercicio Substituto',
+          exercicio: s.name,
         })),
       }
       const resultado = await salvarTreinoExercicio(isEdit ? exercicio.name : null, payload)
@@ -302,6 +319,44 @@ const ModalExercicio = ({ exercicio, grupos, onSave, onClose }) => {
               </div>
             </>
           )}
+        </div>
+
+        <div className="border border-[#323238] rounded-lg overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-2 bg-[#1a1a1a] border-b border-[#323238]">
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Exercícios Substitutos</span>
+          </div>
+          <div className="p-3">
+            <Autocomplete
+              placeholder="Buscar exercício substituto..."
+              icon={Shuffle}
+              searchFn={async (q) => {
+                const norm = q.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+                return todosExercicios.filter(e =>
+                  e.nome_do_exercicio?.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(norm) &&
+                  e.name !== exercicio?.name &&
+                  !substitutos.some(s => s.name === e.name)
+                ).slice(0, 10)
+              }}
+              onSelect={(e) => setSubstitutos(prev => [...prev, { name: e.name, nome: e.nome_do_exercicio }])}
+              renderItem={(e) => <span className="text-sm text-white">{e.nome_do_exercicio}</span>}
+              emptyState={<span className="text-xs text-gray-500">Nenhum exercício encontrado</span>}
+            />
+            {substitutos.length === 0 ? (
+              <p className="text-gray-600 text-xs text-center py-3">Nenhum substituto cadastrado.</p>
+            ) : (
+              <div className="mt-2 flex flex-col gap-1">
+                {substitutos.map((s, i) => (
+                  <div key={s.name} className="flex items-center justify-between px-3 py-2 bg-[#29292e] rounded-lg">
+                    <span className="text-gray-200 text-xs">{s.nome}</span>
+                    <button onClick={() => setSubstitutos(prev => prev.filter((_, idx) => idx !== i))}
+                      className="h-6 w-6 flex items-center justify-center text-gray-500 hover:text-red-400 transition-colors">
+                      <X size={11} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </Modal>
@@ -607,6 +662,7 @@ export default function GerenciarTreino() {
         <ModalExercicio
           exercicio={editando}
           grupos={grupos}
+          exercicios={exercicios}
           onSave={handleSave}
           onClose={() => { setModalOpen(false); setEditando(null) }}
         />

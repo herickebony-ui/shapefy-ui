@@ -361,9 +361,8 @@ function ExercicioBody({
 }) {
   const pulado = estado?.pulado === true
   const concluido = estado?.concluido === true
-  const tituloFinal = estado?.exercicio_substituto
-    ? `${exercicio.exercicio} (Substituto: ${estado.exercicio_substituto})`
-    : exercicio.exercicio
+  const tituloFinal = estado?.exercicio_substituto || exercicio.exercicio
+  const foiSubstituido = !!estado?.exercicio_substituto
   const series = estado?.series || []
   const semSeries = series.length === 0
 
@@ -379,6 +378,9 @@ function ExercicioBody({
           <p className="text-white text-sm font-bold mt-0.5 leading-snug">
             {tituloFinal}
           </p>
+          {foiSubstituido && (
+            <p className="text-[10px] text-[var(--sf-text-muted)] mt-0.5 line-through">{exercicio.exercicio}</p>
+          )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <button
@@ -566,7 +568,7 @@ function ExercicioCard({
               <ExercicioBody
                 exercicio={ex}
                 estado={estados?.[ex.name]}
-                onSubstituir={() => onSubstituir(ex.name, ex.exercicio)}
+                onSubstituir={() => onSubstituir(ex.name, ex.exercicio, ex.substitutos)}
                 onPular={() => onPular(ex.name)}
                 onUpdateSerie={(idx, patch) => onUpdateSerie(ex.name, idx, patch)}
                 onConcluirSerie={(idx, desc) => onConcluirSerie(ex.name, idx, desc)}
@@ -587,7 +589,7 @@ function ExercicioCard({
       <ExercicioBody
         exercicio={ex}
         estado={estados?.[ex.name]}
-        onSubstituir={() => onSubstituir(ex.name, ex.exercicio)}
+        onSubstituir={() => onSubstituir(ex.name, ex.exercicio, ex.substitutos)}
         onPular={() => onPular(ex.name)}
         onUpdateSerie={(idx, patch) => onUpdateSerie(ex.name, idx, patch)}
         onConcluirSerie={(idx, desc) => onConcluirSerie(ex.name, idx, desc)}
@@ -595,6 +597,53 @@ function ExercicioCard({
         onConcluirExercicio={() => onConcluirExercicio(ex.name)}
         onFeedback={(v) => onFeedback(ex.name, v)}
       />
+    </div>
+  )
+}
+
+// ============================================================
+// ============================================================
+// SubstitutosSheet — lista de substitutos pré-cadastrados
+// ============================================================
+
+function SubstitutosSheet({ aberto, exercicioNome, substitutos = [], onSelect, onClose }) {
+  if (!aberto) return null
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm p-3"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-[420px] bg-[var(--sf-surface)] border border-[var(--sf-border)] rounded-2xl shadow-[0_25px_50px_rgba(0,0,0,0.6)] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-4 py-3 border-b border-[var(--sf-border)]">
+          <p className="text-white text-sm font-bold">Substituir exercicio</p>
+          <p className="text-[var(--sf-text-muted)] text-[11px] mt-0.5 truncate">
+            Substituindo: {exercicioNome}
+          </p>
+        </div>
+        <div className="py-2 max-h-72 overflow-y-auto">
+          {substitutos.map((s) => (
+            <button
+              key={s.name}
+              onClick={() => onSelect(s.nome)}
+              className="w-full text-left px-4 py-3 text-white text-sm hover:bg-[var(--sf-surface-2)] transition-colors flex items-center gap-3"
+            >
+              <Replace size={13} className="text-[#60A5FA] shrink-0" />
+              {s.nome}
+            </button>
+          ))}
+        </div>
+        <div className="px-4 py-3 border-t border-[var(--sf-border)]">
+          <button
+            onClick={onClose}
+            className="w-full h-9 rounded-lg border border-[var(--sf-border)] text-gray-300 text-xs font-bold hover:bg-[var(--sf-surface-2)] transition-colors"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -794,6 +843,7 @@ export default function TreinoExecucao() {
   // Modais customizados (substituem window.prompt/confirm)
   const [promptState, setPromptState] = useState(null) // { title, subtitle, placeholder, initialValue, confirmLabel, onConfirm }
   const [confirmState, setConfirmState] = useState(null) // { title, message, confirmLabel, confirmVariant, onConfirm }
+  const [substitutosSheet, setSubstitutosSheet] = useState(null) // { exercicioName, exercicioNome, substitutos }
 
   // Carrega backend + verifica anti-duplicacao
   useEffect(() => {
@@ -870,18 +920,22 @@ export default function TreinoExecucao() {
     }))
   }, [])
 
-  const handleSubstituir = (name, nomeAtual) => {
-    setPromptState({
-      title: 'Substituir exercicio',
-      subtitle: `Substituir "${nomeAtual}" por:`,
-      placeholder: 'Nome do exercicio substituto',
-      initialValue: '',
-      confirmLabel: 'Substituir',
-      onConfirm: (valor) => {
-        atualizarExercicio(name, { exercicio_substituto: valor || null })
-        setPromptState(null)
-      },
-    })
+  const handleSubstituir = (name, nomeAtual, substitutos = []) => {
+    if (substitutos.length > 0) {
+      setSubstitutosSheet({ exercicioName: name, exercicioNome: nomeAtual, substitutos })
+    } else {
+      setPromptState({
+        title: 'Substituir exercicio',
+        subtitle: `Substituir "${nomeAtual}" por:`,
+        placeholder: 'Nome do exercicio substituto',
+        initialValue: '',
+        confirmLabel: 'Substituir',
+        onConfirm: (valor) => {
+          atualizarExercicio(name, { exercicio_substituto: valor || null })
+          setPromptState(null)
+        },
+      })
+    }
   }
 
   const handlePular = (name) => {
@@ -1268,6 +1322,17 @@ export default function TreinoExecucao() {
         onClose={() => !enviando && setModalFinalizar(false)}
         onConfirmar={handleFinalizar}
         enviando={enviando}
+      />
+
+      <SubstitutosSheet
+        aberto={!!substitutosSheet}
+        exercicioNome={substitutosSheet?.exercicioNome}
+        substitutos={substitutosSheet?.substitutos || []}
+        onSelect={(nome) => {
+          atualizarExercicio(substitutosSheet.exercicioName, { exercicio_substituto: nome })
+          setSubstitutosSheet(null)
+        }}
+        onClose={() => setSubstitutosSheet(null)}
       />
 
       <PromptModal
