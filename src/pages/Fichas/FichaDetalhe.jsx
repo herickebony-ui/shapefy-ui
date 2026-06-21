@@ -227,8 +227,8 @@ const calcVolume = (ficha, intensidadeMap = {}) => {
 // ─── novaFicha ────────────────────────────────────────────────────────────────
 
 const novaFicha = () => ({
-  aluno: '', nome_completo: '', data_de_inicio: '', data_de_fim: '',
-  objetivo: '', nivel: '', tipo_de_ciclo: '', orientacoes: '',
+  aluno: '', nome_completo: '', titulo: '', data_de_inicio: '', data_de_fim: '',
+  objetivo: '', nivel: '', orientacoes: '',
   orientacoes_aerobicos: '', orientacoes_aem: '',
   orientacoes_treino_a: '', orientacoes_treino_b: '', orientacoes_treino_c: '',
   orientacoes_treino_d: '', orientacoes_treino_e: '', orientacoes_treino_f: '',
@@ -1936,6 +1936,10 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
                 placeholder="Selecionar..." />
             </FormGroup>
           </div>
+
+          <FormGroup label="Nome / Título da Ficha" hint="Visível apenas para o profissional">
+            <Input value={ficha.titulo || ''} onChange={v => upd('titulo', v)} placeholder="Ex: Fase 1 — Hipertrofia, Pós-lesão..." />
+          </FormGroup>
 
           {!isTemplate && (
             <div className="bg-[#1a1a1a] p-4 rounded-lg border border-[#323238] space-y-3">

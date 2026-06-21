@@ -13,7 +13,7 @@ export const listarFichas = async ({ busca, nivel, aluno, page = 1, limit = 50 }
 
   const params = {
     fields: JSON.stringify([
-      'name', 'creation', 'aluno', 'nome_completo',
+      'name', 'creation', 'aluno', 'nome_completo', 'titulo',
       'nivel', 'objetivo', 'data_de_inicio', 'data_de_fim', 'estrutura_calculada',
     ]),
     filters: JSON.stringify(filters),
