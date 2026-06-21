@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Plus, Edit, Trash2, X, RefreshCw, BookOpen, ExternalLink, Play, Shuffle } from 'lucide-react'
+import { Plus, Edit, Trash2, X, RefreshCw, BookOpen, ExternalLink, Play, Shuffle, Zap } from 'lucide-react'
 import {
   listarExercicios, salvarTreinoExercicio, excluirTreinoExercicio, listarGruposMusculares,
 } from '../../api/fichas'
+import { listarTodasTecnicas, salvarTecnica, excluirTecnica } from '../../api/tecnicas'
 import {
-  Button, FormGroup, Input, Select, Modal, EmptyState, DataTable, Badge,
-  ImportExcelButton, BotaoTutoriais, Autocomplete,
+  Button, FormGroup, Input, Select, Modal, EmptyState, DataTable, Badge, Textarea,
+  ImportExcelButton, BotaoTutoriais, Autocomplete, Tabs,
 } from '../../components/ui'
+import { buscarSmart } from '../../utils/strings'
 import { TUTORIAIS_EXERCICIOS } from '../../data/tutoriais'
 import ListPage from '../../components/templates/ListPage'
 import ExplorarBibliotecaModal from '../../components/ExplorarBibliotecaModal'
@@ -97,7 +99,7 @@ const normIntensidade = (v) => String(v ?? '').replace('.', ',')
 
 // ─── ModalExercicio ───────────────────────────────────────────────────────────
 
-const ModalExercicio = ({ exercicio, grupos, exercicios: todosExercicios = [], onSave, onClose }) => {
+const ModalExercicio = ({ exercicio, grupos, exercicios: todosExercicios = [], onSave, onClose, onVerVideo }) => {
   const isEdit = !!exercicio?.name
   const [saving, setSaving] = useState(false)
   const errorModal = useErrorModal()
@@ -244,6 +246,60 @@ const ModalExercicio = ({ exercicio, grupos, exercicios: todosExercicios = [], o
           <span className="text-sm text-gray-300">Exercício ativo</span>
         </label>
 
+        <div className="border border-[#2563eb]/30 bg-[#2563eb]/5 rounded-lg overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-2 bg-[#2563eb]/10 border-b border-[#2563eb]/20">
+            <Shuffle size={13} className="text-blue-400 shrink-0" />
+            <span className="text-xs font-bold text-blue-300 uppercase tracking-wider">Exercícios Substitutos</span>
+          </div>
+          <div className="p-3">
+            <Autocomplete
+              key={substitutos.length}
+              placeholder="Buscar exercício substituto... (use % como coringa)"
+              icon={Shuffle}
+              searchFn={async (q) => {
+                return todosExercicios.filter(e =>
+                  buscarSmart(e.nome_do_exercicio, q) &&
+                  e.name !== exercicio?.name &&
+                  !substitutos.some(s => s.name === e.name)
+                ).slice(0, 10)
+              }}
+              onSelect={(e) => setSubstitutos(prev => [...prev, { name: e.name, nome: e.nome_do_exercicio }])}
+              renderItem={(e) => <span className="text-sm text-white">{e.nome_do_exercicio}</span>}
+              emptyState={<span className="text-xs text-gray-500">Nenhum exercício encontrado</span>}
+            />
+            {substitutos.length === 0 ? (
+              <p className="text-gray-600 text-xs text-center py-3">Nenhum substituto cadastrado.</p>
+            ) : (
+              <div className="mt-2 flex flex-col gap-1">
+                {substitutos.map((s, i) => {
+                  const exInfo = todosExercicios.find(e => e.name === s.name)
+                  const temVideo = !!exInfo?.video
+                  return (
+                    <div key={s.name} className="flex items-center justify-between px-3 py-2 bg-[#29292e] rounded-lg">
+                      <span className="text-gray-200 text-xs">{s.nome}</span>
+                      <div className="flex items-center gap-1">
+                        {temVideo && (
+                          <button
+                            onClick={() => onVerVideo?.({ id: exInfo.video, platform: exInfo['plataforma_do_vídeo'] || 'YouTube', titulo: exInfo.nome_do_exercicio })}
+                            title="Ver vídeo"
+                            className="h-6 w-6 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors"
+                          >
+                            <Play size={10} />
+                          </button>
+                        )}
+                        <button onClick={() => setSubstitutos(prev => prev.filter((_, idx) => idx !== i))}
+                          className="h-6 w-6 flex items-center justify-center text-gray-500 hover:text-red-400 transition-colors">
+                          <X size={11} />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="border border-[#323238] rounded-lg overflow-hidden">
           <div className="flex items-center justify-between px-4 py-2 bg-[#1a1a1a] border-b border-[#323238]">
             <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Intensidade por Grupo Muscular</span>
@@ -320,52 +376,255 @@ const ModalExercicio = ({ exercicio, grupos, exercicios: todosExercicios = [], o
             </>
           )}
         </div>
-
-        <div className="border border-[#323238] rounded-lg overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-2 bg-[#1a1a1a] border-b border-[#323238]">
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Exercícios Substitutos</span>
-          </div>
-          <div className="p-3">
-            <Autocomplete
-              placeholder="Buscar exercício substituto..."
-              icon={Shuffle}
-              searchFn={async (q) => {
-                const norm = q.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
-                return todosExercicios.filter(e =>
-                  e.nome_do_exercicio?.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(norm) &&
-                  e.name !== exercicio?.name &&
-                  !substitutos.some(s => s.name === e.name)
-                ).slice(0, 10)
-              }}
-              onSelect={(e) => setSubstitutos(prev => [...prev, { name: e.name, nome: e.nome_do_exercicio }])}
-              renderItem={(e) => <span className="text-sm text-white">{e.nome_do_exercicio}</span>}
-              emptyState={<span className="text-xs text-gray-500">Nenhum exercício encontrado</span>}
-            />
-            {substitutos.length === 0 ? (
-              <p className="text-gray-600 text-xs text-center py-3">Nenhum substituto cadastrado.</p>
-            ) : (
-              <div className="mt-2 flex flex-col gap-1">
-                {substitutos.map((s, i) => (
-                  <div key={s.name} className="flex items-center justify-between px-3 py-2 bg-[#29292e] rounded-lg">
-                    <span className="text-gray-200 text-xs">{s.nome}</span>
-                    <button onClick={() => setSubstitutos(prev => prev.filter((_, idx) => idx !== i))}
-                      className="h-6 w-6 flex items-center justify-center text-gray-500 hover:text-red-400 transition-colors">
-                      <X size={11} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
       </div>
     </Modal>
   </>)
 }
 
+// ─── ModalTecnica ─────────────────────────────────────────────────────────────
+
+const ModalTecnica = ({ tecnica, onSave, onClose }) => {
+  const isEdit = !!tecnica?.name
+  const [saving, setSaving] = useState(false)
+  const [nome, setNome] = useState(tecnica?.nome || '')
+  const [descricao, setDescricao] = useState(tecnica?.descricao || '')
+  const [video, setVideo] = useState(tecnica?.video || '')
+  const [plataforma, setPlataforma] = useState(tecnica?.['plataforma_do_vídeo'] || 'YouTube')
+  const [enabled, setEnabled] = useState(tecnica?.enabled ?? 1)
+  const [videoDetected, setVideoDetected] = useState(false)
+  const errorModal = useErrorModal()
+
+  const handleVideoChange = (v) => {
+    const info = extractVideoInfo(v)
+    if (info) { setVideo(info.id); setPlataforma(info.platform); setVideoDetected(true) }
+    else { setVideo(v); setVideoDetected(false) }
+  }
+
+  const handleSave = async () => {
+    if (!nome.trim()) {
+      errorModal.show({ type: 'mandatory', title: 'Campo obrigatório', messages: ['Nome da técnica é obrigatório.'], statusCode: 0 }, 'Salvar técnica')
+      return
+    }
+    setSaving(true)
+    try {
+      const resultado = await salvarTecnica(isEdit ? tecnica.name : null, {
+        nome: nome.trim(), descricao, video, 'plataforma_do_vídeo': plataforma, enabled,
+      })
+      onSave(resultado)
+    } catch (e) { errorModal.show(e, 'Salvar técnica') }
+    finally { setSaving(false) }
+  }
+
+  return (<>
+    {errorModal.element}
+    <Modal isOpen onClose={onClose} title={isEdit ? 'Editar Técnica' : 'Nova Técnica'} size="md"
+      footer={<><Button variant="ghost" onClick={onClose}>Cancelar</Button><Button variant="primary" onClick={handleSave} loading={saving}>Salvar</Button></>}
+    >
+      <div className="p-4 space-y-4">
+        <FormGroup label="Nome da Técnica" required>
+          <Input value={nome} onChange={setNome} placeholder="Ex: Dropset, Strip Set, Backoff Set..." />
+        </FormGroup>
+        <FormGroup label="Descrição" hint="Explique como executar a técnica">
+          <Textarea value={descricao} onChange={setDescricao} rows={4} placeholder="Descreva a execução, quando usar, benefícios..." />
+        </FormGroup>
+        <div className="grid grid-cols-2 gap-4">
+          <FormGroup label="Link ou ID do Vídeo" hint={videoDetected ? '✓ ID extraído automaticamente' : undefined}>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Input value={video} onChange={handleVideoChange} placeholder="https://youtu.be/..." />
+              </div>
+              <button type="button" onClick={() => { const url = buildVideoUrl(video, plataforma); if (url) window.open(url, '_blank', 'noopener,noreferrer') }}
+                disabled={!video}
+                className="h-10 w-10 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors shrink-0 disabled:opacity-30 disabled:cursor-not-allowed">
+                <ExternalLink size={14} />
+              </button>
+            </div>
+          </FormGroup>
+          <FormGroup label="Plataforma">
+            <Select value={plataforma} onChange={setPlataforma} options={PLATAFORMAS} />
+          </FormGroup>
+        </div>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" checked={!!enabled} onChange={e => setEnabled(e.target.checked ? 1 : 0)} className="accent-[#2563eb] w-4 h-4" />
+          <span className="text-sm text-gray-300">Técnica ativa</span>
+        </label>
+      </div>
+    </Modal>
+  </>)
+}
+
+// ─── AbaTecnicas ──────────────────────────────────────────────────────────────
+
+function AbaTecnicas() {
+  const errorModal = useErrorModal()
+  const [tecnicas, setTecnicas] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [busca, setBusca] = useState('')
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editando, setEditando] = useState(null)
+  const [deletando, setDeletando] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const [showBiblioteca, setShowBiblioteca] = useState(false)
+  const [videoAberto, setVideoAberto] = useState(null)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
+
+  const carregar = async () => {
+    setLoading(true)
+    try { setTecnicas(await listarTodasTecnicas()) }
+    catch (e) { console.error(e) }
+    finally { setLoading(false) }
+  }
+
+  useEffect(() => { carregar() }, [])
+
+  const normalizar = (s = '') => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+
+  const filtradas = useMemo(() => {
+    const q = normalizar(busca)
+    return tecnicas.filter(t => !q || normalizar(t.nome).includes(q) || normalizar(t.descricao || '').includes(q))
+  }, [tecnicas, busca])
+
+  useEffect(() => { setPage(1) }, [busca])
+
+  const handleSave = (resultado) => {
+    setTecnicas(prev => {
+      const idx = prev.findIndex(t => t.name === resultado?.name)
+      if (idx >= 0) { const a = [...prev]; a[idx] = resultado; return a }
+      return [resultado, ...prev]
+    })
+    setModalOpen(false); setEditando(null)
+  }
+
+  const handleDelete = async () => {
+    if (!deletando) return
+    setDeleting(true)
+    try {
+      await excluirTecnica(deletando.name)
+      setTecnicas(await listarTodasTecnicas())
+      setDeletando(null)
+    } catch (e) { errorModal.show(e, 'Excluir técnica') }
+    finally { setDeleting(false) }
+  }
+
+  const columns = [
+    {
+      label: 'Nome',
+      render: (t) => (
+        <div>
+          <div className="flex items-center gap-2">
+            <Zap size={12} className="text-amber-400 shrink-0" />
+            <span className="text-white font-medium text-sm">{t.nome}</span>
+          </div>
+          {t.descricao && (
+            <p className="text-gray-500 text-xs mt-0.5 line-clamp-1 ml-[20px]">{t.descricao}</p>
+          )}
+        </div>
+      ),
+    },
+    {
+      label: 'Status',
+      headerClass: 'hidden sm:table-cell',
+      cellClass: 'hidden sm:table-cell',
+      render: (t) => <Badge variant={t.enabled ? 'success' : 'default'} size="sm">{t.enabled ? 'Ativa' : 'Inativa'}</Badge>,
+    },
+    {
+      label: 'Ações',
+      headerClass: 'text-right',
+      cellClass: 'text-right',
+      render: (t) => (
+        <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
+          {t.video && (
+            <button onClick={() => setVideoAberto({ id: t.video, platform: t['plataforma_do_vídeo'] || 'YouTube', titulo: t.nome })}
+              className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors" title="Visualizar vídeo">
+              <Play size={12} />
+            </button>
+          )}
+          <button onClick={() => { setEditando(t); setModalOpen(true) }}
+            className="h-7 w-7 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors" title="Editar">
+            <Edit size={12} />
+          </button>
+          <button onClick={() => setDeletando(t)}
+            className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded-lg transition-colors" title="Excluir">
+            <Trash2 size={12} />
+          </button>
+        </div>
+      ),
+    },
+  ]
+
+  return (
+    <>
+      <ListPage
+        title="Técnicas Intensificadoras"
+        subtitle={`${tecnicas.length} técnica${tecnicas.length !== 1 ? 's' : ''} cadastrada${tecnicas.length !== 1 ? 's' : ''}`}
+        actions={
+          <>
+            <Button variant="secondary" size="sm" icon={RefreshCw} onClick={carregar} loading={loading} />
+            <Button variant="secondary" size="sm" icon={BookOpen} onClick={() => setShowBiblioteca(true)}>Explorar Biblioteca</Button>
+            <Button variant="primary" size="sm" icon={Plus} onClick={() => { setEditando(null); setModalOpen(true) }}>Nova Técnica</Button>
+          </>
+        }
+        filters={[{
+          type: 'search', value: busca,
+          onChange: (v) => { setBusca(v); setPage(1) },
+          placeholder: 'Buscar técnica...',
+        }]}
+        loading={loading}
+        empty={filtradas.length === 0 && !loading ? {
+          title: 'Nenhuma técnica encontrada',
+          description: busca ? 'Tente ajustar a busca.' : 'Clique em "Nova Técnica" para começar ou explore a biblioteca.',
+        } : null}
+      >
+        {!loading && filtradas.length > 0 && (
+          <DataTable columns={columns} rows={filtradas} rowKey="name"
+            page={page} pageSize={pageSize} onPage={setPage} onPageSize={(s) => { setPageSize(s); setPage(1) }}
+            onRowClick={(t) => { setEditando(t); setModalOpen(true) }}
+          />
+        )}
+      </ListPage>
+
+      <ExplorarBibliotecaModal
+        isOpen={showBiblioteca}
+        onClose={() => setShowBiblioteca(false)}
+        titulo="Explorar Biblioteca de Técnicas"
+        doctype="Tecnica Intensificadora"
+        colunas={[
+          { label: 'Técnica', render: (r) => <span className="text-white">{r.nome}</span> },
+          { label: 'Descrição', headerClass: 'hidden sm:block', cellClass: 'hidden sm:block text-gray-400 text-xs', render: (r) => r.descricao ? <span className="line-clamp-1">{r.descricao}</span> : '—' },
+        ]}
+        onImportado={() => carregar()}
+      />
+
+      {modalOpen && (
+        <ModalTecnica
+          tecnica={editando}
+          onSave={handleSave}
+          onClose={() => { setModalOpen(false); setEditando(null) }}
+        />
+      )}
+
+      {deletando && (
+        <Modal isOpen onClose={() => setDeletando(null)} title="Excluir Técnica" size="sm"
+          footer={<><Button variant="ghost" onClick={() => setDeletando(null)}>Cancelar</Button><Button variant="danger" onClick={handleDelete} loading={deleting}>Excluir</Button></>}
+        >
+          <div className="p-4">
+            <p className="text-gray-300 text-sm">Tem certeza que deseja excluir <strong className="text-white">{deletando.nome}</strong>?</p>
+            <p className="text-gray-500 text-xs mt-1">Esta ação não pode ser desfeita.</p>
+          </div>
+        </Modal>
+      )}
+
+      {errorModal.element}
+      <VideoPreviewModal video={videoAberto} onClose={() => setVideoAberto(null)} />
+    </>
+  )
+}
+
 // ─── GerenciarTreino ──────────────────────────────────────────────────────────
 
 export default function GerenciarTreino() {
+  const [aba, setAba] = useState('exercicios')
   const errorModal = useErrorModal()
   const [exercicios, setExercicios] = useState([])
   const [grupos, setGrupos] = useState([])
@@ -568,8 +827,38 @@ export default function GerenciarTreino() {
     },
   ]
 
+  if (aba === 'tecnicas') {
+    return (
+      <div>
+        <div className="px-6 pt-4 pb-0 border-b border-[#323238]">
+          <Tabs
+            tabs={[
+              { id: 'exercicios', label: 'Exercícios', icon: <span className="text-base">🏋️</span> },
+              { id: 'tecnicas', label: 'Técnicas Intensificadoras', icon: <Zap size={14} /> },
+            ]}
+            active={aba}
+            onChange={setAba}
+            variant="underline"
+          />
+        </div>
+        <AbaTecnicas />
+      </div>
+    )
+  }
+
   return (
     <>
+      <div className="px-6 pt-4 pb-0 border-b border-[#323238]">
+        <Tabs
+          tabs={[
+            { id: 'exercicios', label: 'Exercícios', icon: <span className="text-base">🏋️</span> },
+            { id: 'tecnicas', label: 'Técnicas Intensificadoras', icon: <Zap size={14} /> },
+          ]}
+          active={aba}
+          onChange={setAba}
+          variant="underline"
+        />
+      </div>
       <ListPage
         title="Gerenciar Exercícios"
         subtitle={`${exercicios.length} exercício${exercicios.length !== 1 ? 's' : ''} cadastrado${exercicios.length !== 1 ? 's' : ''}`}
@@ -642,6 +931,7 @@ export default function GerenciarTreino() {
             selected={sel.selected}
             onToggle={sel.toggle}
             onTogglePage={sel.togglePage}
+            onRowClick={(ex) => { setEditando(ex); setModalOpen(true) }}
           />
         )}
       </ListPage>
@@ -665,6 +955,7 @@ export default function GerenciarTreino() {
           exercicios={exercicios}
           onSave={handleSave}
           onClose={() => { setModalOpen(false); setEditando(null) }}
+          onVerVideo={setVideoAberto}
         />
       )}
 

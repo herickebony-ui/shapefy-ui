@@ -13,6 +13,7 @@ import {
   listarFichas, buscarFicha, criarFicha, salvarFicha,
   listarExercicios, listarAlongamentos, listarAerobicos, listarGruposMusculares,
 } from '../../api/fichas'
+import { listarTecnicas } from '../../api/tecnicas'
 import { listarAlunos, buscarAluno, salvarAluno } from '../../api/alunos'
 import { buscarModeloFicha, salvarModeloFicha, fichaParaSnapshot } from '../../api/modelos'
 import { listarTextos, salvarNoBancoSeNovo, excluirTexto } from '../../api/bancoTextos'
@@ -1228,6 +1229,65 @@ const SeriesNamePopover = ({ ex, onChange, anchor, onClose }) => {
   )
 }
 
+// ─── TecnicaSeriesPopover ─────────────────────────────────────────────────────
+
+const TecnicaSeriesPopover = ({ ex, onChange, anchor, onClose }) => {
+  const n = parseInt(ex.series) || 0
+  const arr = (ex.tecnica_intensificadora || '').split(',').map(s => s.trim())
+  const hasAny = arr.some(Boolean)
+  const [tecnicas, setTecnicas] = useState(null) // null = não carregado
+
+  useEffect(() => {
+    listarTecnicas().then(setTecnicas).catch(() => setTecnicas([]))
+  }, [])
+
+  const setTec = (i, v) => {
+    const next = [...arr]
+    while (next.length < n) next.push('')
+    next[i] = v
+    onChange({ ...ex, tecnica_intensificadora: next.slice(0, n).join(',') })
+  }
+  const clear = () => onChange({ ...ex, tecnica_intensificadora: '' })
+
+  const hasAnyAssigned = arr.some(Boolean)
+
+  return (
+    <Popover anchor={anchor} onClose={onClose} width={340} align="right">
+      <div className="p-3">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-1.5">
+            <Zap size={11} className="text-amber-400" />
+            <span className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Técnica por série</span>
+          </div>
+          {hasAnyAssigned && (
+            <button onClick={clear} className="text-[10px] text-gray-500 hover:text-red-400 transition">Limpar</button>
+          )}
+        </div>
+        {n === 0 ? (
+          <div className="py-4 text-xs text-gray-500 text-center">Defina o nº de séries primeiro.</div>
+        ) : tecnicas === null ? (
+          <div className="py-4 text-xs text-gray-500 text-center">Carregando técnicas...</div>
+        ) : tecnicas.length === 0 ? (
+          <div className="py-4 text-xs text-gray-500 text-center">Nenhuma técnica cadastrada ainda.</div>
+        ) : (
+          <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto pr-1">
+            {Array.from({ length: n }).map((_, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <span className="w-6 text-[11px] font-mono text-gray-500 text-center shrink-0">{String(i + 1).padStart(2, '0')}</span>
+                <select value={arr[i] || ''} onChange={e => setTec(i, e.target.value)}
+                  className="flex-1 bg-[#0f0f0f] border border-[#323238] text-gray-200 text-xs rounded-lg px-2 py-1.5 outline-none focus:border-amber-400/50">
+                  <option value="">— sem técnica —</option>
+                  {tecnicas.map(t => <option key={t.name} value={t.nome}>{t.nome}</option>)}
+                </select>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </Popover>
+  )
+}
+
 // ─── TabelaExercicios ─────────────────────────────────────────────────────────
 
 // Lista base garantida — independente do que a API retornar
@@ -1419,10 +1479,13 @@ const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, inten
 const ExRow = ({ ex, i, total, isPart, position, onChange, onDup, onRemove, onOpenDetails, grupos, opcoesExercicio, upd, updMany, getOptionMeta, onPreviewVideo, dragProvided, dragSnapshot }) => {
   const [comboOpen, setComboOpen] = useState(false)
   const [seriesOpen, setSeriesOpen] = useState(false)
+  const [tecnicaOpen, setTecnicaOpen] = useState(false)
   const comboBtnRef = useRef(null)
   const seriesBtnRef = useRef(null)
+  const tecnicaBtnRef = useRef(null)
   const comboActive = ex.primeiro || ex.ultimo
   const hasSeriesNames = (ex.tipo_de_serie || '').split(',').some(s => s.trim())
+  const tecnicaCount = (ex.tecnica_intensificadora || '').split(',').filter(s => s.trim()).length
 
   return (
     <tr
@@ -1478,7 +1541,7 @@ const ExRow = ({ ex, i, total, isPart, position, onChange, onDup, onRemove, onOp
           )}
         </div>
       </td>
-      {/* Séries + botão nomear */}
+      {/* Séries + botão nomear + técnica */}
       <td className="px-2 py-1 align-middle">
         <div className="flex items-center gap-0.5">
           <input type="number" value={ex.series || ''} onChange={e => upd('series', e.target.value)}
@@ -1489,8 +1552,15 @@ const ExRow = ({ ex, i, total, isPart, position, onChange, onDup, onRemove, onOp
             }`}>
             <ListOrdered size={11} />
           </button>
+          <button ref={tecnicaBtnRef} onClick={() => setTecnicaOpen(true)} title="Técnicas intensificadoras"
+            className={`h-8 w-6 flex items-center justify-center rounded transition shrink-0 ${
+              tecnicaCount > 0 ? 'text-amber-400 hover:text-amber-300' : 'text-gray-600 hover:text-gray-400'
+            }`}>
+            <Zap size={11} />
+          </button>
         </div>
         {seriesOpen && <SeriesNamePopover ex={ex} onChange={onChange} anchor={seriesBtnRef.current} onClose={() => setSeriesOpen(false)} />}
+        {tecnicaOpen && <TecnicaSeriesPopover ex={ex} onChange={onChange} anchor={tecnicaBtnRef.current} onClose={() => setTecnicaOpen(false)} />}
       </td>
       {/* Reps — banco "Repeticao Treino" com auto-fill de descanso quando vinculado */}
       <td className="px-2 py-1 align-middle">

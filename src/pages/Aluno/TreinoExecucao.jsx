@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft, Play, AlertCircle, CheckCircle2, Check, Replace, Ban,
-  StickyNote, Trophy, Info, Eye, ExternalLink, Timer,
+  StickyNote, Trophy, Info, Eye, ExternalLink, Timer, Shuffle, Zap,
 } from 'lucide-react'
 import { FormGroup, Select, Spinner, Textarea } from '../../components/ui'
 import {
@@ -283,12 +283,13 @@ function CronometrosBar({ inicioMs, agora, descanso, onPularDescanso }) {
 // Linha de serie — layout final igual ao print
 // ============================================================
 
-function SerieLinha({ exercicio, idx, serie, onUpdate, onConcluir, onAnotar }) {
+function SerieLinha({ exercicio, idx, serie, onUpdate, onConcluir, onAnotar, onVerTecnica }) {
   // Remove o prefixo numerico ("1a ", "2a ", "1º ") — fica so o nome
   // (Aquecimento, Preparatoria, Trabalho).
   const tipoSerie = (exercicio.tipo_de_serie_list?.[idx] || '')
     .replace(/^\d+[aºo°]?\s*/i, '')
     .trim()
+  const tecnica = exercicio.tecnicas_por_serie?.[idx] || null
   const hist = exercicio.historico_series?.[idx]
   const concluida = serie.concluida === true
 
@@ -301,6 +302,16 @@ function SerieLinha({ exercicio, idx, serie, onUpdate, onConcluir, onAnotar }) {
           <p className="text-white text-sm font-bold">Serie {idx + 1}</p>
           {tipoSerie && (
             <p className="text-[var(--sf-text-muted)] text-[11px]">{tipoSerie}</p>
+          )}
+          {tecnica && (
+            <button
+              onClick={() => onVerTecnica?.(tecnica)}
+              className="flex items-center gap-1 mt-0.5"
+              title={tecnica.nome}
+            >
+              <Zap size={10} className="text-amber-400 shrink-0" />
+              <span className="text-amber-400 text-[10px] font-medium truncate max-w-[72px]">{tecnica.nome}</span>
+            </button>
           )}
         </div>
         <input
@@ -356,18 +367,23 @@ function SerieLinha({ exercicio, idx, serie, onUpdate, onConcluir, onAnotar }) {
 // ============================================================
 
 function ExercicioBody({
-  exercicio, estado, onSubstituir, onPular, onUpdateSerie, onConcluirSerie,
+  exercicio, estado, onSubstituir, onDesfazer, onPular, onUpdateSerie, onConcluirSerie,
   onAnotarSerie, onConcluirExercicio, onFeedback,
 }) {
+  const [tecnicaAtual, setTecnicaAtual] = useState(null)
   const pulado = estado?.pulado === true
   const concluido = estado?.concluido === true
   const tituloFinal = estado?.exercicio_substituto || exercicio.exercicio
   const foiSubstituido = !!estado?.exercicio_substituto
+  const videoFinal = foiSubstituido && estado?.video_substituto ? estado.video_substituto : exercicio.video
+  const plataformaFinal = foiSubstituido && estado?.video_substituto ? (estado.plataforma_video_substituto || 'YouTube') : exercicio.plataforma_video
   const series = estado?.series || []
   const semSeries = series.length === 0
+  const ativo = !pulado && !concluido
 
   return (
     <div className={`transition-opacity ${pulado ? 'opacity-40' : concluido ? 'opacity-60' : ''}`}>
+      {/* Cabeçalho: nome/grupo + botão substituir */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           {exercicio.grupo_muscular && (
@@ -379,30 +395,44 @@ function ExercicioBody({
             {tituloFinal}
           </p>
           {foiSubstituido && (
-            <p className="text-[10px] text-[var(--sf-text-muted)] mt-0.5 line-through">{exercicio.exercicio}</p>
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-[#2563eb]/20 text-blue-300 border border-[#2563eb]/30">
+                <Shuffle size={8} /> substituído
+              </span>
+              <span className="text-[10px] text-[var(--sf-text-muted)] line-through">{exercicio.exercicio}</span>
+            </div>
           )}
         </div>
-        <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={onSubstituir}
-            title="Substituir"
-            className="h-7 w-7 flex items-center justify-center text-[#60A5FA] hover:text-white border border-[#2563eb]/40 hover:bg-[#2563eb] rounded-lg transition-colors"
-          >
-            <Replace size={12} />
-          </button>
-          <button
-            onClick={onPular}
-            title="Pular"
-            className="h-7 w-7 flex items-center justify-center text-red-400 hover:text-white border border-red-500/30 hover:bg-red-600 rounded-lg transition-colors"
-          >
-            <Ban size={12} />
-          </button>
-        </div>
+        {ativo && (
+          <div className="flex items-center gap-1.5 shrink-0">
+            {foiSubstituido ? (
+              <button
+                onClick={onDesfazer}
+                className="h-7 flex items-center gap-1.5 px-2.5 text-blue-400 hover:text-white border border-[#2563eb]/40 hover:bg-[#2563eb] rounded-lg transition-colors text-[11px] font-medium"
+              >
+                <Shuffle size={11} /> Desfazer
+              </button>
+            ) : (
+              <button
+                onClick={onSubstituir}
+                className="h-7 flex items-center gap-1.5 px-2.5 text-[#60A5FA] hover:text-white border border-[#2563eb]/40 hover:bg-[#2563eb] rounded-lg transition-colors text-[11px] font-medium"
+              >
+                <Replace size={11} /> Substituir
+              </button>
+            )}
+            <button
+              onClick={onPular}
+              className="h-7 flex items-center gap-1.5 px-2.5 text-red-400/70 hover:text-white border border-red-500/30 hover:bg-red-600 hover:border-red-600 rounded-lg transition-colors text-[11px] font-medium"
+            >
+              <Ban size={11} /> Pular
+            </button>
+          </div>
+        )}
       </div>
 
-      {exercicio.video && (
+      {videoFinal && (
         <div className="mt-3">
-          <VideoEmbed id={exercicio.video} plataforma={exercicio.plataforma_video} />
+          <VideoEmbed id={videoFinal} plataforma={plataformaFinal} />
         </div>
       )}
 
@@ -430,22 +460,26 @@ function ExercicioBody({
               onUpdate={(patch) => onUpdateSerie(idx, patch)}
               onConcluir={() => onConcluirSerie(idx, exercicio.descanso)}
               onAnotar={() => onAnotarSerie(idx)}
+              onVerTecnica={(tec) => setTecnicaAtual(tec)}
             />
           ))}
         </div>
       )}
 
+      {/* Sem séries: Pular ao lado do Marcar concluído */}
       {!pulado && semSeries && (
-        <button
-          onClick={onConcluirExercicio}
-          className={`w-full mt-3 h-10 rounded-lg flex items-center justify-center gap-2 text-xs font-bold transition-colors ${
-            concluido
-              ? 'bg-emerald-600 text-white'
-              : 'bg-emerald-500 hover:bg-emerald-600 text-white'
-          }`}
-        >
-          <CheckCircle2 size={14} /> {concluido ? 'Concluido' : 'Marcar concluido'}
-        </button>
+        <div className="flex gap-2 mt-3">
+          <button
+            onClick={onConcluirExercicio}
+            className={`flex-1 h-10 rounded-lg flex items-center justify-center gap-2 text-xs font-bold transition-colors ${
+              concluido
+                ? 'bg-emerald-600 text-white'
+                : 'bg-emerald-500 hover:bg-emerald-600 text-white'
+            }`}
+          >
+            <CheckCircle2 size={14} /> {concluido ? 'Concluido' : 'Marcar concluido'}
+          </button>
+        </div>
       )}
 
       {!pulado && (
@@ -457,6 +491,7 @@ function ExercicioBody({
           className="w-full mt-3 px-3 py-2 bg-[var(--sf-bg)] border border-[var(--sf-border)] text-white rounded-lg text-xs outline-none focus:border-[#2563eb] resize-none placeholder:text-[var(--sf-text-soft)]"
         />
       )}
+      <TecnicaSheet tecnica={tecnicaAtual} onClose={() => setTecnicaAtual(null)} />
     </div>
   )
 }
@@ -544,7 +579,7 @@ function VerExercicioInline({ titulo, sub, video, plataforma_video, uppercase })
 
 function ExercicioCard({
   item, estados,
-  onSubstituir, onPular, onUpdateSerie, onConcluirSerie, onAnotarSerie,
+  onSubstituir, onDesfazer, onPular, onUpdateSerie, onConcluirSerie, onAnotarSerie,
   onConcluirExercicio, onFeedback,
 }) {
   if (item.tipo === 'combinado') {
@@ -569,6 +604,7 @@ function ExercicioCard({
                 exercicio={ex}
                 estado={estados?.[ex.name]}
                 onSubstituir={() => onSubstituir(ex.name, ex.exercicio, ex.substitutos)}
+                onDesfazer={() => onDesfazer(ex.name)}
                 onPular={() => onPular(ex.name)}
                 onUpdateSerie={(idx, patch) => onUpdateSerie(ex.name, idx, patch)}
                 onConcluirSerie={(idx, desc) => onConcluirSerie(ex.name, idx, desc)}
@@ -590,6 +626,7 @@ function ExercicioCard({
         exercicio={ex}
         estado={estados?.[ex.name]}
         onSubstituir={() => onSubstituir(ex.name, ex.exercicio, ex.substitutos)}
+        onDesfazer={() => onDesfazer(ex.name)}
         onPular={() => onPular(ex.name)}
         onUpdateSerie={(idx, patch) => onUpdateSerie(ex.name, idx, patch)}
         onConcluirSerie={(idx, desc) => onConcluirSerie(ex.name, idx, desc)}
@@ -608,6 +645,17 @@ function ExercicioCard({
 
 function SubstitutosSheet({ aberto, exercicioNome, substitutos = [], onSelect, onClose }) {
   if (!aberto) return null
+
+  const buildUrl = (video, plataforma) => {
+    if (!video) return ''
+    if (video.includes('://')) return video
+    switch (plataforma) {
+      case 'Vimeo': return `https://vimeo.com/${video}`
+      case 'Google Drive': return `https://drive.google.com/file/d/${video}/view`
+      default: return `https://www.youtube.com/watch?v=${video}`
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm p-3"
@@ -618,22 +666,38 @@ function SubstitutosSheet({ aberto, exercicioNome, substitutos = [], onSelect, o
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 py-3 border-b border-[var(--sf-border)]">
-          <p className="text-white text-sm font-bold">Substituir exercicio</p>
+          <p className="text-white text-sm font-bold">Substituir exercício</p>
           <p className="text-[var(--sf-text-muted)] text-[11px] mt-0.5 truncate">
-            Substituindo: {exercicioNome}
+            Substituindo: <span className="text-gray-300">{exercicioNome}</span>
           </p>
         </div>
         <div className="py-2 max-h-72 overflow-y-auto">
-          {substitutos.map((s) => (
-            <button
-              key={s.name}
-              onClick={() => onSelect(s.nome)}
-              className="w-full text-left px-4 py-3 text-white text-sm hover:bg-[var(--sf-surface-2)] transition-colors flex items-center gap-3"
-            >
-              <Replace size={13} className="text-[#60A5FA] shrink-0" />
-              {s.nome}
-            </button>
-          ))}
+          {substitutos.map((s) => {
+            const videoUrl = buildUrl(s.video, s.plataforma_video)
+            return (
+              <div key={s.name} className="flex items-center gap-1 px-3 hover:bg-[var(--sf-surface-2)] transition-colors">
+                <button
+                  onClick={() => onSelect(s)}
+                  className="flex-1 text-left py-3 text-white text-sm flex items-center gap-3 min-w-0"
+                >
+                  <Replace size={13} className="text-[#60A5FA] shrink-0" />
+                  <span className="truncate">{s.nome}</span>
+                </button>
+                {videoUrl && (
+                  <a
+                    href={videoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    title="Ver vídeo"
+                    className="h-8 w-8 flex items-center justify-center text-[#60A5FA]/60 hover:text-[#60A5FA] border border-[var(--sf-border)] hover:border-[#2563eb]/40 rounded-lg transition-colors shrink-0"
+                  >
+                    <Play size={12} />
+                  </a>
+                )}
+              </div>
+            )
+          })}
         </div>
         <div className="px-4 py-3 border-t border-[var(--sf-border)]">
           <button
@@ -641,6 +705,69 @@ function SubstitutosSheet({ aberto, exercicioNome, substitutos = [], onSelect, o
             className="w-full h-9 rounded-lg border border-[var(--sf-border)] text-gray-300 text-xs font-bold hover:bg-[var(--sf-surface-2)] transition-colors"
           >
             Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================
+// TecnicaSheet — detalhe da técnica intensificadora
+// ============================================================
+
+function TecnicaSheet({ tecnica, onClose }) {
+  if (!tecnica) return null
+
+  const buildUrl = (video, plataforma) => {
+    if (!video) return ''
+    if (video.includes('://')) return video
+    switch (plataforma) {
+      case 'Vimeo': return `https://vimeo.com/${video}`
+      case 'Google Drive': return `https://drive.google.com/file/d/${video}/view`
+      default: return `https://www.youtube.com/watch?v=${video}`
+    }
+  }
+  const videoUrl = buildUrl(tecnica.video, tecnica.plataforma_video)
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm p-3"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-[420px] bg-[var(--sf-surface)] border border-[var(--sf-border)] rounded-2xl shadow-[0_25px_50px_rgba(0,0,0,0.6)] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-4 py-3 border-b border-[var(--sf-border)] flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-amber-500/20 flex items-center justify-center shrink-0">
+            <Zap size={13} className="text-amber-400" />
+          </div>
+          <div>
+            <p className="text-white text-sm font-bold">{tecnica.nome}</p>
+            <p className="text-amber-400/70 text-[10px] uppercase tracking-widest font-bold">Técnica Intensificadora</p>
+          </div>
+        </div>
+
+        <div className="px-4 py-4 space-y-3">
+          {tecnica.descricao && (
+            <p className="text-[var(--sf-text-muted)] text-sm leading-relaxed whitespace-pre-line">
+              {tecnica.descricao}
+            </p>
+          )}
+          {tecnica.video && (
+            <div className="mt-1">
+              <VideoEmbed id={tecnica.video} plataforma={tecnica.plataforma_video || 'YouTube'} />
+            </div>
+          )}
+        </div>
+
+        <div className="px-4 pb-4">
+          <button
+            onClick={onClose}
+            className="w-full h-9 rounded-lg border border-[var(--sf-border)] text-gray-300 text-xs font-bold hover:bg-[var(--sf-surface-2)] transition-colors"
+          >
+            Fechar
           </button>
         </div>
       </div>
@@ -1296,6 +1423,7 @@ export default function TreinoExecucao() {
                 item={item}
                 estados={estado.exercicios}
                 onSubstituir={handleSubstituir}
+                onDesfazer={(name) => atualizarExercicio(name, { exercicio_substituto: null, video_substituto: null, plataforma_video_substituto: null })}
                 onPular={handlePular}
                 onUpdateSerie={handleUpdateSerie}
                 onConcluirSerie={handleConcluirSerie}
@@ -1328,8 +1456,12 @@ export default function TreinoExecucao() {
         aberto={!!substitutosSheet}
         exercicioNome={substitutosSheet?.exercicioNome}
         substitutos={substitutosSheet?.substitutos || []}
-        onSelect={(nome) => {
-          atualizarExercicio(substitutosSheet.exercicioName, { exercicio_substituto: nome })
+        onSelect={(sub) => {
+          atualizarExercicio(substitutosSheet.exercicioName, {
+            exercicio_substituto: sub.nome,
+            video_substituto: sub.video || null,
+            plataforma_video_substituto: sub.plataforma_video || null,
+          })
           setSubstitutosSheet(null)
         }}
         onClose={() => setSubstitutosSheet(null)}
