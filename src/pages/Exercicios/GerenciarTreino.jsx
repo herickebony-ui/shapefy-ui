@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Plus, Edit, Trash2, X, RefreshCw, BookOpen, ExternalLink, Play, Shuffle, Zap } from 'lucide-react'
+import { Plus, Edit, Trash2, X, RefreshCw, BookOpen, ExternalLink, Play, Shuffle, Zap, ListOrdered, CheckCircle2, XCircle } from 'lucide-react'
 import {
   listarExercicios, salvarTreinoExercicio, excluirTreinoExercicio, listarGruposMusculares,
 } from '../../api/fichas'
 import { listarTodasTecnicas, salvarTecnica, excluirTecnica } from '../../api/tecnicas'
+import { listarTiposDeSerie, salvarTipoDeSerie, excluirTipoDeSerie } from '../../api/tiposDeSerie'
 import {
   Button, FormGroup, Input, Select, Modal, EmptyState, DataTable, Badge, Textarea,
   ImportExcelButton, BotaoTutoriais, Autocomplete, Tabs,
@@ -621,6 +622,214 @@ function AbaTecnicas() {
   )
 }
 
+// ─── ModalTipoDeSerie ─────────────────────────────────────────────────────────
+
+function ModalTipoDeSerie({ tipo, onSave, onClose }) {
+  const isEdit = !!tipo?.name
+  const [nome, setNome] = useState(tipo?.nome || '')
+  const [contabilizar, setContabilizar] = useState(tipo?.contabilizar_volume ?? 1)
+  const [enabled, setEnabled] = useState(tipo?.enabled ?? 1)
+  const [saving, setSaving] = useState(false)
+  const errorModal = useErrorModal()
+
+  const handleSave = async () => {
+    if (!nome.trim()) {
+      errorModal.show({ type: 'mandatory', title: 'Campo obrigatório', messages: ['Nome é obrigatório.'], statusCode: 0 }, 'Salvar tipo')
+      return
+    }
+    setSaving(true)
+    try {
+      const resultado = await salvarTipoDeSerie(isEdit ? tipo.name : null, {
+        nome: nome.trim(),
+        contabilizar_volume: contabilizar,
+        enabled,
+      })
+      onSave(resultado)
+    } catch (e) { errorModal.show(e, 'Salvar tipo de série') }
+    finally { setSaving(false) }
+  }
+
+  return (<>
+    {errorModal.element}
+    <Modal isOpen onClose={onClose}
+      title={isEdit ? 'Editar Tipo de Série' : 'Novo Tipo de Série'}
+      size="sm"
+      footer={<><Button variant="ghost" onClick={onClose}>Cancelar</Button><Button variant="primary" onClick={handleSave} loading={saving}>Salvar</Button></>}
+    >
+      <div className="p-4 space-y-4">
+        <FormGroup label="Nome" required hint="Ex: Aquecimento, Preparatória, Trabalho, Válida…">
+          <Input value={nome} onChange={setNome} placeholder="Nome do tipo de série" />
+        </FormGroup>
+        <div className="bg-[#1a1a1a] border border-[#323238] rounded-xl p-3 space-y-3">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" checked={!!contabilizar} onChange={e => setContabilizar(e.target.checked ? 1 : 0)}
+              className="accent-[#2563eb] w-4 h-4 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm text-gray-200 font-medium">Contabilizar no volume de treino</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Quando desmarcado, séries deste tipo não entram no cálculo de volume semanal da ficha.
+                Útil para séries de aquecimento e preparatórias.
+              </p>
+            </div>
+          </label>
+          <label className="flex items-center gap-3 cursor-pointer border-t border-[#323238] pt-3">
+            <input type="checkbox" checked={!!enabled} onChange={e => setEnabled(e.target.checked ? 1 : 0)}
+              className="accent-[#2563eb] w-4 h-4 shrink-0" />
+            <span className="text-sm text-gray-300">Tipo ativo</span>
+          </label>
+        </div>
+      </div>
+    </Modal>
+  </>)
+}
+
+// ─── AbaTiposSerie ────────────────────────────────────────────────────────────
+
+function AbaTiposSerie() {
+  const errorModal = useErrorModal()
+  const [tipos, setTipos] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [busca, setBusca] = useState('')
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editando, setEditando] = useState(null)
+  const [deletando, setDeletando] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
+
+  const carregar = async () => {
+    setLoading(true)
+    try { setTipos(await listarTiposDeSerie({ apenasAtivos: false })) }
+    catch (e) { console.error(e) }
+    finally { setLoading(false) }
+  }
+
+  useEffect(() => { carregar() }, [])
+
+  const filtrados = useMemo(() => {
+    const q = normalizar(busca)
+    return tipos.filter(t => !q || normalizar(t.nome).includes(q))
+  }, [tipos, busca])
+
+  useEffect(() => { setPage(1) }, [busca])
+
+  const handleSave = (resultado) => {
+    setTipos(prev => {
+      const idx = prev.findIndex(t => t.name === resultado?.name)
+      if (idx >= 0) { const a = [...prev]; a[idx] = resultado; return a }
+      return [resultado, ...prev]
+    })
+    setModalOpen(false); setEditando(null)
+  }
+
+  const handleDelete = async () => {
+    if (!deletando) return
+    setDeleting(true)
+    try {
+      await excluirTipoDeSerie(deletando.name)
+      setTipos(await listarTiposDeSerie({ apenasAtivos: false }))
+      setDeletando(null)
+    } catch (e) { errorModal.show(e, 'Excluir tipo de série') }
+    finally { setDeleting(false) }
+  }
+
+  const columns = [
+    {
+      label: 'Nome',
+      render: (t) => (
+        <div className="flex items-center gap-2">
+          <ListOrdered size={12} className="text-blue-400 shrink-0" />
+          <span className="text-white font-medium text-sm">{t.nome}</span>
+        </div>
+      ),
+    },
+    {
+      label: 'Conta Volume',
+      headerClass: 'hidden sm:table-cell',
+      cellClass: 'hidden sm:table-cell',
+      render: (t) => t.contabilizar_volume
+        ? <div className="flex items-center gap-1 text-green-400 text-xs"><CheckCircle2 size={12} />Sim</div>
+        : <div className="flex items-center gap-1 text-gray-500 text-xs"><XCircle size={12} />Não conta</div>,
+    },
+    {
+      label: 'Status',
+      headerClass: 'hidden sm:table-cell',
+      cellClass: 'hidden sm:table-cell',
+      render: (t) => <Badge variant={t.enabled ? 'success' : 'default'} size="sm">{t.enabled ? 'Ativo' : 'Inativo'}</Badge>,
+    },
+    {
+      label: 'Ações',
+      headerClass: 'text-right',
+      cellClass: 'text-right',
+      render: (t) => (
+        <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
+          <button onClick={() => { setEditando(t); setModalOpen(true) }}
+            className="h-7 w-7 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors" title="Editar">
+            <Edit size={12} />
+          </button>
+          <button onClick={() => setDeletando(t)}
+            className="h-7 w-7 flex items-center justify-center text-[#850000] hover:text-white border border-[#850000]/30 hover:bg-[#850000] rounded-lg transition-colors" title="Excluir">
+            <Trash2 size={12} />
+          </button>
+        </div>
+      ),
+    },
+  ]
+
+  return (
+    <>
+      <ListPage
+        title="Tipos de Série"
+        subtitle={`${tipos.length} tipo${tipos.length !== 1 ? 's' : ''} cadastrado${tipos.length !== 1 ? 's' : ''}`}
+        actions={
+          <>
+            <Button variant="secondary" size="sm" icon={RefreshCw} onClick={carregar} loading={loading} />
+            <Button variant="primary" size="sm" icon={Plus} onClick={() => { setEditando(null); setModalOpen(true) }}>Novo Tipo</Button>
+          </>
+        }
+        filters={[{
+          type: 'search', value: busca,
+          onChange: (v) => { setBusca(v); setPage(1) },
+          placeholder: 'Buscar tipo...',
+        }]}
+        loading={loading}
+        empty={filtrados.length === 0 && !loading ? {
+          title: 'Nenhum tipo cadastrado',
+          description: busca ? 'Tente ajustar a busca.' : 'Clique em "Novo Tipo" para criar um tipo de série (ex: Aquecimento, Trabalho, Válida).',
+        } : null}
+      >
+        {!loading && filtrados.length > 0 && (
+          <DataTable columns={columns} rows={filtrados} rowKey="name"
+            page={page} pageSize={pageSize} onPage={setPage} onPageSize={(s) => { setPageSize(s); setPage(1) }}
+            onRowClick={(t) => { setEditando(t); setModalOpen(true) }}
+          />
+        )}
+      </ListPage>
+
+      {modalOpen && (
+        <ModalTipoDeSerie
+          tipo={editando}
+          onSave={handleSave}
+          onClose={() => { setModalOpen(false); setEditando(null) }}
+        />
+      )}
+
+      {deletando && (
+        <Modal isOpen onClose={() => setDeletando(null)} title="Excluir Tipo de Série" size="sm"
+          footer={<><Button variant="ghost" onClick={() => setDeletando(null)}>Cancelar</Button><Button variant="danger" onClick={handleDelete} loading={deleting}>Excluir</Button></>}
+        >
+          <div className="p-4">
+            <p className="text-gray-300 text-sm">Tem certeza que deseja excluir <strong className="text-white">{deletando.nome}</strong>?</p>
+            <p className="text-gray-500 text-xs mt-1">Fichas que usam este tipo de série não serão afetadas.</p>
+          </div>
+        </Modal>
+      )}
+
+      {errorModal.element}
+    </>
+  )
+}
+
 // ─── GerenciarTreino ──────────────────────────────────────────────────────────
 
 export default function GerenciarTreino() {
@@ -827,38 +1036,39 @@ export default function GerenciarTreino() {
     },
   ]
 
+  const TABS = [
+    { id: 'exercicios', label: 'Exercícios', icon: <span className="text-base">🏋️</span> },
+    { id: 'tecnicas', label: 'Técnicas Intensificadoras', icon: <Zap size={14} /> },
+    { id: 'tipos_serie', label: 'Tipos de Série', icon: <ListOrdered size={14} /> },
+  ]
+
+  const NavTabs = () => (
+    <div className="px-6 pt-4 pb-0 border-b border-[#323238]">
+      <Tabs tabs={TABS} active={aba} onChange={setAba} variant="underline" />
+    </div>
+  )
+
   if (aba === 'tecnicas') {
     return (
       <div>
-        <div className="px-6 pt-4 pb-0 border-b border-[#323238]">
-          <Tabs
-            tabs={[
-              { id: 'exercicios', label: 'Exercícios', icon: <span className="text-base">🏋️</span> },
-              { id: 'tecnicas', label: 'Técnicas Intensificadoras', icon: <Zap size={14} /> },
-            ]}
-            active={aba}
-            onChange={setAba}
-            variant="underline"
-          />
-        </div>
+        <NavTabs />
         <AbaTecnicas />
+      </div>
+    )
+  }
+
+  if (aba === 'tipos_serie') {
+    return (
+      <div>
+        <NavTabs />
+        <AbaTiposSerie />
       </div>
     )
   }
 
   return (
     <>
-      <div className="px-6 pt-4 pb-0 border-b border-[#323238]">
-        <Tabs
-          tabs={[
-            { id: 'exercicios', label: 'Exercícios', icon: <span className="text-base">🏋️</span> },
-            { id: 'tecnicas', label: 'Técnicas Intensificadoras', icon: <Zap size={14} /> },
-          ]}
-          active={aba}
-          onChange={setAba}
-          variant="underline"
-        />
-      </div>
+      <NavTabs />
       <ListPage
         title="Gerenciar Exercícios"
         subtitle={`${exercicios.length} exercício${exercicios.length !== 1 ? 's' : ''} cadastrado${exercicios.length !== 1 ? 's' : ''}`}

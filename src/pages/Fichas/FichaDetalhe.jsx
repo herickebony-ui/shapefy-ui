@@ -14,6 +14,7 @@ import {
   listarExercicios, listarAlongamentos, listarAerobicos, listarGruposMusculares,
 } from '../../api/fichas'
 import { listarTecnicas } from '../../api/tecnicas'
+import { listarTiposDeSerie } from '../../api/tiposDeSerie'
 import { listarAlunos, buscarAluno, salvarAluno } from '../../api/alunos'
 import { buscarModeloFicha, salvarModeloFicha, fichaParaSnapshot } from '../../api/modelos'
 import { listarTextos, salvarNoBancoSeNovo, excluirTexto } from '../../api/bancoTextos'
@@ -194,7 +195,21 @@ const GRUPOS_CONFIG = [
   { key: 'abdomen',            label: 'Abd.',         bg: 'bg-emerald-500/15' },
 ]
 
-const calcVolume = (ficha, intensidadeMap = {}) => {
+// Retorna o nº de séries que contam no volume, respeitando contabilizar_volume por tipo
+const seriesEfetivas = (ex, tipoMap) => {
+  const total = parseInt(ex.series) || 0
+  if (!total || !tipoMap || Object.keys(tipoMap).length === 0) return total
+  const tipos = (ex.tipo_de_serie || '').split(',').map(s => s.trim())
+  if (!tipos.some(Boolean)) return total
+  let count = 0
+  for (let i = 0; i < total; i++) {
+    const t = tipos[i] || ''
+    if (!t || tipoMap[t]?.contabilizar_volume !== 0) count++
+  }
+  return count
+}
+
+const calcVolume = (ficha, intensidadeMap = {}, tipoMap = {}) => {
   const vol = {}
   const diasPorTreino = {}
   ;(ficha.dias_da_semana || []).forEach(d => {
@@ -207,7 +222,7 @@ const calcVolume = (ficha, intensidadeMap = {}) => {
     const dias = diasPorTreino[t] || 0
     if (!dias) return
     ;(ficha[`planilha_de_treino_${t}`] || []).forEach(ex => {
-      const series = parseInt(ex.series) || 0
+      const series = seriesEfetivas(ex, tipoMap)
       if (!series || !ex.exercicio) return
       let intensidades = []
       try {
@@ -813,8 +828,8 @@ const TipoCombinadoBtn = ({ value, onChange }) => {
 
 // ─── RodapeVolume ─────────────────────────────────────────────────────────────
 
-const RodapeVolume = ({ ficha, intensidadeMap, volumeAnterior }) => {
-  const vol = useMemo(() => calcVolume(ficha, intensidadeMap), [ficha, intensidadeMap])
+const RodapeVolume = ({ ficha, intensidadeMap, tipoMap, volumeAnterior }) => {
+  const vol = useMemo(() => calcVolume(ficha, intensidadeMap, tipoMap), [ficha, intensidadeMap, tipoMap])
   const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, '')
   const volNorm = {}
   Object.entries(vol).forEach(([k, v]) => { volNorm[norm(k)] = (volNorm[norm(k)] || 0) + v })
@@ -1176,16 +1191,16 @@ const ComboPopover = ({ ex, onChange, anchor, onClose }) => {
 
 // ─── SeriesModal — nomear séries + técnicas num único modal ──────────────────
 
-const TIPOS_SERIE = ['Aquecimento', 'Preparatória', 'Trabalho', 'Válida', 'Transição', 'Top Set', 'Máxima']
-
 const SeriesModal = ({ ex, onChange, onClose }) => {
   const n = parseInt(ex.series) || 0
   const seriesArr = (ex.tipo_de_serie || '').split(',').map(s => s.trim())
   const tecArr = (ex.tecnica_intensificadora || '').split(',').map(s => s.trim())
   const [tecnicas, setTecnicas] = useState(null)
+  const [tiposDeSerie, setTiposDeSerie] = useState(null)
 
   useEffect(() => {
     listarTecnicas().then(setTecnicas).catch(() => setTecnicas([]))
+    listarTiposDeSerie().then(setTiposDeSerie).catch(() => setTiposDeSerie([]))
   }, [])
 
   const setSerie = (i, v) => {
@@ -1221,25 +1236,42 @@ const SeriesModal = ({ ex, onChange, onClose }) => {
                 <span className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Nomear cada série</span>
                 {hasNames && <button onClick={clearSeries} className="text-[10px] text-gray-500 hover:text-red-400 transition">Limpar</button>}
               </div>
-              <div className="flex flex-wrap gap-1 mb-2">
-                <span className="text-[10px] text-gray-600 self-center mr-1">Aplicar em todas:</span>
-                {['Trabalho', 'Válida'].map(t => (
-                  <button key={t} onClick={() => applyAll(t)}
-                    className="px-1.5 py-0.5 text-[10px] bg-[#29292e] text-gray-300 rounded hover:bg-[#323238] transition">{t}</button>
-                ))}
-              </div>
-              <div className="flex flex-col gap-1 max-h-44 overflow-y-auto pr-1">
-                {Array.from({ length: n }).map((_, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <span className="w-6 text-[11px] font-mono text-gray-500 text-center">{String(i + 1).padStart(2, '0')}</span>
-                    <select value={seriesArr[i] || ''} onChange={e => setSerie(i, e.target.value)}
-                      className="flex-1 bg-[#0f0f0f] border border-[#323238] text-gray-200 text-xs rounded-lg px-2 py-1.5 outline-none focus:border-[#2563eb]/50">
-                      <option value="">—</option>
-                      {TIPOS_SERIE.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  </div>
-                ))}
-              </div>
+              {tiposDeSerie && tiposDeSerie.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-2">
+                  <span className="text-[10px] text-gray-600 self-center mr-1">Aplicar em todas:</span>
+                  {tiposDeSerie.filter(t => t.contabilizar_volume).slice(0, 3).map(t => (
+                    <button key={t.name} onClick={() => applyAll(t.nome)}
+                      className="px-1.5 py-0.5 text-[10px] bg-[#29292e] text-gray-300 rounded hover:bg-[#323238] transition">{t.nome}</button>
+                  ))}
+                </div>
+              )}
+              {tiposDeSerie === null ? (
+                <div className="py-3 text-xs text-gray-500 text-center">Carregando...</div>
+              ) : (
+                <div className="flex flex-col gap-1 max-h-44 overflow-y-auto pr-1">
+                  {Array.from({ length: n }).map((_, i) => {
+                    const tipoSelecionado = tiposDeSerie.find(t => t.nome === seriesArr[i])
+                    return (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="w-6 text-[11px] font-mono text-gray-500 text-center">{String(i + 1).padStart(2, '0')}</span>
+                        <select value={seriesArr[i] || ''} onChange={e => setSerie(i, e.target.value)}
+                          className="flex-1 bg-[#0f0f0f] border border-[#323238] text-gray-200 text-xs rounded-lg px-2 py-1.5 outline-none focus:border-[#2563eb]/50">
+                          <option value="">—</option>
+                          {tiposDeSerie.length === 0
+                            ? <option disabled>Nenhum tipo cadastrado</option>
+                            : tiposDeSerie.map(t => (
+                              <option key={t.name} value={t.nome}>{t.nome}{!t.contabilizar_volume ? ' (não conta)' : ''}</option>
+                            ))
+                          }
+                        </select>
+                        {tipoSelecionado && !tipoSelecionado.contabilizar_volume && (
+                          <span className="text-[10px] text-gray-500 shrink-0 whitespace-nowrap">fora do vol.</span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
 
             <div className="border-t border-[#323238]" />
@@ -1745,6 +1777,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
   const [gruposDisponiveis, setGruposDisponiveis] = useState(GRUPOS_BASE)
   const [porGrupo, setPorGrupo] = useState({})
   const [intensMap, setIntensMap] = useState({})
+  const [tipoMap, setTipoMap] = useState({})
   const [mapaTreinos, setMapaTreinos] = useState({})
   const [alongs, setAlongs] = useState([])
   const [mapaAlong, setMapaAlong] = useState({})
@@ -1814,6 +1847,12 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
       setExercisesLoaded(true)
     }).catch(console.error)
 
+    listarTiposDeSerie().then(lista => {
+      const map = {}
+      lista.forEach(t => { if (t.nome) map[t.nome] = t })
+      setTipoMap(map)
+    }).catch(console.error)
+
     listarAlongamentos().then(lista => {
       const nomes = [], det = {}
       lista.forEach(item => {
@@ -1842,7 +1881,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
         if (!anterior) { setVolumeAnterior(null); return }
         buscarFicha(anterior.name)
           .then(fichaCompleta => {
-            if (fichaCompleta) setVolumeAnterior(calcVolume(fichaCompleta, intensMapRef.current))
+            if (fichaCompleta) setVolumeAnterior(calcVolume(fichaCompleta, intensMapRef.current, tipoMap))
             else setVolumeAnterior(null)
           })
           .catch(console.error)
@@ -2416,7 +2455,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
       </div>
 
       {/* Rodapé de volume — fora do scroll */}
-      <RodapeVolume ficha={ficha} intensidadeMap={intensMap} volumeAnterior={volumeAnterior} />
+      <RodapeVolume ficha={ficha} intensidadeMap={intensMap} tipoMap={tipoMap} volumeAnterior={volumeAnterior} />
 
       {/* Banner orientações globais do aluno */}
       {ficha.aluno && <BannerOrientacoes alunoId={ficha.aluno} />}
