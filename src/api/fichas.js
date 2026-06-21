@@ -7,13 +7,13 @@ import { filtrosBusca } from '../utils/strings'
 
 export const listarFichas = async ({ busca, nivel, aluno, page = 1, limit = 50 } = {}) => {
   const filters = []
-  if (busca) filters.push(...filtrosBusca('nome_completo', busca))
+  // busca é feita client-side (nome_completo OU titulo) — sem filtro backend
   if (nivel) filters.push(['nivel', '=', nivel])
   if (aluno) filters.push(['aluno', '=', aluno])
 
   const params = {
     fields: JSON.stringify([
-      'name', 'creation', 'aluno', 'nome_completo',
+      'name', 'creation', 'aluno', 'nome_completo', 'titulo',
       'nivel', 'objetivo', 'data_de_inicio', 'data_de_fim', 'estrutura_calculada',
     ]),
     filters: JSON.stringify(filters),

@@ -125,6 +125,7 @@ export default function ModalEscolherModelo({ tipo, isOpen, onClose, onCriada })
           nome_completo: aluno.nome_completo,
           data_de_inicio: dataInicio,
           data_de_fim: dataFim,
+          titulo: modeloCompleto.titulo || '',
         })
         nova = await criarFicha(payload)
       }

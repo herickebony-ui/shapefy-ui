@@ -65,12 +65,13 @@ export const aplicarModeloDieta = (snapshot, { aluno, nome_completo, date, final
   final_date: final_date || null,
 })
 
-export const aplicarModeloFicha = (snapshot, { aluno, nome_completo, data_de_inicio, data_de_fim } = {}) => ({
+export const aplicarModeloFicha = (snapshot, { aluno, nome_completo, data_de_inicio, data_de_fim, titulo } = {}) => ({
   ...snapshot,
   aluno,
   nome_completo,
   data_de_inicio: data_de_inicio || null,
   data_de_fim: data_de_fim || null,
+  ...(titulo ? { titulo } : {}),
 })
 
 // ─── Modelo Dieta — CRUD ──────────────────────────────────────────────────────

@@ -976,7 +976,7 @@ export default function FichaListagem() {
         busca: query || undefined,
         limit: FETCH_LIMIT,
       })
-      const lista = query ? list.filter(f => buscarSmart(f.nome_completo, query)) : list
+      const lista = query ? list.filter(f => buscarSmart(f.nome_completo, query) || buscarSmart(f.titulo, query)) : list
       setFichas(lista)
     } catch (err) {
       setError(err.message ?? 'Erro ao buscar fichas')
@@ -1177,7 +1177,7 @@ export default function FichaListagem() {
                 render: (f) => (
                   <>
                     <p className="text-white font-medium text-sm truncate">{f.nome_completo || '—'}</p>
-                    <p className="text-gray-500 text-xs mt-0.5 truncate">{f.aluno}</p>
+                    {f.titulo && <p className="text-blue-400/80 text-xs mt-0.5 truncate italic">{f.titulo}</p>}
                     <p className="text-gray-500 text-xs mt-0.5">criado em: {formatDate(f.creation)}</p>
                   </>
                 ),
