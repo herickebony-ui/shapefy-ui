@@ -1930,16 +1930,19 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
                 )}
               </FormGroup>
             )}
-            <FormGroup label="Objetivo">
-              <Select value={ficha.objetivo || ''} onChange={v => upd('objetivo', v)}
-                options={['Recomposição corporal', 'Hipertrofia', 'Emagrecimento', 'Condicionamento', 'Saúde geral']}
-                placeholder="Selecionar..." />
+            <FormGroup label="Nome / Título da Ficha" hint="Visível apenas para o profissional">
+              <Input value={ficha.titulo || ''} onChange={v => upd('titulo', v)} placeholder="Ex: Fase 1 — Hipertrofia, Pós-lesão..." />
             </FormGroup>
           </div>
 
-          <FormGroup label="Nome / Título da Ficha" hint="Visível apenas para o profissional">
-            <Input value={ficha.titulo || ''} onChange={v => upd('titulo', v)} placeholder="Ex: Fase 1 — Hipertrofia, Pós-lesão..." />
-          </FormGroup>
+          <div className="grid grid-cols-2 gap-4">
+            <FormGroup label="Objetivo">
+              <Input value={ficha.objetivo || ''} onChange={v => upd('objetivo', v)} placeholder="Ex: Hipertrofia, Emagrecimento..." />
+            </FormGroup>
+            <FormGroup label="Nível">
+              <Select value={ficha.nivel || ''} onChange={v => upd('nivel', v)} options={['Iniciante', 'Intermediário', 'Avançado']} placeholder="Selecionar..." />
+            </FormGroup>
+          </div>
 
           {!isTemplate && (
             <div className="bg-[#1a1a1a] p-4 rounded-lg border border-[#323238] space-y-3">
@@ -1963,12 +1966,6 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
               </div>
             </div>
           )}
-
-          <div className="grid grid-cols-2 gap-3">
-            <FormGroup label="Nível">
-              <Select value={ficha.nivel || ''} onChange={v => upd('nivel', v)} options={['Iniciante', 'Intermediário', 'Avançado']} placeholder="Selecionar..." />
-            </FormGroup>
-          </div>
 
           <FormGroup label="Orientações Gerais">
             <TextareaComSugestoes value={ficha.orientacoes || ''} onChange={v => upd('orientacoes', v)}

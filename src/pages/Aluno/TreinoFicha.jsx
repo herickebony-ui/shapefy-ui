@@ -114,10 +114,16 @@ export default function TreinoFicha() {
         </h1>
       </div>
 
-      {/* Card geral: periodo */}
+      {/* Card geral: objetivo (se preenchido) + periodo */}
       <div className="px-4 mt-4">
         <div className={`${CARD} px-4 py-4`}>
-          <p className={LABEL} style={LABEL_STYLE}>Periodo</p>
+          {ficha?.objetivo && (
+            <>
+              <p className={LABEL} style={LABEL_STYLE}>Objetivo</p>
+              <p className="text-white text-sm mt-1">{ficha.objetivo}</p>
+            </>
+          )}
+          <p className={`${LABEL} ${ficha?.objetivo ? 'mt-3' : ''}`} style={LABEL_STYLE}>Periodo</p>
           <p className="text-white text-sm mt-1">
             {fmtDataExtenso(ficha?.data_de_inicio)} ate {fmtDataExtenso(ficha?.data_de_fim)}
           </p>
