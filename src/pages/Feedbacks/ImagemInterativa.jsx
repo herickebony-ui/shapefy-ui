@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { heicUrlToObjectUrl } from '../../utils/heicToJpeg'
+import useAuthSrc from '../../hooks/useAuthSrc'
 
 export default function ImagemInterativa({ src, feedbackId, idx, onRotate, readonly = false }) {
+  const authSrc = useAuthSrc(src)
   const storageKey = `shapefy_img_${feedbackId}_${idx}`
 
   const saved = useMemo(() => {
@@ -136,7 +138,7 @@ export default function ImagemInterativa({ src, feedbackId, idx, onRotate, reado
         )}
         {src && (
           <img
-            src={heicSrc || src}
+            src={heicSrc || authSrc}
             alt="Feedback"
             draggable={false}
             className="max-h-full max-w-full object-contain"
@@ -149,7 +151,7 @@ export default function ImagemInterativa({ src, feedbackId, idx, onRotate, reado
             onError={async () => {
               // Fallback: HEIC antigo que o navegador não decodifica — tenta converter no cliente.
               if (!heicSrc) {
-                const obj = await heicUrlToObjectUrl(src)
+                const obj = await heicUrlToObjectUrl(authSrc)
                 if (obj) { setHeicSrc(obj); setImgLoading(true); return }
               }
               setImgLoading(false); setImgError(true)

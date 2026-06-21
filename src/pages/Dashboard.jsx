@@ -14,6 +14,7 @@ import OnboardingModal from '../components/OnboardingModal'
 import JornadaInicial from '../components/JornadaInicial'
 import useOnboardingStore from '../store/onboardingStore'
 import useErrorModal from '../hooks/useErrorModal'
+import AuthImg from '../components/ui/AuthImg'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 const PAGE_SIZE = 30
@@ -226,7 +227,7 @@ export default function Dashboard() {
       render: (row) => (
         <div className="flex items-center gap-3">
           {row.foto && (
-            <img
+            <AuthImg
               src={`${FRAPPE_URL}${row.foto}`}
               alt={row.nome_completo}
               className="w-8 h-8 rounded-lg object-cover shrink-0 bg-[#323238]"

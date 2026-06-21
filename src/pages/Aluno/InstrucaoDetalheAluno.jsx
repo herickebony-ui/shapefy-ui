@@ -5,6 +5,7 @@ import { Spinner } from '../../components/ui'
 import { GlassCard, SectionHeader, AlertCard, VideoEmbed } from '../../components/aluno'
 import { buscarInstrucaoDetalheAluno } from '../../api/aluno'
 import { extractVideoId } from '../../utils/video'
+import useAuthSrc from '../../hooks/useAuthSrc'
 
 const BASE = import.meta.env.VITE_FRAPPE_URL || ''
 
@@ -48,6 +49,8 @@ const RenderTexto = ({ texto }) => {
 }
 
 const Bloco = ({ bloco }) => {
+  const fileSrc = useAuthSrc(bloco.file_url ? `${BASE}${bloco.file_url}` : null)
+
   if (bloco.tipo === 'topico') {
     return <h2 className="text-white font-bold text-lg">{bloco.texto}</h2>
   }
@@ -76,7 +79,7 @@ const Bloco = ({ bloco }) => {
   if (bloco.tipo === 'pdf') {
     if (!bloco.file_url) return null
     return (
-      <a href={`${BASE}${bloco.file_url}`} target="_blank" rel="noreferrer"
+      <a href={fileSrc || '#'} target="_blank" rel="noreferrer"
         className="flex items-center gap-3 px-4 h-12 rounded-xl bg-[var(--sf-surface-2)] border border-[var(--sf-border)] text-white text-sm hover:border-[var(--sf-blue)] transition-colors">
         <FileText size={16} className="text-[var(--sf-blue-light)] shrink-0" />
         <span className="flex-1 truncate">{bloco.label || 'Abrir PDF'}</span>
@@ -89,7 +92,7 @@ const Bloco = ({ bloco }) => {
     if (!bloco.file_url) return null
     return (
       <figure>
-        <img src={`${BASE}${bloco.file_url}`} alt={bloco.legenda || ''}
+        <img src={fileSrc} alt={bloco.legenda || ''}
           className="w-full rounded-xl border border-[var(--sf-border)]" />
         {bloco.legenda && (
           <figcaption className="text-[var(--sf-text-muted)] text-xs mt-1.5 text-center">{bloco.legenda}</figcaption>

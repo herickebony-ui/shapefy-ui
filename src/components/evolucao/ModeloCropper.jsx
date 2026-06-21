@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { ZoomIn, Move, RotateCw } from 'lucide-react'
+import useAuthSrc from '../../hooks/useAuthSrc'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 
@@ -35,7 +36,8 @@ export default function ModeloCropper({ url, crop, onChange }) {
   const c = parseCrop(crop)
   const boxRef = useRef(null)
   const drag = useRef(null)
-  const src = url?.startsWith('http') ? url : `${FRAPPE_URL}${url}`
+  const rawSrc = url?.startsWith('http') ? url : `${FRAPPE_URL}${url}`
+  const src = useAuthSrc(rawSrc)
 
   const onPointerDown = (e) => {
     drag.current = { x: e.clientX, y: e.clientY }

@@ -8,6 +8,7 @@ import {
   buscarModeloInstrucao, salvarModeloInstrucao, uploadArquivo,
   SEGMENTOS_INSTRUCAO, rotuloModelo,
 } from '../../api/modelos'
+import useAuthSrc from '../../hooks/useAuthSrc'
 import { Button, Input, Textarea, Spinner, Modal, FormGroup } from '../../components/ui'
 
 const BASE = import.meta.env.VITE_FRAPPE_URL
@@ -52,6 +53,7 @@ const META = Object.fromEntries(BLOCK_TYPES.map(b => [b.tipo, b]))
 
 const BlocoEditor = ({ bloco, onChange }) => {
   const [uploading, setUploading] = useState(false)
+  const fileSrc = useAuthSrc(bloco.file_url ? `${BASE}${bloco.file_url}` : null)
 
   const handleUpload = async (file) => {
     if (!file) return
@@ -117,8 +119,8 @@ const BlocoEditor = ({ bloco, onChange }) => {
             <input type="file" accept="application/pdf" className="hidden"
               onChange={(e) => { handleUpload(e.target.files?.[0]); e.target.value = '' }} />
           </label>
-          {bloco.file_url && (
-            <a href={`${BASE}${bloco.file_url}`} target="_blank" rel="noreferrer"
+          {fileSrc && (
+            <a href={fileSrc} target="_blank" rel="noreferrer"
               className="text-[#2563eb] text-xs underline truncate max-w-[200px]">
               {bloco.file_url.split('/').pop()}
             </a>
@@ -140,7 +142,7 @@ const BlocoEditor = ({ bloco, onChange }) => {
           </label>
         </div>
         {bloco.file_url && (
-          <img src={`${BASE}${bloco.file_url}`} alt="" className="max-h-48 rounded-lg border border-[#323238]" />
+          <img src={fileSrc} alt="" className="max-h-48 rounded-lg border border-[#323238]" />
         )}
         <Input
           value={bloco.legenda || ''}

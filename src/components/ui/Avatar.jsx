@@ -1,3 +1,5 @@
+import useAuthSrc from '../../hooks/useAuthSrc'
+
 export default function Avatar({ nome, foto, size = 'md' }) {
   const sizes = {
     xs: 'h-7 w-7 text-xs',
@@ -7,6 +9,8 @@ export default function Avatar({ nome, foto, size = 'md' }) {
     xl: 'h-16 w-16 text-xl',
   }
 
+  const src = useAuthSrc(foto)
+
   const initials = nome
     ?.split(' ')
     .slice(0, 2)
@@ -14,10 +18,10 @@ export default function Avatar({ nome, foto, size = 'md' }) {
     .join('')
     .toUpperCase() || '?'
 
-  if (foto) {
+  if (src) {
     return (
       <img
-        src={foto}
+        src={src}
         alt={nome}
         className={`${sizes[size]} rounded-full object-cover shrink-0 border-2 border-[#323238]`}
       />

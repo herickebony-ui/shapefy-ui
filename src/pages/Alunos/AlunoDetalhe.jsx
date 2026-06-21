@@ -22,6 +22,7 @@ import {
 } from '../../components/ui'
 import { TabPerfil, TabAnamnese, TabLista } from './AlunoModal'
 import useErrorModal from '../../hooks/useErrorModal'
+import useAuthSrc from '../../hooks/useAuthSrc'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 
@@ -59,6 +60,7 @@ export default function AlunoDetalhe() {
   const [aluno, setAluno] = useState(null)
   const [loadingAluno, setLoadingAluno] = useState(true)
   const [erroAluno, setErroAluno] = useState(null)
+  const fotoSrc = useAuthSrc(aluno?.foto ? `${FRAPPE_URL}${aluno.foto}` : null)
 
   const [abaAtiva, setAbaAtiva] = useState('perfil')
 
@@ -183,9 +185,9 @@ export default function AlunoDetalhe() {
           <div className="flex flex-col md:flex-row md:items-center gap-4">
             {/* Avatar + nome */}
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              {aluno.foto ? (
+              {fotoSrc ? (
                 <img
-                  src={`${FRAPPE_URL}${aluno.foto}`}
+                  src={fotoSrc}
                   alt={aluno.nome_completo}
                   className="w-14 h-14 rounded-full object-cover border-2 border-[#323238] shrink-0"
                 />

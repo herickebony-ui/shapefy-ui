@@ -4,6 +4,7 @@ import { CheckCircle2, AlertCircle, MapPin, User, KeyRound, Mail } from 'lucide-
 import { Button, FormGroup, Input, Modal, Spinner } from '../../components/ui'
 import { getProfissionalPorSlug, enviarCadastroPublico, buscarCep, verificarAlunoExistente, recuperarAcessoAluno } from '../../api/cadastroPublico'
 import { tw } from '../../styles/tokens'
+import AuthImg from '../../components/ui/AuthImg'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 
@@ -317,7 +318,7 @@ export default function CadastroPublico() {
         {/* Header */}
         <div className="text-center mb-8">
           {fotoUrl ? (
-            <img
+            <AuthImg
               src={fotoUrl}
               alt={profissional?.nome || ''}
               className="w-20 h-20 rounded-xl object-cover mx-auto mb-4 border border-[#323238]"

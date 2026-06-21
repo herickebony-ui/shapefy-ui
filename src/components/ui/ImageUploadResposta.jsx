@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { Image as ImageIcon, RotateCw, Trash2, Upload } from 'lucide-react'
 import useErrorModal from '../../hooks/useErrorModal'
+import useAuthSrc from '../../hooks/useAuthSrc'
 import { toRenderableImage } from '../../utils/heicToJpeg'
 import HeicSafeImg from './HeicSafeImg'
 import { cropImgStyle } from '../evolucao/ModeloCropper'
@@ -36,6 +37,7 @@ export default function ImageUploadResposta({ value, onChange, uploadFn, onRotat
   const [rotateBust, setRotateBust] = useState(0)
   const inputRef = useRef(null)
   const errorModal = useErrorModal()
+  const modeloSrc = useAuthSrc(modelo ? `${FRAPPE_URL}${modelo}` : null)
 
   const mostrarAvisoRaw = () => {
     errorModal.show({
@@ -160,7 +162,7 @@ export default function ImageUploadResposta({ value, onChange, uploadFn, onRotat
           </>
         ) : modelo ? (
           <>
-            <img src={`${FRAPPE_URL}${encodeURI(modelo)}`} alt="modelo" draggable={false} style={cropImgStyle(modeloCrop)} className="opacity-75" />
+            <img src={modeloSrc} alt="modelo" draggable={false} style={cropImgStyle(modeloCrop)} className="opacity-75" />
             <div className="absolute inset-0 bg-black/15 flex flex-col items-center justify-center gap-1 text-center px-3">
               <span className="text-yellow-400 text-sm font-extrabold uppercase tracking-widest [text-shadow:0_1px_4px_rgba(0,0,0,0.95)]">Modelo</span>
               <span className="text-white text-[11px] leading-tight [text-shadow:0_1px_3px_rgba(0,0,0,0.9)]">{dragOver ? 'Solte aqui' : 'Toque para enviar a sua'}</span>
