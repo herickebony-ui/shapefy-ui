@@ -113,16 +113,29 @@ export const salvarModeloDieta = async (name, campos) => {
   return res.data?.data
 }
 
+export const duplicarModeloDieta = async (name) => {
+  const orig = await buscarModeloDieta(name)
+  return criarModeloDieta({
+    titulo: `${orig.titulo} (cópia)`,
+    descricao: orig.descricao || '',
+    categoria: orig.categoria || '',
+    strategy_ref: orig.strategy_ref || '',
+    total_calories_ref: orig.total_calories_ref || null,
+    snapshot_json: orig.snapshot_json || '{}',
+  })
+}
+
 export const excluirModeloDieta = async (name) => {
   await client.delete(`/api/resource/${encodeURIComponent(RESOURCE_DIETA)}/${encodeURIComponent(name)}`)
 }
 
 // ─── Modelo Ficha — CRUD ──────────────────────────────────────────────────────
 
-export const listarModelosFicha = async ({ busca = '', categoria = '', page = 1, limit = 50 } = {}) => {
+export const listarModelosFicha = async ({ busca = '', categoria = '', nivel = '', page = 1, limit = 50 } = {}) => {
   const filtros = []
   if (busca) filtros.push(...filtrosBusca(['Modelo Ficha', 'titulo'], busca))
   if (categoria) filtros.push(['Modelo Ficha', 'categoria', '=', categoria])
+  if (nivel) filtros.push(['Modelo Ficha', 'nivel_ref', '=', nivel])
 
   const params = {
     fields: JSON.stringify([
@@ -155,6 +168,19 @@ export const criarModeloFicha = async (campos) => {
 export const salvarModeloFicha = async (name, campos) => {
   const res = await client.put(`/api/resource/${encodeURIComponent(RESOURCE_FICHA)}/${encodeURIComponent(name)}`, campos)
   return res.data?.data
+}
+
+export const duplicarModeloFicha = async (name) => {
+  const orig = await buscarModeloFicha(name)
+  return criarModeloFicha({
+    titulo: `${orig.titulo} (cópia)`,
+    descricao: orig.descricao || '',
+    categoria: orig.categoria || '',
+    objetivo_ref: orig.objetivo_ref || '',
+    nivel_ref: orig.nivel_ref || '',
+    tipo_de_ciclo_ref: orig.tipo_de_ciclo_ref || '',
+    snapshot_json: orig.snapshot_json || '{}',
+  })
 }
 
 export const excluirModeloFicha = async (name) => {

@@ -7,6 +7,7 @@ export default function ListPage({
   title,
   subtitle,
   actions,
+  tabs,
   filters = [],
   stats = [],
   loading = false,
@@ -17,16 +18,22 @@ export default function ListPage({
   return (
     <div className="p-4 md:p-8 text-white min-h-screen bg-[#0a0a0a]">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-6">
+      <div className={`flex items-start justify-between gap-4 ${tabs ? 'mb-4' : 'mb-6'}`}>
         <div>
           <h1 className="text-[18px] md:text-xl font-bold text-white tracking-tight">{title}</h1>
           {subtitle && <p className="text-gray-400 text-xs md:text-sm mt-1">{subtitle}</p>}
         </div>
-        {/* Desktop: all actions; Mobile: primary action only (others go in overflow menu) */}
         <div className="flex items-center gap-2 shrink-0">
           {actions}
         </div>
       </div>
+
+      {/* Tabs slot — entre o header e os filtros */}
+      {tabs && (
+        <div className="-mx-4 md:-mx-8 px-4 md:px-8 pb-0 border-b border-[#323238] mb-4">
+          {tabs}
+        </div>
+      )}
 
       {/* Stats bar */}
       {stats.length > 0 && (

@@ -4,7 +4,7 @@ import { maybeOpenNewTab } from '../../utils/navigation'
 import {
   ArrowLeft, RefreshCw, ChevronLeft, ChevronRight,
   Dumbbell, Activity, Clock, MessageSquare, LineChart,
-  Save, Search, Calendar, TrendingUp, Check, Eye, EyeOff, Trash2,
+  Save, Search, Calendar, TrendingUp, Check, Eye, EyeOff, Trash2, Shuffle,
 } from 'lucide-react'
 import { buscarSmart } from '../../utils/strings'
 import {
@@ -339,6 +339,12 @@ function SectionTable({ title, items, tipo, icon, prescricoes, semanaInfo }) {
                 {tipo === 'strength' && <PrescricaoInline presc={presc} />}
               </div>
               {tipo === 'strength' && !!item.realizado && <ChipsRealizados series={item.series} />}
+              {!!item.exercicio_original && (
+                <p className="mt-1 ml-4 text-[11px] text-blue-400/80 flex items-center gap-1.5">
+                  <Shuffle size={10} className="shrink-0" />
+                  <span>substituído de <span className="font-medium text-blue-300">{item.exercicio_original}</span></span>
+                </p>
+              )}
               {!!item.feedback_do_aluno && (
                 <p className="mt-1.5 ml-4 text-[12px] leading-snug text-yellow-400/90 italic flex items-start gap-1.5">
                   <MessageSquare size={11} className="mt-0.5 shrink-0" />

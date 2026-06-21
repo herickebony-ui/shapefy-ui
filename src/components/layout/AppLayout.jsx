@@ -47,7 +47,7 @@ const NAV_ITEMS = [
 
   { type: 'divider', label: 'Catálogos' },
   { id: 'conjuntos-fotos',    label: 'Conjuntos de Fotos', icon: Layers,         path: '/conjuntos-fotos',              funcPerm: 'feedback' },
-  { id: 'exercicios',         label: 'Exercícios',        icon: ListChecks,      path: '/exercicios',         modulo: 'treino',  funcPerm: 'treino' },
+  { id: 'exercicios',         label: 'Exercícios e Técnicas', icon: ListChecks,   path: '/exercicios',         modulo: 'treino',  funcPerm: 'treino' },
   { id: 'alongamentos',       label: 'Alongamentos',      icon: Waves,           path: '/alongamentos',       modulo: 'treino',  funcPerm: 'treino' },
   { id: 'aerobicos',          label: 'Aeróbicos',         icon: Wind,            path: '/aerobicos',          modulo: 'treino',  funcPerm: 'treino' },
   { id: 'alimentos',          label: 'Alimentos',         icon: UtensilsCrossed, path: '/alimentos',          modulo: 'dieta',   funcPerm: 'alimentos' },
