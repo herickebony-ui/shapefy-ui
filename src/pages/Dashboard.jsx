@@ -20,8 +20,7 @@ const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 const PAGE_SIZE = 30
 const FETCH_LIMIT = 500
 
-const SEXO_OPTS = [
-  { value: '', label: 'Selecionar...' },
+const SEXO_OPTS = [  
   { value: 'Masculino', label: 'Masculino' },
   { value: 'Feminino', label: 'Feminino' },
 ]

@@ -2,11 +2,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Plus, RefreshCw, AlertCircle, Trash2, FileText, Flame,
-  ClipboardList, X, Search, Tag,
+  ClipboardList, X, Search, Tag, Copy,
 } from 'lucide-react'
 import {
   listarModelosDieta, excluirModeloDieta, buscarModeloDieta, salvarModeloDieta,
-  aplicarModeloDieta, CATEGORIAS_DIETA,
+  aplicarModeloDieta, duplicarModeloDieta, CATEGORIAS_DIETA,
 } from '../../api/modelos'
 import { listarAlunos, buscarAluno } from '../../api/alunos'
 import { criarDieta, dadosAntropometricosFromAluno } from '../../api/dietas'
@@ -227,6 +227,7 @@ export default function ModeloDietaListagem() {
   const [modalEditar, setModalEditar] = useState(null)
   const [modalAplicar, setModalAplicar] = useState(null)
   const [modalCriar, setModalCriar] = useState(false)
+  const [duplicando, setDuplicando] = useState(null)
 
   useEffect(() => {
     const t = setTimeout(() => { setQuery(search); setPage(1) }, 400)
@@ -250,6 +251,18 @@ export default function ModeloDietaListagem() {
   }, [query, categoria])
 
   useEffect(() => { carregar() }, [carregar])
+
+  const handleDuplicar = async (modelo) => {
+    setDuplicando(modelo.name)
+    try {
+      await duplicarModeloDieta(modelo.name)
+      await carregar()
+    } catch (e) {
+      alert('Erro ao duplicar: ' + (e?.message || 'desconhecido'))
+    } finally {
+      setDuplicando(null)
+    }
+  }
 
   const handleExcluir = async (modelo) => {
     if (!window.confirm(`Excluir modelo "${modelo.titulo}"?`)) return
@@ -305,7 +318,7 @@ export default function ModeloDietaListagem() {
     },
     {
       label: 'Ações',
-      headerClass: 'min-w-[140px]',
+      headerClass: 'min-w-[160px]',
       render: (m) => (
         <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
           <button
@@ -321,6 +334,14 @@ export default function ModeloDietaListagem() {
             className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors"
           >
             <Tag size={12} />
+          </button>
+          <button
+            onClick={() => handleDuplicar(m)}
+            title="Duplicar modelo"
+            disabled={duplicando === m.name}
+            className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors disabled:opacity-40"
+          >
+            <Copy size={12} />
           </button>
           <button
             onClick={() => handleExcluir(m)}

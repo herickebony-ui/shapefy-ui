@@ -2,11 +2,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Plus, RefreshCw, AlertCircle, Trash2, FileText,
-  X, Search, Target, BarChart2, Tag,
+  X, Search, Target, BarChart2, Tag, Copy,
 } from 'lucide-react'
 import {
   listarModelosFicha, excluirModeloFicha, buscarModeloFicha, salvarModeloFicha,
-  aplicarModeloFicha, CATEGORIAS_FICHA,
+  aplicarModeloFicha, duplicarModeloFicha, CATEGORIAS_FICHA,
 } from '../../api/modelos'
 import { listarAlunos } from '../../api/alunos'
 import { criarFicha } from '../../api/fichas'
@@ -128,6 +128,7 @@ const ModalAplicarModelo = ({ modelo, onClose, onAplicado }) => {
         nome_completo: aluno.nome_completo,
         data_de_inicio: dataInicio,
         data_de_fim: dataFim,
+        titulo: modeloCompleto.titulo || '',
       })
 
       const nova = await criarFicha(payload)
@@ -212,11 +213,13 @@ export default function ModeloFichaListagem() {
   const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
   const [categoria, setCategoria] = useState('')
+  const [nivel, setNivel] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [modalEditar, setModalEditar] = useState(null)
   const [modalAplicar, setModalAplicar] = useState(null)
   const [modalCriar, setModalCriar] = useState(false)
+  const [duplicando, setDuplicando] = useState(null)
 
   useEffect(() => {
     const t = setTimeout(() => { setQuery(search); setPage(1) }, 400)
@@ -229,7 +232,7 @@ export default function ModeloFichaListagem() {
     try {
       // Lista pequena: busca no servidor depende da collation (acento). Buscamos
       // tudo da categoria e filtramos local com buscarSmart (acento + coringa garantidos).
-      const { list } = await listarModelosFicha({ categoria, limit: 200 })
+      const { list } = await listarModelosFicha({ categoria, nivel, limit: 200 })
       const filtrada = query ? list.filter(m => buscarSmart([m.titulo, m.descricao], query)) : list
       setModelos(filtrada)
     } catch (err) {
@@ -237,9 +240,21 @@ export default function ModeloFichaListagem() {
     } finally {
       setLoading(false)
     }
-  }, [query, categoria])
+  }, [query, categoria, nivel])
 
   useEffect(() => { carregar() }, [carregar])
+
+  const handleDuplicar = async (modelo) => {
+    setDuplicando(modelo.name)
+    try {
+      await duplicarModeloFicha(modelo.name)
+      await carregar()
+    } catch (e) {
+      alert('Erro ao duplicar: ' + (e?.message || 'desconhecido'))
+    } finally {
+      setDuplicando(null)
+    }
+  }
 
   const handleExcluir = async (modelo) => {
     if (!window.confirm(`Excluir modelo "${modelo.titulo}"?`)) return
@@ -299,7 +314,7 @@ export default function ModeloFichaListagem() {
     },
     {
       label: 'Ações',
-      headerClass: 'min-w-[140px]',
+      headerClass: 'min-w-[160px]',
       render: (m) => (
         <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
           <button
@@ -315,6 +330,14 @@ export default function ModeloFichaListagem() {
             className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors"
           >
             <Tag size={12} />
+          </button>
+          <button
+            onClick={() => handleDuplicar(m)}
+            title="Duplicar modelo"
+            disabled={duplicando === m.name}
+            className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors disabled:opacity-40"
+          >
+            <Copy size={12} />
           </button>
           <button
             onClick={() => handleExcluir(m)}
@@ -374,12 +397,25 @@ export default function ModeloFichaListagem() {
               onClear={search ? () => setSearch('') : undefined}
             />
           </div>
-          <div className="w-full sm:w-56">
+          <div className="w-full sm:w-48">
             <Select
               value={categoria}
               onChange={setCategoria}
               options={['', ...CATEGORIAS_FICHA].map(c => ({ value: c, label: c || 'Todas as categorias' }))}
               placeholder="Todas as categorias"
+            />
+          </div>
+          <div className="w-full sm:w-40">
+            <Select
+              value={nivel}
+              onChange={setNivel}
+              options={[
+                { value: '', label: 'Todos os níveis' },
+                { value: 'Iniciante', label: 'Iniciante' },
+                { value: 'Intermediário', label: 'Intermediário' },
+                { value: 'Avançado', label: 'Avançado' },
+              ]}
+              placeholder="Todos os níveis"
             />
           </div>
         </div>

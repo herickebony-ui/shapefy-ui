@@ -5,7 +5,7 @@ import {
   ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Save,
   Plus, X, Trash2, Copy, Info, Loader, Check,
   Zap, Bookmark,
-  Link2, ListOrdered, Play, GripVertical,
+  Link2, Play, GripVertical, SlidersHorizontal,
 } from 'lucide-react'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import { lockRowWidths, unlockRowWidths, dragRowStyle, makeOnDragEnd } from '../../utils/dndLinhas'
@@ -1174,117 +1174,108 @@ const ComboPopover = ({ ex, onChange, anchor, onClose }) => {
   )
 }
 
-// ─── SeriesNamePopover ────────────────────────────────────────────────────────
+// ─── SeriesModal — nomear séries + técnicas num único modal ──────────────────
 
-const TIPOS_SERIE_POPOVER = ['Aquecimento', 'Preparatória', 'Trabalho', 'Válida', 'Transição', 'Top Set', 'Máxima']
+const TIPOS_SERIE = ['Aquecimento', 'Preparatória', 'Trabalho', 'Válida', 'Transição', 'Top Set', 'Máxima']
 
-const SeriesNamePopover = ({ ex, onChange, anchor, onClose }) => {
+const SeriesModal = ({ ex, onChange, onClose }) => {
   const n = parseInt(ex.series) || 0
-  const arr = (ex.tipo_de_serie || '').split(',').map(s => s.trim())
-  const hasNames = arr.some(Boolean)
-
-  const setSerie = (i, v) => {
-    const next = [...arr]
-    while (next.length < n) next.push('')
-    next[i] = v
-    onChange({ ...ex, tipo_de_serie: next.slice(0, n).join(',') })
-  }
-  const applyAll = (v) => onChange({ ...ex, tipo_de_serie: Array(n).fill(v).join(',') })
-  const clear = () => onChange({ ...ex, tipo_de_serie: '' })
-
-  return (
-    <Popover anchor={anchor} onClose={onClose} width={320} align="right">
-      <div className="p-3">
-        <div className="flex items-center justify-between mb-2">
-          <div className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Nomear cada série</div>
-          {hasNames && <button onClick={clear} className="text-[10px] text-gray-500 hover:text-red-400 transition">Limpar</button>}
-        </div>
-        {n === 0 ? (
-          <div className="py-4 text-xs text-gray-500 text-center">Defina o nº de séries primeiro.</div>
-        ) : (
-          <>
-            <div className="flex flex-wrap gap-1 mb-3">
-              <span className="text-[10px] text-gray-600 self-center mr-1">Aplicar em todas:</span>
-              {['Trabalho', 'Válida'].map(t => (
-                <button key={t} onClick={() => applyAll(t)}
-                  className="px-1.5 py-0.5 text-[10px] bg-[#29292e] text-gray-300 rounded hover:bg-[#323238] transition">{t}</button>
-              ))}
-            </div>
-            <div className="flex flex-col gap-1 max-h-64 overflow-y-auto pr-1">
-              {Array.from({ length: n }).map((_, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span className="w-6 text-[11px] font-mono text-gray-500 text-center">{String(i + 1).padStart(2, '0')}</span>
-                  <select value={arr[i] || ''} onChange={(e) => setSerie(i, e.target.value)}
-                    className="flex-1 bg-[#0f0f0f] border border-[#323238] text-gray-200 text-xs rounded-lg px-2 py-1.5 outline-none focus:border-[#2563eb]/50">
-                    <option value="">—</option>
-                    {TIPOS_SERIE_POPOVER.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-    </Popover>
-  )
-}
-
-// ─── TecnicaSeriesPopover ─────────────────────────────────────────────────────
-
-const TecnicaSeriesPopover = ({ ex, onChange, anchor, onClose }) => {
-  const n = parseInt(ex.series) || 0
-  const arr = (ex.tecnica_intensificadora || '').split(',').map(s => s.trim())
-  const hasAny = arr.some(Boolean)
-  const [tecnicas, setTecnicas] = useState(null) // null = não carregado
+  const seriesArr = (ex.tipo_de_serie || '').split(',').map(s => s.trim())
+  const tecArr = (ex.tecnica_intensificadora || '').split(',').map(s => s.trim())
+  const [tecnicas, setTecnicas] = useState(null)
 
   useEffect(() => {
     listarTecnicas().then(setTecnicas).catch(() => setTecnicas([]))
   }, [])
 
+  const setSerie = (i, v) => {
+    const next = [...seriesArr]
+    while (next.length < n) next.push('')
+    next[i] = v
+    onChange({ ...ex, tipo_de_serie: next.slice(0, n).join(',') })
+  }
+  const applyAll = (v) => onChange({ ...ex, tipo_de_serie: Array(n).fill(v).join(',') })
+  const clearSeries = () => onChange({ ...ex, tipo_de_serie: '' })
+
   const setTec = (i, v) => {
-    const next = [...arr]
+    const next = [...tecArr]
     while (next.length < n) next.push('')
     next[i] = v
     onChange({ ...ex, tecnica_intensificadora: next.slice(0, n).join(',') })
   }
-  const clear = () => onChange({ ...ex, tecnica_intensificadora: '' })
+  const clearTec = () => onChange({ ...ex, tecnica_intensificadora: '' })
 
-  const hasAnyAssigned = arr.some(Boolean)
+  const hasNames = seriesArr.some(Boolean)
+  const hasTec = tecArr.some(Boolean)
 
   return (
-    <Popover anchor={anchor} onClose={onClose} width={340} align="right">
-      <div className="p-3">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-1.5">
-            <Zap size={11} className="text-amber-400" />
-            <span className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Técnica por série</span>
-          </div>
-          {hasAnyAssigned && (
-            <button onClick={clear} className="text-[10px] text-gray-500 hover:text-red-400 transition">Limpar</button>
-          )}
-        </div>
+    <Modal isOpen onClose={onClose} title={ex.exercicio || 'Configurar Séries'} subtitle="Nomear e técnicas intensificadoras" size="sm">
+      <div className="p-4 space-y-5">
         {n === 0 ? (
-          <div className="py-4 text-xs text-gray-500 text-center">Defina o nº de séries primeiro.</div>
-        ) : tecnicas === null ? (
-          <div className="py-4 text-xs text-gray-500 text-center">Carregando técnicas...</div>
-        ) : tecnicas.length === 0 ? (
-          <div className="py-4 text-xs text-gray-500 text-center">Nenhuma técnica cadastrada ainda.</div>
+          <p className="text-center text-xs text-gray-500 py-6">Defina o nº de séries no campo Séries primeiro.</p>
         ) : (
-          <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto pr-1">
-            {Array.from({ length: n }).map((_, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <span className="w-6 text-[11px] font-mono text-gray-500 text-center shrink-0">{String(i + 1).padStart(2, '0')}</span>
-                <select value={arr[i] || ''} onChange={e => setTec(i, e.target.value)}
-                  className="flex-1 bg-[#0f0f0f] border border-[#323238] text-gray-200 text-xs rounded-lg px-2 py-1.5 outline-none focus:border-amber-400/50">
-                  <option value="">— sem técnica —</option>
-                  {tecnicas.map(t => <option key={t.name} value={t.nome}>{t.nome}</option>)}
-                </select>
+          <>
+            {/* Nomear séries */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Nomear cada série</span>
+                {hasNames && <button onClick={clearSeries} className="text-[10px] text-gray-500 hover:text-red-400 transition">Limpar</button>}
               </div>
-            ))}
-          </div>
+              <div className="flex flex-wrap gap-1 mb-2">
+                <span className="text-[10px] text-gray-600 self-center mr-1">Aplicar em todas:</span>
+                {['Trabalho', 'Válida'].map(t => (
+                  <button key={t} onClick={() => applyAll(t)}
+                    className="px-1.5 py-0.5 text-[10px] bg-[#29292e] text-gray-300 rounded hover:bg-[#323238] transition">{t}</button>
+                ))}
+              </div>
+              <div className="flex flex-col gap-1 max-h-44 overflow-y-auto pr-1">
+                {Array.from({ length: n }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="w-6 text-[11px] font-mono text-gray-500 text-center">{String(i + 1).padStart(2, '0')}</span>
+                    <select value={seriesArr[i] || ''} onChange={e => setSerie(i, e.target.value)}
+                      className="flex-1 bg-[#0f0f0f] border border-[#323238] text-gray-200 text-xs rounded-lg px-2 py-1.5 outline-none focus:border-[#2563eb]/50">
+                      <option value="">—</option>
+                      {TIPOS_SERIE.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t border-[#323238]" />
+
+            {/* Técnicas intensificadoras */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5">
+                  <Zap size={11} className="text-amber-400" />
+                  <span className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Técnica por série</span>
+                </div>
+                {hasTec && <button onClick={clearTec} className="text-[10px] text-gray-500 hover:text-red-400 transition">Limpar</button>}
+              </div>
+              {tecnicas === null ? (
+                <div className="py-3 text-xs text-gray-500 text-center">Carregando...</div>
+              ) : tecnicas.length === 0 ? (
+                <div className="py-3 text-xs text-gray-500 text-center">Nenhuma técnica cadastrada ainda.</div>
+              ) : (
+                <div className="flex flex-col gap-1.5 max-h-44 overflow-y-auto pr-1">
+                  {Array.from({ length: n }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <span className="w-6 text-[11px] font-mono text-gray-500 text-center shrink-0">{String(i + 1).padStart(2, '0')}</span>
+                      <select value={tecArr[i] || ''} onChange={e => setTec(i, e.target.value)}
+                        className="flex-1 bg-[#0f0f0f] border border-[#323238] text-gray-200 text-xs rounded-lg px-2 py-1.5 outline-none focus:border-amber-400/50">
+                        <option value="">— sem técnica —</option>
+                        {tecnicas.map(t => <option key={t.name} value={t.nome}>{t.nome}</option>)}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
         )}
       </div>
-    </Popover>
+    </Modal>
   )
 }
 
@@ -1422,6 +1413,7 @@ const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, inten
                 <th className="text-left py-2.5 px-2 w-32">Grupo Muscular</th>
                 <th className="text-left py-2.5 px-2 w-56">Exercício</th>
                 <th className="text-center py-2.5 px-2 w-[88px]">Séries</th>
+                <th className="w-8 py-2.5 px-1" />
                 <th className="text-center py-2.5 px-2 w-24">Reps</th>
                 <th className="text-center py-2.5 px-2 w-24">Descanso</th>
                 <th className="text-left py-2.5 px-2">Instruções</th>
@@ -1478,14 +1470,10 @@ const TabelaExercicios = ({ exercicios, onChange, exerciciosPorGrupo = {}, inten
 
 const ExRow = ({ ex, i, total, isPart, position, onChange, onDup, onRemove, onOpenDetails, grupos, opcoesExercicio, upd, updMany, getOptionMeta, onPreviewVideo, dragProvided, dragSnapshot }) => {
   const [comboOpen, setComboOpen] = useState(false)
-  const [seriesOpen, setSeriesOpen] = useState(false)
-  const [tecnicaOpen, setTecnicaOpen] = useState(false)
+  const [seriesModalOpen, setSeriesModalOpen] = useState(false)
   const comboBtnRef = useRef(null)
-  const seriesBtnRef = useRef(null)
-  const tecnicaBtnRef = useRef(null)
   const comboActive = ex.primeiro || ex.ultimo
-  const hasSeriesNames = (ex.tipo_de_serie || '').split(',').some(s => s.trim())
-  const tecnicaCount = (ex.tecnica_intensificadora || '').split(',').filter(s => s.trim()).length
+  const hasSeriesConfig = (ex.tipo_de_serie || '').split(',').some(s => s.trim()) || (ex.tecnica_intensificadora || '').split(',').some(s => s.trim())
 
   return (
     <tr
@@ -1541,26 +1529,22 @@ const ExRow = ({ ex, i, total, isPart, position, onChange, onDup, onRemove, onOp
           )}
         </div>
       </td>
-      {/* Séries + botão nomear + técnica */}
+      {/* Séries */}
       <td className="px-2 py-1 align-middle">
-        <div className="flex items-center gap-0.5">
-          <input type="number" value={ex.series || ''} onChange={e => upd('series', e.target.value)}
-            className="w-full h-8 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 text-center font-semibold" />
-          <button ref={seriesBtnRef} onClick={() => setSeriesOpen(true)} title="Nomear séries"
-            className={`h-8 w-6 flex items-center justify-center rounded transition shrink-0 ${
-              hasSeriesNames ? 'text-amber-400 hover:text-amber-300' : 'text-gray-600 hover:text-gray-400'
-            }`}>
-            <ListOrdered size={11} />
-          </button>
-          <button ref={tecnicaBtnRef} onClick={() => setTecnicaOpen(true)} title="Técnicas intensificadoras"
-            className={`h-8 w-6 flex items-center justify-center rounded transition shrink-0 ${
-              tecnicaCount > 0 ? 'text-amber-400 hover:text-amber-300' : 'text-gray-600 hover:text-gray-400'
-            }`}>
-            <Zap size={11} />
-          </button>
-        </div>
-        {seriesOpen && <SeriesNamePopover ex={ex} onChange={onChange} anchor={seriesBtnRef.current} onClose={() => setSeriesOpen(false)} />}
-        {tecnicaOpen && <TecnicaSeriesPopover ex={ex} onChange={onChange} anchor={tecnicaBtnRef.current} onClose={() => setTecnicaOpen(false)} />}
+        <input type="number" value={ex.series || ''} onChange={e => upd('series', e.target.value)}
+          className="w-full h-8 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 text-center font-semibold" />
+      </td>
+      {/* Botão séries — coluna dedicada ao lado de Séries */}
+      <td className="px-1 py-1 align-middle text-center">
+        <button onClick={() => setSeriesModalOpen(true)} title="Nomear séries e técnicas intensificadoras"
+          className={`h-7 w-7 flex items-center justify-center rounded transition mx-auto ${
+            hasSeriesConfig ? 'text-amber-400 hover:text-amber-300 hover:bg-amber-500/10' : 'text-gray-500 hover:text-gray-200 hover:bg-[#29292e]'
+          }`}>
+          <SlidersHorizontal size={12} />
+        </button>
+        {seriesModalOpen && (
+          <SeriesModal ex={ex} onChange={onChange} onClose={() => setSeriesModalOpen(false)} />
+        )}
       </td>
       {/* Reps — banco "Repeticao Treino" com auto-fill de descanso quando vinculado */}
       <td className="px-2 py-1 align-middle">
@@ -1580,7 +1564,6 @@ const ExRow = ({ ex, i, total, isPart, position, onChange, onDup, onRemove, onOp
       <td className="px-2 py-1 align-middle">
         <TextareaExpansivel value={ex.observacao || ''} onChange={v => upd('observacao', v)} placeholder="Instruções..." doctype="Treino Observacao" campo="treino_observacao" />
       </td>
-      {/* Ações minimalistas */}
       <td className="px-1 py-1 align-middle">
         <div className="flex items-center justify-end gap-0.5">
           {/* Combinado */}
@@ -1981,28 +1964,23 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
     if (s.id === 'config') return (
       <div className="flex flex-col gap-4 max-w-6xl mx-auto w-full">
         <div className="space-y-2">
-          <div className={`grid grid-cols-1 ${isTemplate ? '' : 'md:grid-cols-2'} gap-3`}>
-            {!isTemplate && (
-              <FormGroup label="Aluno" required>
-                {ficha.nome_completo ? (
-                  <div className="flex items-center justify-between h-10 px-3 rounded-lg bg-[#29292e] border border-[#2563eb]/40">
-                    <span className="text-white text-sm">{ficha.nome_completo}</span>
-                    <button onClick={() => { upd('aluno', ''); upd('nome_completo', '') }} className="text-gray-500 hover:text-red-400 ml-2">×</button>
-                  </div>
-                ) : (
-                  <Autocomplete
-                    searchFn={buscarAlunosFn}
-                    onSelect={a => { upd('aluno', a.name); upd('nome_completo', a.nome_completo) }}
-                    renderItem={a => <div><p className="font-medium text-sm text-white">{a.nome_completo}</p>{a.email && <p className="text-xs text-gray-500">{a.email}</p>}</div>}
-                    placeholder="Buscar aluno pelo nome..."
-                  />
-                )}
-              </FormGroup>
-            )}
-            <FormGroup label="Nome / Título da Ficha" hint="Visível apenas para o profissional">
-              <Input value={ficha.titulo || ''} onChange={v => upd('titulo', v)} placeholder="Ex: Fase 1 — Hipertrofia, Pós-lesão..." />
+          {!isTemplate && (
+            <FormGroup label="Aluno" required>
+              {ficha.nome_completo ? (
+                <div className="flex items-center justify-between h-10 px-3 rounded-lg bg-[#29292e] border border-[#2563eb]/40">
+                  <span className="text-white text-sm">{ficha.nome_completo}</span>
+                  <button onClick={() => { upd('aluno', ''); upd('nome_completo', '') }} className="text-gray-500 hover:text-red-400 ml-2">×</button>
+                </div>
+              ) : (
+                <Autocomplete
+                  searchFn={buscarAlunosFn}
+                  onSelect={a => { upd('aluno', a.name); upd('nome_completo', a.nome_completo) }}
+                  renderItem={a => <div><p className="font-medium text-sm text-white">{a.nome_completo}</p>{a.email && <p className="text-xs text-gray-500">{a.email}</p>}</div>}
+                  placeholder="Buscar aluno pelo nome..."
+                />
+              )}
             </FormGroup>
-          </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <FormGroup label="Objetivo">
               <Input value={ficha.objetivo || ''} onChange={v => upd('objetivo', v)} placeholder="Ex: Hipertrofia, Emagrecimento..." />
@@ -2386,7 +2364,17 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
               </h1>
               {isTemplate
                 ? modeloMeta?.titulo && <p className="text-gray-400 text-xs md:text-sm truncate">{modeloMeta.titulo}</p>
-                : ficha.nome_completo && <p className="text-gray-400 text-xs md:text-sm truncate">{ficha.nome_completo}</p>
+                : (
+                  <>
+                    {ficha.nome_completo && <p className="text-gray-500 text-[11px] truncate leading-tight">{ficha.nome_completo}</p>}
+                    <input
+                      value={ficha.titulo || ''}
+                      onChange={e => upd('titulo', e.target.value)}
+                      placeholder="Título da ficha..."
+                      className="w-full bg-transparent text-gray-200 text-xs font-medium outline-none placeholder-gray-600 truncate leading-tight border-b border-[#444] focus:border-[#2563eb]/70 pb-px transition-colors"
+                    />
+                  </>
+                )
               }
             </div>
             {isTemplate && modeloMeta?.categoria && (
