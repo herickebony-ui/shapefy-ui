@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Edit, Trash2, RefreshCw, BookOpen, ExternalLink } from 'lucide-react'
+import { Plus, Edit, Trash2, RefreshCw, BookOpen, ExternalLink, Play, ToggleLeft, ToggleRight } from 'lucide-react'
 import {
   listarAerobicos, salvarAerobico, excluirAerobico, toggleAerobico,
 } from '../../api/fichas'
@@ -12,6 +12,34 @@ import ListPage from '../../components/templates/ListPage'
 import ExplorarBibliotecaModal from '../../components/ExplorarBibliotecaModal'
 import { extractVideoId } from '../../utils/video'
 import useErrorModal from '../../hooks/useErrorModal'
+import useSelection from '../../hooks/useSelection'
+import { excluirEmLote } from '../../utils/bulk'
+
+const getEmbedUrl = (id, platform) => {
+  const plat = String(platform || '').toLowerCase()
+  if (plat.includes('vimeo')) return `https://player.vimeo.com/video/${id}?autoplay=1`
+  if (plat.includes('drive')) return `https://drive.google.com/file/d/${id}/preview`
+  return `https://www.youtube.com/embed/${id}?rel=0&autoplay=1&modestbranding=1`
+}
+
+const VideoPreviewModal = ({ video, onClose }) => {
+  if (!video?.id) return null
+  return (
+    <Modal isOpen onClose={onClose} title={video.titulo || 'Pré-visualização'} size="lg">
+      <div className="p-3">
+        <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-[#323238] bg-black">
+          <iframe
+            src={getEmbedUrl(video.id, video.platform)}
+            title={video.titulo || 'Aeróbico'}
+            allow="autoplay; encrypted-media; picture-in-picture"
+            allowFullScreen
+            className="w-full h-full"
+          />
+        </div>
+      </div>
+    </Modal>
+  )
+}
 
 const PLATAFORMAS = ['YouTube', 'Google Drive', 'Vimeo']
 
@@ -166,6 +194,10 @@ export default function GerenciarAerobicos() {
   const [deleting, setDeleting] = useState(false)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const sel = useSelection()
+  const [confirmLote, setConfirmLote] = useState(false)
+  const [excluindoLote, setExcluindoLote] = useState(false)
+  const [videoAberto, setVideoAberto] = useState(null)
 
   const carregar = async () => {
     setLoading(true)
@@ -249,6 +281,22 @@ export default function GerenciarAerobicos() {
     } finally { setDeleting(false) }
   }
 
+  const handleExcluirLote = async () => {
+    const ids = [...sel.selected]
+    if (!ids.length) return
+    setExcluindoLote(true)
+    try {
+      const { fail, erros } = await excluirEmLote(excluirAerobico, ids)
+      const data = await listarAerobicos({ limit: 1000, gerenciar: true })
+      setAerobicos(data)
+      sel.clear()
+      setConfirmLote(false)
+      if (fail) errorModal.show(erros[0]?.erro || new Error(`${fail} item(ns) não puderam ser excluídos`), `Excluir aeróbicos (${fail} falhou/falharam)`)
+    } catch (e) {
+      errorModal.show(e, 'Excluir aeróbicos em lote')
+    } finally { setExcluindoLote(false) }
+  }
+
   const columns = [
     {
       label: 'Nome',
@@ -280,6 +328,15 @@ export default function GerenciarAerobicos() {
       cellClass: 'text-right',
       render: (row) => (
         <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
+          {row.video && (
+            <button
+              onClick={() => setVideoAberto({ id: row.video, platform: row['plataforma_do_vídeo'] || 'YouTube', titulo: row.exercicio_aerobico })}
+              className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors"
+              title="Visualizar vídeo"
+            >
+              <Play size={12} />
+            </button>
+          )}
           <button
             onClick={() => handleToggle(row)}
             title={row.enabled ? 'Desativar' : 'Ativar'}
@@ -289,7 +346,7 @@ export default function GerenciarAerobicos() {
                 : 'text-gray-500 border-[#323238] hover:border-gray-500 hover:text-white'
               }`}
           >
-            {row.enabled ? '●' : '○'}
+            {row.enabled ? <ToggleRight size={12} /> : <ToggleLeft size={12} />}
           </button>
           <button
             onClick={() => { setEditando(row); setModalOpen(true) }}
@@ -318,6 +375,11 @@ export default function GerenciarAerobicos() {
         actions={
           <>
             <BotaoTutoriais videos={TUTORIAIS_EXERCICIOS} />
+            {sel.count > 0 && (
+              <Button variant="danger" size="sm" icon={Trash2} loading={excluindoLote} onClick={() => setConfirmLote(true)}>
+                Excluir {sel.count}
+              </Button>
+            )}
             <Button variant="secondary" size="sm" icon={RefreshCw} onClick={carregar} loading={loading} />
             <Button variant="secondary" size="sm" icon={BookOpen} onClick={() => setShowBiblioteca(true)}>
               Explorar Biblioteca
@@ -365,6 +427,10 @@ export default function GerenciarAerobicos() {
             pageSize={pageSize}
             onPage={setPage}
             onPageSize={(s) => { setPageSize(s); setPage(1) }}
+            selectable
+            selected={sel.selected}
+            onToggle={sel.toggle}
+            onTogglePage={sel.togglePage}
           />
         )}
       </ListPage>
@@ -409,7 +475,29 @@ export default function GerenciarAerobicos() {
           </div>
         </Modal>
       )}
+      {confirmLote && (
+        <Modal
+          isOpen
+          onClose={() => setConfirmLote(false)}
+          title="Excluir selecionados"
+          size="sm"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setConfirmLote(false)}>Cancelar</Button>
+              <Button variant="danger" onClick={handleExcluirLote} loading={excluindoLote}>Excluir {sel.count}</Button>
+            </>
+          }
+        >
+          <div className="p-4">
+            <p className="text-gray-300 text-sm">
+              Tem certeza que deseja excluir <strong className="text-white">{sel.count}</strong> aeróbico{sel.count !== 1 ? 's' : ''}?
+            </p>
+            <p className="text-gray-500 text-xs mt-1">Esta ação não pode ser desfeita.</p>
+          </div>
+        </Modal>
+      )}
       {errorModal.element}
+      <VideoPreviewModal video={videoAberto} onClose={() => setVideoAberto(null)} />
     </>
   )
 }

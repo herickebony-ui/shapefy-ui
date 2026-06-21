@@ -2,17 +2,20 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import {
-  ArrowLeft, Save, AlertCircle, Loader, ChevronUp, ChevronDown, Plus,
+  ArrowLeft, Save, AlertCircle, Loader, Plus, Zap,
   FileText, UtensilsCrossed, Edit, Copy, Trash2, ArrowLeftRight, X,
-  BookmarkPlus, BookmarkCheck, Bookmark,
+  BookmarkPlus, BookmarkCheck, Bookmark, GripVertical, ChevronUp, ChevronDown,
 } from 'lucide-react'
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
+import { lockRowWidths, unlockRowWidths, dragRowStyle, reorderList } from '../../utils/dndLinhas'
 import {
   buscarDieta, salvarDieta, listarAlimentos, normalizarAlturaCm,
   listarRefeicoesProntas, buscarRefeicaoPronta,
   criarRefeicaoPronta, excluirDieta, duplicarDieta,
-  dadosAntropometricosFromAluno,
+  dadosAntropometricosFromAluno, palParaFrequencia,
 } from '../../api/dietas'
 import { listarAlunos, buscarAluno, salvarAluno } from '../../api/alunos'
+import { getPref, setPref } from '../../api/prefs'
 import {
   buscarModeloDieta, salvarModeloDieta, excluirModeloDieta, dietaParaSnapshot,
 } from '../../api/modelos'
@@ -93,14 +96,37 @@ const ajustarPorSelecao = (items, idx) => {
 
 // ─── LegendaSug ───────────────────────────────────────────────────────────────
 // Input de legenda com auto-sugestão ao digitar (portal fixed).
+// Cache de módulo: todas as instâncias na mesma tela compartilham 1 request.
+let _legendasCache = null
+let _legendasInFlight = null
+
+const _carregarLegendasGlobal = () => {
+  if (_legendasCache !== null) return Promise.resolve(_legendasCache)
+  if (_legendasInFlight) return _legendasInFlight
+  _legendasInFlight = listarTextos('Legendas', 'legend', { apenasAtivos: true })
+    .then(lista => { _legendasCache = lista; _legendasInFlight = null; return lista })
+    .catch(e => { _legendasInFlight = null; throw e })
+  return _legendasInFlight
+}
 
 const LegendaSug = ({ value, onChange }) => {
   const ref = useRef(null)
+  const textareaRef = useRef(null)
   const blurRef = useRef(null)
   const [todasSugestoes, setTodasSugestoes] = useState(null)
   const [dropOpen, setDropOpen] = useState(false)
   const [dropPos, setDropPos] = useState(null)
   const [salvoBanco, setSalvoBanco] = useState(false)
+  const [hoveredSug, setHoveredSug] = useState(null)
+
+  const autoSize = () => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }
+
+  useEffect(() => { autoSize() }, [value])
 
   const posicionar = () => {
     if (!ref.current) return
@@ -113,7 +139,7 @@ const LegendaSug = ({ value, onChange }) => {
   const carregarTodas = async () => {
     if (todasSugestoes !== null) return todasSugestoes
     try {
-      const lista = await listarTextos('Legendas', 'legend', { apenasAtivos: true })
+      const lista = await _carregarLegendasGlobal()
       setTodasSugestoes(lista)
       return lista
     } catch (e) { console.error('sugestões legendas:', e.message); return [] }
@@ -150,6 +176,9 @@ const LegendaSug = ({ value, onChange }) => {
     try {
       const registro = await salvarNoBancoSeNovo('Legendas', 'legend', value.trim())
       if (registro?.name) {
+        if (_legendasCache && !_legendasCache.some(s => s.name === registro.name)) {
+          _legendasCache = [..._legendasCache, registro]
+        }
         setTodasSugestoes(prev => {
           const base = prev || []
           return base.some(s => s.name === registro.name) ? base : [...base, registro]
@@ -163,6 +192,7 @@ const LegendaSug = ({ value, onChange }) => {
   const excluirSugestao = async (item) => {
     try {
       await excluirTexto('Legendas', item.name)
+      if (_legendasCache) _legendasCache = _legendasCache.filter(s => s.name !== item.name)
       setTodasSugestoes(prev => prev ? prev.filter(s => s.name !== item.name) : prev)
     } catch (e) { console.error('excluir sugestão:', e.message) }
   }
@@ -171,15 +201,16 @@ const LegendaSug = ({ value, onChange }) => {
   const handleFocus = async () => { clearTimeout(blurRef.current); await abrirDrop() }
 
   return (
-    <div ref={ref} className="flex items-center gap-1 w-full relative">
-      <input value={value || ''} onChange={e => onChange(e.target.value)}
-        onBlur={handleBlur} onFocus={handleFocus}
+    <div ref={ref} className="flex items-start gap-1 w-full relative">
+      <textarea ref={textareaRef} value={value || ''} onChange={e => onChange(e.target.value)}
+        onBlur={handleBlur} onFocus={handleFocus} onInput={autoSize}
+        rows={1}
         placeholder="Legenda (Ex: Consumir 40min antes do treino)"
-        className="flex-1 bg-transparent text-gray-400 text-xs outline-none border-b border-transparent hover:border-[#323238] focus:border-[#2563eb]/60 transition-colors text-left pb-1"
+        className="flex-1 bg-transparent text-gray-400 text-xs outline-none border-b border-transparent hover:border-[#323238] focus:border-[#2563eb]/60 transition-colors pb-1 resize-none overflow-hidden leading-snug"
       />
       {value?.trim() && (
         <button type="button" onMouseDown={(e) => { e.preventDefault(); salvarNoBanco() }}
-          className="shrink-0 pb-1 transition-colors" title="Salvar no banco">
+          className="shrink-0 pt-0.5 transition-colors" title="Salvar no banco">
           {salvoBanco
             ? <BookmarkCheck size={13} className="text-green-400" />
             : <BookmarkPlus size={13} className="text-blue-400/60 hover:text-blue-400" />}
@@ -190,10 +221,17 @@ const LegendaSug = ({ value, onChange }) => {
           className="bg-[#29292e] border border-[#323238] rounded-lg shadow-xl overflow-hidden">
           <div className="max-h-44 overflow-y-auto">
             {sugestoesFiltradas.map(item => (
-              <div key={item.name} className="flex items-start group/sug border-b border-[#323238]/50 last:border-0 hover:bg-[#323238] transition-colors">
+              <div key={item.name}
+                className="flex items-start group/sug border-b border-[#323238]/50 last:border-0 hover:bg-[#323238] transition-colors"
+                onMouseEnter={e => {
+                  const r = e.currentTarget.getBoundingClientRect()
+                  setHoveredSug({ texto: item.legend, top: r.bottom + 4, left: r.left, width: r.width })
+                }}
+                onMouseLeave={() => setHoveredSug(null)}
+              >
                 <button type="button"
-                  onMouseDown={() => { clearTimeout(blurRef.current); onChange(item.legend); setDropOpen(false) }}
-                  className="flex-1 text-left px-3 py-2 text-xs text-gray-300 group-hover/sug:text-white">
+                  onMouseDown={(e) => { e.preventDefault(); clearTimeout(blurRef.current); onChange(item.legend); setDropOpen(false); setHoveredSug(null) }}
+                  className="flex-1 text-left px-3 py-2 text-xs text-gray-300 group-hover/sug:text-white truncate">
                   {item.legend}
                 </button>
                 <button type="button"
@@ -205,6 +243,15 @@ const LegendaSug = ({ value, onChange }) => {
               </div>
             ))}
           </div>
+        </div>,
+        document.body
+      )}
+      {hoveredSug && createPortal(
+        <div
+          style={{ position: 'fixed', top: hoveredSug.top, left: hoveredSug.left, width: Math.max(hoveredSug.width, 380), zIndex: 100001 }}
+          className="pointer-events-none bg-[#1a1a1a] border border-[#323238] rounded-lg shadow-2xl px-3 py-2 text-xs text-gray-100 whitespace-pre-wrap"
+        >
+          {hoveredSug.texto}
         </div>,
         document.body
       )}
@@ -597,10 +644,59 @@ const ModalAdicionarRefeicaoPronta = ({ onClose, onSelectMeal }) => {
 }
 
 // ─── TabelaAlimentos ──────────────────────────────────────────────────────────
-const TabelaAlimentos = ({ items, onUpdateItem, onAddItem, onDeleteItem, onDuplicateItem, onMoveItem, onMoveGroup, onAddRefeicaoPronta, onAddSubstituteBelow, macrosReferencia }) => {
+// Move grupos (principal + substitutos contíguos) respeitando a hierarquia visual.
+// from/to são índices na lista de GRUPOS (= índices dos itens principais, sem substitutos visíveis).
+const reorderByGroups = (items, from, to) => {
+  const groups = []
+  for (const item of items) {
+    if (item.substitute) { if (groups.length) groups[groups.length - 1].push(item) }
+    else groups.push([item])
+  }
+  const ng = [...groups]
+  const [m] = ng.splice(from, 1)
+  ng.splice(to, 0, m)
+  return ng.flat()
+}
+
+// from/to são índices em TODOS os itens (inclusive substitutos visíveis).
+// Encontra o grupo de cada índice e move o grupo inteiro.
+const reorderByGroupsFull = (items, from, to) => {
+  const groups = []
+  for (const item of items) {
+    if (item.substitute) { if (groups.length) groups[groups.length - 1].push(item) }
+    else groups.push([item])
+  }
+  let idx = 0, fromGroup = 0, toGroup = 0
+  for (let g = 0; g < groups.length; g++) {
+    const end = idx + groups[g].length - 1
+    if (from >= idx && from <= end) fromGroup = g
+    if (to >= idx && to <= end) toGroup = g
+    idx += groups[g].length
+  }
+  if (fromGroup === toGroup) return items
+  const ng = [...groups]
+  const [m] = ng.splice(fromGroup, 1)
+  ng.splice(toGroup, 0, m)
+  return ng.flat()
+}
+
+const TabelaAlimentos = ({ items, onUpdateItem, onAddItem, onDeleteItem, onDuplicateItem, onMoveItem, onMoveGroup, onAddRefeicaoPronta, onAddSubstituteBelow, onReorderItems, macrosReferencia }) => {
   const [exibirSubs, setExibirSubs] = useState(false)
   const [editingIdx, setEditingIdx] = useState(null)
+  const dndScope = useRef(`dieta-${uid()}`).current
   const visiveis = exibirSubs ? items : items.filter(i => !i.substitute)
+
+  const onDragEnd = (result) => {
+    unlockRowWidths()
+    if (!result.destination || result.destination.index === result.source.index) return
+    const { index: from } = result.source
+    const { index: to } = result.destination
+    if (onReorderItems) {
+      onReorderItems(exibirSubs
+        ? reorderByGroupsFull(items, from, to)
+        : reorderByGroups(items, from, to))
+    }
+  }
 
   const macrosOpcao = items.reduce((acc, item) => {
     if (!item.substitute) {
@@ -619,7 +715,15 @@ const TabelaAlimentos = ({ items, onUpdateItem, onAddItem, onDeleteItem, onDupli
         <ModalEditarAlimento
           item={items[editingIdx]}
           onClose={() => setEditingIdx(null)}
-          onSave={(updatedItem) => { onUpdateItem(editingIdx, '__selecionarAlimento', updatedItem); setEditingIdx(null) }}
+          onSave={(updatedItem) => {
+            const isPrincipal = items[editingIdx]?.substitute !== 1
+            onUpdateItem(editingIdx, '__selecionarAlimento', {
+              ...updatedItem,
+              _base: updatedItem,                              // fix #3: ancora novo _base nos valores editados
+              ...(isPrincipal ? { __autoMatch: true } : {}),  // fix #1: cascateia substitutos se for principal
+            })
+            setEditingIdx(null)
+          }}
         />
       )}
 
@@ -632,6 +736,7 @@ const TabelaAlimentos = ({ items, onUpdateItem, onAddItem, onDeleteItem, onDupli
         <>
           {/* Desktop table */}
           <div className="hidden md:block w-full overflow-x-auto">
+            <DragDropContext onBeforeDragStart={lockRowWidths} onDragEnd={onDragEnd}>
             <table className="w-full text-xs border-separate border-spacing-y-0.5">
               <thead className="text-gray-500 uppercase bg-[#29292e] border-b border-[#323238]">
                 <tr>
@@ -648,32 +753,34 @@ const TabelaAlimentos = ({ items, onUpdateItem, onAddItem, onDeleteItem, onDupli
                   <th className="px-2 py-2 w-24 text-center">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#323238]/50">
+              <Droppable droppableId={dndScope}>
+                {(dropProvided) => (
+              <tbody ref={dropProvided.innerRef} {...dropProvided.droppableProps} className="divide-y divide-[#323238]/50">
                 {visiveis.map((item, itemIdx) => {
                   const realIdx = item.__uid ? items.findIndex(i => i.__uid === item.__uid) : items.indexOf(item)
                   const temSubstitutoOculto = !exibirSubs && !item.substitute && items[realIdx + 1]?.substitute === 1
-                  // Subs ocultos + item principal: mover em bloco (imanta substitutos abaixo).
-                  const moveAsGroup = !exibirSubs && !item.substitute
-                  const handleMove = (dir) => (moveAsGroup ? onMoveGroup(realIdx, dir) : onMoveItem(realIdx, dir))
-                  let groupSize = 1
-                  if (moveAsGroup) while (items[realIdx + groupSize]?.substitute === 1) groupSize++
-                  const upDisabled = realIdx === 0
-                  const downDisabled = moveAsGroup ? realIdx + groupSize >= items.length : realIdx === items.length - 1
+                  const rowId = item.__uid || item.name || `row-${dndScope}-${itemIdx}`
+                  // Substitutos visíveis não têm drag handle — apenas o alimento principal
+                  // pode ser arrastado (move o grupo inteiro via reorderByGroupsFull).
+                  const isSubVisible = exibirSubs && item.substitute
                   return (
-                    <tr key={item.__uid || itemIdx}
+                    <Draggable key={rowId} draggableId={rowId} index={itemIdx} isDragDisabled={isSubVisible}>
+                      {(dragProvided, dragSnapshot) => (
+                    <tr
+                      ref={dragProvided.innerRef}
+                      {...dragProvided.draggableProps}
+                      style={dragRowStyle(dragProvided, dragSnapshot)}
                       className={`transition-colors ${item.substitute ? 'bg-red-500/10' : temSubstitutoOculto ? 'bg-[#2c2c31]' : 'bg-[#222226]'} hover:bg-[#2f2f35]`}>
                       <td className="px-2 py-2 rounded-l-lg">
                         <div className="flex items-center gap-1 justify-center">
-                          <div className="flex flex-col items-center">
-                            <button onClick={() => handleMove(-1)} disabled={upDisabled}
-                              className="h-4 w-5 flex items-center justify-center text-gray-500 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
-                              <ChevronUp size={11} />
-                            </button>
-                            <button onClick={() => handleMove(+1)} disabled={downDisabled}
-                              className="h-4 w-5 flex items-center justify-center text-gray-500 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
-                              <ChevronDown size={11} />
-                            </button>
-                          </div>
+                          {!isSubVisible ? (
+                            <span {...dragProvided.dragHandleProps} title="Arrastar para reordenar"
+                              className="text-gray-600 hover:text-gray-300 cursor-grab active:cursor-grabbing">
+                              <GripVertical size={13} />
+                            </span>
+                          ) : (
+                            <span className="w-[13px]" />
+                          )}
                           <span className="text-gray-600 font-mono text-xs">{realIdx + 1}</span>
                         </div>
                       </td>
@@ -739,10 +846,16 @@ const TabelaAlimentos = ({ items, onUpdateItem, onAddItem, onDeleteItem, onDupli
                         </div>
                       </td>
                     </tr>
+                      )}
+                    </Draggable>
                   )
                 })}
+                {dropProvided.placeholder}
               </tbody>
+                )}
+              </Droppable>
             </table>
+            </DragDropContext>
           </div>
 
           {/* Mobile: card stack minimalista */}
@@ -1099,6 +1212,7 @@ const RefeicaoBlock = ({ n, draft, setDraft }) => {
         return { ...prev, [field]: arr }
       }),
       onAddRefeicaoPronta: () => setModalRefeicaoPronta({ optNum }),
+      onReorderItems: (newItems) => setDraft(prev => ({ ...prev, [field]: newItems })),
     }
   }
 
@@ -1308,6 +1422,55 @@ export const ModalDuplicarDieta = ({ dietaId, nomeAtual, onClose, onDuplicado })
 const TABS_CONFIG = [
   { id: 'gerais',    label: 'Dados Gerais', icon: <FileText size={15} /> },
   { id: 'refeicoes', label: 'Refeições',    icon: <UtensilsCrossed size={15} /> },
+  { id: 'tdee',      label: 'TDEE',         icon: <Zap size={15} /> },
+]
+
+const FATORES_PAL = [
+  { valor: 1.4,  label: 'Sedentário',              desc: 'Pouco ou nenhum exercício. Trabalho de escritório.' },
+  { valor: 1.5,  label: 'Levemente Ativo',         desc: 'Exercício/esporte leve de 1 a 3 dias por semana.' },
+  { valor: 1.6,  label: 'Moderadamente Ativo',     desc: 'Exercício/esporte moderado de 3 a 5 dias por semana.' },
+  { valor: 1.7,  label: 'Muito Ativo',             desc: 'Exercício/esporte intenso de 6 a 7 dias por semana.' },
+  { valor: 1.85, label: 'Extremamente Ativo',      desc: 'Exercício muito intenso, trabalho físico pesado e treinos diários (ou duas vezes ao dia).' },
+  { valor: 2.0,  label: 'Atleta / Profissional',   desc: 'Treinamento duas vezes ao dia, atleta de alto rendimento.' },
+]
+
+const calcTMB = (formula, peso, altura, idade, sexo) => {
+  if (!peso || !altura || !idade) return null
+  if (formula === 'tinsley') return Math.round(24.8 * peso + 10)
+  if (formula === 'mifflin') {
+    if (!sexo) return null
+    return sexo === 'Masculino'
+      ? Math.round(10 * peso + 6.25 * altura - 5 * idade + 5)
+      : Math.round(10 * peso + 6.25 * altura - 5 * idade - 161)
+  }
+  if (formula === 'harris') {
+    if (!sexo) return null
+    return sexo === 'Masculino'
+      ? Math.round(66.47 + 13.75 * peso + 5.00 * altura - 6.75 * idade)
+      : Math.round(655.09 + 9.56 * peso + 1.85 * altura - 4.67 * idade)
+  }
+  if (formula === 'harris_rev') {
+    if (!sexo) return null
+    return sexo === 'Masculino'
+      ? Math.round(88.36 + 13.39 * peso + 4.79 * altura - 5.67 * idade)
+      : Math.round(447.59 + 9.24 * peso + 3.09 * altura - 4.33 * idade)
+  }
+  return null
+}
+
+// Indicações clínicas exibidas abaixo do nome da fórmula
+const FORMULA_DICA = {
+  tinsley:    'Pessoas treinadas e atletas',
+  mifflin:    'Melhor para geral, sobrepeso e obesidade',
+  harris:     'Comparação histórica / mais conservadora',
+  harris_rev: 'Versão atualizada do Harris-Benedict',
+}
+
+const FORMULAS = [
+  { id: 'tinsley',    label: 'Tinsley',             sub: 'Atletas'    },
+  { id: 'mifflin',    label: 'Mifflin-St Jeor',     sub: 'Geral'      },
+  { id: 'harris',     label: 'Harris-Benedict',     sub: 'Original'   },
+  { id: 'harris_rev', label: 'Harris-Benedict Rev.', sub: 'Revisada'  },
 ]
 
 export default function DietaDetalhe() {
@@ -1324,6 +1487,12 @@ export default function DietaDetalhe() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [tab, setTab] = useState('gerais')
+  const [formulaRef, setFormulaRef] = useState(null)
+  const setFormulaRefPersist = (v, alunoId) => {
+    setFormulaRef(v)
+    const key = `tdee_formula_${alunoId || draft?.aluno}`
+    setPref(key, v || '').catch(console.error)
+  }
   const [toastSubstitutos, setToastSubstitutos] = useState(null)
   const [pendingPayload, setPendingPayload] = useState(null)
   const [draft, setDraft] = useState(null)
@@ -1361,7 +1530,24 @@ export default function DietaDetalhe() {
           })
         } else {
           const data = await buscarDieta(id)
-          setDraft(addUids(data))
+          let dietaDraft = addUids(data)
+          if (data.aluno) {
+            try {
+              const alunoDoc = await buscarAluno(data.aluno)
+              const dadosAluno = dadosAntropometricosFromAluno(alunoDoc)
+              // fator_atividade sempre vem do perfil atual do aluno (é bidirrecional)
+              if (dadosAluno.fator_atividade) dietaDraft = { ...dietaDraft, fator_atividade: dadosAluno.fator_atividade }
+              // demais campos antropométricos: só preenche se a dieta estiver vazia
+              if (!dietaDraft.weight  && dadosAluno.weight)  dietaDraft = { ...dietaDraft, weight:  dadosAluno.weight }
+              if (!dietaDraft.height  && dadosAluno.height)  dietaDraft = { ...dietaDraft, height:  dadosAluno.height }
+              if (!dietaDraft.age     && dadosAluno.age)     dietaDraft = { ...dietaDraft, age:     dadosAluno.age }
+              if (!dietaDraft.sexo    && dadosAluno.sexo)    dietaDraft = { ...dietaDraft, sexo:    dadosAluno.sexo }
+            } catch (e) { console.warn('Erro ao sincronizar perfil do aluno:', e) }
+          }
+          setDraft(dietaDraft)
+          if (data.aluno) {
+            getPref(`tdee_formula_${data.aluno}`).then(v => { if (v) setFormulaRef(v) }).catch(() => {})
+          }
         }
       } catch (err) {
         setError(err.message ?? 'Erro ao carregar dieta')
@@ -1469,6 +1655,12 @@ export default function DietaDetalhe() {
   const handleChange = (field, value) => setDraft(prev => ({ ...prev, [field]: value }))
   const totais = calcularTotais(draft)
 
+  // Diff do rodapé: kcal da dieta vs Gasto Calórico Diário Total da fórmula de referência
+  const _tmbRef = formulaRef && draft ? calcTMB(formulaRef, parseFloat(draft.weight), parseFloat(draft.height), parseInt(draft.age, 10), draft.sexo) : null
+  const _palRef = parseFloat(draft?.fator_atividade) || null
+  const _gcdtRef = _tmbRef && _palRef ? Math.round(_tmbRef * _palRef) : null
+  const _diffRef = _gcdtRef ? Math.round((totais?.kcal || 0) - _gcdtRef) : null
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); handleSave() }
@@ -1567,60 +1759,51 @@ export default function DietaDetalhe() {
 
       {/* Aba: Dados Gerais */}
       {tab === 'gerais' && (
-        <div className="space-y-6 animate-in fade-in duration-300">
-          <div className="bg-[#29292e] border border-[#323238] rounded-lg p-4 md:p-6 space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {!isTemplate && (
-                <div className="md:col-span-2">
-                  <FormGroup label="Aluno" required>
-                    <Autocomplete
-                      value={draft.nome_completo || ''}
-                      onChange={(v) => handleChange('nome_completo', v)}
-                      onSelect={async (a) => {
-                        handleChange('aluno', a.id)
-                        handleChange('nome_completo', a.nome)
-                        try {
-                          const data = await buscarAluno(a.id)
-                          const d = dadosAntropometricosFromAluno(data)
-                          handleChange('sexo', d.sexo)
-                          handleChange('age', d.age)
-                          handleChange('weight', d.weight)
-                          handleChange('height', d.height)
-                          handleChange('frequencia_atividade', d.frequencia_atividade)
-                        } catch (e) { console.error(e) }
-                      }}
-                      searchFn={buscarAlunosFn}
-                      renderItem={(a) => <span className="text-gray-200 text-sm">{a.nome}</span>}
-                      placeholder="Digite o nome do aluno..."
-                    />
-                  </FormGroup>
-                </div>
-              )}
+        <div className="space-y-3 animate-in fade-in duration-300">
+          <div className="bg-[#29292e] border border-[#323238] rounded-lg p-3 md:p-4 space-y-2">
+            {!isTemplate && (
+              <FormGroup label="Aluno" required>
+                <Autocomplete
+                  value={draft.nome_completo || ''}
+                  onChange={(v) => handleChange('nome_completo', v)}
+                  onSelect={async (a) => {
+                    handleChange('aluno', a.id)
+                    handleChange('nome_completo', a.nome)
+                    try {
+                      const data = await buscarAluno(a.id)
+                      const d = dadosAntropometricosFromAluno(data)
+                      handleChange('sexo', d.sexo)
+                      handleChange('age', d.age)
+                      handleChange('weight', d.weight)
+                      handleChange('height', d.height)
+                      handleChange('frequencia_atividade', d.frequencia_atividade)
+                      if (d.fator_atividade) handleChange('fator_atividade', String(d.fator_atividade))
+                    } catch (e) { console.error(e) }
+                  }}
+                  searchFn={buscarAlunosFn}
+                  renderItem={(a) => <span className="text-gray-200 text-sm">{a.nome}</span>}
+                  placeholder="Digite o nome do aluno..."
+                />
+              </FormGroup>
+            )}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               <FormGroup label="Estratégia">
-                <Input value={draft.strategy} onChange={(v) => handleChange('strategy', v)} placeholder="Ex: 01 — Dieta Linear" />
+                <Input value={draft.strategy} onChange={(v) => handleChange('strategy', v)} placeholder="Ex: Dieta Linear" />
               </FormGroup>
               <FormGroup label="Dias da Semana">
                 <Input value={draft.week_days} onChange={(v) => handleChange('week_days', v)} placeholder="Ex: Todos os dias" />
               </FormGroup>
-              {!isTemplate && (
+              {!isTemplate && <>
                 <FormGroup label="Data Inicial">
                   <Input type="date" value={draft.date} onChange={(v) => handleChange('date', v)} />
                 </FormGroup>
-              )}
-              {!isTemplate && (
                 <FormGroup label="Data Final">
                   <Input type="date" value={draft.final_date} onChange={(v) => handleChange('final_date', v)} />
                 </FormGroup>
-              )}
-              <FormGroup label="Meta de Calorias">
-                <Input type="number" value={draft.calorie_goal} onChange={(v) => handleChange('calorie_goal', v)} />
-              </FormGroup>
+              </>}
             </div>
-          </div>
-
-          {!isTemplate && (
-            <div className="bg-[#29292e] border border-[#323238] rounded-lg p-4 md:p-6 space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {!isTemplate && (
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                 <FormGroup label="Sexo">
                   <Select value={draft.sexo} onChange={(v) => handleChange('sexo', v)} options={['Feminino', 'Masculino']} />
                 </FormGroup>
@@ -1633,18 +1816,22 @@ export default function DietaDetalhe() {
                 <FormGroup label="Altura (cm)">
                   <Input type="number" value={draft.height} onChange={(v) => handleChange('height', v)} />
                 </FormGroup>
-                <div className="md:col-span-2">
-                  <FormGroup label="Nível de Atividade Física (PAL)">
-                    <Select value={draft.frequencia_atividade} onChange={(v) => handleChange('frequencia_atividade', v)}
-                      options={['Sedentário', 'Levemente Ativo', 'Moderadamente Ativo', 'Muito Ativo', 'Extremamente Ativo']} />
-                  </FormGroup>
-                </div>
+                <FormGroup label="Meta de Calorias">
+                  <Input type="number" value={draft.calorie_goal} onChange={(v) => handleChange('calorie_goal', v)} />
+                </FormGroup>
               </div>
-            </div>
-          )}
+            )}
+            {!isTemplate && (
+              <FormGroup label="Nível de Atividade Física (PAL)">
+                <Select value={draft.frequencia_atividade} onChange={(v) => handleChange('frequencia_atividade', v)}
+                  options={['Sedentário', 'Levemente Ativo', 'Moderadamente Ativo', 'Muito Ativo', 'Extremamente Ativo']} />
+              </FormGroup>
+            )}
+          </div>
 
-          <div className="bg-[#29292e] border border-[#323238] rounded-lg p-4 md:p-6 space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+          <div className="bg-[#29292e] border border-[#323238] rounded-lg p-3 md:p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <FormGroup label="Descrições Gerais">
                 <TextareaComSugestoes value={draft.general_description} onChange={(v) => handleChange('general_description', v)}
                   placeholder="Ex: Consumo de água..."
@@ -1682,7 +1869,10 @@ export default function DietaDetalhe() {
                   { label: 'Líp',   shortLabel: 'L', value: `${fmt(totais?.lip, 0)}g` },
                   { label: 'Carb',  shortLabel: 'C', value: `${fmt(totais?.carb, 0)}g` },
                   { label: 'Fib',   shortLabel: 'F', value: `${fmt(totais?.fib, 0)}g` },
-                  { label: 'Kcal',  shortLabel: 'Kcal', value: fmt(totais?.kcal, 0), highlight: true },
+                  { label: 'Kcal', shortLabel: 'Kcal', value: fmt(totais?.kcal, 0), highlight: true,
+                    badge: _diffRef !== null ? `${_diffRef > 0 ? '+' : ''}${_diffRef.toLocaleString('pt-BR')} kcal` : undefined,
+                    badgeColor: _diffRef > 0 ? 'text-green-400' : _diffRef < 0 ? 'text-blue-400' : 'text-gray-400',
+                  },
                 ],
               }}
               rightGroup={{
@@ -1697,6 +1887,221 @@ export default function DietaDetalhe() {
           </div>
         </div>
       )}
+
+      {tab === 'tdee' && (() => {
+        const w = parseFloat(draft.weight)
+        const h = parseFloat(draft.height)
+        const a = parseInt(draft.age, 10)
+        const s = draft.sexo
+        const pal = parseFloat(draft.fator_atividade) || null
+        const semDados = !w || !h || !a
+        const kcalDieta = Math.round(totais?.kcal || 0)
+        const salvarFatorNoAluno = async (valor) => {
+          handleChange('fator_atividade', String(valor))
+          if (draft.aluno) {
+            const freq = palParaFrequencia(valor)
+            try {
+              await salvarAluno(draft.aluno, { frequencia_atividade: freq })
+              handleChange('frequencia_atividade', freq)
+            } catch (e) { console.error(e) }
+          }
+        }
+        return (
+          <div className="animate-in fade-in duration-300 space-y-6">
+            {/* Resumo dos dados usados */}
+            <div className="flex flex-wrap gap-2 text-[11px]">
+              {[
+                { label: 'Peso', val: w ? `${w} kg` : null },
+                { label: 'Altura', val: h ? `${h} cm` : null },
+                { label: 'Idade', val: a ? `${a} anos` : null },
+                { label: 'Sexo', val: s || null },
+              ].map(({ label, val }) => (
+                <span key={label} className={`px-2.5 py-1 rounded border text-xs font-medium ${val ? 'border-[#323238] text-gray-300 bg-[#29292e]' : 'border-yellow-500/30 text-yellow-500 bg-yellow-500/10'}`}>
+                  {label}: {val ?? <span className="italic">não informado</span>}
+                </span>
+              ))}
+              {!s && <span className="text-[10px] text-yellow-400 self-center">Sexo necessário para Mifflin e Harris-Benedict</span>}
+            </div>
+
+            {/* Aviso se faltar dados base */}
+            {semDados && (
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 text-sm text-yellow-300">
+                Preencha peso, altura e idade na aba Dados Gerais para calcular.
+              </div>
+            )}
+
+            {/* Seletor de fator de atividade */}
+            <div className="bg-[#29292e] border border-[#323238] rounded-xl p-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Nível de Atividade Física (PAL)</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5 mb-2.5">
+                {FATORES_PAL.map(f => {
+                  const ativo = pal === f.valor
+                  return (
+                    <button
+                      key={f.valor}
+                      onClick={() => salvarFatorNoAluno(f.valor)}
+                      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-left transition-colors ${
+                        ativo
+                          ? 'bg-[#2563eb] border-[#2563eb] text-white'
+                          : 'bg-[#1a1a1a] border-[#323238] text-gray-400 hover:border-[#2563eb]/50 hover:text-white'
+                      }`}
+                    >
+                      <span className="text-xs font-bold leading-none shrink-0">{f.valor === 1.85 ? '1.8–1.9' : f.valor === 2.0 ? '2.0+' : f.valor}</span>
+                      <span className={`text-[10px] font-semibold leading-tight ${ativo ? 'text-blue-100' : 'text-gray-500'}`}>{f.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+              {/* Legenda PAL */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 pt-1 border-t border-[#323238]">
+                {FATORES_PAL.map(f => (
+                  <div key={f.valor} className="flex gap-1.5 items-start">
+                    <span className={`text-[10px] font-semibold shrink-0 leading-snug ${pal === f.valor ? 'text-blue-400' : 'text-gray-400'}`}>
+                      {f.label}:
+                    </span>
+                    <span className="text-[10px] text-gray-500 leading-snug">{f.desc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Kcal da dieta atual + seletor de fórmula de referência */}
+            {kcalDieta > 0 && (() => {
+              const tmbRef = formulaRef ? calcTMB(formulaRef, w, h, a, s) : null
+              const gcdtRef = tmbRef && pal ? Math.round(tmbRef * pal) : null
+              const diffRef = gcdtRef ? kcalDieta - gcdtRef : null
+              return (
+                <div className="bg-[#1a1a1a] border border-[#323238] rounded-xl px-4 py-3 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-0.5">Kcal desta dieta</p>
+                      <div className="flex items-baseline gap-3 flex-wrap">
+                        <p className="text-lg font-bold text-white leading-none">
+                          {kcalDieta.toLocaleString('pt-BR')} <span className="text-xs font-medium text-gray-400">kcal</span>
+                        </p>
+                        {diffRef !== null && (
+                          <span className={`text-sm font-bold ${diffRef > 0 ? 'text-green-400' : diffRef < 0 ? 'text-blue-400' : 'text-gray-400'}`}>
+                            {diffRef > 0 ? '+' : ''}{diffRef.toLocaleString('pt-BR')} kcal
+                            <span className="text-[10px] font-medium text-gray-500 ml-1">
+                              {diffRef > 0 ? 'superávit' : diffRef < 0 ? 'déficit' : 'isocalórico'}
+                            </span>
+                          </span>
+                        )}
+                        {formulaRef && !gcdtRef && !pal && (
+                          <span className="text-[10px] text-gray-600 italic">selecione o PAL</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <div className="flex flex-col items-center gap-0.5 px-2 py-1 bg-blue-500/10 border border-blue-500/20 rounded">
+                        <span className="text-[9px] font-bold text-blue-400 uppercase tracking-wider">PTN</span>
+                        <span className="text-xs font-bold text-blue-300 leading-none">{Math.round(totais?.prot || 0)}g</span>
+                      </div>
+                      <div className="flex flex-col items-center gap-0.5 px-2 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded">
+                        <span className="text-[9px] font-bold text-yellow-400 uppercase tracking-wider">CHO</span>
+                        <span className="text-xs font-bold text-yellow-300 leading-none">{Math.round(totais?.carb || 0)}g</span>
+                      </div>
+                      <div className="flex flex-col items-center gap-0.5 px-2 py-1 bg-orange-500/10 border border-orange-500/20 rounded">
+                        <span className="text-[9px] font-bold text-orange-400 uppercase tracking-wider">LIP</span>
+                        <span className="text-xs font-bold text-orange-300 leading-none">{Math.round(totais?.lip || 0)}g</span>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Seletor de fórmula de referência */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-gray-600">Referência:</span>
+                    {FORMULAS.map(({ id: fId, label }) => {
+                      const ativo = formulaRef === fId
+                      const semSexo = fId !== 'tinsley' && !s
+                      return (
+                        <button
+                          key={fId}
+                          disabled={semSexo}
+                          onClick={() => setFormulaRefPersist(ativo ? null : fId)}
+                          className={`text-[10px] font-semibold px-2.5 py-1 rounded border transition-colors ${
+                            semSexo ? 'opacity-30 cursor-not-allowed border-[#323238] text-gray-600' :
+                            ativo ? 'bg-[#2563eb] border-[#2563eb] text-white' :
+                            'border-[#323238] text-gray-400 hover:border-[#2563eb]/50 hover:text-white'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      )
+                    })}
+                    {formulaRef && <button onClick={() => setFormulaRefPersist(null)} className="text-[9px] text-gray-600 hover:text-gray-400 underline">limpar</button>}
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* Resultados das 4 fórmulas */}
+            {!semDados && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {FORMULAS.map(({ id: fId, label, sub }) => {
+                  const tmb = calcTMB(fId, w, h, a, s)
+                  const gcdt = tmb && pal ? Math.round(tmb * pal) : null
+                  const semSexo = fId !== 'tinsley' && !s
+                  const diff = gcdt && kcalDieta ? kcalDieta - gcdt : null
+                  return (
+                    <div key={fId} className="bg-[#29292e] border border-[#323238] rounded-xl p-3 flex flex-col gap-1.5">
+                      <div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="text-xs font-bold text-white">{label}</p>
+                          <span className="text-[9px] text-gray-600">({sub})</span>
+                          {fId !== 'tinsley' && s && (
+                            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-[#323238] text-gray-400">
+                              {s === 'Feminino' ? '♀ Feminino' : '♂ Masculino'}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[9px] text-gray-600 leading-tight mt-0.5">{FORMULA_DICA[fId]}</p>
+                      </div>
+                      {semSexo ? (
+                        <p className="text-[11px] text-yellow-400 italic">Informe o sexo em Dados Gerais</p>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-4">
+                            <div>
+                              <p className="text-[9px] uppercase tracking-wider text-gray-500 font-bold mb-0.5">TMB</p>
+                              <p className="text-base font-bold text-white leading-none">
+                                {tmb?.toLocaleString('pt-BR')} <span className="text-[10px] font-medium text-gray-400">kcal</span>
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[9px] uppercase tracking-wider text-gray-500 font-bold mb-0.5">Gasto Calórico Diário Total</p>
+                              <p className={`text-xl font-bold leading-none ${gcdt ? 'text-[#2563eb]' : 'text-gray-600'}`}>
+                                {gcdt ? gcdt.toLocaleString('pt-BR') : '—'} <span className="text-[10px] font-medium text-gray-400">{gcdt ? 'kcal' : ''}</span>
+                              </p>
+                              {!pal && <p className="text-[9px] text-gray-600 mt-0.5">Selecione o PAL</p>}
+                            </div>
+                          </div>
+                          {diff !== null && (
+                            <div className={`rounded-lg px-3 py-1.5 flex items-center justify-between ${
+                              diff > 0 ? 'bg-green-500/10 border border-green-500/20' :
+                              diff < 0 ? 'bg-blue-500/10 border border-blue-500/20' :
+                              'bg-[#323238] border border-[#323238]'
+                            }`}>
+                              <p className="text-[9px] uppercase tracking-wider font-bold text-gray-500">Dieta vs Gasto Diário Total</p>
+                              <div className="text-right">
+                                <p className={`text-sm font-bold leading-none ${diff > 0 ? 'text-green-400' : diff < 0 ? 'text-blue-400' : 'text-gray-400'}`}>
+                                  {diff > 0 ? '+' : ''}{diff.toLocaleString('pt-BR')} <span className="text-[9px] font-medium">kcal</span>
+                                </p>
+                                <p className="text-[9px] text-gray-500">
+                                  {diff > 0 ? 'superávit' : diff < 0 ? 'déficit' : 'isocalórico'}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Modal duplicar */}
       {modalDuplicar && (

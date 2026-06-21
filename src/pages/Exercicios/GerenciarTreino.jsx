@@ -1,17 +1,45 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Plus, Edit, Trash2, X, RefreshCw, BookOpen, ExternalLink } from 'lucide-react'
+import { Plus, Edit, Trash2, X, RefreshCw, BookOpen, ExternalLink, Play, Shuffle } from 'lucide-react'
 import {
   listarExercicios, salvarTreinoExercicio, excluirTreinoExercicio, listarGruposMusculares,
 } from '../../api/fichas'
 import {
   Button, FormGroup, Input, Select, Modal, EmptyState, DataTable, Badge,
-  ImportExcelButton, BotaoTutoriais,
+  ImportExcelButton, BotaoTutoriais, Autocomplete,
 } from '../../components/ui'
 import { TUTORIAIS_EXERCICIOS } from '../../data/tutoriais'
 import ListPage from '../../components/templates/ListPage'
 import ExplorarBibliotecaModal from '../../components/ExplorarBibliotecaModal'
 import { extractVideoId } from '../../utils/video'
 import useErrorModal from '../../hooks/useErrorModal'
+import useSelection from '../../hooks/useSelection'
+import { excluirEmLote } from '../../utils/bulk'
+
+const getEmbedUrl = (id, platform) => {
+  const plat = String(platform || '').toLowerCase()
+  if (plat.includes('vimeo')) return `https://player.vimeo.com/video/${id}?autoplay=1`
+  if (plat.includes('drive')) return `https://drive.google.com/file/d/${id}/preview`
+  return `https://www.youtube.com/embed/${id}?rel=0&autoplay=1&modestbranding=1`
+}
+
+const VideoPreviewModal = ({ video, onClose }) => {
+  if (!video?.id) return null
+  return (
+    <Modal isOpen onClose={onClose} title={video.titulo || 'Pré-visualização'} size="lg">
+      <div className="p-3">
+        <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-[#323238] bg-black">
+          <iframe
+            src={getEmbedUrl(video.id, video.platform)}
+            title={video.titulo || 'Exercício'}
+            allow="autoplay; encrypted-media; picture-in-picture"
+            allowFullScreen
+            className="w-full h-full"
+          />
+        </div>
+      </div>
+    </Modal>
+  )
+}
 
 const normalizar = (s = '') =>
   String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
@@ -69,7 +97,7 @@ const normIntensidade = (v) => String(v ?? '').replace('.', ',')
 
 // ─── ModalExercicio ───────────────────────────────────────────────────────────
 
-const ModalExercicio = ({ exercicio, grupos, onSave, onClose }) => {
+const ModalExercicio = ({ exercicio, grupos, exercicios: todosExercicios = [], onSave, onClose }) => {
   const isEdit = !!exercicio?.name
   const [saving, setSaving] = useState(false)
   const errorModal = useErrorModal()
@@ -79,6 +107,19 @@ const ModalExercicio = ({ exercicio, grupos, onSave, onClose }) => {
   const [video, setVideo] = useState(exercicio?.video || '')
   const [plataforma, setPlataforma] = useState(exercicio?.['plataforma_do_vídeo'] || 'YouTube')
   const [videoDetected, setVideoDetected] = useState(false)
+  const [substitutos, setSubstitutos] = useState([]) // [{name, nome}]
+
+  useEffect(() => {
+    if (!exercicio?.name) return
+    import('../../api/client').then(({ default: client }) => {
+      client.get(`/api/resource/Treino%20Exercicio/${encodeURIComponent(exercicio.name)}`)
+        .then(res => {
+          const subs = res.data?.data?.substitutos || []
+          setSubstitutos(subs.map(s => ({ name: s.exercicio, nome: s.nome_exercicio || s.exercicio })))
+        })
+        .catch(() => {})
+    })
+  }, [exercicio?.name])
 
   const handleVideoChange = (v) => {
     const info = extractVideoInfo(v)
@@ -129,6 +170,10 @@ const ModalExercicio = ({ exercicio, grupos, onSave, onClose }) => {
           doctype: 'Treino Exercicio Grupo Muscular',
           grupo_muscular: i.grupo_muscular,
           intensidade: normIntensidade(i.intensidade),
+        })),
+        substitutos: substitutos.map(s => ({
+          doctype: 'Treino Exercicio Substituto',
+          exercicio: s.name,
         })),
       }
       const resultado = await salvarTreinoExercicio(isEdit ? exercicio.name : null, payload)
@@ -275,6 +320,44 @@ const ModalExercicio = ({ exercicio, grupos, onSave, onClose }) => {
             </>
           )}
         </div>
+
+        <div className="border border-[#323238] rounded-lg overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-2 bg-[#1a1a1a] border-b border-[#323238]">
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Exercícios Substitutos</span>
+          </div>
+          <div className="p-3">
+            <Autocomplete
+              placeholder="Buscar exercício substituto..."
+              icon={Shuffle}
+              searchFn={async (q) => {
+                const norm = q.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+                return todosExercicios.filter(e =>
+                  e.nome_do_exercicio?.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(norm) &&
+                  e.name !== exercicio?.name &&
+                  !substitutos.some(s => s.name === e.name)
+                ).slice(0, 10)
+              }}
+              onSelect={(e) => setSubstitutos(prev => [...prev, { name: e.name, nome: e.nome_do_exercicio }])}
+              renderItem={(e) => <span className="text-sm text-white">{e.nome_do_exercicio}</span>}
+              emptyState={<span className="text-xs text-gray-500">Nenhum exercício encontrado</span>}
+            />
+            {substitutos.length === 0 ? (
+              <p className="text-gray-600 text-xs text-center py-3">Nenhum substituto cadastrado.</p>
+            ) : (
+              <div className="mt-2 flex flex-col gap-1">
+                {substitutos.map((s, i) => (
+                  <div key={s.name} className="flex items-center justify-between px-3 py-2 bg-[#29292e] rounded-lg">
+                    <span className="text-gray-200 text-xs">{s.nome}</span>
+                    <button onClick={() => setSubstitutos(prev => prev.filter((_, idx) => idx !== i))}
+                      className="h-6 w-6 flex items-center justify-center text-gray-500 hover:text-red-400 transition-colors">
+                      <X size={11} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </Modal>
   </>)
@@ -297,6 +380,10 @@ export default function GerenciarTreino() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const debounceRef = useRef(null)
+  const sel = useSelection()
+  const [confirmLote, setConfirmLote] = useState(false)
+  const [excluindoLote, setExcluindoLote] = useState(false)
+  const [videoAberto, setVideoAberto] = useState(null)
 
   const carregar = async () => {
     setLoading(true)
@@ -378,6 +465,22 @@ export default function GerenciarTreino() {
     } finally { setDeleting(false) }
   }
 
+  const handleExcluirLote = async () => {
+    const ids = [...sel.selected]
+    if (!ids.length) return
+    setExcluindoLote(true)
+    try {
+      const { fail, erros } = await excluirEmLote(excluirTreinoExercicio, ids)
+      const exs = await listarExercicios({ limit: 1000 })
+      setExercicios(exs)
+      sel.clear()
+      setConfirmLote(false)
+      if (fail) errorModal.show(erros[0]?.erro || new Error(`${fail} item(ns) não puderam ser excluídos`), `Excluir exercícios (${fail} falhou/falharam)`)
+    } catch (e) {
+      errorModal.show(e, 'Excluir exercícios em lote')
+    } finally { setExcluindoLote(false) }
+  }
+
   const grupoOpts = useMemo(() => [
     { value: '', label: 'Todos os grupos' },
     ...grupos.map(g => ({ value: g, label: g })),
@@ -437,6 +540,15 @@ export default function GerenciarTreino() {
       cellClass: 'text-right',
       render: (ex) => (
         <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
+          {ex.video && (
+            <button
+              onClick={() => setVideoAberto({ id: ex.video, platform: ex['plataforma_do_vídeo'] || 'YouTube', titulo: ex.nome_do_exercicio })}
+              className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors"
+              title="Visualizar vídeo"
+            >
+              <Play size={12} />
+            </button>
+          )}
           <button
             onClick={() => { setEditando(ex); setModalOpen(true) }}
             className="h-7 w-7 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors"
@@ -464,6 +576,11 @@ export default function GerenciarTreino() {
         actions={
           <>
             <BotaoTutoriais videos={TUTORIAIS_EXERCICIOS} />
+            {sel.count > 0 && (
+              <Button variant="danger" size="sm" icon={Trash2} loading={excluindoLote} onClick={() => setConfirmLote(true)}>
+                Excluir {sel.count}
+              </Button>
+            )}
             <Button variant="secondary" size="sm" icon={RefreshCw} onClick={carregar} loading={loading} />
             <Button variant="secondary" size="sm" icon={BookOpen} onClick={() => setShowBiblioteca(true)}>
               Explorar Biblioteca
@@ -521,6 +638,10 @@ export default function GerenciarTreino() {
             pageSize={pageSize}
             onPage={setPage}
             onPageSize={(s) => { setPageSize(s); setPage(1) }}
+            selectable
+            selected={sel.selected}
+            onToggle={sel.toggle}
+            onTogglePage={sel.togglePage}
           />
         )}
       </ListPage>
@@ -541,6 +662,7 @@ export default function GerenciarTreino() {
         <ModalExercicio
           exercicio={editando}
           grupos={grupos}
+          exercicios={exercicios}
           onSave={handleSave}
           onClose={() => { setModalOpen(false); setEditando(null) }}
         />
@@ -567,7 +689,29 @@ export default function GerenciarTreino() {
           </div>
         </Modal>
       )}
+      {confirmLote && (
+        <Modal
+          isOpen
+          onClose={() => setConfirmLote(false)}
+          title="Excluir selecionados"
+          size="sm"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setConfirmLote(false)}>Cancelar</Button>
+              <Button variant="danger" onClick={handleExcluirLote} loading={excluindoLote}>Excluir {sel.count}</Button>
+            </>
+          }
+        >
+          <div className="p-4">
+            <p className="text-gray-300 text-sm">
+              Tem certeza que deseja excluir <strong className="text-white">{sel.count}</strong> exercício{sel.count !== 1 ? 's' : ''}?
+            </p>
+            <p className="text-gray-500 text-xs mt-1">Esta ação não pode ser desfeita.</p>
+          </div>
+        </Modal>
+      )}
       {errorModal.element}
+      <VideoPreviewModal video={videoAberto} onClose={() => setVideoAberto(null)} />
     </>
   )
 }

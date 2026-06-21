@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Copy, Check } from 'lucide-react'
 import { Modal, Button } from '../ui'
 import { salvarAnamnese, rotarImagemAnamnese } from '../../api/anamneses'
+import { buscarRegistro } from '../../api/evolucao'
 import ImagemInterativa from '../../pages/Feedbacks/ImagemInterativa'
 import { formatFeedbackParaCopia, copiarTexto } from '../../utils/copiarRespostas'
 
@@ -12,6 +13,8 @@ const fmtData = (d) => {
   const [y, m, day] = String(d).split(' ')[0].split('-')
   return `${day}/${m}/${y}`
 }
+
+const numBR = (n) => (n == null ? '—' : Number(n).toFixed(1).replace('.', ','))
 
 // Detecta duplicação em sequência (idx 1..N + idx N+1..2N com mesmas perguntas)
 // e escolhe a metade com mais informação preenchida — backend às vezes cria a
@@ -43,6 +46,18 @@ export default function AnamneseViewerModal({ anamnese, onClose, onAtualizada })
   const [salvo, setSalvo] = useState(false)
   const [copiado, setCopiado] = useState(false)
   const [imgSrcs, setImgSrcs] = useState({})
+  const [registro, setRegistro] = useState(null)
+
+  // Fonte única de fotos/peso: o Registro de Evolução vinculado (mesmo padrão
+  // do FeedbackDetalhe). Sem registro vinculado, o bloco não aparece.
+  useEffect(() => {
+    if (!anamnese.registro_evolucao) return
+    let cancel = false
+    buscarRegistro(anamnese.registro_evolucao)
+      .then(r => { if (!cancel) setRegistro(r) })
+      .catch(() => {})
+    return () => { cancel = true }
+  }, [anamnese.registro_evolucao])
 
   const handleCopiarRespostas = async () => {
     const limpas = dedupePerguntas(respostas)
@@ -122,6 +137,44 @@ export default function AnamneseViewerModal({ anamnese, onClose, onAtualizada })
       }
     >
       <div className="p-4">
+        {/* Evolução · Fotos & Peso — do Registro de Evolução vinculado */}
+        {registro && (registro.peso != null || registro.fotos?.length > 0) && (
+          <div className="bg-[#1a1a1a] rounded-xl border border-[#323238] p-4 mb-4">
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Evolução · Fotos &amp; Peso</h3>
+            {registro.peso != null && (
+              <div className="mb-4">
+                <span className="text-gray-500 text-[10px] uppercase tracking-wider font-bold">Peso</span>
+                <p className="text-white text-2xl font-bold leading-none mt-1">
+                  {numBR(registro.peso)} <span className="text-base text-gray-500">kg</span>
+                </p>
+              </div>
+            )}
+            {registro.fotos?.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {registro.fotos.map((f, i) => (
+                  <div key={i}>
+                    <p className="text-[#93C5FD] text-[10px] font-bold uppercase tracking-wider mb-1 truncate" title={f.rotulo}>
+                      {f.rotulo}
+                    </p>
+                    {f.url ? (
+                      <ImagemInterativa
+                        src={imgSrcs[`${anamnese.name}_reg_${i}`] || `${FRAPPE_URL}${encodeURI(f.url)}`}
+                        feedbackId={anamnese.name}
+                        idx={`reg_${i}`}
+                        onRotate={() => handleRotate(f.url, `reg_${i}`)}
+                      />
+                    ) : (
+                      <div className="w-full aspect-[3/4] rounded-lg border border-dashed border-[#323238] flex items-center justify-center text-gray-600 text-[10px] text-center px-1">
+                        sem foto neste período
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="divide-y divide-[#323238]/40 bg-[#1a1a1a] rounded-xl border border-[#323238] overflow-hidden">
           {respostas.map((item, idx) => {
             const isSecao = item.tipo === 'Quebra de Seção' || item.tipo === 'Quebra de Sessão' || item.tipo === 'Section Break'

@@ -155,3 +155,9 @@ body {
   height: 0;
   float: left;
 }
+
+/* @hello-pangea/dnd — acelera deslocamento das linhas não-arrastadas.
+   A biblioteca aplica transition inline; !important sobrescreve. */
+[data-rfd-draggable-id] {
+  transition-duration: 0.05s !important;
+}

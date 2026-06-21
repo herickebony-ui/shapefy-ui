@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft, ChevronRight, BarChart2, Plus,
   ClipboardList, Activity, Calendar, Mail, Phone, AtSign,
-  Cake, Images, TrendingUp,
+  Cake, Images, TrendingUp, X,
 } from 'lucide-react'
 
 const WhatsAppIcon = ({ size = 14 }) => (
@@ -63,6 +63,7 @@ export default function AlunoDetalhe() {
   const fotoSrc = useAuthSrc(aluno?.foto ? `${FRAPPE_URL}${aluno.foto}` : null)
 
   const [abaAtiva, setAbaAtiva] = useState('perfil')
+  const [fotoExpandida, setFotoExpandida] = useState(false)
 
   const [dietas, setDietas] = useState([])
   const [loadingDietas, setLoadingDietas] = useState(false)
@@ -172,6 +173,25 @@ export default function AlunoDetalhe() {
   return (
     <div className="text-white">
       {errorModal.element}
+      {fotoExpandida && aluno.foto && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/85 cursor-zoom-out"
+          onClick={() => setFotoExpandida(false)}
+        >
+          <img
+            src={`${FRAPPE_URL}${aluno.foto}`}
+            alt={aluno.nome_completo}
+            className="max-w-[90vw] max-h-[90vh] rounded-2xl object-contain shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          />
+          <button
+            onClick={() => setFotoExpandida(false)}
+            className="absolute top-4 right-4 h-9 w-9 flex items-center justify-center text-white bg-black/50 hover:bg-black/80 rounded-full transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </div>
+      )}
       {/* Header sticky */}
       <div className="sticky top-0 z-40 bg-[#1a1a1a]/95 backdrop-blur border-b border-[#323238]">
         <div className="max-w-screen-xl mx-auto px-4 md:px-8 py-3">
@@ -185,9 +205,9 @@ export default function AlunoDetalhe() {
           <div className="flex flex-col md:flex-row md:items-center gap-4">
             {/* Avatar + nome */}
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              {fotoSrc ? (
+              {aluno.foto ? (
                 <img
-                  src={fotoSrc}
+                  src={`${FRAPPE_URL}${aluno.foto}`}
                   alt={aluno.nome_completo}
                   className="w-14 h-14 rounded-full object-cover border-2 border-[#323238] shrink-0"
                 />

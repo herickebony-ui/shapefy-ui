@@ -3,7 +3,7 @@ import { RefreshCw } from 'lucide-react'
 import { heicUrlToObjectUrl } from '../../utils/heicToJpeg'
 import useAuthSrc from '../../hooks/useAuthSrc'
 
-export default function ImagemInterativa({ src, feedbackId, idx, onRotate, readonly = false }) {
+export default function ImagemInterativa({ src, feedbackId, idx, onRotate, readonly = false, extraActions }) {
   const authSrc = useAuthSrc(src)
   const storageKey = `shapefy_img_${feedbackId}_${idx}`
 
@@ -75,12 +75,15 @@ export default function ImagemInterativa({ src, feedbackId, idx, onRotate, reado
       {!readonly && (
         <div className="flex flex-col w-full gap-3 px-1 bg-[#222226]/60 p-3 rounded-lg border border-[#323238]">
           <div className="flex items-center justify-between w-full">
-            <button
-              onClick={handleVirar}
-              className="text-[10px] flex items-center gap-1 bg-[#29292e] px-3 py-1.5 rounded-lg border border-[#323238] hover:border-[#2563eb] text-white transition-all shrink-0 font-bold"
-            >
-              <RefreshCw size={10} /> Virar 90°
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={handleVirar}
+                className="text-[10px] flex items-center gap-1 bg-[#29292e] px-3 py-1.5 rounded-lg border border-[#323238] hover:border-[#2563eb] text-white transition-all shrink-0 font-bold"
+              >
+                <RefreshCw size={10} /> Virar 90°
+              </button>
+              {extraActions}
+            </div>
             {isDirty && (
               <button
                 onClick={reset}

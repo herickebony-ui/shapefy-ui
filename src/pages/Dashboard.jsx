@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Users, UserCheck, UserX, CalendarPlus, Plus, RefreshCw, Trash2, Link2, AlertTriangle, Archive, Info } from 'lucide-react'
+import { Users, UserCheck, UserX, CalendarPlus, Plus, RefreshCw, Trash2, Link2, AlertTriangle, Archive, Info, ToggleLeft, ToggleRight } from 'lucide-react'
 import { listarAlunos, criarAluno, buscarStatsAlunos, excluirAluno, salvarAluno } from '../api/alunos'
 import { listarVinculosAluno, excluirVinculosExcluiveis } from '../api/alunoVinculos'
 import { parseFrappeError } from '../utils/frappeErrors'
@@ -196,6 +196,17 @@ export default function Dashboard() {
     }
   }
 
+  const handleToggleAtivo = async (row) => {
+    const novoEnabled = row.enabled ? 0 : 1
+    setAlunos(prev => prev.map(a => a.name === row.name ? { ...a, enabled: novoEnabled } : a))
+    try {
+      await salvarAluno(row.name, { enabled: novoEnabled })
+    } catch (e) {
+      console.error(e)
+      setAlunos(prev => prev.map(a => a.name === row.name ? { ...a, enabled: row.enabled } : a))
+    }
+  }
+
   const setField = (campo) => (val) => setNovoAluno(prev => ({ ...prev, [campo]: val }))
 
   const handleCriar = async () => {
@@ -270,10 +281,19 @@ export default function Dashboard() {
     },
     {
       label: 'Ações',
-      headerClass: 'w-16 text-center',
+      headerClass: 'w-24 text-center',
       cellClass: 'text-center',
       render: (row) => (
-        <div className="flex items-center justify-center" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-center gap-1.5" onClick={e => e.stopPropagation()}>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleToggleAtivo(row) }}
+            title={row.enabled ? 'Desativar aluno' : 'Ativar aluno'}
+            className={`h-7 w-7 flex items-center justify-center border rounded-lg transition-colors ${row.enabled
+              ? 'text-green-400 border-green-500/30 hover:bg-green-700 hover:border-green-700 hover:text-white'
+              : 'text-gray-500 border-[#323238] hover:border-gray-500 hover:text-white'}`}
+          >
+            {row.enabled ? <ToggleRight size={12} /> : <ToggleLeft size={12} />}
+          </button>
           <button
             onClick={(e) => { e.stopPropagation(); setAlunoExcluir(row) }}
             title="Excluir aluno"

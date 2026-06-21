@@ -65,12 +65,13 @@ export const aplicarModeloDieta = (snapshot, { aluno, nome_completo, date, final
   final_date: final_date || null,
 })
 
-export const aplicarModeloFicha = (snapshot, { aluno, nome_completo, data_de_inicio, data_de_fim } = {}) => ({
+export const aplicarModeloFicha = (snapshot, { aluno, nome_completo, data_de_inicio, data_de_fim, titulo } = {}) => ({
   ...snapshot,
   aluno,
   nome_completo,
   data_de_inicio: data_de_inicio || null,
   data_de_fim: data_de_fim || null,
+  ...(titulo ? { titulo } : {}),
 })
 
 // ─── Modelo Dieta — CRUD ──────────────────────────────────────────────────────
@@ -212,10 +213,26 @@ export const duplicarModeloInstrucao = async (name) => {
   })
 }
 
-// Upload genérico de arquivo (PDF/imagem) — sempre público e sem optimize.
+// Sanitiza o nome do arquivo: tira acento, remove caracteres especiais e troca
+// espaço por "_". Evita o bug do iOS (Safari normaliza a URL pra NFC e não acha
+// arquivo salvo em NFD) e URLs quebradas por espaço/acento.
+const nomeArquivoSeguro = (nome = '') => {
+  const i = nome.lastIndexOf('.')
+  const ext = i > 0 ? nome.slice(i).toLowerCase() : ''
+  const base = (i > 0 ? nome.slice(0, i) : nome)
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
+    .replace(/[^\w.-]+/g, '_')                        // resto vira "_"
+    .replace(/_+/g, '_').replace(/^_|_$/g, '')        // limpa "_" duplicados/nas pontas
+  return (base || 'arquivo') + ext
+}
+
+// Upload genérico de arquivo (PDF/imagem) — sempre público, sem optimize e com
+// nome sanitizado.
 export const uploadArquivo = async (file) => {
+  const seguro = nomeArquivoSeguro(file.name)
+  const arquivo = seguro !== file.name ? new File([file], seguro, { type: file.type }) : file
   const formData = new FormData()
-  formData.append('file', file)
+  formData.append('file', arquivo)
   formData.append('is_private', '0')
   formData.append('optimize', '0')
   const res = await client.post('/api/method/upload_file', formData, {

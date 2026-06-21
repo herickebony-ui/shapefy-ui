@@ -210,6 +210,10 @@ export default function AvaliacaoListagem() {
   const fotoDaPose = (av, p) =>
     (fotosPorAv[av.name] || []).find(f => f.slot_id === p.slot)?.url || av[p.key] || ''
 
+  // Fotos comparativas: limitada às 3 últimas quando nenhuma seleção explícita.
+  // Quando o usuário seleciona colunas (visibleAvNames != null), exibe todas selecionadas.
+  const fotosAvs = visibleAvNames ? visibleAvs : visibleAvs.slice(-3)
+
   const latest = visibleAvs[visibleAvs.length - 1]
   const first  = visibleAvs[0]
   const getDelta = (key) => {
@@ -1050,19 +1054,22 @@ export default function AvaliacaoListagem() {
           <div className="px-4 py-3 border-b border-[#323238] bg-[#1a1a1a]/40 flex items-center justify-between flex-wrap gap-2">
             <h3 className="font-bold text-white text-sm">Fotos comparativas</h3>
             <p className="text-[11px] text-gray-500">
-              Cada linha é uma pose · {visibleAvs.length} avaliações selecionadas
+              Cada linha é uma pose · {fotosAvs.length} avaliações
+              {!visibleAvNames && visibleAvs.length > 3 && (
+                <span className="ml-1 text-gray-600">(selecione colunas acima para ver mais)</span>
+              )}
             </p>
           </div>
           <div className="p-4 space-y-6">
             {/* Cabeçalho de datas */}
             <div
               className="grid gap-3"
-              style={{ gridTemplateColumns: `120px repeat(${visibleAvs.length}, minmax(0, 1fr))` }}
+              style={{ gridTemplateColumns: `120px repeat(${fotosAvs.length}, minmax(0, 1fr))` }}
             >
               <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest self-end pb-1">
                 Pose
               </span>
-              {visibleAvs.map(av => (
+              {fotosAvs.map(av => (
                 <div key={av.name} className="text-center">
                   <span className="block text-[11px] font-bold text-white">{fmtDate(av.date)}</span>
                   {av.name === historico[historico.length - 1]?.name && (
@@ -1074,18 +1081,18 @@ export default function AvaliacaoListagem() {
 
             {/* Uma linha por pose com fotos lado a lado */}
             {PHOTOS.map(pose => {
-              const temAlguma = visibleAvs.some(av => fotoDaPose(av, pose))
+              const temAlguma = fotosAvs.some(av => fotoDaPose(av, pose))
               if (!temAlguma) return null
               return (
                 <div
                   key={pose.key}
                   className="grid gap-3 items-start pt-3 border-t border-[#323238]/30"
-                  style={{ gridTemplateColumns: `120px repeat(${visibleAvs.length}, minmax(0, 1fr))` }}
+                  style={{ gridTemplateColumns: `120px repeat(${fotosAvs.length}, minmax(0, 1fr))` }}
                 >
                   <div className="text-[11px] font-semibold text-gray-300 pt-2 leading-tight">
                     {pose.label}
                   </div>
-                  {visibleAvs.map(av => fotoDaPose(av, pose) ? (
+                  {fotosAvs.map(av => fotoDaPose(av, pose) ? (
                     <div key={av.name}>
                       <ImagemInterativa
                         src={`${FRAPPE_URL}${fotoDaPose(av, pose)}`}
