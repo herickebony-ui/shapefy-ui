@@ -43,8 +43,10 @@ export const feedComunidade = async (community, { cursor, limit } = {}) => {
   return res.data?.message || { posts: [], has_more: false }
 }
 
-export const criarPost = async (community, { caption, imagem }) => {
-  const res = await client.post(`${BASE}.create_community_post`, { community, caption, imagem })
+export const criarPost = async (community, { caption, imagens }) => {
+  const res = await client.post(`${BASE}.create_community_post`, {
+    community, caption, imagens: JSON.stringify(imagens || []),
+  })
   return res.data?.message
 }
 
@@ -156,8 +158,10 @@ export const alunoFeed = async (community, { cursor, limit } = {}) => {
   return res.data?.message || { posts: [], has_more: false }
 }
 
-export const alunoCriarPost = async (community, { caption, imagem }) => {
-  const res = await client.post(`${BASE}.aluno_create_post`, { community, caption, imagem })
+export const alunoCriarPost = async (community, { caption, imagens }) => {
+  const res = await client.post(`${BASE}.aluno_create_post`, {
+    community, caption, imagens: JSON.stringify(imagens || []),
+  })
   return res.data?.message
 }
 

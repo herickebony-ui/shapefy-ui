@@ -6,6 +6,7 @@ import EnqueteCard from '../../components/comunidade/EnqueteCard'
 import CriarPostModal from '../../components/comunidade/CriarPostModal'
 import CriarEnqueteModal from '../../components/comunidade/CriarEnqueteModal'
 import useErrorModal from '../../hooks/useErrorModal'
+import usePullToRefresh from '../../hooks/usePullToRefresh.jsx'
 import * as api from '../../api/comunidade'
 
 export default function ComunidadeFeed({ community }) {
@@ -49,6 +50,11 @@ export default function ComunidadeFeed({ community }) {
 
   useEffect(() => { load(null); loadPoll() }, [load, loadPoll])
 
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([load(null), loadPoll()])
+  }, [load, loadPoll])
+  const { indicator: pullIndicator } = usePullToRefresh(handleRefresh)
+
   // infinite scroll
   const cursorRef = useRef(cursor)
   const hasMoreRef = useRef(hasMore)
@@ -69,8 +75,8 @@ export default function ComunidadeFeed({ community }) {
     return () => observer.disconnect()
   }, [load])
 
-  const handleNewPost = async ({ caption, imagem }) => {
-    await api.criarPost(community, { caption, imagem })
+  const handleNewPost = async ({ caption, imagens }) => {
+    await api.criarPost(community, { caption, imagens })
     load(null)
   }
 
@@ -105,6 +111,7 @@ export default function ComunidadeFeed({ community }) {
   return (
     <div className="space-y-3">
       {errorModal.element}
+      {pullIndicator}
 
       <div className="flex gap-2">
         <button onClick={() => setShowCriar(true)}

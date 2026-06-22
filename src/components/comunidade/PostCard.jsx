@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Heart, MessageCircle, MoreHorizontal, EyeOff, Pencil, Trash2, Pin, PinOff } from 'lucide-react'
+import { Heart, MessageCircle, MoreHorizontal, EyeOff, Pencil, Trash2, Pin, PinOff, ChevronLeft, ChevronRight } from 'lucide-react'
 import useAuthSrc from '../../hooks/useAuthSrc'
 import ComentarioSection from './ComentarioSection'
 
@@ -16,6 +16,82 @@ const fmtTempo = (iso) => {
   if (diff < 86400) return `${Math.floor(diff / 3600)}h`
   if (diff < 604800) return `${Math.floor(diff / 86400)}d`
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+}
+
+function useAuthSrcAll(urls) {
+  const entries = urls.map(u => useAuthSrc(u ? `${FRAPPE_URL}${u}` : null))
+  return entries
+}
+
+function PostCarousel({ images, fallbackImage, onClick }) {
+  const [idx, setIdx] = useState(0)
+  const touchRef = useRef(null)
+
+  const urls = images && images.length > 0
+    ? images.map(img => img.medium || img.thumbnail || img.original)
+    : fallbackImage ? [fallbackImage] : []
+
+  const resolved = useAuthSrcAll(urls)
+
+  if (urls.length === 0) return null
+
+  const prev = (e) => { e.stopPropagation(); setIdx(i => Math.max(0, i - 1)) }
+  const next = (e) => { e.stopPropagation(); setIdx(i => Math.min(urls.length - 1, i + 1)) }
+
+  const onTouchStart = (e) => { touchRef.current = e.touches[0].clientX }
+  const onTouchEnd = (e) => {
+    if (touchRef.current === null) return
+    const diff = touchRef.current - e.changedTouches[0].clientX
+    touchRef.current = null
+    if (Math.abs(diff) < 40) return
+    if (diff > 0 && idx < urls.length - 1) setIdx(i => i + 1)
+    else if (diff < 0 && idx > 0) setIdx(i => i - 1)
+  }
+
+  return (
+    <div className="relative cursor-pointer" onClick={onClick}
+      onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <div className="overflow-hidden">
+        <div className="flex transition-transform duration-300 ease-out"
+          style={{ transform: `translateX(-${idx * 100}%)` }}>
+          {resolved.map((src, i) => (
+            <div key={i} className="w-full shrink-0">
+              {src ? (
+                <img src={src} alt="" className="w-full aspect-square object-cover" loading="lazy" />
+              ) : (
+                <div className="w-full aspect-square bg-[#29292e] animate-pulse" />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {urls.length > 1 && (
+        <>
+          {idx > 0 && (
+            <button onClick={prev}
+              className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 flex items-center justify-center bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors">
+              <ChevronLeft size={18} />
+            </button>
+          )}
+          {idx < urls.length - 1 && (
+            <button onClick={next}
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 flex items-center justify-center bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors">
+              <ChevronRight size={18} />
+            </button>
+          )}
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+            {urls.map((_, i) => (
+              <span key={i} className={`block w-1.5 h-1.5 rounded-full transition-colors ${i === idx ? 'bg-white' : 'bg-white/40'}`} />
+            ))}
+          </div>
+          <span className="absolute top-3 right-3 bg-black/50 text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
+            {idx + 1}/{urls.length}
+          </span>
+        </>
+      )}
+    </div>
+  )
 }
 
 export default function PostCard({
@@ -38,8 +114,6 @@ export default function PostCard({
   const [pinned, setPinned] = useState(!!post.is_pinned)
 
   const comName = community || post.comunidade
-  const imgUrl = post.image ? `${FRAPPE_URL}${post.image}` : null
-  const imgSrc = useAuthSrc(imgUrl)
   const avatarUrl = post.author_foto ? `${FRAPPE_URL}${post.author_foto}` : null
   const avatarSrc = useAuthSrc(avatarUrl)
 
@@ -175,10 +249,8 @@ export default function PostCard({
         <p className="px-4 pb-2 text-[var(--sf-text,#e1e1e6)] text-sm leading-relaxed whitespace-pre-wrap cursor-pointer" onClick={goToPost}>{caption}</p>
       ) : null}
 
-      {/* Image */}
-      {imgSrc && (
-        <img src={imgSrc} alt="" className="w-full max-h-[500px] object-cover cursor-pointer" loading="lazy" onClick={goToPost} />
-      )}
+      {/* Images */}
+      <PostCarousel images={post.images} fallbackImage={post.image} onClick={goToPost} />
 
       {/* Actions */}
       <div className="flex items-center gap-4 px-4 py-2.5 border-t border-[#323238]/50">

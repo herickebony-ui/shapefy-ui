@@ -7,6 +7,7 @@ import EnqueteCard from '../../components/comunidade/EnqueteCard'
 import CriarPostModal from '../../components/comunidade/CriarPostModal'
 import useAuthSrc from '../../hooks/useAuthSrc'
 import useErrorModal from '../../hooks/useErrorModal'
+import usePullToRefresh from '../../hooks/usePullToRefresh.jsx'
 import * as api from '../../api/comunidade'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
@@ -62,6 +63,11 @@ export default function ComunidadeFeedAluno() {
 
   useEffect(() => { load(null); loadPoll() }, [load, loadPoll])
 
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([load(null), loadPoll()])
+  }, [load, loadPoll])
+  const { indicator: pullIndicator } = usePullToRefresh(handleRefresh)
+
   // infinite scroll
   const cursorRef = useRef(cursor)
   const hasMoreRef = useRef(hasMore)
@@ -82,12 +88,15 @@ export default function ComunidadeFeedAluno() {
     return () => observer.disconnect()
   }, [load])
 
-  const handleNewPost = async ({ caption, imagem, file }) => {
-    if (file) {
+  const handleNewPost = async ({ caption, imagens, files }) => {
+    if (files && files.length > 0) {
       setPublicando(true)
       try {
-        const imageUrl = await api.uploadImagemComunidade(file)
-        await api.alunoCriarPost(name, { caption, imagem: imageUrl })
+        const urls = []
+        for (const f of files) {
+          urls.push(await api.uploadImagemComunidade(f))
+        }
+        await api.alunoCriarPost(name, { caption, imagens: urls })
         load(null)
       } catch (e) {
         errorModal.show(e, 'Criar post')
@@ -96,7 +105,7 @@ export default function ComunidadeFeedAluno() {
       }
       return
     }
-    await api.alunoCriarPost(name, { caption, imagem })
+    await api.alunoCriarPost(name, { caption, imagens: imagens || [] })
     load(null)
   }
 
@@ -130,6 +139,7 @@ export default function ComunidadeFeedAluno() {
       </div>
 
       <div className="px-4 pt-4 space-y-3">
+        {pullIndicator}
         <button onClick={() => setShowCriar(true)}
           className="w-full flex items-center gap-3 px-4 h-11 rounded-xl bg-[var(--sf-surface,#1a1a1a)] border border-[var(--sf-border,#323238)] hover:border-[var(--sf-blue,#2563eb)]/40 text-gray-400 text-sm transition-colors">
           <Plus size={16} className="text-[var(--sf-blue,#2563eb)]" />
