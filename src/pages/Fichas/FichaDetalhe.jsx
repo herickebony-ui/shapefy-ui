@@ -1226,6 +1226,21 @@ const SeriesModal = ({ ex, onChange, onClose }) => {
   const applyAll = (v) => onChange({ ...ex, tipo_de_serie: Array(n).fill(v).join(',') })
   const clearSeries = () => onChange({ ...ex, tipo_de_serie: '' })
 
+  // Padrão: 1ª Aquecimento, 2ª Preparatória, demais Válida (usa o tipo cadastrado
+  // que casa por nome, sem acento; fallback no nome literal).
+  const acharTipo = (frag, fallback) => {
+    const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    return (tiposDeSerie || []).find(t => norm(t.nome).includes(frag))?.nome || fallback
+  }
+  const aplicarPadrao = () => {
+    const arr = Array.from({ length: n }, (_, i) =>
+      i === 0 ? acharTipo('aquecimento', 'Aquecimento')
+        : i === 1 ? acharTipo('preparat', 'Preparatória')
+          : acharTipo('valid', 'Válida')
+    )
+    onChange({ ...ex, tipo_de_serie: arr.join(',') })
+  }
+
   const setTec = (i, v) => {
     const next = [...tecArr]
     while (next.length < n) next.push('')
@@ -1233,12 +1248,13 @@ const SeriesModal = ({ ex, onChange, onClose }) => {
     onChange({ ...ex, tecnica_intensificadora: next.slice(0, n).join(',') })
   }
   const clearTec = () => onChange({ ...ex, tecnica_intensificadora: '' })
+  const applyAllTec = (v) => onChange({ ...ex, tecnica_intensificadora: Array(n).fill(v).join(',') })
 
   const hasNames = seriesArr.some(Boolean)
   const hasTec = tecArr.some(Boolean)
 
   return (
-    <Modal isOpen onClose={onClose} title={ex.exercicio || 'Configurar Séries'} subtitle="Nomear e técnicas intensificadoras" size="sm">
+    <Modal isOpen onClose={onClose} title={ex.exercicio || 'Configurar Séries'} subtitle="Nomear e técnicas intensificadoras" size="lg">
       <div className="p-4 space-y-5">
         <FormGroup label="Séries" hint="Número de séries do exercício">
           <Input type="number" value={ex.series || ''} onChange={v => onChange({ ...ex, series: v })} />
@@ -1247,41 +1263,39 @@ const SeriesModal = ({ ex, onChange, onClose }) => {
         {n === 0 ? (
           <p className="text-center text-xs text-gray-500 py-6">Defina o nº de séries acima primeiro.</p>
         ) : (
-          <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
             {/* Nomear séries */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Nomear cada série</span>
                 {hasNames && <button onClick={clearSeries} className="text-[10px] text-gray-500 hover:text-red-400 transition">Limpar</button>}
               </div>
-              {tiposDeSerie && tiposDeSerie.length > 0 && (
-                <div className="flex flex-wrap gap-1 mb-2">
-                  <span className="text-[10px] text-gray-600 self-center mr-1">Aplicar em todas:</span>
-                  {tiposDeSerie.filter(t => t.contabilizar_volume).slice(0, 3).map(t => (
-                    <button key={t.name} onClick={() => applyAll(t.nome)}
-                      className="px-1.5 py-0.5 text-[10px] bg-[#29292e] text-gray-300 rounded hover:bg-[#323238] transition">{t.nome}</button>
-                  ))}
-                </div>
-              )}
+              <div className="flex flex-wrap items-center gap-1 mb-2 min-h-[22px]">
+                <button onClick={aplicarPadrao}
+                  className="px-1.5 py-0.5 text-[10px] font-semibold bg-[#2563eb]/15 text-blue-300 border border-[#2563eb]/40 rounded hover:bg-[#2563eb]/25 transition">Padrão</button>
+                {tiposDeSerie && tiposDeSerie.length > 0 && (
+                  <>
+                    <span className="text-[10px] text-gray-600 self-center mx-1">ou em todas:</span>
+                    {tiposDeSerie.filter(t => t.contabilizar_volume).slice(0, 2).map(t => (
+                      <button key={t.name} onClick={() => applyAll(t.nome)}
+                        className="px-1.5 py-0.5 text-[10px] bg-[#29292e] text-gray-300 rounded hover:bg-[#323238] transition">{t.nome}</button>
+                    ))}
+                  </>
+                )}
+              </div>
               {tiposDeSerie === null ? (
                 <div className="py-3 text-xs text-gray-500 text-center">Carregando...</div>
               ) : (
-                <div className="flex flex-col gap-1 max-h-44 overflow-y-auto pr-1">
+                <div className="flex flex-col gap-1.5 max-h-52 overflow-y-auto pr-1">
                   {Array.from({ length: n }).map((_, i) => {
                     const tipoSelecionado = tiposDeSerie.find(t => t.nome === seriesArr[i])
                     return (
                       <div key={i} className="flex items-center gap-2">
-                        <span className="w-6 text-[11px] font-mono text-gray-500 text-center">{String(i + 1).padStart(2, '0')}</span>
-                        <select value={seriesArr[i] || ''} onChange={e => setSerie(i, e.target.value)}
-                          className="flex-1 bg-[#0f0f0f] border border-[#323238] text-gray-200 text-xs rounded-lg px-2 py-1.5 outline-none focus:border-[#2563eb]/50">
-                          <option value="">—</option>
-                          {tiposDeSerie.length === 0
-                            ? <option disabled>Nenhum tipo cadastrado</option>
-                            : tiposDeSerie.map(t => (
-                              <option key={t.name} value={t.nome}>{t.nome}{!t.contabilizar_volume ? ' (não conta)' : ''}</option>
-                            ))
-                          }
-                        </select>
+                        <span className="w-6 text-[11px] font-mono text-gray-500 text-center shrink-0">{String(i + 1).padStart(2, '0')}</span>
+                        <div className="flex-1 min-w-0">
+                          <SearchableCombo value={seriesArr[i] || ''} onChange={v => setSerie(i, v)}
+                            options={tiposDeSerie.map(t => t.nome)} placeholder="Digite o tipo..." />
+                        </div>
                         {tipoSelecionado && !tipoSelecionado.contabilizar_volume && (
                           <span className="text-[10px] text-gray-500 shrink-0 whitespace-nowrap">fora do vol.</span>
                         )}
@@ -1292,8 +1306,6 @@ const SeriesModal = ({ ex, onChange, onClose }) => {
               )}
             </div>
 
-            <div className="border-t border-[#323238]" />
-
             {/* Técnicas intensificadoras */}
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -1303,26 +1315,36 @@ const SeriesModal = ({ ex, onChange, onClose }) => {
                 </div>
                 {hasTec && <button onClick={clearTec} className="text-[10px] text-gray-500 hover:text-red-400 transition">Limpar</button>}
               </div>
+              <div className="flex flex-wrap items-center gap-1 mb-2 min-h-[22px]">
+                {tecnicas && tecnicas.length > 0 && (
+                  <>
+                    <span className="text-[10px] text-gray-600 self-center mr-1">Aplicar em todas:</span>
+                    {tecnicas.slice(0, 2).map(t => (
+                      <button key={t.name} onClick={() => applyAllTec(t.nome)}
+                        className="px-1.5 py-0.5 text-[10px] bg-[#29292e] text-gray-300 rounded hover:bg-[#323238] transition">{t.nome}</button>
+                    ))}
+                  </>
+                )}
+              </div>
               {tecnicas === null ? (
                 <div className="py-3 text-xs text-gray-500 text-center">Carregando...</div>
               ) : tecnicas.length === 0 ? (
                 <div className="py-3 text-xs text-gray-500 text-center">Nenhuma técnica cadastrada ainda.</div>
               ) : (
-                <div className="flex flex-col gap-1.5 max-h-44 overflow-y-auto pr-1">
+                <div className="flex flex-col gap-1.5 max-h-52 overflow-y-auto pr-1">
                   {Array.from({ length: n }).map((_, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <span className="w-6 text-[11px] font-mono text-gray-500 text-center shrink-0">{String(i + 1).padStart(2, '0')}</span>
-                      <select value={tecArr[i] || ''} onChange={e => setTec(i, e.target.value)}
-                        className="flex-1 bg-[#0f0f0f] border border-[#323238] text-gray-200 text-xs rounded-lg px-2 py-1.5 outline-none focus:border-amber-400/50">
-                        <option value="">— sem técnica —</option>
-                        {tecnicas.map(t => <option key={t.name} value={t.nome}>{t.nome}</option>)}
-                      </select>
+                      <div className="flex-1 min-w-0">
+                        <SearchableCombo value={tecArr[i] || ''} onChange={v => setTec(i, v)}
+                          options={tecnicas.map(t => t.nome)} placeholder="Digite a técnica..." />
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-          </>
+          </div>
         )}
       </div>
     </Modal>

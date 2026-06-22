@@ -10,6 +10,7 @@ import { buscarSmart } from '../../utils/strings'
 import {
   listarTreinosRealizados, buscarTreinoRealizado,
   salvarFeedbackProfissional, marcarEntregueTreino, excluirTreinoRealizado,
+  listarAerobicosRealizados,
 } from '../../api/treinosRealizados'
 import { buscarFicha } from '../../api/fichas'
 import { Button, Badge, Spinner, Modal, BotaoTutoriais } from '../../components/ui'
@@ -363,6 +364,7 @@ function SectionTable({ title, items, tipo, icon, prescricoes, semanaInfo }) {
 
 function DetalheView({ treinoBase, listaFiltrada, onVoltar, onEntregueAtualizado }) {
   const [detalhe, setDetalhe] = useState(null)
+  const [aerobicos, setAerobicos] = useState([])
   const [loading, setLoading] = useState(true)
   const [feedback, setFeedback] = useState('')
   const [salvando, setSalvando] = useState(false)
@@ -398,6 +400,10 @@ function DetalheView({ treinoBase, listaFiltrada, onVoltar, onEntregueAtualizado
       const ficha = await buscarFichaCached(treino.ficha || doc.ficha)
       setDetalhe(doc)
       setFeedback(doc.feedback_do_profissional || '')
+      const dataMarcacao = (doc.data_e_hora_do_inicio || '').split(' ')[0] || null
+      listarAerobicosRealizados({ aluno: doc.aluno, data: dataMarcacao })
+        .then(setAerobicos)
+        .catch(() => setAerobicos([]))
       if (ficha) {
         const dataTreinoISO = (doc.data_e_hora_do_inicio || '').split(' ')[0] || null
         const info = calcularPrescricoes({
@@ -618,7 +624,7 @@ function DetalheView({ treinoBase, listaFiltrada, onVoltar, onEntregueAtualizado
               />
               <SectionTable
                 title="Aeróbicos"
-                items={detalhe.aerobicos || []}
+                items={aerobicos}
                 tipo="simple"
                 icon={<Activity size={14} className="text-white" />}
               />

@@ -40,6 +40,24 @@ export const buscarTreinoRealizado = async (id) => {
   return res.data.data
 }
 
+// Aeróbicos não ficam na child legada do Treino Realizado — vivem no DocType
+// 'Aerobico Realizado' (aluno + data_marcacao). Busca os que o aluno fez na data
+// do treino, mesma lógica do flag tem_aerobico do backend.
+export const listarAerobicosRealizados = async ({ aluno, data } = {}) => {
+  if (!aluno || !data) return []
+  const res = await client.get('/api/resource/Aerobico Realizado', {
+    params: {
+      fields: JSON.stringify(['name', 'exercicio', 'aerobico_id', 'frequencia_texto', 'data_marcacao']),
+      filters: JSON.stringify([['aluno', '=', aluno], ['data_marcacao', '=', data]]),
+      limit: 100,
+      order_by: 'creation asc',
+    },
+  })
+  // Cada registro existente em Aerobico Realizado = aeróbico concluído; o
+  // SectionTable usa o flag `realizado` pra marcar verde/feito.
+  return (res.data?.data || []).map(a => ({ ...a, realizado: 1 }))
+}
+
 export const salvarFeedbackProfissional = async (id, feedback) => {
   const res = await client.put(`/api/resource/${DOCTYPE}/${encodeURIComponent(id)}`, {
     feedback_do_profissional: feedback,

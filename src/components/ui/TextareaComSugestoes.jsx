@@ -67,12 +67,10 @@ export default function TextareaComSugestoes({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, doctype, campo])
 
-  // Só abre o dropdown quando há texto digitado — focar o campo vazio não deve
-  // despejar todas as sugestões (poluía a tela sobrepondo a tabela abaixo).
-  const abrirDrop = async (q = value) => {
-    if (!q?.trim()) { setDropdownOpen(false); return }
+  const abrirDrop = async () => {
     const lista = await carregarTodas()
-    setDropdownOpen(filtrar(lista, q).length > 0)
+    const filtradas = filtrar(lista, value)
+    if (filtradas.length > 0) setDropdownOpen(true)
   }
 
   const salvarNoBanco = async () => {
@@ -105,7 +103,7 @@ export default function TextareaComSugestoes({
     <div className="relative">
       <textarea
         value={value}
-        onChange={(e) => { onChange(e.target.value); abrirDrop(e.target.value) }}
+        onChange={(e) => onChange(e.target.value)}
         onBlur={handleBlur}
         onFocus={handleFocus}
         placeholder={placeholder}
