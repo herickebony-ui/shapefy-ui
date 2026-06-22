@@ -249,7 +249,7 @@ export default function AppLayout() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto relative">
           <Outlet />
         </div>
       </main>

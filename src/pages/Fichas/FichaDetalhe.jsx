@@ -1738,7 +1738,6 @@ const GerenciadorTreinos = ({ ficha, upd, onClose }) => {
       upd(`treino_${destino}_label`, labelOrigem)
       setFeedback(`✅ ${labelTreino(origem, ficha)} e ${labelTreino(destino, ficha)} invertidos.`)
     } else if (acao === 'excluir') {
-      if (!window.confirm(`Excluir todos os exercícios do ${labelTreino(origem, ficha)}?`)) return
       upd(chaveOrigem, [])
       setFeedback(`✅ ${labelTreino(origem, ficha)} limpo.`)
     }
@@ -1777,7 +1776,7 @@ const GerenciadorTreinos = ({ ficha, upd, onClose }) => {
           />
         </FormGroup>
 
-        <FormGroup label={acao === 'inverter' ? 'Treino A (inverter com)' : 'Copiar/Mover/Limpar exercícios do'}>
+        <FormGroup label={acao === 'inverter' ? 'Treino A (inverter com)' : acao === 'copiar' ? 'Copiar exercícios do' : acao === 'mover' ? 'Mover exercícios do' : 'Limpar exercícios do'}>
           <Select
             value={origem}
             onChange={v => { setOrigem(v); setFeedback('') }}
@@ -2125,16 +2124,35 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
           <div className="space-y-3">
             <h3 className="text-white font-semibold text-sm border-b border-[#323238] pb-2">Distribuição Semanal</h3>
             <div className="bg-[#1a1a1a] rounded-lg border border-[#323238] overflow-hidden">
-              {ficha.dias_da_semana.map((dia, i) => (
-                <div key={i} className="flex items-center justify-between px-4 py-2 border-b border-[#323238] last:border-0 h-10">
-                  <span className="text-gray-300 text-sm w-24">{dia.dia_da_semana}</span>
-                  <select value={dia.treino} onChange={e => { const d = [...ficha.dias_da_semana]; d[i] = { ...d[i], treino: e.target.value }; upd('dias_da_semana', d) }}
-                    className="bg-[#29292e] border border-[#323238] text-gray-200 text-xs rounded-lg px-2 py-1 outline-none focus:border-[#2563eb]/60 w-36">
-                    <option value="Off">Off</option>
-                    {['Treino A', 'Treino B', 'Treino C', 'Treino D', 'Treino E', 'Treino F'].map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-              ))}
+              {ficha.dias_da_semana.map((dia, i) => {
+                const letraKey = dia.treino !== 'Off' ? dia.treino.replace('Treino ', '').toLowerCase() : null
+                const labelKey = letraKey ? `treino_${letraKey}_label` : null
+                return (
+                  <div key={i} className="flex items-center gap-3 px-4 py-2 border-b border-[#323238] last:border-0 h-10">
+                    <span className="text-gray-300 text-sm w-20 shrink-0">{dia.dia_da_semana}</span>
+                    <div className="flex-1 flex items-center bg-[#29292e] border border-[#323238] rounded-lg overflow-hidden focus-within:border-[#2563eb]/60 transition-colors">
+                      <select value={dia.treino} onChange={e => { const d = [...ficha.dias_da_semana]; d[i] = { ...d[i], treino: e.target.value }; upd('dias_da_semana', d) }}
+                        className="bg-transparent text-gray-400 text-xs px-2 py-1 outline-none shrink-0 border-r border-[#323238] cursor-pointer">
+                        <option value="Off">Off</option>
+                        {['a','b','c','d','e','f'].map(t => (
+                          <option key={t} value={`Treino ${t.toUpperCase()}`}>{t.toUpperCase()}</option>
+                        ))}
+                      </select>
+                      {labelKey ? (
+                        <input
+                          type="text"
+                          value={ficha[labelKey] || ''}
+                          onChange={e => upd(labelKey, e.target.value)}
+                          placeholder={dia.treino}
+                          className="flex-1 min-w-0 bg-transparent text-gray-200 text-xs px-2 py-1 outline-none placeholder-gray-600"
+                        />
+                      ) : (
+                        <span className="flex-1 px-2 text-gray-600 text-xs">—</span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
 
@@ -2471,7 +2489,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
   }
 
   return (
-    <div className="flex flex-col h-full text-white min-w-0 overflow-hidden">
+    <div className="absolute inset-0 flex flex-col text-white min-w-0 overflow-hidden">
       {/* Header — sticky dentro do scroll container do AppLayout */}
       <div className="sticky top-0 z-20 flex items-center justify-between gap-2 px-3 md:px-6 py-3 border-b border-[#323238] bg-[#29292e]">
         <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
@@ -2536,18 +2554,11 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
         {renderStep()}
       </div>
 
-      {/* Rodapé de volume — fora do scroll */}
-      <RodapeVolume ficha={ficha} intensidadeMap={intensMap} tipoMap={tipoMap} volumeAnterior={volumeAnterior} />
-
-      {/* Banner orientações globais do aluno */}
+      {/* Banner orientações globais — fora do scroll, fixo acima do rodapé */}
       {ficha.aluno && <BannerOrientacoes alunoId={ficha.aluno} />}
 
-      {/* Prev / Next */}
-      <div className="sticky bottom-0 z-10 flex justify-between items-center gap-2 px-3 md:px-6 py-3 bg-[#202024] border-t border-[#323238]">
-        <Button variant="ghost" size="sm" icon={ChevronLeft} onClick={() => setStep(s => Math.max(0, s - 1))} disabled={step === 0}>Anterior</Button>
-        <span className="text-gray-600 text-xs shrink-0">{step + 1} / {steps.length}</span>
-        <Button variant="ghost" size="sm" iconRight={ChevronRight} onClick={() => setStep(s => Math.min(steps.length - 1, s + 1))} disabled={step === steps.length - 1}>Próximo</Button>
-      </div>
+      {/* Rodapé fixo: volume — shrink-0 garante visibilidade no flex-col */}
+      <RodapeVolume ficha={ficha} intensidadeMap={intensMap} tipoMap={tipoMap} volumeAnterior={volumeAnterior} />
 
       {gerenciadorAberto && (
         <GerenciadorTreinos
