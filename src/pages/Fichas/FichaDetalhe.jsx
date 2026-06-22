@@ -473,6 +473,10 @@ const TextareaExpansivel = ({ value, onChange, placeholder = '', resetKey, class
 const InputSug = ({ value, onChange, doctype, campo, className = '', extra = null, onSelect = null, extraSources = [] }) => {
   const ref = useRef(null)
   const blurRef = useRef(null)
+  // Valor capturado no momento em que o dropdown abre — enquanto o valor não mudar,
+  // mostramos todas as opções (sem filtrar pelo valor atual). Assim clicar numa célula
+  // que já tem "5 a 7" exibe a lista inteira, não "Nenhuma sugestão".
+  const openedValueRef = useRef(null)
   const [todasSugestoes, setTodasSugestoes] = useState(null)
   const [dropOpen, setDropOpen] = useState(false)
   const [dropPos, setDropPos] = useState(null)
@@ -541,13 +545,19 @@ const InputSug = ({ value, onChange, doctype, campo, className = '', extra = nul
 
   const sugestoesFiltradas = useMemo(() => {
     if (!todasSugestoes) return []
+    // Se o valor não mudou desde que o dropdown abriu, mostra tudo (exceto match exato).
+    // Permite ver todas as opções ao clicar numa célula que já tem um valor.
+    if (value === openedValueRef.current || !value?.trim()) {
+      const n = normalizar(value || '')
+      return todasSugestoes.filter(item => normalizar(item[campo]) !== n)
+    }
     return filtrar(todasSugestoes, value)
-  }, [todasSugestoes, value])
+  }, [todasSugestoes, value, campo])
 
   const abrirDrop = async () => {
+    openedValueRef.current = value  // captura valor no momento de abertura
     const lista = await carregarTodas()
-    const filtradas = filtrar(lista, value)
-    if (filtradas.length === 0) return
+    if (!lista.length) return
     posicionar()
     setDropOpen(true)
   }
@@ -598,7 +608,9 @@ const InputSug = ({ value, onChange, doctype, campo, className = '', extra = nul
   return (
     <div className="relative flex items-center">
       <input ref={ref} value={value || ''} onChange={e => onChange(e.target.value)}
-        onBlur={handleBlur} onFocus={async () => { clearTimeout(blurRef.current); await abrirDrop() }}
+        onBlur={handleBlur}
+        onFocus={async () => { clearTimeout(blurRef.current); await abrirDrop() }}
+        onClick={async () => { clearTimeout(blurRef.current); if (!dropOpen) await abrirDrop() }}
         className={`w-full h-8 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 pr-6 ${className}`} />
       {value?.trim() && !jaExisteNoBanco && (
         <button type="button" onMouseDown={(e) => { e.preventDefault(); salvarNoBanco() }}
@@ -1311,7 +1323,7 @@ const SeriesModal = ({ ex, onChange, onClose }) => {
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
                   <Zap size={11} className="text-amber-400" />
-                  <span className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Técnica por série</span>
+                  <span className="text-[9px] uppercase tracking-wider text-gray-600">Técnica por série</span>
                 </div>
                 {hasTec && <button onClick={clearTec} className="text-[10px] text-gray-500 hover:text-red-400 transition">Limpar</button>}
               </div>
@@ -1321,7 +1333,7 @@ const SeriesModal = ({ ex, onChange, onClose }) => {
                     <span className="text-[10px] text-gray-600 self-center mr-1">Aplicar em todas:</span>
                     {tecnicas.slice(0, 2).map(t => (
                       <button key={t.name} onClick={() => applyAllTec(t.nome)}
-                        className="px-1.5 py-0.5 text-[10px] bg-[#29292e] text-gray-300 rounded hover:bg-[#323238] transition">{t.nome}</button>
+                        className="px-2 py-0.5 text-[11px] font-semibold bg-amber-400/10 text-amber-300 border border-amber-400/30 rounded hover:bg-amber-400/20 transition">{t.nome}</button>
                     ))}
                   </>
                 )}
@@ -1546,6 +1558,7 @@ const ExRow = ({ ex, i, total, isPart, position, onChange, onDup, onRemove, onOp
   const comboBtnRef = useRef(null)
   const comboActive = ex.primeiro || ex.ultimo
   const hasSeriesConfig = (ex.tipo_de_serie || '').split(',').some(s => s.trim()) || (ex.tecnica_intensificadora || '').split(',').some(s => s.trim())
+  const primeiraTecnica = (ex.tecnica_intensificadora || '').split(',').map(s => s.trim()).filter(Boolean)[0] || ''
 
   return (
     <tr
@@ -1609,10 +1622,10 @@ const ExRow = ({ ex, i, total, isPart, position, onChange, onDup, onRemove, onOp
       {/* Botão séries — coluna dedicada ao lado de Séries */}
       <td className="px-1 py-1 align-middle text-center">
         <button onClick={() => setSeriesModalOpen(true)} title="Nomear séries e técnicas intensificadoras"
-          className={`h-7 w-7 flex items-center justify-center rounded transition mx-auto ${
-            hasSeriesConfig ? 'text-amber-400 hover:text-amber-300 hover:bg-amber-500/10' : 'text-gray-500 hover:text-gray-200 hover:bg-[#29292e]'
+          className={`flex flex-col items-center justify-center gap-0.5 rounded transition mx-auto min-h-[28px] px-1 py-0.5 ${
+            primeiraTecnica ? 'hover:bg-amber-500/10' : hasSeriesConfig ? 'hover:bg-amber-500/10' : 'hover:bg-[#29292e]'
           }`}>
-          <SlidersHorizontal size={12} />
+          <SlidersHorizontal size={12} className={primeiraTecnica || hasSeriesConfig ? 'text-amber-400' : 'text-gray-500 hover:text-gray-200'} />
         </button>
         {seriesModalOpen && (
           <SeriesModal ex={ex} onChange={onChange} onClose={() => setSeriesModalOpen(false)} />
@@ -2155,10 +2168,12 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
               />
             </div>
             <div className="bg-[#1a1a1a] rounded-lg border border-[#323238] overflow-hidden">
+              <DragDropContext onBeforeDragStart={lockRowWidths}
+                onDragEnd={makeOnDragEnd(ficha.periodizacao || [], v => upd('periodizacao', v.map((item, k) => ({ ...item, idx: k + 1, semana: String(k + 1).padStart(2, '0') }))))}>
               <table className="w-full text-xs">
                 <thead>
                   <tr className="text-gray-500 border-b border-[#323238]">
-                    <th className="py-2 px-3 text-left w-12">Sem.</th>
+                    <th className="py-2 px-3 text-left w-16">Sem.</th>
                     <th className="py-2 px-2 text-left text-[10px] text-gray-600 font-bold uppercase tracking-widest">Período (Seg-Dom)</th>
                     <th className="py-2 px-3 text-center">Séries</th>
                     <th className="py-2 px-3 text-center">Reps</th>
@@ -2166,7 +2181,9 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
                     <th className="w-16" />
                   </tr>
                 </thead>
-                <tbody>
+                <Droppable droppableId="peri-drop">
+                  {(dropProvided) => (
+                <tbody ref={dropProvided.innerRef} {...dropProvided.droppableProps}>
                   {(ficha.periodizacao || []).map((p, i) => {
                     let periodoTexto = '—'
                     if (ficha.data_de_inicio && ficha.periodizacao.length > 0) {
@@ -2179,9 +2196,19 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
                     const sincronizar = (lista) => lista.map((item, k) => ({
                       ...item, idx: k + 1, semana: String(k + 1).padStart(2, '0'),
                     }))
+                    const rowId = `peri-${p._id || p.name || i}`
                     return (
-                      <tr key={i} className="border-b border-[#323238]/50 group h-10 hover:bg-[#202024]">
-                        <td className="px-3 text-gray-400 font-mono">{String(i + 1).padStart(2, '0')}</td>
+                      <Draggable key={rowId} draggableId={rowId} index={i}>
+                        {(dragProvided, dragSnapshot) => (
+                      <tr ref={dragProvided.innerRef} {...dragProvided.draggableProps} style={dragRowStyle(dragProvided, dragSnapshot)}
+                        className="border-b border-[#323238]/50 group h-10 hover:bg-[#202024]">
+                        <td className="px-3 text-gray-400 font-mono">
+                          <div className="flex items-center gap-1.5">
+                            <span {...dragProvided.dragHandleProps} title="Arrastar para reordenar"
+                              className="text-gray-600 hover:text-gray-200 cursor-grab active:cursor-grabbing"><GripVertical size={12} /></span>
+                            {String(i + 1).padStart(2, '0')}
+                          </div>
+                        </td>
                         <td className="px-2 text-gray-500 text-[10px]">{periodoTexto}</td>
                         <td className="px-2 py-1"><input value={p.series || ''} onChange={e => { const a = [...ficha.periodizacao]; a[i] = { ...a[i], series: e.target.value }; upd('periodizacao', a) }} className="bg-[#29292e] border border-[#323238] text-gray-200 text-xs rounded px-2 py-1 w-full outline-none text-center" /></td>
                         <td className="px-2 py-1">
@@ -2200,7 +2227,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
                         </td>
                         <td className="px-1 text-center">
                           <div className="flex items-center justify-center gap-0.5 opacity-0 group-hover:opacity-100 transition">
-                            <button onClick={() => { const { name: _n, ...sem } = p; const a = [...ficha.periodizacao]; a.splice(i + 1, 0, { ...sem }); upd('periodizacao', sincronizar(a)) }}
+                            <button onClick={() => { const { name: _n, ...sem } = p; const a = [...ficha.periodizacao, { ...sem, _id: uid() }]; upd('periodizacao', sincronizar(a)) }}
                               title="Duplicar semana"
                               className="text-gray-500 hover:text-blue-400"><Copy size={11} /></button>
                             <button onClick={() => upd('periodizacao', sincronizar(ficha.periodizacao.filter((_, idx) => idx !== i)))}
@@ -2209,10 +2236,16 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
                           </div>
                         </td>
                       </tr>
+                        )}
+                      </Draggable>
                     )
                   })}
+                  {dropProvided.placeholder}
                 </tbody>
+                  )}
+                </Droppable>
               </table>
+              </DragDropContext>
               <button onClick={() => { const a = ficha.periodizacao || []; const ul = a[a.length - 1]; const nova = [...a, { series: ul?.series || '3', repeticoes: ul?.repeticoes || '', descanso: ul?.descanso || '' }]; upd('periodizacao', nova.map((item, k) => ({ ...item, idx: k + 1, semana: String(k + 1).padStart(2, '0') }))) }}
                 className="w-full py-2 text-xs text-gray-500 hover:text-gray-300 flex items-center justify-center gap-1 transition border-t border-[#323238]/30">
                 <Plus size={10} /> Add Semana Manual
