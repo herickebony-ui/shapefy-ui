@@ -477,6 +477,7 @@ const InputSug = ({ value, onChange, doctype, campo, className = '', extra = nul
   // mostramos todas as opções (sem filtrar pelo valor atual). Assim clicar numa célula
   // que já tem "5 a 7" exibe a lista inteira, não "Nenhuma sugestão".
   const openedValueRef = useRef(null)
+  const instanceIdRef = useRef(Math.random().toString(36).slice(2))
   const [todasSugestoes, setTodasSugestoes] = useState(null)
   const [dropOpen, setDropOpen] = useState(false)
   const [dropPos, setDropPos] = useState(null)
@@ -559,12 +560,20 @@ const InputSug = ({ value, onChange, doctype, campo, className = '', extra = nul
     const lista = await carregarTodas()
     if (!lista.length) return
     posicionar()
+    document.dispatchEvent(new CustomEvent('shapefy:closeSug', { detail: { id: instanceIdRef.current } }))
     setDropOpen(true)
   }
 
   useEffect(() => {
     if (dropOpen) posicionar()
   }, [value, dropOpen])
+
+  // Fecha quando outra instância (InputSug ou TextareaComSugestoes) abre o dropdown
+  useEffect(() => {
+    const close = (e) => { if (e.detail?.id !== instanceIdRef.current) setDropOpen(false) }
+    document.addEventListener('shapefy:closeSug', close)
+    return () => document.removeEventListener('shapefy:closeSug', close)
+  }, [])
 
   // Reseta o cache quando o doctype/campo muda (ex.: trocar aba Alongamento↔Aeróbico
   // reusa a mesma instância do componente) — senão fica com sugestões da aba anterior.
@@ -607,7 +616,7 @@ const InputSug = ({ value, onChange, doctype, campo, className = '', extra = nul
 
   return (
     <div className="relative flex items-center">
-      <input ref={ref} value={value || ''} onChange={e => onChange(e.target.value)}
+      <input ref={ref} value={value || ''} onChange={e => { onChange(e.target.value); carregarTodas(); setDropOpen(true) }}
         onBlur={handleBlur}
         onFocus={async () => { clearTimeout(blurRef.current); await abrirDrop() }}
         onClick={async () => { clearTimeout(blurRef.current); if (!dropOpen) await abrirDrop() }}
@@ -2462,7 +2471,7 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
   }
 
   return (
-    <div className="flex flex-col min-h-full text-white min-w-0 overflow-x-hidden">
+    <div className="flex flex-col h-full text-white min-w-0 overflow-hidden">
       {/* Header — sticky dentro do scroll container do AppLayout */}
       <div className="sticky top-0 z-20 flex items-center justify-between gap-2 px-3 md:px-6 py-3 border-b border-[#323238] bg-[#29292e]">
         <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">

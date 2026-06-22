@@ -51,6 +51,7 @@ export default function Input({
           type={type}
           value={value ?? ''}
           onChange={e => onChange(e.target.value)}
+          onWheel={type === 'number' ? e => e.target.blur() : undefined}
           placeholder={placeholder}
           disabled={disabled}
           className={baseClass}

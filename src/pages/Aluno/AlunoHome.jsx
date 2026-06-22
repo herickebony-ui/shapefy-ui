@@ -199,7 +199,6 @@ export default function AlunoHome() {
   })
 
   const feedbackPendente = !!(pendencias.feedback || pendencias.feedback_agendado_formulario)
-  const temPendencia = !!(feedbackPendente || pendencias.anamnese)
 
   const handleCardClick = (card) => () => {
     const link = resolveCardLink(card, pendencias, flags)
@@ -209,43 +208,28 @@ export default function AlunoHome() {
     else if (link.href) window.open(link.href, '_blank', 'noopener')
   }
 
-  const irPraPendencia = () => {
-    if (pendencias.feedback) navigate(`/aluno/feedbacks/${pendencias.feedback}`)
-    else if (pendencias.feedback_agendado_formulario) setMostrarStatusFeedback(true)
-    else if (pendencias.anamnese) navigate(`/aluno/anamneses/${pendencias.anamnese}`)
-  }
-
   const badgePorCard = (id) => {
     if (id === 'anamnese' && pendencias.anamnese) return '1'
-    if (id === 'feedback' && (pendencias.feedback || pendencias.feedback_agendado_formulario)) return '1'
+    if (id === 'feedback' && feedbackPendente) return '1'
     return null
-  }
-
-  const textoPendencia = () => {
-    const itens = []
-    if (pendencias.anamnese) itens.push('uma anamnese')
-    if (pendencias.feedback || pendencias.feedback_agendado_formulario) itens.push('um feedback')
-    return itens.join(' e ')
   }
 
   return (
     <div className="pb-8 bg-[var(--sf-bg)] min-h-full">
       <BannerProfissional profissional={profissional} />
 
-      {temPendencia && (
+      {pendencias.anamnese && (
         <div className="px-4 mt-2">
           <AlertCard
             variant="info"
-            titulo={`Você tem ${textoPendencia()} pendente.`}
+            titulo="Você tem uma anamnese pendente."
             descricao="Toque pra responder."
-            onClick={irPraPendencia}
+            onClick={() => navigate(`/aluno/anamneses/${pendencias.anamnese}`)}
           />
         </div>
       )}
 
-      {/* Sem feedback pendente: mostra o último que o aluno enviou (em vez de
-          nagar por disparos antigos da fila que ele já respondeu). */}
-      {!feedbackPendente && pendencias.ultimo_feedback_respondido && (
+      {pendencias.ultimo_feedback_respondido && (
         <div className="px-4 mt-2">
           <div className="flex items-center gap-2 px-1 text-[var(--sf-text-muted)] text-xs">
             <Check size={14} className="text-[var(--sf-green)] shrink-0" />

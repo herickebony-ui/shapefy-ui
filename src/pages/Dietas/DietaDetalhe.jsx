@@ -818,6 +818,7 @@ const TabelaAlimentos = ({ items, onUpdateItem, onAddItem, onDeleteItem, onDupli
                       </td>
                       <td className="px-2 py-1">
                         <input type="number" value={item.ref_weight ?? ''} onChange={e => onUpdateItem(realIdx, 'ref_weight', e.target.value)}
+                          onWheel={e => e.target.blur()}
                           className="w-full h-7 px-2 bg-[#29292e] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60" />
                       </td>
                       <td className="px-2 py-1">
@@ -833,6 +834,7 @@ const TabelaAlimentos = ({ items, onUpdateItem, onAddItem, onDeleteItem, onDupli
                       {['protein', 'carbohydrate', 'lipid', 'fiber', 'calories'].map(f => (
                         <td key={f} className="px-2 py-1">
                           <input type="number" value={item[f] ?? ''} onChange={e => onUpdateItem(realIdx, f, e.target.value)}
+                            onWheel={e => e.target.blur()}
                             className="w-full h-7 px-1 text-center bg-transparent border border-transparent hover:border-[#323238] focus:border-[#2563eb]/60 text-white rounded text-xs outline-none transition-colors" />
                         </td>
                       ))}
@@ -898,11 +900,13 @@ const TabelaAlimentos = ({ items, onUpdateItem, onAddItem, onDeleteItem, onDupli
                   <div className="flex gap-2 mt-1.5 pl-0.5">
                     <div className="flex items-center gap-1">
                       <input type="number" value={item.ref_weight ?? ''} onChange={e => onUpdateItem(realIdx, 'ref_weight', e.target.value)}
+                        onWheel={e => e.target.blur()}
                         className="w-16 h-6 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-[11px] text-center outline-none focus:border-[#2563eb]/60" />
                       <span className="text-[10px] text-gray-500">g</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <input type="number" value={item.calories ?? ''} onChange={e => onUpdateItem(realIdx, 'calories', e.target.value)}
+                        onWheel={e => e.target.blur()}
                         className="w-16 h-6 px-1 bg-[#29292e] border border-[#323238] text-white rounded text-[11px] text-center outline-none focus:border-[#2563eb]/60" />
                       <span className="text-[10px] text-gray-500">kcal</span>
                     </div>

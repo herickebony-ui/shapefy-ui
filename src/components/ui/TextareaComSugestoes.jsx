@@ -15,6 +15,7 @@ export default function TextareaComSugestoes({
   extraCampo = null,
 }) {
   const blurTimerRef = useRef(null)
+  const instanceIdRef = useRef(Math.random().toString(36).slice(2))
   const [todasSugestoes, setTodasSugestoes] = useState(null)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [salvado, setSalvado] = useState(false)
@@ -67,10 +68,20 @@ export default function TextareaComSugestoes({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, doctype, campo])
 
+  // Fecha quando outra instância (InputSug ou TextareaComSugestoes) abre o dropdown
+  useEffect(() => {
+    const close = (e) => { if (e.detail?.id !== instanceIdRef.current) setDropdownOpen(false) }
+    document.addEventListener('shapefy:closeSug', close)
+    return () => document.removeEventListener('shapefy:closeSug', close)
+  }, [])
+
   const abrirDrop = async () => {
     const lista = await carregarTodas()
     const filtradas = filtrar(lista, value)
-    if (filtradas.length > 0) setDropdownOpen(true)
+    if (filtradas.length > 0) {
+      document.dispatchEvent(new CustomEvent('shapefy:closeSug', { detail: { id: instanceIdRef.current } }))
+      setDropdownOpen(true)
+    }
   }
 
   const salvarNoBanco = async () => {
@@ -98,12 +109,18 @@ export default function TextareaComSugestoes({
 
   const handleBlur = () => { blurTimerRef.current = setTimeout(() => setDropdownOpen(false), 200) }
   const handleFocus = async () => { clearTimeout(blurTimerRef.current); await abrirDrop() }
+  const handleChange = (e) => {
+    onChange(e.target.value)
+    carregarTodas()
+    document.dispatchEvent(new CustomEvent('shapefy:closeSug', { detail: { id: instanceIdRef.current } }))
+    setDropdownOpen(true)
+  }
 
   return (
     <div className="relative">
       <textarea
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={handleChange}
         onBlur={handleBlur}
         onFocus={handleFocus}
         placeholder={placeholder}

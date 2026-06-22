@@ -46,7 +46,7 @@ export default function Modal({
         {(title || onClose) && (
           <div className="flex items-center justify-between px-4 md:px-[22px] py-4 border-b border-[#323238] shrink-0">
             <div>
-              {title && <h3 className="text-white font-semibold text-sm md:text-base">{title}</h3>}
+              {title && <h3 className="text-white font-semibold text-sm md:text-base truncate" title={typeof title === 'string' ? title : undefined}>{title}</h3>}
               {subtitle && <p className="text-gray-400 text-[11px] mt-0.5">{subtitle}</p>}
             </div>
             {onClose && (

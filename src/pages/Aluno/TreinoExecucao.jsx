@@ -721,17 +721,6 @@ function SubstitutosSheet({ aberto, exercicioNome, substitutos = [], onSelect, o
 function TecnicaSheet({ tecnica, onClose }) {
   if (!tecnica) return null
 
-  const buildUrl = (video, plataforma) => {
-    if (!video) return ''
-    if (video.includes('://')) return video
-    switch (plataforma) {
-      case 'Vimeo': return `https://vimeo.com/${video}`
-      case 'Google Drive': return `https://drive.google.com/file/d/${video}/view`
-      default: return `https://www.youtube.com/watch?v=${video}`
-    }
-  }
-  const videoUrl = buildUrl(tecnica.video, tecnica.plataforma_video)
-
   return (
     <div
       className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm p-3"
@@ -758,18 +747,8 @@ function TecnicaSheet({ tecnica, onClose }) {
             </p>
           )}
           {tecnica.video && (
-            <div className="mt-1 relative w-full aspect-video rounded-xl overflow-hidden border border-[var(--sf-border)] bg-black">
-              {(tecnica.plataforma_video || 'YouTube').toLowerCase().includes('drive') ? (
-                <video src={getDriveStream(tecnica.video)} controls playsInline preload="metadata" className="w-full h-full" />
-              ) : (
-                <iframe
-                  src={(tecnica.plataforma_video || '').toLowerCase().includes('vimeo') ? getVimeoEmbed(tecnica.video) : getYouTubeEmbed(tecnica.video)}
-                  title={tecnica.nome}
-                  allow="autoplay; encrypted-media; picture-in-picture"
-                  allowFullScreen
-                  className="w-full h-full"
-                />
-              )}
+            <div className="mt-1">
+              <VideoEmbed id={tecnica.video} plataforma={tecnica.plataforma_video} />
             </div>
           )}
         </div>
