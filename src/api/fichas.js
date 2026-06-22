@@ -6,22 +6,51 @@ import { filtrosBusca } from '../utils/strings'
 // ─── Fichas de Treino ─────────────────────────────────────────────────────────
 
 export const listarFichas = async ({ busca, nivel, aluno, page = 1, limit = 50 } = {}) => {
+  const fields = [
+    'name', 'creation', 'aluno', 'nome_completo', 'titulo',
+    'nivel', 'objetivo', 'data_de_inicio', 'data_de_fim', 'estrutura_calculada', 'profissional',
+  ]
+
+  if (busca) {
+    // OR backend: nome_completo OU titulo — evita truncar ao limite de paginação
+    const orFilters = [
+      ...filtrosBusca(['Ficha', 'nome_completo'], busca),
+      ...filtrosBusca(['Ficha', 'titulo'], busca),
+    ]
+    const regularFilters = []
+    if (nivel) regularFilters.push(['Ficha', 'nivel', '=', nivel])
+    if (aluno) regularFilters.push(['Ficha', 'aluno', '=', aluno])
+
+    const data = new URLSearchParams({
+      doctype: 'Ficha',
+      fields: JSON.stringify(fields),
+      filters: JSON.stringify(regularFilters),
+      or_filters: JSON.stringify(orFilters),
+      limit_start: 0,
+      limit_page_length: 300,
+      order_by: 'creation desc',
+    })
+    const res = await client.post('/api/method/frappe.desk.reportview.get', data, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    })
+    const result = res.data.message
+    const list = result?.values?.map(row =>
+      Object.fromEntries(result.keys.map((k, i) => [k, row[i]]))
+    ) || []
+    return { list, hasMore: false }
+  }
+
   const filters = []
-  // busca é feita client-side (nome_completo OU titulo) — sem filtro backend
   if (nivel) filters.push(['nivel', '=', nivel])
   if (aluno) filters.push(['aluno', '=', aluno])
 
   const params = {
-    fields: JSON.stringify([
-      'name', 'creation', 'aluno', 'nome_completo', 'titulo',
-      'nivel', 'objetivo', 'data_de_inicio', 'data_de_fim', 'estrutura_calculada',
-    ]),
+    fields: JSON.stringify(fields),
     filters: JSON.stringify(filters),
-    limit: busca ? 200 : limit,
-    limit_start: busca ? 0 : (page - 1) * limit,
+    limit,
+    limit_start: (page - 1) * limit,
     order_by: 'creation desc',
   }
-
   const res = await client.get('/api/resource/Ficha', { params })
   const list = res.data?.data || []
   return { list, hasMore: list.length === limit }

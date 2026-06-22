@@ -52,6 +52,15 @@ export default function TextareaComSugestoes({
     return todasSugestoes.some(s => normalizar(s[campo]) === n)
   }, [todasSugestoes, value, campo])
 
+  // Reseta o cache quando o doctype/campo muda — a mesma instância é reusada
+  // ao trocar de aba (ex.: Aeróbicos↔Alongamentos), senão fica com as sugestões
+  // do contexto anterior.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTodasSugestoes(null)
+    setDropdownOpen(false)
+  }, [doctype, campo])
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (doctype && campo && value?.trim() && todasSugestoes === null) carregarTodas()

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft, Play, AlertCircle, CheckCircle2, Check, Replace, Ban,
-  StickyNote, Trophy, Info, Eye, ExternalLink, Timer, Shuffle, Zap,
+  StickyNote, Trophy, Info, Eye, ExternalLink, Timer, Shuffle, Zap, ChevronRight,
 } from 'lucide-react'
 import { FormGroup, Select, Spinner, Textarea } from '../../components/ui'
 import {
@@ -296,68 +296,70 @@ function SerieLinha({ exercicio, idx, serie, onUpdate, onConcluir, onAnotar, onV
   // Quando concluida: linha inteira com opacidade reduzida (50%). So o botao
   // de check muda de cor (verde sinaliza o status). Sem badges/borders verdes.
   return (
-    <div className={`flex flex-col gap-1 transition-opacity ${concluida ? 'opacity-50' : ''}`}>
-      <div className="flex items-center gap-2.5">
-        <div className="min-w-[88px]">
-          <p className="text-white text-sm font-bold">Serie {idx + 1}</p>
-          {tipoSerie && (
-            <p className="text-[var(--sf-text-muted)] text-[11px]">{tipoSerie}</p>
-          )}
-          {tecnica && (
-            <button
-              onClick={() => onVerTecnica?.(tecnica)}
-              className="flex items-center gap-1 mt-0.5"
-              title={tecnica.nome}
-            >
-              <Zap size={10} className="text-amber-400 shrink-0" />
-              <span className="text-amber-400 text-[10px] font-medium truncate max-w-[72px]">{tecnica.nome}</span>
-            </button>
-          )}
-        </div>
-        <input
-          type="number"
-          inputMode="numeric"
-          placeholder="Reps"
-          value={serie.repeticoes || ''}
-          onChange={(e) => onUpdate({ repeticoes: parseInt(e.target.value, 10) || 0 })}
-          className="w-16 h-9 px-2 bg-[var(--sf-surface)] border border-[var(--sf-border)] text-white rounded-full text-xs outline-none focus:border-[#2563eb] placeholder:text-[var(--sf-text-muted)] text-center font-bold"
-        />
-        <input
-          type="number"
-          inputMode="decimal"
-          step="0.5"
-          placeholder="Kg"
-          value={serie.carga || ''}
-          onChange={(e) => onUpdate({ carga: parseFloat(e.target.value) || 0 })}
-          className="w-16 h-9 px-2 bg-[var(--sf-surface)] border border-[var(--sf-border)] text-white rounded-full text-xs outline-none focus:border-[#2563eb] placeholder:text-[var(--sf-text-muted)] text-center font-bold"
-        />
-        <button
-          onClick={onAnotar}
-          title="Anotar"
-          className={`h-9 w-9 flex items-center justify-center rounded-lg transition-colors shrink-0 ${
-            serie.nota
-              ? 'text-[#60A5FA] bg-[#0a2956] border border-[#2563eb]/60'
-              : 'text-white bg-[var(--sf-surface)] border border-[var(--sf-border)] hover:bg-[var(--sf-surface-2)]'
-          }`}
-        >
-          <StickyNote size={14} />
-        </button>
-        <button
-          onClick={onConcluir}
-          title={concluida ? 'Desfazer' : 'Concluir serie'}
-          className="h-9 w-9 flex items-center justify-center rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white transition-colors shrink-0"
-        >
-          <Check size={15} strokeWidth={3} />
-        </button>
+    <div className={`flex items-start gap-2.5 transition-opacity ${concluida ? 'opacity-50' : ''}`}>
+      <div className="min-w-[88px] pt-0.5">
+        <p className="text-white text-sm font-bold">Serie {idx + 1}</p>
+        {tipoSerie && (
+          <p className="text-[var(--sf-text-muted)] text-[11px]">{tipoSerie}</p>
+        )}
+        {tecnica && (
+          <button
+            onClick={() => onVerTecnica?.(tecnica)}
+            className="inline-flex items-center gap-1 mt-1 active:opacity-70 transition-opacity"
+            title={tecnica.nome}
+          >
+            <Play size={10} className="text-amber-400 fill-amber-400 shrink-0" />
+            <span className="text-amber-400 text-[10px] font-semibold underline decoration-amber-400/40 underline-offset-2 truncate max-w-[68px]">{tecnica.nome}</span>
+          </button>
+        )}
       </div>
-      {hist?.repeticoes != null && (
-        <p className="text-[var(--sf-text-muted)] text-[11px] pl-[88px] ml-2.5">
-          historico: {hist.repeticoes} reps - {hist.carga}kg
-        </p>
-      )}
-      {serie.nota && (
-        <p className="text-[#60A5FA] text-[11px] italic pl-[88px] ml-2.5">{serie.nota}</p>
-      )}
+      <div className="flex flex-col gap-1 min-w-0">
+        <div className="flex items-center gap-2.5">
+          <input
+            type="number"
+            inputMode="numeric"
+            placeholder="Reps"
+            value={serie.repeticoes || ''}
+            onChange={(e) => onUpdate({ repeticoes: parseInt(e.target.value, 10) || 0 })}
+            className="w-16 h-9 px-2 bg-[var(--sf-surface)] border border-[var(--sf-border)] text-white rounded-full text-xs outline-none focus:border-[#2563eb] placeholder:text-[var(--sf-text-muted)] text-center font-bold"
+          />
+          <input
+            type="number"
+            inputMode="decimal"
+            step="0.5"
+            placeholder="Kg"
+            value={serie.carga || ''}
+            onChange={(e) => onUpdate({ carga: parseFloat(e.target.value) || 0 })}
+            className="w-16 h-9 px-2 bg-[var(--sf-surface)] border border-[var(--sf-border)] text-white rounded-full text-xs outline-none focus:border-[#2563eb] placeholder:text-[var(--sf-text-muted)] text-center font-bold"
+          />
+          <button
+            onClick={onAnotar}
+            title="Anotar"
+            className={`h-9 w-9 flex items-center justify-center rounded-lg transition-colors shrink-0 ${
+              serie.nota
+                ? 'text-[#60A5FA] bg-[#0a2956] border border-[#2563eb]/60'
+                : 'text-white bg-[var(--sf-surface)] border border-[var(--sf-border)] hover:bg-[var(--sf-surface-2)]'
+            }`}
+          >
+            <StickyNote size={14} />
+          </button>
+          <button
+            onClick={onConcluir}
+            title={concluida ? 'Desfazer' : 'Concluir serie'}
+            className="h-9 w-9 flex items-center justify-center rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white transition-colors shrink-0"
+          >
+            <Check size={15} strokeWidth={3} />
+          </button>
+        </div>
+        {hist?.repeticoes != null && (
+          <p className="text-[var(--sf-text-muted)] text-[11px] pl-1">
+            historico: {hist.repeticoes} reps - {hist.carga}kg
+          </p>
+        )}
+        {serie.nota && (
+          <p className="text-[#60A5FA] text-[11px] italic pl-1">{serie.nota}</p>
+        )}
+      </div>
     </div>
   )
 }
@@ -756,8 +758,18 @@ function TecnicaSheet({ tecnica, onClose }) {
             </p>
           )}
           {tecnica.video && (
-            <div className="mt-1">
-              <VideoEmbed id={tecnica.video} plataforma={tecnica.plataforma_video || 'YouTube'} />
+            <div className="mt-1 relative w-full aspect-video rounded-xl overflow-hidden border border-[var(--sf-border)] bg-black">
+              {(tecnica.plataforma_video || 'YouTube').toLowerCase().includes('drive') ? (
+                <video src={getDriveStream(tecnica.video)} controls playsInline preload="metadata" className="w-full h-full" />
+              ) : (
+                <iframe
+                  src={(tecnica.plataforma_video || '').toLowerCase().includes('vimeo') ? getVimeoEmbed(tecnica.video) : getYouTubeEmbed(tecnica.video)}
+                  title={tecnica.nome}
+                  allow="autoplay; encrypted-media; picture-in-picture"
+                  allowFullScreen
+                  className="w-full h-full"
+                />
+              )}
             </div>
           )}
         </div>
