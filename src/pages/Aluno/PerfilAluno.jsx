@@ -9,6 +9,7 @@ import { Spinner, Button } from '../../components/ui'
 import { GlassCard, SectionHeader } from '../../components/aluno'
 import { perfilAluno } from '../../api/aluno'
 import useErrorModal from '../../hooks/useErrorModal'
+import useAuthSrc from '../../hooks/useAuthSrc'
 
 const fmtDataBR = (d) => {
   if (!d) return ''
@@ -99,6 +100,7 @@ export default function PerfilAluno() {
   const altura = perfil.height ? `${perfil.height} m` : null
   const peso = perfil.weight ? `${perfil.weight} kg` : null
   const idade = perfil.age ? `${perfil.age} anos` : null
+  const fotoSrc = useAuthSrc(perfil.foto_url || null)
 
   return (
     <div className="pb-8 bg-[var(--sf-bg)] min-h-full">
@@ -127,9 +129,9 @@ export default function PerfilAluno() {
         <GlassCard as="div" className="px-4 py-5 flex flex-col items-center text-center">
           <div className="relative">
             <div className="absolute -inset-2 rounded-full bg-[#2563EB]/30 blur-xl" aria-hidden="true" />
-            {perfil.foto_url ? (
+            {fotoSrc ? (
               <img
-                src={perfil.foto_url}
+                src={fotoSrc}
                 alt={perfil.nome_completo}
                 className="relative w-24 h-24 rounded-full object-cover ring-2 ring-[#60A5FA] shadow-[0_0_24px_rgba(37,99,235,0.45)]"
               />

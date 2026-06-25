@@ -6,6 +6,7 @@ import { ActionButton, GlassCard, SectionHeader } from '../../components/aluno'
 import { CampoLabel, CampoTexto, CampoSelect } from '../../components/aluno/form'
 import { perfilEditarAluno, salvarPerfilAluno, uploadFotoAluno } from '../../api/aluno'
 import useErrorModal from '../../hooks/useErrorModal'
+import useAuthSrc from '../../hooks/useAuthSrc'
 
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || ''
 
@@ -25,6 +26,7 @@ const absUrl = (u) => {
 function CampoFoto({ value, onChange }) {
   const [enviando, setEnviando] = useState(false)
   const inputRef = useRef(null)
+  const fotoSrc = useAuthSrc(value ? absUrl(value) : null)
 
   const handleFile = async (file) => {
     if (!file) return
@@ -43,8 +45,8 @@ function CampoFoto({ value, onChange }) {
   return (
     <div className="flex items-center gap-4">
       <div className="relative w-20 h-20 rounded-full overflow-hidden border border-[var(--sf-border-strong)] bg-[#0d0d0f] flex items-center justify-center shrink-0">
-        {value ? (
-          <img src={absUrl(value)} alt="Foto" className="w-full h-full object-cover" />
+        {fotoSrc ? (
+          <img src={fotoSrc} alt="Foto" className="w-full h-full object-cover" />
         ) : (
           <Camera size={20} className="text-[var(--sf-text-soft)]" />
         )}

@@ -3,6 +3,7 @@ import { Save, ImageIcon, Upload } from 'lucide-react'
 import client from '../../api/client'
 import { buscarProfissional, salvarProfissional } from '../../api/profissional'
 import { Button, FormGroup, Input, Select, Spinner } from '../../components/ui'
+import AuthImg from '../../components/ui/AuthImg'
 import DetailPage from '../../components/templates/DetailPage'
 import AddressForm from '../../components/AddressForm'
 
@@ -48,7 +49,7 @@ function ImageUploadField({ label, hint, value, fieldname, docname, onUploaded }
     }
   }
 
-  const preview = value ? `${BASE}${value}` : null
+  const imgSrc = value ? `${BASE}${value}` : null
 
   return (
     <FormGroup label={label} hint={hint}>
@@ -59,8 +60,8 @@ function ImageUploadField({ label, hint, value, fieldname, docname, onUploaded }
         >
           {uploading ? (
             <span className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
-          ) : preview ? (
-            <img src={preview} alt={label} className="w-full h-full object-cover" />
+          ) : imgSrc ? (
+            <AuthImg src={imgSrc} alt={label} className="w-full h-full object-cover" />
           ) : (
             <ImageIcon size={20} className="text-gray-600" />
           )}

@@ -89,10 +89,10 @@ const Bloco = ({ bloco }) => {
   }
 
   if (bloco.tipo === 'imagem') {
-    if (!bloco.file_url) return null
+    if (!fileSrc) return null
     return (
       <figure>
-        <img src={`${BASE}${bloco.file_url}`} alt={bloco.legenda || ''}
+        <img src={fileSrc} alt={bloco.legenda || ''}
           className="w-full rounded-xl border border-[var(--sf-border)]" />
         {bloco.legenda && (
           <figcaption className="text-[var(--sf-text-muted)] text-xs mt-1.5 text-center">{bloco.legenda}</figcaption>

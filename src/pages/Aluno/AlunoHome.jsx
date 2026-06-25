@@ -10,6 +10,7 @@ import {
 } from '../../components/aluno'
 import { proximidadeFeedback } from '../../components/aluno/proximidade'
 import useAuthStore from '../../store/authStore'
+import useAuthSrc from '../../hooks/useAuthSrc'
 import {
   homeAluno,
   listarProximosFeedbacksAluno,
@@ -76,16 +77,19 @@ const fmtDataBR = (d) => {
 }
 
 function BannerProfissional({ profissional }) {
+  const bannerRaw = profissional?.banner_url || profissional?.capa_url || null
+  const banner = useAuthSrc(bannerRaw)
+  const fotoSrc = useAuthSrc(profissional?.foto_url || null)
+
   if (!profissional) return null
   const iniciais = (profissional.nome || '').split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase()
-  const banner = profissional.banner_url || profissional.capa_url
 
   return (
     <div className="relative">
       <div
         className="h-52 w-full relative overflow-hidden"
         style={banner
-          ? { backgroundImage: `url("${encodeURI(banner)}")`, backgroundSize: 'cover', backgroundPosition: 'center' }
+          ? { backgroundImage: `url("${banner}")`, backgroundSize: 'cover', backgroundPosition: 'center' }
           : {
               backgroundImage: `
                 radial-gradient(circle at 15% 20%, rgba(37, 99, 235, 0.45) 0px, transparent 50%),
@@ -124,9 +128,9 @@ function BannerProfissional({ profissional }) {
         <div className="relative">
           <div className="absolute -inset-3 rounded-full bg-[#2563EB]/40 blur-2xl" aria-hidden="true" />
           <div className="absolute -inset-1 rounded-full bg-[#60A5FA]/30 blur-lg" aria-hidden="true" />
-          {profissional.foto_url ? (
+          {fotoSrc ? (
             <img
-              src={profissional.foto_url}
+              src={fotoSrc}
               alt={profissional.nome}
               className="relative w-28 h-28 rounded-full object-cover ring-2 ring-[#60A5FA] shadow-[0_0_30px_rgba(37,99,235,0.6)]"
             />
