@@ -175,8 +175,10 @@ export default function Login() {
       >
         <div className="absolute inset-0 bg-black/40" />
         <div className="absolute bottom-8 left-8">
-          <img src="/shapefy-logo.png" alt="Shapefy" className="h-14 drop-shadow-xl" />
-          <p className="text-gray-300 text-sm mt-2 drop-shadow font-medium">Plataforma de gestão para profissionais de saúde</p>
+          <h1 className="text-4xl font-bold text-white tracking-tight drop-shadow-lg">
+            Shape<span className="text-[#2563eb]">fy</span>
+          </h1>
+          <p className="text-gray-300 text-sm mt-1 drop-shadow font-medium">Plataforma de gestão para profissionais de saúde</p>
         </div>
       </div>
 
@@ -191,15 +193,17 @@ export default function Login() {
 
       <div className="w-full max-w-md relative z-10">
 
-        <div className="flex flex-col items-center mb-8 lg:hidden">
-          <img src="/shapefy-logo.png" alt="Shapefy" className="h-16 drop-shadow-xl" />
+        <div className="text-center mb-8 lg:hidden">
+          <h1 className="text-4xl font-bold text-white tracking-tight drop-shadow-lg">
+            Shape<span className="text-[#2563eb]">fy</span>
+          </h1>
           <p className="text-gray-300 mt-2 text-sm drop-shadow font-medium">
             Plataforma de gestão para profissionais de saúde
           </p>
         </div>
 
-        <div className={`${tw.card} p-6 shadow-xl`}>
-          <div className="grid grid-cols-2 gap-2 p-1 bg-[#1a1a1a] border border-[#323238] rounded-lg mb-6">
+        <div className="bg-[#0a0a0a]/75 lg:bg-[#29292e] backdrop-blur-md lg:backdrop-blur-none border border-white/10 lg:border-[#323238] rounded-xl p-6 shadow-xl">
+          <div className="grid grid-cols-2 gap-2 p-1 bg-black/40 lg:bg-[#1a1a1a] border border-white/10 lg:border-[#323238] rounded-lg mb-6">
             <button
               type="button"
               onClick={() => { setTipo('profissional'); setError('') }}
