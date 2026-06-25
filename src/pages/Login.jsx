@@ -170,7 +170,7 @@ export default function Login() {
     <div className="min-h-screen relative flex flex-col items-center justify-between lg:justify-center px-4 pt-16 pb-10">
       {/* Foto full-bleed */}
       <div
-        className="absolute inset-0 bg-cover bg-[center_20%] bg-no-repeat"
+        className="absolute inset-0 bg-cover bg-[center_55%] bg-no-repeat"
         style={{ backgroundImage: 'url(https://shapefy.online/assets/shapefy/images/fundo-home.jpg)' }}
       />
       {/* Gradiente: transparente no topo, escuro na base */}
