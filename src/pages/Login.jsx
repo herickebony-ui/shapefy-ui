@@ -175,10 +175,8 @@ export default function Login() {
       >
         <div className="absolute inset-0 bg-black/40" />
         <div className="absolute bottom-8 left-8">
-          <h1 className="text-4xl font-bold text-white tracking-tight drop-shadow-lg">
-            Shape<span className="text-[#2563eb]">fy</span>
-          </h1>
-          <p className="text-gray-300 text-sm mt-1 drop-shadow">Plataforma de gestão para profissionais de saúde</p>
+          <img src="/shapefy-logo.png" alt="Shapefy" className="h-14 drop-shadow-xl" />
+          <p className="text-gray-300 text-sm mt-2 drop-shadow font-medium">Plataforma de gestão para profissionais de saúde</p>
         </div>
       </div>
 
@@ -193,11 +191,9 @@ export default function Login() {
 
       <div className="w-full max-w-md relative z-10">
 
-        <div className="text-center mb-8 lg:hidden">
-          <h1 className="text-4xl font-bold text-white tracking-tight drop-shadow-lg">
-            Shape<span className="text-[#2563eb]">fy</span>
-          </h1>
-          <p className="text-gray-300 mt-2 text-sm drop-shadow">
+        <div className="flex flex-col items-center mb-8 lg:hidden">
+          <img src="/shapefy-logo.png" alt="Shapefy" className="h-16 drop-shadow-xl" />
+          <p className="text-gray-300 mt-2 text-sm drop-shadow font-medium">
             Plataforma de gestão para profissionais de saúde
           </p>
         </div>
