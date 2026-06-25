@@ -175,12 +175,13 @@ export default function ComunidadeFeedAluno() {
                 community={name}
                 isAluno
                 onToggleLike={api.alunoToggleReacao}
-                onComment={async (postName, text) => { await api.alunoCriarComentario(postName, text) }}
+                onComment={async (postName, text, parentComment) => { await api.alunoCriarComentario(postName, text, parentComment) }}
                 onEditPost={async (postName, caption) => { await api.alunoEditarPost(postName, caption) }}
                 onDeletePost={handleDeletePost}
                 onEditComment={async (comment, text) => { await api.alunoEditarComentario(comment, text) }}
                 onDeleteComment={async (comment) => { await api.alunoExcluirComentario(comment) }}
                 commentApi={api.alunoComentarios}
+                replyApi={api.alunoListarRespostas}
               />
             ))}
             <div ref={sentinelRef} className="h-4">

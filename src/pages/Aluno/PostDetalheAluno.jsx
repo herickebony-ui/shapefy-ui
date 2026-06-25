@@ -49,12 +49,13 @@ export default function PostDetalheAluno() {
             isAluno
             expandComments
             onToggleLike={api.alunoToggleReacao}
-            onComment={async (pName, text) => { await api.alunoCriarComentario(pName, text) }}
+            onComment={async (pName, text, parentComment) => { await api.alunoCriarComentario(pName, text, parentComment) }}
             onEditPost={async (pName, caption) => { await api.alunoEditarPost(pName, caption) }}
             onDeletePost={handleDeletePost}
             onEditComment={async (c, text) => { await api.alunoEditarComentario(c, text) }}
             onDeleteComment={async (c) => { await api.alunoExcluirComentario(c) }}
             commentApi={api.alunoComentarios}
+            replyApi={api.alunoListarRespostas}
           />
         ) : (
           <p className="text-gray-500 text-sm text-center py-12">Post não encontrado.</p>

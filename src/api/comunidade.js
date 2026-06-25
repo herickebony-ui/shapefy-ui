@@ -50,9 +50,16 @@ export const criarPost = async (community, { caption, imagens }) => {
   return res.data?.message
 }
 
-export const criarComentario = async (post, text) => {
-  const res = await client.post(`${BASE}.create_community_comment`, { post, text })
+export const criarComentario = async (post, text, parent_comentario) => {
+  const res = await client.post(`${BASE}.create_community_comment`, { post, text, parent_comentario: parent_comentario || undefined })
   return res.data?.message
+}
+
+export const listarRespostas = async (comment, { cursor, limit } = {}) => {
+  const res = await client.get(`${BASE}.get_comment_replies`, {
+    params: { comment, cursor, limit },
+  })
+  return res.data?.message || { replies: [], has_more: false }
 }
 
 export const toggleReacao = async (post) => {
@@ -165,9 +172,16 @@ export const alunoCriarPost = async (community, { caption, imagens }) => {
   return res.data?.message
 }
 
-export const alunoCriarComentario = async (post, text) => {
-  const res = await client.post(`${BASE}.aluno_create_comment`, { post, text })
+export const alunoCriarComentario = async (post, text, parent_comentario) => {
+  const res = await client.post(`${BASE}.aluno_create_comment`, { post, text, parent_comentario: parent_comentario || undefined })
   return res.data?.message
+}
+
+export const alunoListarRespostas = async (comment, { cursor, limit } = {}) => {
+  const res = await client.get(`${BASE}.aluno_get_comment_replies`, {
+    params: { comment, cursor, limit },
+  })
+  return res.data?.message || { replies: [], has_more: false }
 }
 
 export const alunoToggleReacao = async (post) => {

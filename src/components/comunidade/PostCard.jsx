@@ -99,7 +99,7 @@ export default function PostCard({
   onEditPost, onDeletePost, onEditComment, onDeleteComment,
   onPinPost, onUnpinPost,
   canModerate = false, isAluno = false,
-  commentApi, expandComments = false,
+  commentApi, replyApi, expandComments = false,
 }) {
   const navigate = useNavigate()
   const [showComments, setShowComments] = useState(expandComments)
@@ -270,14 +270,15 @@ export default function PostCard({
       {showComments && (
         <ComentarioSection
           postName={post.name}
-          onComment={async (text) => {
-            await onComment(post.name, text)
+          onComment={async (text, parentComment) => {
+            await onComment(post.name, text, parentComment)
             setCommentCount(c => c + 1)
           }}
           onHideComment={canModerate ? onHideComment : null}
           onEditComment={onEditComment}
           onDeleteComment={onDeleteComment}
           commentApi={commentApi}
+          replyApi={replyApi}
         />
       )}
     </div>

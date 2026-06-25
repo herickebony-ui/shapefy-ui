@@ -149,7 +149,7 @@ export default function ComunidadeFeed({ community }) {
               community={community}
               canModerate
               onToggleLike={api.toggleReacao}
-              onComment={async (postName, text) => { await api.criarComentario(postName, text) }}
+              onComment={async (postName, text, parentComment) => { await api.criarComentario(postName, text, parentComment) }}
               onHidePost={handleHidePost}
               onHideComment={async (commentName) => { await api.ocultarComentario(commentName) }}
               onEditPost={handleEditPost}
@@ -159,6 +159,7 @@ export default function ComunidadeFeed({ community }) {
               onPinPost={async (postName) => { await api.fixarPost(postName); load(null) }}
               onUnpinPost={async (postName) => { await api.desfixarPost(postName); load(null) }}
               commentApi={api.listarComentarios}
+              replyApi={api.listarRespostas}
             />
           ))}
           <div ref={sentinelRef} className="h-4">

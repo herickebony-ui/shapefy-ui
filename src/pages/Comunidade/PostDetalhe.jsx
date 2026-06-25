@@ -46,7 +46,7 @@ export default function PostDetalhe() {
           canModerate
           expandComments
           onToggleLike={api.toggleReacao}
-          onComment={async (pName, text) => { await api.criarComentario(pName, text) }}
+          onComment={async (pName, text, parentComment) => { await api.criarComentario(pName, text, parentComment) }}
           onHidePost={async () => { await api.ocultarPost(postName); navigate(`/comunidade/${community}`) }}
           onHideComment={async (c) => { await api.ocultarComentario(c) }}
           onEditPost={async (pName, caption) => { await api.editarPost(pName, caption) }}
@@ -54,6 +54,7 @@ export default function PostDetalhe() {
           onEditComment={async (c, text) => { await api.editarComentario(c, text) }}
           onDeleteComment={async (c) => { await api.excluirComentario(c) }}
           commentApi={api.listarComentarios}
+          replyApi={api.listarRespostas}
         />
       ) : (
         <p className="text-gray-500 text-sm text-center py-12">Post não encontrado.</p>
