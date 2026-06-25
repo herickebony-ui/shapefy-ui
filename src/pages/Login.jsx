@@ -167,43 +167,30 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex bg-[#0a0a0a]">
-      {/* Foto de fundo — lado esquerdo no desktop, background no mobile */}
+    <div className="min-h-screen relative flex flex-col items-center justify-between lg:justify-center px-4 pt-16 pb-10">
+      {/* Foto full-bleed */}
       <div
-        className="hidden lg:block lg:w-1/2 xl:w-3/5 bg-cover bg-center bg-no-repeat relative"
+        className="absolute inset-0 bg-cover bg-[center_20%] bg-no-repeat"
         style={{ backgroundImage: 'url(https://shapefy.online/assets/shapefy/images/fundo-home.jpg)' }}
-      >
-        <div className="absolute inset-0 bg-black/40" />
-        <div className="absolute bottom-8 left-8">
-          <h1 className="text-4xl font-bold text-white tracking-tight drop-shadow-lg">
-            Shape<span className="text-[#2563eb]">fy</span>
-          </h1>
-          <p className="text-gray-300 text-sm mt-1 drop-shadow font-medium">Plataforma de gestão para profissionais de saúde</p>
-        </div>
+      />
+      {/* Gradiente: transparente no topo, escuro na base */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/40 to-black/85" />
+
+      {/* Título — topo */}
+      <div className="relative z-10 text-center">
+        <h1 className="text-4xl font-bold text-white tracking-tight drop-shadow-lg">
+          Shape<span className="text-[#2563eb]">fy</span>
+        </h1>
+        <p className="text-gray-300 mt-2 text-sm drop-shadow font-medium">
+          Plataforma de gestão para profissionais de saúde
+        </p>
       </div>
 
-      {/* Formulário */}
-      <div className="w-full lg:w-1/2 xl:w-2/5 flex items-center justify-center px-4 py-12 relative">
-        {/* Background mobile: foto com overlay */}
-        <div
-          className="lg:hidden absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: 'url(https://shapefy.online/assets/shapefy/images/fundo-home.jpg)' }}
-        />
-        <div className="lg:hidden absolute inset-0 bg-black/70" />
-
+      {/* Formulário — base no mobile, centralizado no desktop */}
       <div className="w-full max-w-md relative z-10">
 
-        <div className="text-center mb-8 lg:hidden">
-          <h1 className="text-4xl font-bold text-white tracking-tight drop-shadow-lg">
-            Shape<span className="text-[#2563eb]">fy</span>
-          </h1>
-          <p className="text-gray-300 mt-2 text-sm drop-shadow font-medium">
-            Plataforma de gestão para profissionais de saúde
-          </p>
-        </div>
-
-        <div className="bg-[#0a0a0a]/75 lg:bg-[#29292e] backdrop-blur-md lg:backdrop-blur-none border border-white/10 lg:border-[#323238] rounded-xl p-6 shadow-xl">
-          <div className="grid grid-cols-2 gap-2 p-1 bg-black/40 lg:bg-[#1a1a1a] border border-white/10 lg:border-[#323238] rounded-lg mb-6">
+        <div className="bg-[#0a0a0a]/80 backdrop-blur-md border border-white/10 rounded-xl p-5 shadow-xl">
+          <div className="grid grid-cols-2 gap-2 p-1 bg-black/40 border border-white/10 rounded-lg mb-5">
             <button
               type="button"
               onClick={() => { setTipo('profissional'); setError('') }}
@@ -230,8 +217,8 @@ export default function Login() {
 
           {tipo === 'profissional' ? (
             <>
-              <h2 className="text-white text-lg font-semibold mb-5">Entrar na sua conta</h2>
-              <form onSubmit={handleLoginProfissional} className="space-y-4">
+              <h2 className="text-white text-lg font-semibold mb-4">Entrar na sua conta</h2>
+              <form onSubmit={handleLoginProfissional} className="space-y-3">
                 <Input
                   label="E-mail ou usuário"
                   type="text"
@@ -301,7 +288,7 @@ export default function Login() {
               <p className="text-gray-500 text-xs mb-5">
                 Use o código de acesso que seu profissional te enviou.
               </p>
-              <form onSubmit={handleLoginAluno} className="space-y-4">
+              <form onSubmit={handleLoginAluno} className="space-y-3">
                 <Input
                   label="Código de acesso"
                   type="text"
@@ -334,10 +321,9 @@ export default function Login() {
           )}
         </div>
 
-        <p className="text-center text-gray-500 text-xs mt-6">
+        <p className="text-center text-gray-500 text-xs mt-5">
           © {new Date().getFullYear()} Shapefy · Todos os direitos reservados
         </p>
-      </div>
       </div>
     </div>
   )
