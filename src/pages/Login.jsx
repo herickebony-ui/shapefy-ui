@@ -167,14 +167,37 @@ export default function Login() {
   }
 
   return (
-    <div className={`${tw.page} flex items-center justify-center px-4`}>
-      <div className="w-full max-w-md">
-
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white tracking-tight">
+    <div className="min-h-screen flex bg-[#0a0a0a]">
+      {/* Foto de fundo — lado esquerdo no desktop, background no mobile */}
+      <div
+        className="hidden lg:block lg:w-1/2 xl:w-3/5 bg-cover bg-center bg-no-repeat relative"
+        style={{ backgroundImage: 'url(https://shapefy.online/assets/shapefy/images/fundo-home.jpg)' }}
+      >
+        <div className="absolute inset-0 bg-black/40" />
+        <div className="absolute bottom-8 left-8">
+          <h1 className="text-4xl font-bold text-white tracking-tight drop-shadow-lg">
             Shape<span className="text-[#2563eb]">fy</span>
           </h1>
-          <p className="text-gray-400 mt-2 text-sm">
+          <p className="text-gray-300 text-sm mt-1 drop-shadow">Plataforma de gestão para profissionais de saúde</p>
+        </div>
+      </div>
+
+      {/* Formulário */}
+      <div className="w-full lg:w-1/2 xl:w-2/5 flex items-center justify-center px-4 py-12 relative">
+        {/* Background mobile: foto com overlay */}
+        <div
+          className="lg:hidden absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: 'url(https://shapefy.online/assets/shapefy/images/fundo-home.jpg)' }}
+        />
+        <div className="lg:hidden absolute inset-0 bg-black/70" />
+
+      <div className="w-full max-w-md relative z-10">
+
+        <div className="text-center mb-8 lg:hidden">
+          <h1 className="text-4xl font-bold text-white tracking-tight drop-shadow-lg">
+            Shape<span className="text-[#2563eb]">fy</span>
+          </h1>
+          <p className="text-gray-300 mt-2 text-sm drop-shadow">
             Plataforma de gestão para profissionais de saúde
           </p>
         </div>
@@ -311,9 +334,10 @@ export default function Login() {
           )}
         </div>
 
-        <p className="text-center text-gray-600 text-xs mt-6">
+        <p className="text-center text-gray-500 text-xs mt-6">
           © {new Date().getFullYear()} Shapefy · Todos os direitos reservados
         </p>
+      </div>
       </div>
     </div>
   )
