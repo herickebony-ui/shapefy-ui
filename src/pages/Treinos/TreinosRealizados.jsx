@@ -4,13 +4,13 @@ import { maybeOpenNewTab } from '../../utils/navigation'
 import {
   ArrowLeft, RefreshCw, ChevronLeft, ChevronRight,
   Dumbbell, Activity, Clock, MessageSquare, LineChart,
-  Save, Search, Calendar, TrendingUp, Check, Eye, EyeOff, Trash2, Shuffle,
+  Save, Search, Calendar, TrendingUp, Check, Eye, EyeOff, Trash2, Shuffle, UserX,
 } from 'lucide-react'
 import { buscarSmart } from '../../utils/strings'
 import {
   listarTreinosRealizados, buscarTreinoRealizado,
   salvarFeedbackProfissional, marcarEntregueTreino, excluirTreinoRealizado,
-  listarAerobicosRealizados,
+  listarAerobicosRealizados, listarAlunosInativosComFicha,
 } from '../../api/treinosRealizados'
 import { buscarFicha } from '../../api/fichas'
 import { Button, Badge, Spinner, Modal, BotaoTutoriais } from '../../components/ui'
@@ -668,6 +668,10 @@ export default function TreinosRealizados() {
   const [treinoAberto, setTreinoAberto] = useState(rotaId ? { name: rotaId } : null)
   const [modalExcluir, setModalExcluir] = useState(null) // treino a confirmar
   const [excluindo, setExcluindo] = useState(false)
+  const [modalInativos, setModalInativos] = useState(false)
+  const [diasInativos, setDiasInativos] = useState(7)
+  const [inativos, setInativos] = useState(null) // null = não carregado, [] = carregado
+  const [loadingInativos, setLoadingInativos] = useState(false)
   const errorModal = useErrorModal()
   const debounceRef = useRef(null)
 
@@ -684,6 +688,25 @@ export default function TreinosRealizados() {
     } finally {
       setExcluindo(false)
     }
+  }
+
+  const carregarInativos = async (dias = diasInativos) => {
+    setLoadingInativos(true)
+    try {
+      const result = await listarAlunosInativosComFicha(dias)
+      setInativos(result)
+    } catch (e) {
+      console.error(e)
+      setInativos([])
+    } finally {
+      setLoadingInativos(false)
+    }
+  }
+
+  const abrirModalInativos = (dias = diasInativos) => {
+    setModalInativos(true)
+    setInativos(null)
+    carregarInativos(dias)
   }
 
   const carregar = async (reset = true, query = queryBusca, status = statusFiltro) => {
@@ -744,6 +767,9 @@ export default function TreinosRealizados() {
       actions={
         <>
           <BotaoTutoriais videos={TUTORIAIS_TREINOS_PROGRESSAO} />
+          <Button variant="secondary" size="sm" icon={UserX} onClick={() => abrirModalInativos()}>
+            Inativos
+          </Button>
           <Button variant="secondary" size="sm" icon={RefreshCw} onClick={() => carregar()} loading={loading} />
         </>
       }
@@ -908,6 +934,76 @@ export default function TreinosRealizados() {
           )}
         </div>
       )}
+      {modalInativos && (
+        <Modal
+          isOpen
+          onClose={() => setModalInativos(false)}
+          title="Alunos inativos com ficha vigente"
+          size="md"
+          footer={
+            <Button variant="ghost" onClick={() => setModalInativos(false)}>Fechar</Button>
+          }
+        >
+          <div className="p-4 space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-gray-400 shrink-0">Sem treino nos últimos</span>
+              <select
+                value={diasInativos}
+                onChange={e => {
+                  const d = Number(e.target.value)
+                  setDiasInativos(d)
+                  setInativos(null)
+                  carregarInativos(d)
+                }}
+                className="h-8 px-2 bg-[#1a1a1a] border border-[#323238] text-white rounded-lg text-xs outline-none focus:border-[#2563eb]/60 transition-colors"
+              >
+                <option value={7}>7 dias</option>
+                <option value={14}>14 dias</option>
+                <option value={30}>30 dias</option>
+              </select>
+            </div>
+
+            {loadingInativos || inativos === null ? (
+              <div className="flex justify-center py-8"><Spinner /></div>
+            ) : inativos.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-8 text-center">
+                <UserX size={28} className="text-green-400" />
+                <p className="text-sm font-semibold text-white">Nenhum aluno inativo</p>
+                <p className="text-xs text-gray-500">Todos os alunos com ficha vigente treinaram nos últimos {diasInativos} dias.</p>
+              </div>
+            ) : (
+              <>
+                <p className="text-xs text-gray-500">
+                  <span className="text-white font-bold">{inativos.length}</span> aluno{inativos.length !== 1 ? 's' : ''} com ficha vigente sem registrar treino nos últimos <span className="text-white font-bold">{diasInativos} dias</span>.
+                </p>
+                <div className="bg-[#29292e] rounded-lg border border-[#323238] overflow-hidden">
+                  <div className="divide-y divide-[#323238]/50 max-h-80 overflow-y-auto">
+                    {inativos.map(f => (
+                      <div key={f.name} className="flex items-center justify-between px-4 py-3 hover:bg-white/[0.03] transition-colors">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-white truncate">{f.nome_completo}</p>
+                          {f.data_de_fim && (
+                            <p className="text-[10px] text-gray-500 mt-0.5">
+                              Ficha até {fmtDate(f.data_de_fim)}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => { setModalInativos(false); navigate(`/alunos/${encodeURIComponent(f.aluno)}`) }}
+                          className="shrink-0 ml-3 h-7 px-3 flex items-center gap-1.5 text-gray-400 hover:text-white border border-[#323238] hover:border-[#2563eb]/50 rounded-lg text-[11px] font-medium transition-colors"
+                        >
+                          Ver aluno
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </Modal>
+      )}
+
       {modalExcluir && (
         <Modal
           isOpen

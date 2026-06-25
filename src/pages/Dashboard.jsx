@@ -68,6 +68,9 @@ export default function Dashboard() {
   const [erroExcluir, setErroExcluir] = useState(null)
   const [falhasParciais, setFalhasParciais] = useState(null) // [{label,name,erro}]
 
+  // Lightbox foto de perfil
+  const [fotoAmpliada, setFotoAmpliada] = useState(null)
+
   // Modal novo aluno
   const [showModal, setShowModal] = useState(false)
   const [salvando, setSalvando] = useState(false)
@@ -237,12 +240,17 @@ export default function Dashboard() {
       render: (row) => (
         <div className="flex items-center gap-3">
           {row.foto && (
-            <AuthImg
-              src={`${FRAPPE_URL}${row.foto}`}
-              alt={row.nome_completo}
-              className="w-8 h-8 rounded-lg object-cover shrink-0 bg-[#323238]"
-              onError={e => { e.target.style.display = 'none' }}
-            />
+            <button
+              onClick={e => { e.stopPropagation(); setFotoAmpliada(`${FRAPPE_URL}${row.foto}`) }}
+              className="shrink-0 focus:outline-none"
+            >
+              <AuthImg
+                src={`${FRAPPE_URL}${row.foto}`}
+                alt={row.nome_completo}
+                className="w-8 h-8 rounded-lg object-cover bg-[#323238] hover:opacity-80 transition-opacity cursor-zoom-in"
+                onError={e => { e.target.parentElement.style.display = 'none' }}
+              />
+            </button>
           )}
           <div className="min-w-0">
             <p className="text-white text-sm font-medium truncate">{row.nome_completo}</p>
@@ -581,6 +589,18 @@ export default function Dashboard() {
             </FormGroup>
           </div>
         </Modal>
+      )}
+      {fotoAmpliada && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          onClick={() => setFotoAmpliada(null)}
+        >
+          <AuthImg
+            src={fotoAmpliada}
+            className="max-w-[90vw] max-h-[90vh] rounded-xl object-contain shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          />
+        </div>
       )}
       {errorModal.element}
     </>
