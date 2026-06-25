@@ -77,6 +77,55 @@ export const marcarEntregueTreino = async (id, entregue = true) => {
   return res.data?.data
 }
 
+// Retorna alunos com ficha vigente (enabled=1 e data_de_fim >= hoje ou sem data_de_fim)
+// que não registraram nenhum treino nos últimos `dias` dias.
+export const listarAlunosInativosComFicha = async (dias = 7) => {
+  const prof = profissionalLogado()
+  const hoje = new Date()
+  const hojeISO = hoje.toISOString().split('T')[0]
+  const corte = new Date(hoje)
+  corte.setDate(corte.getDate() - dias)
+  const corteISO = `${corte.toISOString().split('T')[0]} 00:00:00`
+
+  const [fichasRes, treinosRes] = await Promise.all([
+    client.get('/api/resource/Ficha', {
+      params: {
+        fields: JSON.stringify(['name', 'aluno', 'nome_completo', 'data_de_fim', 'data_de_inicio']),
+        filters: JSON.stringify([['enabled', '=', 1], ['profissional', '=', prof]]),
+        limit: 500,
+        order_by: 'nome_completo asc',
+      },
+    }),
+    client.get(`/api/resource/${DOCTYPE}`, {
+      params: {
+        fields: JSON.stringify(['aluno']),
+        filters: JSON.stringify([
+          ['profissional', '=', prof],
+          ['data_e_hora_do_inicio', '>=', corteISO],
+        ]),
+        limit: 500,
+      },
+    }),
+  ])
+
+  const fichas = fichasRes.data.data || []
+  const treinosRecentes = new Set((treinosRes.data.data || []).map(t => t.aluno))
+
+  // Fichas vigentes: sem data_de_fim ou data_de_fim >= hoje
+  const vigentes = fichas.filter(f => !f.data_de_fim || f.data_de_fim >= hojeISO)
+
+  // Deduplica por aluno (pega a ficha com data_de_fim mais longe)
+  const porAluno = new Map()
+  for (const f of vigentes) {
+    const atual = porAluno.get(f.aluno)
+    if (!atual || (f.data_de_fim || '9999') > (atual.data_de_fim || '9999')) {
+      porAluno.set(f.aluno, f)
+    }
+  }
+
+  return [...porAluno.values()].filter(f => !treinosRecentes.has(f.aluno))
+}
+
 export const listarIdsDoAluno = async (alunoId, limit = 300) => {
   const res = await client.get(`/api/resource/${DOCTYPE}`, {
     params: {
