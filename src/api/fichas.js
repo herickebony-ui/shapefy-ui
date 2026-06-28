@@ -8,7 +8,7 @@ import { filtrosBusca } from '../utils/strings'
 export const listarFichas = async ({ busca, nivel, aluno, page = 1, limit = 50 } = {}) => {
   const fields = [
     'name', 'creation', 'aluno', 'nome_completo', 'titulo',
-    'nivel', 'objetivo', 'data_de_inicio', 'data_de_fim', 'estrutura_calculada', 'profissional',
+    'nivel', 'objetivo', 'data_de_inicio', 'data_de_fim', 'estrutura_calculada', 'profissional', 'enabled',
   ]
 
   if (busca) {
@@ -73,6 +73,11 @@ export const salvarFicha = async (id, dados) => {
 
 export const excluirFicha = async (id) => {
   await client.delete(`/api/resource/Ficha/${id}`)
+}
+
+export const toggleFicha = async (id, enabled) => {
+  const res = await client.put(`/api/resource/Ficha/${encodeURIComponent(id)}`, { enabled })
+  return res.data?.data
 }
 
 // ─── Exercícios ───────────────────────────────────────────────────────────────

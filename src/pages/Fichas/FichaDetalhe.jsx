@@ -6,12 +6,13 @@ import {
   Plus, X, Trash2, Copy, Info, Loader, Check,
   Zap, Bookmark,
   Link2, Play, GripVertical, SlidersHorizontal,
+  ToggleLeft, ToggleRight,
 } from 'lucide-react'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import { lockRowWidths, unlockRowWidths, dragRowStyle, makeOnDragEnd } from '../../utils/dndLinhas'
 import {
   listarFichas, buscarFicha, criarFicha, salvarFicha,
-  listarExercicios, listarAlongamentos, listarAerobicos, listarGruposMusculares,
+  listarExercicios, listarAlongamentos, listarAerobicos, listarGruposMusculares, toggleFicha,
 } from '../../api/fichas'
 import { listarTecnicas } from '../../api/tecnicas'
 import { listarTiposDeSerie } from '../../api/tiposDeSerie'
@@ -2048,6 +2049,17 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
     } finally { setSaving(false) }
   }
 
+  const handleToggleEnabled = async () => {
+    const novo = ficha.enabled === 0 ? 1 : 0
+    upd('enabled', novo)
+    try {
+      await toggleFicha(ficha.name, novo)
+    } catch (e) {
+      console.error(e)
+      upd('enabled', ficha.enabled)
+    }
+  }
+
   const steps = [
     { id: 'config', label: 'Dados da Ficha' },
     { id: 'aerobico', label: 'Aeróbicos' },
@@ -2530,6 +2542,13 @@ const FormularioFicha = ({ fichaInicial, onClose, onSave, isTemplate = false, mo
             </Button>
           )}
           {isEdit && !isTemplate && <DownloadPdfButton entity="ficha" name={ficha.name} />}
+          {isEdit && !isTemplate && (
+            <button onClick={handleToggleEnabled} title={ficha.enabled === 0 ? 'Ativar ficha' : 'Desativar ficha'}
+              className={`h-8 px-2.5 flex items-center gap-1.5 border rounded-lg text-sm transition-colors ${ficha.enabled === 0 ? 'text-gray-400 border-[#323238] hover:text-white hover:border-gray-500' : 'text-green-400 border-green-500/30 hover:text-white hover:bg-green-700 hover:border-green-700'}`}>
+              {ficha.enabled === 0 ? <ToggleLeft size={15} /> : <ToggleRight size={15} />}
+              <span className="hidden md:inline text-xs">{ficha.enabled === 0 ? 'Inativa' : 'Ativa'}</span>
+            </button>
+          )}
           <Button variant="secondary" size="sm" icon={Copy} onClick={() => setGerenciadorAberto(true)}>
             <span className="hidden sm:inline">Gerenciar Treinos</span>
           </Button>

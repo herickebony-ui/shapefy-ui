@@ -5,8 +5,9 @@ import {
   Flame, User, LayoutGrid, List,
   RefreshCw, AlertCircle, Copy, ClipboardList,
   Trash2, SlidersHorizontal, Eye, Loader, FileText,
+  ToggleLeft, ToggleRight,
 } from 'lucide-react'
-import { listarDietas, excluirDieta, buscarDieta, salvarDieta, criarDieta, dadosAntropometricosFromAluno } from '../../api/dietas'
+import { listarDietas, excluirDieta, buscarDieta, salvarDieta, criarDieta, dadosAntropometricosFromAluno, toggleDieta } from '../../api/dietas'
 import { listarAlunos, buscarAluno } from '../../api/alunos'
 import { ModalDuplicarDieta } from './DietaDetalhe'
 import ModalEscolherModelo from '../Modelos/ModalEscolherModelo'
@@ -57,6 +58,7 @@ const getStrategyStyle = (strategy) => STRATEGY_COLORS[strategy?.slice(0, 2)] ??
 // ─── Status ───────────────────────────────────────────────────────────────────
 
 const getStatus = (dieta) => {
+  if (dieta?.enabled === 0) return { label: 'Inativa', color: 'bg-red-500/10 text-red-300 border-red-500/20 shadow-[0_0_8px_rgba(239,68,68,0.5)]' }
   const start = toYMD(dieta?.date)
   const end = toYMD(dieta?.final_date)
   const hoje = new Date().toISOString().split('T')[0]
@@ -600,6 +602,17 @@ export default function DietaListagem() {
     }
   }
 
+  const handleToggleDieta = async (row) => {
+    const novo = row.enabled === 0 ? 1 : 0
+    setDietas(prev => prev.map(d => d.name === row.name ? { ...d, enabled: novo } : d))
+    try {
+      await toggleDieta(row.name, novo)
+    } catch (e) {
+      console.error(e)
+      setDietas(prev => prev.map(d => d.name === row.name ? { ...d, enabled: row.enabled } : d))
+    }
+  }
+
   const temFiltroAtivo = filtros.status || filtros.kcalMin || filtros.kcalMax || filtros.refeicoes?.length > 0
 
   return (
@@ -766,6 +779,10 @@ export default function DietaListagem() {
                 headerClass: 'min-w-[120px]',
                 render: (d) => (
                   <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                    <button onClick={() => handleToggleDieta(d)} title={d.enabled === 0 ? 'Ativar' : 'Desativar'}
+                      className={`h-7 w-7 flex items-center justify-center border rounded-lg transition-colors ${d.enabled === 0 ? 'text-gray-500 border-[#323238] hover:border-gray-500 hover:text-white' : 'text-green-400 border-green-500/30 hover:bg-green-700 hover:border-green-700 hover:text-white'}`}>
+                      {d.enabled === 0 ? <ToggleLeft size={12} /> : <ToggleRight size={12} />}
+                    </button>
                     <button onClick={() => setVizId(d.name)}
                       className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors" title="Visualizar">
                       <Eye size={12} />

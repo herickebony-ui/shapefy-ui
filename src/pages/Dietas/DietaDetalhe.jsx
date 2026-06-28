@@ -5,6 +5,7 @@ import {
   ArrowLeft, Save, AlertCircle, Loader, Plus, Zap,
   FileText, UtensilsCrossed, Edit, Copy, Trash2, ArrowLeftRight, X,
   BookmarkPlus, BookmarkCheck, Bookmark, GripVertical, ChevronUp, ChevronDown,
+  ToggleLeft, ToggleRight,
 } from 'lucide-react'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import { lockRowWidths, unlockRowWidths, dragRowStyle, reorderList } from '../../utils/dndLinhas'
@@ -12,7 +13,7 @@ import {
   buscarDieta, salvarDieta, listarAlimentos, normalizarAlturaCm,
   listarRefeicoesProntas, buscarRefeicaoPronta,
   criarRefeicaoPronta, excluirDieta, duplicarDieta,
-  dadosAntropometricosFromAluno, palParaFrequencia,
+  dadosAntropometricosFromAluno, palParaFrequencia, toggleDieta,
 } from '../../api/dietas'
 import { listarAlunos, buscarAluno, salvarAluno } from '../../api/alunos'
 import { getPref, setPref } from '../../api/prefs'
@@ -1657,6 +1658,18 @@ export default function DietaDetalhe() {
   }
 
   const handleChange = (field, value) => setDraft(prev => ({ ...prev, [field]: value }))
+
+  const handleToggleEnabled = async () => {
+    const novo = draft.enabled === 0 ? 1 : 0
+    setDraft(prev => ({ ...prev, enabled: novo }))
+    try {
+      await toggleDieta(id, novo)
+    } catch (e) {
+      console.error(e)
+      setDraft(prev => ({ ...prev, enabled: draft.enabled }))
+    }
+  }
+
   const totais = calcularTotais(draft)
 
   // Diff do rodapé: kcal da dieta vs Gasto Calórico Diário Total da fórmula de referência
@@ -1725,6 +1738,13 @@ export default function DietaDetalhe() {
             </Button>
           )}
           {!isTemplate && <DownloadPdfButton entity="dieta" name={draft?.name} />}
+          {!isTemplate && (
+            <button onClick={handleToggleEnabled} title={draft.enabled === 0 ? 'Ativar dieta' : 'Desativar dieta'}
+              className={`h-9 px-3 flex items-center gap-1.5 border rounded-lg text-sm transition-colors ${draft.enabled === 0 ? 'text-gray-400 border-[#323238] hover:text-white hover:border-gray-500' : 'text-green-400 border-green-500/30 hover:text-white hover:bg-green-700 hover:border-green-700'}`}>
+              {draft.enabled === 0 ? <ToggleLeft size={16} /> : <ToggleRight size={16} />}
+              <span className="hidden md:inline">{draft.enabled === 0 ? 'Inativa' : 'Ativa'}</span>
+            </button>
+          )}
           <Button
             variant="danger"
             size="sm"

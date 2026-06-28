@@ -4,8 +4,9 @@ import {
   Plus, ChevronRight, Calendar, User, LayoutGrid, List,
   RefreshCw, AlertCircle, Copy, ClipboardList, X,
   Trash2, SlidersHorizontal, Eye, Loader, BarChart2, FileText, Sparkles,
+  ToggleLeft, ToggleRight,
 } from 'lucide-react'
-import { listarFichas, buscarFicha, excluirFicha, criarFicha, salvarFicha, listarExercicios } from '../../api/fichas'
+import { listarFichas, buscarFicha, excluirFicha, criarFicha, salvarFicha, listarExercicios, toggleFicha } from '../../api/fichas'
 import { listarAlunos } from '../../api/alunos'
 import ModalEscolherModelo from '../Modelos/ModalEscolherModelo'
 import ModalGerarFichaIA from './ModalGerarFichaIA'
@@ -109,6 +110,7 @@ const calcVolume = (ficha, intensidadeMap = {}) => {
 // ─── Status ───────────────────────────────────────────────────────────────────
 
 const statusFicha = (f) => {
+  if (f?.enabled === 0) return 'Inativo'
   const start = toYMD(f?.data_de_inicio)
   const end   = toYMD(f?.data_de_fim)
   const hoje  = new Date().toISOString().split('T')[0]
@@ -126,6 +128,7 @@ const STATUS_COLOR = {
   'Vence em breve': 'bg-orange-500/10 text-orange-300 border-orange-500/20 shadow-[0_0_8px_rgba(249,115,22,0.5)]',
   'Concluído':      'bg-red-500/10 text-red-300 border-red-500/20 shadow-[0_0_8px_rgba(239,68,68,0.5)]',
   'Rascunho':       'bg-amber-500/10 text-amber-300 border-amber-500/20 shadow-[0_0_8px_rgba(245,158,11,0.5)]',
+  'Inativo':        'bg-red-500/10 text-red-300 border-red-500/20 shadow-[0_0_8px_rgba(239,68,68,0.5)]',
 }
 
 const StatusBadge = ({ ficha }) => {
@@ -1027,6 +1030,17 @@ export default function FichaListagem() {
     }
   }
 
+  const handleToggleFicha = async (row) => {
+    const novo = row.enabled === 0 ? 1 : 0
+    setFichas(prev => prev.map(f => f.name === row.name ? { ...f, enabled: novo } : f))
+    try {
+      await toggleFicha(row.name, novo)
+    } catch (e) {
+      console.error(e)
+      setFichas(prev => prev.map(f => f.name === row.name ? { ...f, enabled: row.enabled } : f))
+    }
+  }
+
   const temFiltroAtivo = filtros.filtroSexo || filtros.status || filtros.nivel ||
     filtros.filtroLetras?.length > 0 || filtros.filtroTotalDias ||
     filtros.dataInicioFrom || filtros.dataInicioTo || filtros.dataFimFrom || filtros.dataFimTo
@@ -1220,6 +1234,10 @@ export default function FichaListagem() {
                 headerClass: 'min-w-[100px]',
                 render: (f) => (
                   <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                    <button onClick={() => handleToggleFicha(f)} title={f.enabled === 0 ? 'Ativar' : 'Desativar'}
+                      className={`h-7 w-7 flex items-center justify-center border rounded-lg transition-colors ${f.enabled === 0 ? 'text-gray-500 border-[#323238] hover:border-gray-500 hover:text-white' : 'text-green-400 border-green-500/30 hover:bg-green-700 hover:border-green-700 hover:text-white'}`}>
+                      {f.enabled === 0 ? <ToggleLeft size={12} /> : <ToggleRight size={12} />}
+                    </button>
                     <button onClick={() => setModalViz(f)}
                       className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors" title="Visualizar">
                       <Eye size={12} />

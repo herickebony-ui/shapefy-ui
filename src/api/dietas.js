@@ -48,7 +48,7 @@ export const dadosAntropometricosFromAluno = (alunoDoc = {}) => ({
 export const listarDietas = async ({ alunoId, busca, kcalMin, kcalMax, page = 1, limit = 20 } = {}) => {
   const params = {
     fields: JSON.stringify([
-      "name", "date", "final_date", "creation",
+      "name", "date", "final_date", "enabled", "creation",
       "aluno", "nome_completo", "profissional",
       "strategy", "week_days", "total_calories",
       "meal_1", "meal_2", "meal_3", "meal_4",
@@ -89,6 +89,11 @@ export const salvarDieta = async (id, campos) => {
 
 export const excluirDieta = async (id) => {
   await client.delete(`/api/resource/Dieta/${id}`)
+}
+
+export const toggleDieta = async (id, enabled) => {
+  const res = await client.put(`/api/resource/Dieta/${encodeURIComponent(id)}`, { enabled })
+  return res.data.data
 }
 
 export const duplicarDieta = async (id, novoAluno = null, dataInicial = null, dataFinal = null) => {
