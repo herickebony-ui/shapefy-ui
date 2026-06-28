@@ -17,7 +17,7 @@ export const listarFichas = async ({ busca, nivel, aluno, page = 1, limit = 50 }
       ...filtrosBusca(['Ficha', 'nome_completo'], busca),
       ...filtrosBusca(['Ficha', 'titulo'], busca),
     ]
-    const regularFilters = []
+    const regularFilters = [['Ficha', 'profissional', '=', profissionalLogado()]]
     if (nivel) regularFilters.push(['Ficha', 'nivel', '=', nivel])
     if (aluno) regularFilters.push(['Ficha', 'aluno', '=', aluno])
 
@@ -34,9 +34,10 @@ export const listarFichas = async ({ busca, nivel, aluno, page = 1, limit = 50 }
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     })
     const result = res.data.message
-    const list = result?.values?.map(row =>
-      Object.fromEntries(result.keys.map((k, i) => [k, row[i]]))
-    ) || []
+    const values = Array.isArray(result?.values) ? result.values : []
+    const list = values.map(row =>
+      Object.fromEntries((result.keys || []).map((k, i) => [k, row[i]]))
+    )
     return { list, hasMore: false }
   }
 

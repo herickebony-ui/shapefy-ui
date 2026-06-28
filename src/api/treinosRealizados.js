@@ -77,8 +77,9 @@ export const marcarEntregueTreino = async (id, entregue = true) => {
   return res.data?.data
 }
 
-// Retorna alunos com ficha vigente (enabled=1 e data_de_fim >= hoje ou sem data_de_fim)
+// Retorna alunos com ficha vigente pelo intervalo de datas (data_de_inicio <= hoje <= data_de_fim)
 // que não registraram nenhum treino nos últimos `dias` dias.
+// "Vigente" é determinado exclusivamente pelo período de datas — não pelo campo enabled.
 export const listarAlunosInativosComFicha = async (dias = 7) => {
   const prof = profissionalLogado()
   const hoje = new Date()
@@ -88,10 +89,15 @@ export const listarAlunosInativosComFicha = async (dias = 7) => {
   const corteISO = `${corte.toISOString().split('T')[0]} 00:00:00`
 
   const [fichasRes, treinosRes] = await Promise.all([
+    // Busca fichas que já iniciaram (data_de_inicio <= hoje); o filtro de data_de_fim é feito no cliente
+    // porque data_de_fim NULL (sem prazo) deve ser tratado como ainda vigente.
     client.get('/api/resource/Ficha', {
       params: {
         fields: JSON.stringify(['name', 'aluno', 'nome_completo', 'data_de_fim', 'data_de_inicio']),
-        filters: JSON.stringify([['enabled', '=', 1], ['profissional', '=', prof]]),
+        filters: JSON.stringify([
+          ['profissional', '=', prof],
+          ['data_de_inicio', '<=', hojeISO],
+        ]),
         limit: 500,
         order_by: 'nome_completo asc',
       },
@@ -111,8 +117,10 @@ export const listarAlunosInativosComFicha = async (dias = 7) => {
   const fichas = fichasRes.data.data || []
   const treinosRecentes = new Set((treinosRes.data.data || []).map(t => t.aluno))
 
-  // Fichas vigentes: sem data_de_fim ou data_de_fim >= hoje
-  const vigentes = fichas.filter(f => !f.data_de_fim || f.data_de_fim >= hojeISO)
+  // Vigente = começou até hoje E (sem data_de_fim definida OU data_de_fim >= hoje)
+  const vigentes = fichas.filter(f =>
+    (!f.data_de_fim || f.data_de_fim >= hojeISO)
+  )
 
   // Deduplica por aluno (pega a ficha com data_de_fim mais longe)
   const porAluno = new Map()

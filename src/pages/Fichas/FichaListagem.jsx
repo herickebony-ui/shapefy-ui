@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Plus, ChevronRight, Calendar, User, LayoutGrid, List,
-  RefreshCw, AlertCircle, Copy, ClipboardList, X,
+  RefreshCw, AlertCircle, Copy, ClipboardList, X, Check,
   Trash2, SlidersHorizontal, Eye, Loader, BarChart2, FileText, Sparkles,
   ToggleLeft, ToggleRight,
 } from 'lucide-react'
@@ -958,6 +958,8 @@ export default function FichaListagem() {
   const [modalViz, setModalViz] = useState(null)
   const errorModal = useErrorModal()
   const [modalHistorico, setModalHistorico] = useState(null)
+  const [editandoPeriodo, setEditandoPeriodo] = useState(null) // { name, inicio, fim }
+  const [salvandoPeriodo, setSalvandoPeriodo] = useState(false)
 
   // Carrega mapa de intensidade uma vez para calcVolume no modal de visualização
   useEffect(() => {
@@ -982,8 +984,15 @@ export default function FichaListagem() {
       })
       const lista = query ? list.filter(f => buscarSmart(f.nome_completo, query) || buscarSmart(f.titulo, query)) : list
       setFichas(lista)
+      setError(null)
     } catch (err) {
-      setError(err.message ?? 'Erro ao buscar fichas')
+      // Erro durante busca ativa → não exibe banner vermelho, trata como sem resultado
+      if (query) {
+        setFichas([])
+        setError(null)
+      } else {
+        setError(err.message ?? 'Erro ao buscar fichas')
+      }
     } finally {
       setLoading(false)
     }
@@ -1039,6 +1048,26 @@ export default function FichaListagem() {
     } catch (e) {
       console.error(e)
       setFichas(prev => prev.map(f => f.name === row.name ? { ...f, enabled: row.enabled } : f))
+    }
+  }
+
+  const handleSalvarPeriodo = async () => {
+    if (!editandoPeriodo || salvandoPeriodo) return
+    setSalvandoPeriodo(true)
+    try {
+      await salvarFicha(editandoPeriodo.name, {
+        data_de_inicio: editandoPeriodo.inicio || null,
+        data_de_fim: editandoPeriodo.fim || null,
+      })
+      setFichas(prev => prev.map(f => f.name === editandoPeriodo.name
+        ? { ...f, data_de_inicio: editandoPeriodo.inicio || null, data_de_fim: editandoPeriodo.fim || null }
+        : f
+      ))
+      setEditandoPeriodo(null)
+    } catch (e) {
+      errorModal.show(e, 'Salvar período')
+    } finally {
+      setSalvandoPeriodo(false)
     }
   }
 
@@ -1221,15 +1250,59 @@ export default function FichaListagem() {
               },
               {
                 label: 'Período',
-                headerClass: 'min-w-[160px]',
-                render: (f) => (
-                  <div className="flex items-center gap-1.5 text-gray-400 text-xs">
-                    <Calendar size={11} />
-                    <span>{formatDate(f.data_de_inicio)}</span>
-                    <span className="text-gray-600">→</span>
-                    <span>{formatDate(f.data_de_fim)}</span>
-                  </div>
-                ),
+                headerClass: 'min-w-[220px]',
+                render: (f) => {
+                  const editing = editandoPeriodo?.name === f.name
+                  if (editing) {
+                    return (
+                      <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                        <input
+                          type="date"
+                          value={editandoPeriodo.inicio}
+                          onChange={e => setEditandoPeriodo(p => ({ ...p, inicio: e.target.value }))}
+                          className="h-7 px-1.5 bg-[#1a1a1a] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 w-[116px]"
+                        />
+                        <span className="text-gray-600 text-xs shrink-0">→</span>
+                        <input
+                          type="date"
+                          value={editandoPeriodo.fim}
+                          onChange={e => setEditandoPeriodo(p => ({ ...p, fim: e.target.value }))}
+                          className="h-7 px-1.5 bg-[#1a1a1a] border border-[#323238] text-white rounded text-xs outline-none focus:border-[#2563eb]/60 w-[116px]"
+                        />
+                        <button
+                          onClick={handleSalvarPeriodo}
+                          disabled={salvandoPeriodo}
+                          className="h-7 w-7 flex items-center justify-center text-white bg-[#2563eb] hover:bg-[#1d4ed8] rounded transition-colors disabled:opacity-50 shrink-0"
+                          title="Salvar"
+                        >
+                          {salvandoPeriodo ? <Loader size={10} className="animate-spin" /> : <Check size={10} />}
+                        </button>
+                        <button
+                          onClick={() => setEditandoPeriodo(null)}
+                          className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] rounded transition-colors shrink-0"
+                          title="Cancelar"
+                        >
+                          <X size={10} />
+                        </button>
+                      </div>
+                    )
+                  }
+                  return (
+                    <button
+                      onClick={e => {
+                        e.stopPropagation()
+                        setEditandoPeriodo({ name: f.name, inicio: toYMD(f.data_de_inicio), fim: toYMD(f.data_de_fim) })
+                      }}
+                      className="flex items-center gap-1.5 text-gray-400 hover:text-white text-xs group/periodo transition-colors"
+                      title="Clique para editar as datas"
+                    >
+                      <Calendar size={11} />
+                      <span>{formatDate(f.data_de_inicio)}</span>
+                      <span className="text-gray-600">→</span>
+                      <span>{formatDate(f.data_de_fim)}</span>
+                    </button>
+                  )
+                },
               },
               {
                 label: 'Ações',
