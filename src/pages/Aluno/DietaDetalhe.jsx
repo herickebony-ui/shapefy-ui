@@ -104,8 +104,7 @@ export default function DietaDetalhe() {
       </div>
 
       <div className="px-3 pt-3 space-y-3">
-        <ActionButton variant="ghost" fullWidth onClick={abrirPDF} className="flex items-center justify-center gap-2">
-          <Printer size={16} />
+        <ActionButton variant="ghost" fullWidth icon={Printer} onClick={abrirPDF}>
           Baixar PDF da Dieta
         </ActionButton>
         {dieta.obs && (
