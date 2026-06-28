@@ -1,7 +1,36 @@
 import { useState, useEffect, useMemo } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, Maximize2, X } from 'lucide-react'
 import { heicUrlToObjectUrl } from '../../utils/heicToJpeg'
 import useAuthSrc from '../../hooks/useAuthSrc'
+
+function Lightbox({ src, onClose }) {
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center"
+      onClick={onClose}
+    >
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition-colors"
+      >
+        <X size={20} />
+      </button>
+      <img
+        src={src}
+        alt="Fullscreen"
+        draggable={false}
+        onClick={e => e.stopPropagation()}
+        className="max-h-screen max-w-full object-contain select-none"
+      />
+    </div>
+  )
+}
 
 export default function ImagemInterativa({ src, feedbackId, idx, onRotate, readonly = false, extraActions }) {
   const authSrc = useAuthSrc(src)
@@ -21,6 +50,7 @@ export default function ImagemInterativa({ src, feedbackId, idx, onRotate, reado
   const [imgLoading, setImgLoading] = useState(true)
   const [imgError, setImgError] = useState(false)
   const [heicSrc, setHeicSrc] = useState(null) // fallback: HEIC antigo decodificado no cliente
+  const [fullscreen, setFullscreen] = useState(false)
 
   const isDirty = scale !== 1 || pos.x !== 0 || pos.y !== 0 || align !== 0 || rotation !== 0
 
@@ -70,8 +100,11 @@ export default function ImagemInterativa({ src, feedbackId, idx, onRotate, reado
   }
   const handleTouchEnd = () => setIsDragging(false)
 
+  const activeSrc = heicSrc || authSrc
+
   return (
     <div className="flex flex-col items-center gap-0 w-full">
+      {fullscreen && activeSrc && <Lightbox src={activeSrc} onClose={() => setFullscreen(false)} />}
       {!readonly && (
         <div className="flex flex-col w-full gap-3 px-1 bg-[#222226]/60 p-3 rounded-lg border border-[#323238]">
           <div className="flex items-center justify-between w-full">
@@ -81,6 +114,13 @@ export default function ImagemInterativa({ src, feedbackId, idx, onRotate, reado
                 className="text-[10px] flex items-center gap-1 bg-[#29292e] px-3 py-1.5 rounded-lg border border-[#323238] hover:border-[#2563eb] text-white transition-all shrink-0 font-bold"
               >
                 <RefreshCw size={10} /> Virar 90°
+              </button>
+              <button
+                onClick={() => setFullscreen(true)}
+                title="Ver em tela cheia"
+                className="text-[10px] flex items-center gap-1 bg-[#29292e] px-3 py-1.5 rounded-lg border border-[#323238] hover:border-[#2563eb] text-white transition-all shrink-0 font-bold"
+              >
+                <Maximize2 size={10} /> Tela cheia
               </button>
               {extraActions}
             </div>
@@ -141,7 +181,7 @@ export default function ImagemInterativa({ src, feedbackId, idx, onRotate, reado
         )}
         {src && (
           <img
-            src={heicSrc || authSrc}
+            src={activeSrc}
             alt="Feedback"
             draggable={false}
             className="max-h-full max-w-full object-contain"
@@ -162,6 +202,15 @@ export default function ImagemInterativa({ src, feedbackId, idx, onRotate, reado
           />
         )}
         <div className="absolute inset-0 border-2 border-transparent group-hover:border-white/10 rounded-lg pointer-events-none transition-colors" />
+        {!imgError && !imgLoading && activeSrc && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setFullscreen(true) }}
+            title="Ver em tela cheia"
+            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 hover:bg-black/80 text-white rounded-lg p-1.5"
+          >
+            <Maximize2 size={14} />
+          </button>
+        )}
       </div>
       {!readonly && (
         <span className="text-[9px] text-gray-600 text-center w-full mt-1">

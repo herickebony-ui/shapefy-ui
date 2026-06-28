@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, TrendingUp, Images, Pencil, Check } from 'lucide-react'
+import { ArrowLeft, TrendingUp, Images, Pencil, Check, Maximize2, X } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Spinner, Button } from '../../components/ui'
 import HeicSafeImg from '../../components/ui/HeicSafeImg'
@@ -85,8 +85,26 @@ export function GraficoPeso({ pontos }) {
   )
 }
 
+// ─── Lightbox fullscreen ───────────────────────────────────────────────────────
+function Lightbox({ src, onClose }) {
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [onClose])
+  return (
+    <div className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center" onClick={onClose}>
+      <button onClick={onClose} className="absolute top-4 right-4 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition-colors">
+        <X size={20} />
+      </button>
+      <img src={src} alt="Fullscreen" draggable={false} onClick={e => e.stopPropagation()} className="max-h-screen max-w-full object-contain select-none" />
+    </div>
+  )
+}
+
 // ─── Comparação de fotos por slot (alinhada por slot_id) ──────────────────────
 export function MatrizFotos({ registros }) {
+  const [lightboxSrc, setLightboxSrc] = useState(null)
   const cols = registros // todas as datas — scroll horizontal resolve o "muitas fotos"
   // união dos slots por slot_id (rótulo/ordem do registro mais recente que o tem)
   const slotMap = new Map()
@@ -105,34 +123,52 @@ export function MatrizFotos({ registros }) {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <div className="min-w-max space-y-4">
-        {/* cabeçalho de datas */}
-        <div className="grid gap-2" style={{ gridTemplateColumns: `120px repeat(${cols.length}, 120px)` }}>
-          <div />
-          {cols.map((reg) => (
-            <div key={reg.name} className="text-center text-[10px] font-bold text-[#60A5FA] uppercase tracking-wider">{fmtData(reg.data)}</div>
+    <>
+      {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
+      <div className="overflow-x-auto">
+        <div className="min-w-max space-y-4">
+          {/* cabeçalho de datas */}
+          <div className="grid gap-2" style={{ gridTemplateColumns: `120px repeat(${cols.length}, 120px)` }}>
+            <div />
+            {cols.map((reg) => (
+              <div key={reg.name} className="text-center text-[10px] font-bold text-[#60A5FA] uppercase tracking-wider">{fmtData(reg.data)}</div>
+            ))}
+          </div>
+          {slots.map((slot) => (
+            <div key={slot.slot_id} className="grid gap-2 items-center" style={{ gridTemplateColumns: `120px repeat(${cols.length}, 120px)` }}>
+              <div className="text-[11px] font-semibold text-gray-300 pr-2">{slot.rotulo}</div>
+              {cols.map((reg) => {
+                const url = urlDoSlot(reg, slot.slot_id)
+                const fullSrc = url ? `${FRAPPE_URL}${encodeURI(url)}` : null
+                return (
+                  <div key={reg.name} className="w-[120px] aspect-[3/4] relative group">
+                    {fullSrc ? (
+                      <>
+                        <HeicSafeImg
+                          src={fullSrc}
+                          alt={slot.rotulo}
+                          className="w-full h-full rounded-lg border border-[#323238] object-cover cursor-pointer"
+                          loading="lazy"
+                          onClick={() => setLightboxSrc(fullSrc)}
+                        />
+                        <button
+                          onClick={() => setLightboxSrc(fullSrc)}
+                          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 hover:bg-black/80 text-white rounded p-1"
+                        >
+                          <Maximize2 size={10} />
+                        </button>
+                      </>
+                    ) : (
+                      <div className="w-full h-full rounded-lg border border-dashed border-[#323238] flex items-center justify-center text-gray-600 text-[9px] text-center px-1">sem foto neste período</div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           ))}
         </div>
-        {slots.map((slot) => (
-          <div key={slot.slot_id} className="grid gap-2 items-center" style={{ gridTemplateColumns: `120px repeat(${cols.length}, 120px)` }}>
-            <div className="text-[11px] font-semibold text-gray-300 pr-2">{slot.rotulo}</div>
-            {cols.map((reg) => {
-              const url = urlDoSlot(reg, slot.slot_id)
-              return (
-                <div key={reg.name} className="w-[120px] aspect-[3/4]">
-                  {url ? (
-                    <HeicSafeImg src={`${FRAPPE_URL}${encodeURI(url)}`} alt={slot.rotulo} className="w-full h-full rounded-lg border border-[#323238] object-cover" loading="lazy" />
-                  ) : (
-                    <div className="w-full h-full rounded-lg border border-dashed border-[#323238] flex items-center justify-center text-gray-600 text-[9px] text-center px-1">sem foto neste período</div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        ))}
       </div>
-    </div>
+    </>
   )
 }
 
