@@ -51,6 +51,21 @@ export const buscarRegistro = async (id) => {
   return res.data.data
 }
 
+export const buscarRegistroPorData = async (alunoId, data) => {
+  if (!alunoId || !data) return null
+  const dataISO = String(data).split(' ')[0]
+  const res = await client.get(`/api/resource/${DOCTYPE}`, {
+    params: {
+      fields: JSON.stringify(['name']),
+      filters: JSON.stringify([['aluno', '=', alunoId], ['data', '=', dataISO]]),
+      limit: 1,
+    },
+  })
+  const lista = res.data?.data || []
+  if (!lista.length) return null
+  return buscarRegistro(lista[0].name)
+}
+
 // Feed da tela Evolução do Aluno, paginado server-side. conteudo 'foto' (só com
 // foto) ou 'peso' (só com peso). Retorna { registros, hasMore }.
 export const listarRegistrosFeed = async ({ aluno = null, alunos = null, origem = '', conjunto = '', conteudo = 'foto', limit = 30, limitStart = 0 } = {}) => {

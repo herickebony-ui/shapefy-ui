@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Copy, Check } from 'lucide-react'
 import { Modal, Button } from '../ui'
 import { salvarAnamnese, rotarImagemAnamnese } from '../../api/anamneses'
-import { buscarRegistro } from '../../api/evolucao'
+import { buscarRegistro, buscarRegistroPorData } from '../../api/evolucao'
 import ImagemInterativa from '../../pages/Feedbacks/ImagemInterativa'
 import { formatFeedbackParaCopia, copiarTexto } from '../../utils/copiarRespostas'
 
@@ -48,16 +48,22 @@ export default function AnamneseViewerModal({ anamnese, onClose, onAtualizada })
   const [imgSrcs, setImgSrcs] = useState({})
   const [registro, setRegistro] = useState(null)
 
-  // Fonte única de fotos/peso: o Registro de Evolução vinculado (mesmo padrão
-  // do FeedbackDetalhe). Sem registro vinculado, o bloco não aparece.
+  // Fonte única de fotos/peso: FK direta (registro_evolucao) tem prioridade;
+  // fallback: busca por aluno + data da anamnese (date ou creation).
   useEffect(() => {
-    if (!anamnese.registro_evolucao) return
     let cancel = false
-    buscarRegistro(anamnese.registro_evolucao)
-      .then(r => { if (!cancel) setRegistro(r) })
-      .catch(() => {})
+    const data = anamnese.date || String(anamnese.creation || '').split(' ')[0]
+    if (anamnese.registro_evolucao) {
+      buscarRegistro(anamnese.registro_evolucao)
+        .then(r => { if (!cancel) setRegistro(r) })
+        .catch(() => {})
+    } else if (anamnese.aluno && data) {
+      buscarRegistroPorData(anamnese.aluno, data)
+        .then(r => { if (!cancel && r) setRegistro(r) })
+        .catch(() => {})
+    }
     return () => { cancel = true }
-  }, [anamnese.registro_evolucao])
+  }, [anamnese.registro_evolucao, anamnese.aluno, anamnese.date, anamnese.creation])
 
   const handleCopiarRespostas = async () => {
     const limpas = dedupePerguntas(respostas)
