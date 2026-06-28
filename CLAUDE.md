@@ -21,15 +21,22 @@ Dois repositórios **separados**, cada um com sua branch canônica:
 - **Backend**: **SEMPRE** testa no **beta** primeiro, **valida**, e **só então** sobe pro prod. NUNCA editar direto no servidor. Trabalho vai na branch **`develop`**.
 
 ### Deploy
-- **Front (prod)**: `cd /opt/shapefy-ui && git pull && docker compose up -d --build`.
-- **Backend (beta e depois prod)**: commit/push em `develop` → no servidor:
-  ```
-  cd /opt/shapefy/apps/shapefy
-  git pull && bench --site <site> migrate && bench restart
-  ```
-  (`<site>` = `beta.shapefy.online` no beta, `shapefy.online` no prod). `migrate` aplica mudança de doctype; `bench restart` recarrega o código Python.
 
-> Backend é deploy por **git pull no servidor** (não rsync). Commitar em `develop`, testar no beta, validar, depois prod.
+- **Front (prod)**: no servidor → `cd /opt/shapefy-ui && git pull && docker compose up -d --build`
+- **Backend (prod)**: via `deploy-prod.sh` (rsync do Mac pro servidor, sem depender de push no GitHub):
+  1. No Mac, puxar mudanças do Marcos primeiro: `git -C shapefy-frappe-app pull --rebase origin develop` (stash se tiver mudanças locais)
+  2. Conferir o que vai subir: `bash deploy-prod.sh --dry`
+  3. Subir: `bash deploy-prod.sh`
+  4. No servidor (`ssh shapefy@217.216.49.29`):
+     ```
+     cd /opt/shapefy
+     bench --site shapefy.online migrate
+     sudo supervisorctl restart shapefy-web: shapefy-workers:
+     ```
+  - `deploy-prod.sh` fica em `/Users/herickebony/shapefy-ui/deploy-prod.sh`
+  - Servidor prod: `shapefy@217.216.49.29`
+
+> Push direto pro GitHub (`shapefy-saas` org) requer token/SSH com acesso à org — usar rsync via `deploy-prod.sh` é o caminho padrão.
 
 ---
 
