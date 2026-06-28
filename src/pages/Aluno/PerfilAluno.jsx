@@ -5,8 +5,8 @@ import {
   Activity, Target, MapPin, Briefcase, AtSign, Heart, Pill,
   Dumbbell, Apple, CheckCircle2, XCircle, IdCard,
 } from 'lucide-react'
-import { Spinner, Button } from '../../components/ui'
-import { GlassCard, SectionHeader } from '../../components/aluno'
+import { Spinner } from '../../components/ui'
+import { GlassCard, SectionHeader, ActionButton } from '../../components/aluno'
 import { perfilAluno } from '../../api/aluno'
 import useErrorModal from '../../hooks/useErrorModal'
 import useAuthSrc from '../../hooks/useAuthSrc'
@@ -116,14 +116,6 @@ export default function PerfilAluno() {
           <ArrowLeft size={16} />
         </button>
         <h1 className="text-white text-base font-bold flex-1">Meu Perfil</h1>
-        <Button
-          variant="secondary"
-          size="sm"
-          icon={Pencil}
-          onClick={() => navigate('/aluno/perfil/editar')}
-        >
-          Editar
-        </Button>
       </div>
 
       <div className="px-3 pt-4 space-y-3">
@@ -150,6 +142,10 @@ export default function PerfilAluno() {
             </p>
           )}
         </GlassCard>
+
+        <ActionButton variant="ghost" fullWidth icon={Pencil} onClick={() => navigate('/aluno/perfil/editar')}>
+          Editar Perfil
+        </ActionButton>
 
         <SectionHeader icon={<User size={15} />} label="Dados pessoais" />
         <GlassCard as="div" className="overflow-hidden">
