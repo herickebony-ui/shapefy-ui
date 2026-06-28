@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Printer, Pill } from 'lucide-react'
+import { ArrowLeft, Printer, Pill, AlertCircle } from 'lucide-react'
 import { Spinner } from '../../components/ui'
 import { GlassCard, ActionButton } from '../../components/aluno'
 import { listarPrescricoesAluno } from '../../api/aluno'
@@ -51,6 +51,7 @@ export default function PrescricaoDetalhe() {
 
   const [prescricao, setPrescricao] = useState(null)
   const [carregando, setCarregando] = useState(true)
+  const [erro, setErro] = useState(null)
 
   useEffect(() => {
     let cancelado = false
@@ -59,12 +60,7 @@ export default function PrescricaoDetalhe() {
         if (cancelado) return
         const p = list.find(x => x.name === name)
         if (!p) {
-          errorModalRef.current.show({
-            type: 'server',
-            title: 'Prescrição não encontrada',
-            messages: ['Esta prescrição não existe ou não pertence ao seu perfil.'],
-            statusCode: 404,
-          }, 'Prescrição')
+          setErro('Esta prescrição não está disponível ou pode ter expirado.')
           return
         }
         setPrescricao(p)
@@ -79,6 +75,17 @@ export default function PrescricaoDetalhe() {
       <div className="min-h-[60vh] flex items-center justify-center bg-[var(--sf-bg)]">
         {errorModal.element}
         <Spinner />
+      </div>
+    )
+  }
+
+  if (erro) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center px-6 bg-[var(--sf-bg)]">
+        <div className="sf-card flex items-center gap-3 px-5 py-4 max-w-sm w-full">
+          <AlertCircle size={18} className="text-[var(--sf-cyan)] shrink-0" />
+          <span className="text-[var(--sf-text)] text-sm">{erro}</span>
+        </div>
       </div>
     )
   }

@@ -46,24 +46,27 @@ export default function InstrucoesAluno() {
         ) : (
           <>
             <SectionHeader icon={<BookOpen size={15} />} label="Suas instruções" />
-            <div className="rounded-[var(--sf-radius-card)] border border-[var(--sf-border-strong)] overflow-hidden divide-y divide-[var(--sf-border-strong)]">
+            <div className="flex flex-col gap-3">
               {instrucoes.map((ins) => (
-                <button
+                <GlassCard
                   key={ins.name}
+                  as="button"
                   onClick={() => navigate(`/aluno/instrucoes/${ins.name}`)}
-                  className="w-full flex items-center gap-3 px-4 py-4 text-left bg-[var(--sf-card)] hover:bg-[var(--sf-surface-2)] transition-colors"
+                  className="px-4 py-4 flex items-start gap-3"
                 >
-                  <div className="h-9 w-9 rounded-xl bg-[var(--sf-surface-2)] border border-[var(--sf-border)] flex items-center justify-center shrink-0">
-                    <BookOpen size={16} className="text-[var(--sf-blue-light)]" />
+                  <div className="w-11 h-11 rounded-xl border border-[var(--sf-border-strong)] bg-[var(--sf-surface-2)] flex items-center justify-center text-[#60A5FA] shrink-0 shadow-[0_0_10px_rgba(37,99,235,0.25)]">
+                    <BookOpen size={18} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-white font-semibold text-sm truncate">{ins.titulo || 'Instrução'}</p>
-                    {ins.descricao
-                      ? <p className="text-[var(--sf-text-muted)] text-xs mt-0.5 truncate">{ins.descricao}</p>
-                      : ins.tipo && <p className="text-[var(--sf-text-muted)] text-xs mt-0.5">{ins.tipo}</p>}
+                    <p className="text-white text-sm font-bold truncate">{ins.titulo || 'Instrução'}</p>
+                    {(ins.descricao || ins.tipo) && (
+                      <p className="text-[var(--sf-text-muted)] text-xs mt-1 truncate">
+                        {ins.descricao || ins.tipo}
+                      </p>
+                    )}
                   </div>
-                  <ChevronRight size={16} className="text-[var(--sf-text-muted)] shrink-0" />
-                </button>
+                  <ChevronRight size={16} className="text-[var(--sf-text-soft)] shrink-0 mt-1" />
+                </GlassCard>
               ))}
             </div>
           </>
