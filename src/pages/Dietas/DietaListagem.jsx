@@ -42,6 +42,11 @@ const formatDate = (v) => {
   return `${d}/${mo}/${y}`
 }
 
+const formatTime = (v) => {
+  const t = String(v || '').split(' ')[1] || ''
+  return t.slice(0, 5)
+}
+
 const fmt = (v, dec = 1) => v != null ? Number(v).toFixed(dec) : '0'
 
 // ─── Cores por estratégia ─────────────────────────────────────────────────────
@@ -99,7 +104,7 @@ const CardDieta = ({ dieta, href }) => {
             <User size={11} />
             <span className="truncate">{dieta.aluno}</span>
           </p>
-          <p className="text-gray-500 text-xs mt-0.5">criado em: {formatDate(dieta.creation)}</p>
+          <p className="text-gray-500 text-xs mt-0.5">criado em: {formatDate(dieta.creation)}{formatTime(dieta.creation) ? <span className="text-gray-600"> · {formatTime(dieta.creation)}</span> : ''}</p>
         </div>
         <ChevronRight size={16} className="text-gray-600 group-hover:text-gray-300 transition-colors mt-0.5 shrink-0" />
       </div>
@@ -743,7 +748,7 @@ export default function DietaListagem() {
                     <>
                       <p className="text-white font-medium text-sm truncate">{d.nome_completo || '—'}</p>
                       <p className="text-gray-500 text-xs mt-0.5 truncate">{d.aluno}</p>
-                      <p className="text-gray-500 text-xs mt-0.5">criado em: {formatDate(d.creation)}</p>
+                      <p className="text-gray-500 text-xs mt-0.5">criado em: {formatDate(d.creation)}{formatTime(d.creation) ? <span className="text-gray-600"> · {formatTime(d.creation)}</span> : ''}</p>
                     </>
                   )
                 },

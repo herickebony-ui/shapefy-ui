@@ -49,6 +49,11 @@ const formatDate = (v) => {
   return `${d}/${mo}/${y}`
 }
 
+const formatTime = (v) => {
+  const t = String(v || '').split(' ')[1] || ''
+  return t.slice(0, 5)
+}
+
 // ─── Volume ───────────────────────────────────────────────────────────────────
 
 const GRUPOS_CONFIG = [
@@ -157,7 +162,7 @@ const CardFicha = ({ ficha, href }) => {
         <p className="text-gray-400 text-xs mt-1 flex items-center gap-1.5">
           <User size={11} /><span className="truncate">{ficha.aluno}</span>
         </p>
-        <p className="text-gray-500 text-xs mt-0.5">criado em: {formatDate(ficha.creation)}</p>
+        <p className="text-gray-500 text-xs mt-0.5">criado em: {formatDate(ficha.creation)}{formatTime(ficha.creation) ? <span className="text-gray-600"> · {formatTime(ficha.creation)}</span> : ''}</p>
       </div>
       <ChevronRight size={16} className="text-gray-600 group-hover:text-gray-300 mt-0.5 shrink-0" />
     </div>
@@ -191,7 +196,7 @@ const RowFicha = ({ ficha, index = 0, onClick, onDuplicar, onExcluir, onVisualiz
     <td className="px-4 py-3.5 min-w-[200px]">
       <p className="text-white font-medium text-sm truncate">{ficha.nome_completo || '—'}</p>
       <p className="text-gray-500 text-xs mt-0.5 truncate">{ficha.aluno}</p>
-      <p className="text-gray-500 text-xs mt-0.5">criado em: {formatDate(ficha.creation)}</p>
+      <p className="text-gray-500 text-xs mt-0.5">criado em: {formatDate(ficha.creation)}{formatTime(ficha.creation) ? <span className="text-gray-600"> · {formatTime(ficha.creation)}</span> : ''}</p>
     </td>
     <td className="px-4 py-3.5 min-w-[100px]">
       <span className="text-blue-400 text-xs font-medium">{ficha.nivel || '—'}</span>
@@ -849,7 +854,7 @@ const ModalHistoricoAluno = ({ ficha: fichaRef, onClose }) => {
                         )}
                       </div>
                       <div className="flex gap-3 mt-0.5 flex-wrap">
-                        <span className="text-gray-500 text-xs">Criado: {formatDate(f.creation)}</span>
+                        <span className="text-gray-500 text-xs">Criado: {formatDate(f.creation)}{formatTime(f.creation) ? <span className="text-gray-600"> · {formatTime(f.creation)}</span> : ''}</span>
                         {f.data_de_inicio && <span className="text-gray-500 text-xs">Início: {formatDate(f.data_de_inicio)}</span>}
                         {f.data_de_fim && <span className="text-gray-500 text-xs">Fim: {formatDate(f.data_de_fim)}</span>}
                       </div>
@@ -1230,7 +1235,7 @@ export default function FichaListagem() {
                   <>
                     <p className="text-white font-bold text-sm truncate">{f.nome_completo || '—'}</p>
                     {f.titulo && <p className="text-gray-300 font-medium text-sm truncate">{f.titulo}</p>}
-                    <p className="text-gray-500 text-xs mt-0.5">criado em: {formatDate(f.creation)}</p>
+                    <p className="text-gray-500 text-xs mt-0.5">criado em: {formatDate(f.creation)}{formatTime(f.creation) ? <span className="text-gray-600"> · {formatTime(f.creation)}</span> : ''}</p>
                   </>
                 ),
               },
