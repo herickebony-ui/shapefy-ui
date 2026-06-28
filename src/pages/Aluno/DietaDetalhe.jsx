@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Printer, Apple, Info, Leaf, AlertCircle } from 'lucide-react'
-import { Spinner, Button } from '../../components/ui'
-import { GlassCard, SectionHeader } from '../../components/aluno'
+import { Spinner } from '../../components/ui'
+import { GlassCard, SectionHeader, ActionButton } from '../../components/aluno'
 import { buscarDietaAluno } from '../../api/aluno'
 import useErrorModal from '../../hooks/useErrorModal'
 
@@ -101,17 +101,13 @@ export default function DietaDetalhe() {
             {dieta.week_days ? ` · ${dieta.week_days}` : ''}
           </p>
         </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          icon={Printer}
-          onClick={abrirPDF}
-        >
-          PDF
-        </Button>
       </div>
 
       <div className="px-3 pt-3 space-y-3">
+        <ActionButton variant="ghost" fullWidth onClick={abrirPDF} className="flex items-center justify-center gap-2">
+          <Printer size={16} />
+          Baixar PDF da Dieta
+        </ActionButton>
         {dieta.obs && (
           <GlassCard as="div" variant="default" className="overflow-hidden">
             <div className="border-l-2 border-[#2563EB] px-4 py-3 bg-[#2563EB]/[0.08] flex items-center gap-2">

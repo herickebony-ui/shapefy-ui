@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Printer, Pill } from 'lucide-react'
-import { Spinner, Button } from '../../components/ui'
-import { GlassCard } from '../../components/aluno'
+import { Spinner } from '../../components/ui'
+import { GlassCard, ActionButton } from '../../components/aluno'
 import { listarPrescricoesAluno } from '../../api/aluno'
 import useErrorModal from '../../hooks/useErrorModal'
 
@@ -112,17 +112,13 @@ export default function PrescricaoDetalhe() {
           <ArrowLeft size={16} />
         </button>
         <h1 className="text-white text-base font-bold flex-1">Prescrição</h1>
-        <Button
-          variant="secondary"
-          size="sm"
-          icon={Printer}
-          onClick={abrirPDF}
-        >
-          Imprimir
-        </Button>
       </div>
 
       <div className="px-3 pt-3 space-y-3">
+        <ActionButton variant="ghost" fullWidth onClick={abrirPDF} className="flex items-center justify-center gap-2">
+          <Printer size={16} />
+          Baixar PDF da Prescrição
+        </ActionButton>
         <GlassCard as="div" className="px-4 py-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <InfoCell label="Profissional" value={prof.nome} />
