@@ -4,7 +4,7 @@ import { maybeOpenNewTab } from '../../utils/navigation'
 import {
   ArrowLeft, RefreshCw, ChevronLeft, ChevronRight,
   Dumbbell, Activity, Clock, MessageSquare, LineChart,
-  Save, Search, Calendar, TrendingUp, Check, Eye, EyeOff, Trash2, Shuffle, UserX,
+  Save, Search, Calendar, TrendingUp, Check, Eye, EyeOff, Trash2, Shuffle, UserX, WifiOff,
 } from 'lucide-react'
 import { buscarSmart } from '../../utils/strings'
 import {
@@ -767,8 +767,14 @@ export default function TreinosRealizados() {
       actions={
         <>
           <BotaoTutoriais videos={TUTORIAIS_TREINOS_PROGRESSAO} />
-          <Button variant="secondary" size="sm" icon={UserX} onClick={() => abrirModalInativos()}>
-            Inativos
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={WifiOff}
+            onClick={() => abrirModalInativos()}
+            className="text-amber-400 border-amber-500/30 hover:bg-amber-900/20 hover:border-amber-500/50 hover:text-amber-300"
+          >
+            Alunos que não estão usando o app
           </Button>
           <Button variant="secondary" size="sm" icon={RefreshCw} onClick={() => carregar()} loading={loading} />
         </>
@@ -938,7 +944,7 @@ export default function TreinosRealizados() {
         <Modal
           isOpen
           onClose={() => setModalInativos(false)}
-          title="Alunos inativos com ficha vigente"
+          title="Alunos que não estão usando o app"
           size="md"
           footer={
             <Button variant="ghost" onClick={() => setModalInativos(false)}>Fechar</Button>
