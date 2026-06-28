@@ -21,7 +21,7 @@ export default function Suporte() {
             variant="primary"
             size="sm"
             icon={Mail}
-            onClick={() => window.location.href = 'mailto:suporte@shapefyapp.com'}
+            onClick={() => window.location.href = 'mailto:shapefysaas@gmail.com'}
           >
             Enviar e-mail
           </Button>
