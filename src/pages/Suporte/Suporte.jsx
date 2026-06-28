@@ -17,14 +17,17 @@ export default function Suporte() {
           <p className="text-gray-400 text-sm">
             Use estes canais para falar com o time do Shapefy sobre dúvidas do painel, assinatura ou problemas técnicos.
           </p>
-          <Button
-            variant="primary"
-            size="sm"
-            icon={Mail}
-            onClick={() => window.location.href = 'mailto:shapefysaas@gmail.com'}
-          >
-            Enviar e-mail
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="primary"
+              size="sm"
+              icon={Mail}
+              onClick={() => window.location.href = 'mailto:shapefysaas@gmail.com'}
+            >
+              Enviar e-mail
+            </Button>
+            <span className="text-gray-400 text-sm select-all">shapefysaas@gmail.com</span>
+          </div>
           <div className="flex items-start gap-2 text-gray-500 text-xs pt-1">
             <Clock size={13} className="mt-0.5 shrink-0" />
             <span>Horário de atendimento: Segunda a sexta, das 9h às 18h (horário de Brasília)</span>

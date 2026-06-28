@@ -10,7 +10,8 @@ import { listarFichas, buscarFicha, excluirFicha, criarFicha, salvarFicha, lista
 import { listarAlunos } from '../../api/alunos'
 import ModalEscolherModelo from '../Modelos/ModalEscolherModelo'
 import ModalGerarFichaIA from './ModalGerarFichaIA'
-import { Button, FormGroup, Input, Autocomplete, Modal, EmptyState, Pagination, DataTable } from '../../components/ui'
+import { Button, FormGroup, Input, Autocomplete, Modal, EmptyState, Pagination, DataTable, BotaoTutoriais } from '../../components/ui'
+import { TUTORIAIS_FICHAS } from '../../data/tutoriais'
 import { buscarSmart } from '../../utils/strings'
 import { openOrNavigate } from '../../utils/navigation'
 import useErrorModal from '../../hooks/useErrorModal'
@@ -1109,6 +1110,7 @@ export default function FichaListagem() {
             <p className="text-gray-400 text-sm mt-1">Gerencie as fichas de treino dos alunos</p>
           </div>
           <div className="flex items-center gap-2">
+            <BotaoTutoriais videos={TUTORIAIS_FICHAS} />
             <Button variant="secondary" size="sm" icon={RefreshCw} onClick={fetchFichas} loading={loading} title="Atualizar" />
             <Button
               variant={temFiltroAtivo ? 'danger' : 'secondary'}

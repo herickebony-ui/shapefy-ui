@@ -106,11 +106,11 @@ export default function SinhoNotificacoesAluno() {
                 </span>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <p className="text-white text-xl font-bold leading-tight">
-                  {naoLidas > 0
-                    ? `${naoLidas} não lida${naoLidas > 1 ? 's' : ''}`
-                    : 'Tudo em dia'}
-                </p>
+                {naoLidas > 0 && (
+                  <p className="text-white text-xl font-bold leading-tight">
+                    {naoLidas} não lida{naoLidas > 1 ? 's' : ''}
+                  </p>
+                )}
                 <div className="flex items-center gap-2 shrink-0">
                   {naoLidas > 0 && (
                     <button

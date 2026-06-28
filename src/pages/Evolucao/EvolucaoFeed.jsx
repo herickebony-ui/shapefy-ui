@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { Activity, Search, Columns, X, ArrowLeft, CheckCircle, Plus, Image as ImageIcon, LineChart as LineChartIcon, ChevronLeft, ChevronRight, Pencil, Check, Trash2, Eraser, ArrowLeftRight, Camera, Save } from 'lucide-react'
+import { Activity, Search, Columns, X, ArrowLeft, CheckCircle, Plus, Image as ImageIcon, LineChart as LineChartIcon, ChevronLeft, ChevronRight, Pencil, Check, Trash2, ArrowLeftRight, Camera, Save } from 'lucide-react'
 import { Button, Badge, Spinner, EmptyState, DataTable } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 import ImagemInterativa from '../Feedbacks/ImagemInterativa'
@@ -46,6 +46,8 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
   const [swapSlot, setSwapSlot] = useState(null)  // slot_id aguardando para troca
   const [uploadingSlot, setUploadingSlot] = useState(null)  // slot_id com upload em progresso
   const [excluindo, setExcluindo] = useState(false)
+  const [excluidos, setExcluidos] = useState(new Set())
+  const listaEdicaoFiltrada = listaEdicao.filter(r => !excluidos.has(r.name))
   const fileInputRef = useRef(null)
   const pendingUploadSlot = useRef(null)
 
@@ -138,7 +140,7 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
   // Edita peso (peso_revisado=1) e/ou a data (campo `data`, manual). O display
   // sempre usa `data`, nunca `modified` — então editar peso não muda a data.
   const abrirEdicao = (r) => {
-    setPesoInput(r.peso != null && r.peso > 0 ? String(r.peso).replace('.', ',') : '')
+    setPesoInput(r.peso != null && r.peso > 0 ? String(r.peso) : '')
     setDataInput(String(r.data || '').split(' ')[0])
     setEditId(r.name)
   }
@@ -159,12 +161,14 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
       setSalvando(false)
     }
   }
-  const limparPeso = async (regName) => {
+  const excluirDoHistorico = async (r) => {
+    if (!window.confirm(`Excluir o registro de ${fmtData(r.data)}? Não dá pra desfazer.`)) return
     setSalvando(true)
     try {
-      await onPesoSalvo?.(regName, { peso: 0, peso_revisado: 1 })
+      await excluirRegistro(r.name)
+      setExcluidos(prev => new Set([...prev, r.name]))
       setEditId(null)
-    } finally {
+    } catch {} finally {
       setSalvando(false)
     }
   }
@@ -218,9 +222,9 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
             <GraficoPeso pontos={pontosGrafico} />
             {mostrarEdicao && (
               <div className="mt-4 pt-4 border-t border-[#323238]">
-                <p className="text-gray-500 text-[10px] uppercase tracking-wider font-bold mb-2">Editar data e peso · {listaEdicao.length} registro(s)</p>
+                <p className="text-gray-500 text-[10px] uppercase tracking-wider font-bold mb-2">Editar data e peso · {listaEdicaoFiltrada.length} registro(s)</p>
                 <div className="space-y-1 max-h-80 overflow-auto pr-1">
-                  {[...listaEdicao].sort((a, b) => (b.data || '').localeCompare(a.data || '')).map((r) => (
+                  {[...listaEdicaoFiltrada].sort((a, b) => (b.data || '').localeCompare(a.data || '')).map((r) => (
                     <div key={r.name} className="flex items-center justify-between gap-3 px-2 py-1.5 rounded hover:bg-white/5">
                       {editId === r.name ? (
                         <div className="flex items-center gap-1.5 flex-wrap">
@@ -240,9 +244,9 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
                             className="h-8 w-8 flex items-center justify-center text-green-400 hover:text-white border border-green-500/30 hover:bg-green-700 rounded-lg transition-colors">
                             {salvando ? <span className="w-3 h-3 border-2 border-green-400 border-t-transparent rounded-full animate-spin" /> : <Check size={14} />}
                           </button>
-                          <button onClick={() => limparPeso(r.name)} disabled={salvando} title="Limpar peso"
-                            className="h-8 w-8 flex items-center justify-center text-amber-500 hover:text-white border border-amber-500/30 hover:bg-amber-600 rounded-lg transition-colors">
-                            <Eraser size={13} />
+                          <button onClick={() => excluirDoHistorico(r)} disabled={salvando} title="Excluir registro"
+                            className="h-8 w-8 flex items-center justify-center text-red-400 hover:text-white border border-red-500/30 hover:bg-red-700 rounded-lg transition-colors">
+                            <Trash2 size={13} />
                           </button>
                           <button onClick={() => setEditId(null)} title="Cancelar"
                             className="h-8 w-8 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] rounded-lg transition-colors">
@@ -392,7 +396,7 @@ function PesoDetalhe({ aluno, nome, onVoltar }) {
     .sort((a, b) => (a.data || '').localeCompare(b.data || ''))
 
   const abrir = (r) => {
-    setPesoInput(r.peso != null && r.peso > 0 ? String(r.peso).replace('.', ',') : '')
+    setPesoInput(r.peso != null && r.peso > 0 ? String(r.peso) : '')
     setDataInput(String(r.data || '').split(' ')[0])
     setEditId(r.name)
   }

@@ -29,7 +29,23 @@ export const TUTORIAIS_FORMULARIOS = [
   {
     title: 'Criando formulários personalizados',
     description: 'Como montar seus próprios formulários de anamnese e feedback.',
-    url: 'https://www.youtube.com/watch?v=DIJAHKcmBCs&t=25s',
+    url: 'https://www.youtube.com/watch?v=lCtOiFqC0J8',
+  },
+]
+
+export const TUTORIAIS_FICHAS = [
+  {
+    title: 'Criando fichas de treino',
+    description: 'Passo a passo para montar e gerenciar fichas de treino dos seus alunos.',
+    url: 'https://www.youtube.com/watch?v=_eocJ6jmZXI',
+  },
+]
+
+export const TUTORIAIS_CONJUNTOS_FOTOS = [
+  {
+    title: 'Como criar conjunto de padrões de fotos para feedbacks e avaliações',
+    description: 'Padronize os ângulos de foto reutilizáveis nos feedbacks e avaliações.',
+    url: 'https://www.youtube.com/watch?v=9T8Eg8LpkGY',
   },
 ]
 
@@ -37,7 +53,7 @@ export const TUTORIAIS_CRONOGRAMA_FEEDBACKS = [
   {
     title: 'Planejando o cronograma de feedbacks',
     description: 'Como definir frequência e datas dos feedbacks dos seus alunos.',
-    url: 'https://www.youtube.com/watch?v=PwWJV8fgklo',
+    url: 'https://www.youtube.com/watch?v=vQz5sfXY6qA&t=364s',
   },
 ]
 
@@ -45,7 +61,7 @@ export const TUTORIAIS_TREINOS_PROGRESSAO = [
   {
     title: 'Acompanhe treinos e progressão de cargas',
     description: 'Como ver os treinos realizados e a evolução das cargas de cada aluno.',
-    url: 'https://www.youtube.com/watch?v=XckhEiwEv0w&t=1s',
+    url: 'https://www.youtube.com/watch?v=yyH7DBRZZxQ',
   },
 ]
 
@@ -59,6 +75,11 @@ export const TUTORIAIS_EXERCICIOS = [
     title: 'Importando exercícios em massa',
     description: 'Importação de exercícios, alimentos, alongamentos e aeróbicos via planilha.',
     url: 'https://www.youtube.com/watch?v=EhCm072Ky4g',
+  },
+  {
+    title: 'Nomenclaturas de séries, técnicas intensificadoras e exercícios substitutos',
+    description: 'Como usar nomenclaturas de séries, cadastrar técnicas intensificadoras e exercícios substitutos.',
+    url: 'https://www.youtube.com/watch?v=veCl6iViiKQ',
   },
 ]
 

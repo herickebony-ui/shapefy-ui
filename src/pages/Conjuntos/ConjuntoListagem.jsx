@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, RefreshCw, Edit, Trash2, Images, Star } from 'lucide-react'
 import ListPage from '../../components/templates/ListPage'
-import { Button } from '../../components/ui'
+import { Button, BotaoTutoriais } from '../../components/ui'
+import { TUTORIAIS_CONJUNTOS_FOTOS } from '../../data/tutoriais'
 import { listarConjuntos, excluirConjunto, conjuntoPadraoAtual, definirConjuntoPadrao } from '../../api/conjuntos'
 import useErrorModal from '../../hooks/useErrorModal'
 
@@ -59,6 +60,7 @@ export default function ConjuntoListagem() {
       subtitle="Templates de ângulos de foto reutilizáveis nos feedbacks"
       actions={
         <>
+          <BotaoTutoriais videos={TUTORIAIS_CONJUNTOS_FOTOS} />
           <Button variant="secondary" size="sm" icon={RefreshCw} onClick={carregar} loading={loading} />
           <Button variant="primary" size="sm" icon={Plus} onClick={() => navigate('/conjuntos-fotos/novo')}>
             Novo Conjunto
