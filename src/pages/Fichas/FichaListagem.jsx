@@ -936,19 +936,22 @@ const FILTROS_INICIAL = {
 }
 
 const FETCH_LIMIT = 200
+const SESSION_KEY = 'fichas_listagem_state'
+const readSession = () => { try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)) } catch { return null } }
 
 export default function FichaListagem() {
   const navigate = useNavigate()
   const [fichas, setFichas] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [search, setSearch] = useState('')
-  const [query, setQuery] = useState('')
+  const _saved = useMemo(readSession, [])
+  const [search, setSearch] = useState(_saved?.search ?? '')
+  const [query, setQuery] = useState(_saved?.search ?? '')
   const intensMapRef = useRef({})
   const [view, setView] = useState('list')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
-  const [filtros, setFiltros] = useState(FILTROS_INICIAL)
+  const [filtros, setFiltros] = useState(() => _saved?.filtros ?? FILTROS_INICIAL)
   const [modalFiltros, setModalFiltros] = useState(false)
   const [modalNova, setModalNova] = useState(false)
   const [modalGerarIA, setModalGerarIA] = useState(false)
@@ -965,6 +968,11 @@ export default function FichaListagem() {
   useEffect(() => {
     listarExercicios().then(lista => { intensMapRef.current = buildIntensMap(lista) }).catch(console.error)
   }, [])
+
+  // Persiste busca e filtros para restaurar ao voltar da ficha
+  useEffect(() => {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ search, filtros }))
+  }, [search, filtros])
 
   // Debounce busca
   useEffect(() => {
@@ -1126,7 +1134,7 @@ export default function FichaListagem() {
           filtros={filtros}
           onChange={(f) => { setPage(1); setFiltros(f) }}
           onClose={() => setModalFiltros(false)}
-          onLimpar={() => { setPage(1); setFiltros(FILTROS_INICIAL) }}
+          onLimpar={() => { setPage(1); setFiltros(FILTROS_INICIAL); setSearch(''); sessionStorage.removeItem(SESSION_KEY) }}
         />
       )}
 

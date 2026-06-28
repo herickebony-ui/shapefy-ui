@@ -4,16 +4,18 @@ import { maybeOpenNewTab } from '../../utils/navigation'
 import {
   ArrowLeft, RefreshCw, ChevronLeft, ChevronRight,
   Dumbbell, Activity, Clock, MessageSquare, LineChart,
-  Save, Search, Calendar, TrendingUp, Check, Eye, EyeOff, Trash2, Shuffle, UserX, WifiOff,
+  Save, Search, Calendar, TrendingUp, Check, Eye, EyeOff, Trash2, Shuffle, UserX, WifiOff, List,
 } from 'lucide-react'
 import { buscarSmart } from '../../utils/strings'
 import {
   listarTreinosRealizados, buscarTreinoRealizado,
   salvarFeedbackProfissional, marcarEntregueTreino, excluirTreinoRealizado,
   listarAerobicosRealizados, listarAlunosInativosComFicha,
+  listarTreinosDoAlunoNoPeriodo, listarAerobicosDoAlunoNoPeriodo,
 } from '../../api/treinosRealizados'
+import { listarAlunos } from '../../api/alunos'
 import { buscarFicha } from '../../api/fichas'
-import { Button, Badge, Spinner, Modal, BotaoTutoriais } from '../../components/ui'
+import { Button, Badge, Spinner, Modal, BotaoTutoriais, Autocomplete } from '../../components/ui'
 import { TUTORIAIS_TREINOS_PROGRESSAO } from '../../data/tutoriais'
 import ListPage from '../../components/templates/ListPage'
 import useErrorModal from '../../hooks/useErrorModal'
@@ -642,6 +644,343 @@ function DetalheView({ treinoBase, listaFiltrada, onVoltar, onEntregueAtualizado
   )
 }
 
+// ─── FrequenciaView ───────────────────────────────────────────────────────────
+
+const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+const DIAS_SEMANA = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
+
+function FrequenciaView({ alunosRecentes = [], initialAluno = null }) {
+  const [aluno, setAluno] = useState(initialAluno)
+  const [alunoQuery, setAlunoQuery] = useState(initialAluno?.nome_completo || '')
+  const [mes, setMes] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1))
+  const [treinos, setTreinos] = useState([])
+  const [aerobicos, setAerobicos] = useState([])
+  const [loading, setLoading] = useState(false)
+  const autoSelecionouRef = useRef(!!initialAluno)
+
+  useEffect(() => {
+    if (!autoSelecionouRef.current && alunosRecentes.length > 0 && !aluno) {
+      autoSelecionouRef.current = true
+      const primeiro = alunosRecentes[0]
+      setAluno(primeiro)
+      setAlunoQuery(primeiro.nome_completo)
+    }
+  }, [alunosRecentes])
+
+  const ano = mes.getFullYear()
+  const mesIdx = mes.getMonth()
+  const inicioMes = `${ano}-${String(mesIdx + 1).padStart(2, '0')}-01`
+  const fimMes = (() => {
+    const d = new Date(ano, mesIdx + 1, 0)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  })()
+
+  useEffect(() => {
+    if (!aluno) return
+    setLoading(true)
+    setTreinos([])
+    setAerobicos([])
+    Promise.all([
+      listarTreinosDoAlunoNoPeriodo(aluno.name, inicioMes, fimMes),
+      listarAerobicosDoAlunoNoPeriodo(aluno.name, inicioMes, fimMes),
+    ])
+      .then(([t, a]) => { setTreinos(t); setAerobicos(a) })
+      .catch(console.error)
+      .finally(() => setLoading(false))
+  }, [aluno?.name, inicioMes])
+
+  const diasMap = useMemo(() => {
+    const m = new Map()
+    treinos.forEach(t => {
+      const dia = String(t.data_e_hora_do_inicio).split(' ')[0]
+      if (!m.has(dia)) m.set(dia, { treinos: [], aerobicos: [] })
+      m.get(dia).treinos.push(t)
+    })
+    aerobicos.forEach(a => {
+      const dia = a.data_marcacao
+      if (!m.has(dia)) m.set(dia, { treinos: [], aerobicos: [] })
+      m.get(dia).aerobicos.push(a)
+    })
+    return m
+  }, [treinos, aerobicos])
+
+  const celulas = useMemo(() => {
+    const total = new Date(ano, mesIdx + 1, 0).getDate()
+    const primeiroDia = new Date(ano, mesIdx, 1).getDay()
+    const cells = Array(primeiroDia).fill(null)
+    for (let d = 1; d <= total; d++) cells.push(d)
+    return cells
+  }, [ano, mesIdx])
+
+  const hoje = useMemo(() => new Date().toISOString().split('T')[0], [])
+  const navMes = (dir) => setMes(m => new Date(m.getFullYear(), m.getMonth() + dir, 1))
+
+  const totalTreinosDias = new Set(treinos.map(t => String(t.data_e_hora_do_inicio).split(' ')[0])).size
+  const totalAerobicosDias = new Set(aerobicos.map(a => a.data_marcacao)).size
+
+  const getLetrasTreino = (treinosDoDia) => {
+    const letras = []
+    const vistas = new Set()
+    treinosDoDia.forEach(t => {
+      const label = (t.treino_label || t.treino || '').trim()
+      const m = label.match(/\b([A-F])\b/i)
+      const letra = m ? m[1].toUpperCase() : (label ? label[0].toUpperCase() : '?')
+      if (!vistas.has(letra)) { vistas.add(letra); letras.push(letra) }
+    })
+    return letras
+  }
+
+  return (
+    <div className="px-4 pb-6 max-w-2xl mx-auto space-y-3 pt-2">
+      {/* Seletor + recentes */}
+      <div className="bg-[#29292e] rounded-xl border border-[#323238] p-3 space-y-2">
+        <Autocomplete
+          value={alunoQuery}
+          onChange={(v) => { setAlunoQuery(v); if (!v) setAluno(null) }}
+          onSelect={(item) => { setAluno(item); setAlunoQuery(item.nome_completo) }}
+          searchFn={async (q) => {
+            const { list } = await listarAlunos({ search: q, limit: 15 })
+            return list
+          }}
+          renderItem={(item) => <span className="text-sm">{item.nome_completo}</span>}
+          placeholder="Buscar aluno..."
+          icon={Search}
+        />
+        {alunosRecentes.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 items-center">
+            <span className="text-[10px] text-gray-600 font-medium shrink-0">Recentes:</span>
+            {alunosRecentes.map(a => (
+              <button
+                key={a.name}
+                onClick={() => { setAluno(a); setAlunoQuery(a.nome_completo) }}
+                className={`text-[10px] px-2 py-0.5 rounded-lg border transition-colors font-medium ${
+                  aluno?.name === a.name
+                    ? 'bg-[#2563eb]/20 border-[#2563eb]/50 text-blue-300'
+                    : 'bg-[#1a1a1a] border-[#323238] text-gray-400 hover:text-white hover:border-gray-500'
+                }`}
+              >
+                {a.nome_completo.split(' ').slice(0, 2).join(' ')}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {!aluno && (
+        <div className="flex flex-col items-center py-12 gap-3 text-center">
+          <Calendar size={36} className="text-gray-700" />
+          <p className="text-sm text-gray-600">Selecione um aluno para ver a frequência de treino</p>
+        </div>
+      )}
+
+      {aluno && (
+        <>
+          {/* Stats cards */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-[#29292e] rounded-xl border border-[#323238] py-2 px-3 flex items-center gap-2.5">
+              <p className="text-xl font-bold text-blue-400">{loading ? '—' : totalTreinosDias}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 leading-tight">Treinos</p>
+            </div>
+            <div className="bg-[#29292e] rounded-xl border border-[#323238] py-2 px-3 flex items-center gap-2.5">
+              <p className="text-xl font-bold text-green-400">{loading ? '—' : totalAerobicosDias}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 leading-tight">Aeróbicos</p>
+            </div>
+            <div className="bg-[#29292e] rounded-xl border border-[#323238] py-2 px-3 flex items-center gap-2.5">
+              <p className="text-xl font-bold text-white">{loading ? '—' : diasMap.size}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 leading-tight">Dias ativos</p>
+            </div>
+          </div>
+
+          {/* Calendário */}
+          <div className="bg-[#1a1a1a] rounded-xl border border-[#323238] overflow-hidden">
+            <div className="px-3 py-2 border-b border-[#323238] flex items-center justify-between">
+              <button
+                onClick={() => navMes(-1)}
+                className="h-6 w-6 flex items-center justify-center text-gray-500 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors"
+              >
+                <ChevronLeft size={12} />
+              </button>
+              <span className="text-xs font-bold text-white">{MESES_PT[mesIdx]} {ano}</span>
+              <button
+                onClick={() => navMes(1)}
+                className="h-6 w-6 flex items-center justify-center text-gray-500 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors"
+              >
+                <ChevronRight size={12} />
+              </button>
+            </div>
+
+            {loading ? (
+              <div className="py-10 flex justify-center"><Spinner size="sm" /></div>
+            ) : (
+              <div className="p-2">
+                <div className="grid grid-cols-7 mb-0.5">
+                  {DIAS_SEMANA.map(d => (
+                    <div key={d} className="text-center text-[8px] font-bold text-gray-700 uppercase tracking-wide py-1">
+                      {d}
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-0.5">
+                  {celulas.map((dia, idx) => {
+                    if (!dia) return <div key={`e${idx}`} className="h-10" />
+                    const iso = `${ano}-${String(mesIdx + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`
+                    const dados = diasMap.get(iso)
+                    const temTreino = (dados?.treinos?.length ?? 0) > 0
+                    const temAerobico = (dados?.aerobicos?.length ?? 0) > 0
+                    const isHoje = iso === hoje
+
+                    const tooltipParts = []
+                    if (dados?.treinos?.length) dados.treinos.forEach(t => tooltipParts.push(`💪 ${t.treino_label || t.treino || 'Treino'}`))
+                    if (dados?.aerobicos?.length) dados.aerobicos.forEach(a => tooltipParts.push(`🏃 ${a.exercicio || 'Aeróbico'}`))
+
+                    return (
+                      <div
+                        key={dia}
+                        title={tooltipParts.join('\n') || undefined}
+                        className={[
+                          'h-10 flex flex-col items-center justify-center rounded transition-colors',
+                          temTreino && temAerobico
+                            ? 'bg-amber-500/20 border border-amber-400/40'
+                            : temTreino
+                            ? 'bg-blue-600/15 border border-blue-500/25'
+                            : temAerobico
+                            ? 'bg-green-600/15 border border-green-500/25'
+                            : 'border border-transparent',
+                          isHoje ? 'ring-1 ring-[#2563eb]/60' : '',
+                        ].join(' ')}
+                      >
+                        <span className={`text-[10px] font-bold leading-none ${
+                          temTreino && temAerobico ? 'text-amber-300'
+                          : temTreino || temAerobico ? 'text-white'
+                          : isHoje ? 'text-[#2563eb]' : 'text-gray-700'
+                        }`}>
+                          {dia}
+                        </span>
+                        {(temTreino || temAerobico) && (
+                          <div className="flex gap-0.5 mt-0.5">
+                            {temTreino && <span className="w-1 h-1 rounded-full bg-blue-400" />}
+                            {temAerobico && <span className="w-1 h-1 rounded-full bg-green-400" />}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+                <div className="mt-2 pt-2 border-t border-[#323238] flex items-center justify-center gap-4 flex-wrap">
+                  <span className="flex items-center gap-1.5 text-[9px] text-gray-500">
+                    <span className="w-2 h-2 rounded bg-blue-600/15 border border-blue-500/25 shrink-0" /> Treino
+                  </span>
+                  <span className="flex items-center gap-1.5 text-[9px] text-gray-500">
+                    <span className="w-2 h-2 rounded bg-green-600/15 border border-green-500/25 shrink-0" /> Aeróbico
+                  </span>
+                  <span className="flex items-center gap-1.5 text-[9px] text-gray-500">
+                    <span className="w-2 h-2 rounded bg-amber-500/20 border border-amber-400/40 shrink-0" /> Treino + Aeróbico
+                  </span>
+                  <span className="flex items-center gap-1.5 text-[9px] text-gray-500">
+                    <span className="w-2 h-2 rounded border border-transparent ring-1 ring-[#2563eb]/60 shrink-0" /> Hoje
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ─── InativosView ────────────────────────────────────────────────────────────
+
+function InativosView({ onSelectAluno }) {
+  const navigate = useNavigate()
+  const [diasInativos, setDiasInativos] = useState(7)
+  const [inativos, setInativos] = useState(null)
+  const [loadingInativos, setLoadingInativos] = useState(false)
+
+  const carregar = async (dias = diasInativos) => {
+    setLoadingInativos(true)
+    try {
+      setInativos(await listarAlunosInativosComFicha(dias))
+    } catch (e) {
+      console.error(e)
+      setInativos([])
+    } finally {
+      setLoadingInativos(false)
+    }
+  }
+
+  useEffect(() => { carregar() }, [])
+
+  return (
+    <div className="pb-4 space-y-0">
+      {/* Filtro + descrição */}
+      <div className="px-4 pb-3 flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-400 shrink-0">Sem treino nos últimos</span>
+          <select
+            value={diasInativos}
+            onChange={e => { const d = Number(e.target.value); setDiasInativos(d); setInativos(null); carregar(d) }}
+            className="h-8 px-2 bg-[#1a1a1a] border border-[#323238] text-white rounded-lg text-xs outline-none focus:border-[#2563eb]/60 transition-colors"
+          >
+            <option value={7}>7 dias</option>
+            <option value={14}>14 dias</option>
+            <option value={30}>30 dias</option>
+          </select>
+        </div>
+        {!loadingInativos && inativos !== null && inativos.length > 0 && (
+          <span className="text-xs text-gray-500">
+            <span className="text-white font-bold">{inativos.length}</span> aluno{inativos.length !== 1 ? 's' : ''} com ficha vigente não treinaram nos últimos <span className="text-white font-bold">{diasInativos} dias</span>
+          </span>
+        )}
+      </div>
+
+      {loadingInativos || inativos === null ? (
+        <div className="py-24 flex justify-center"><Spinner /></div>
+      ) : inativos.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 py-24 text-center">
+          <UserX size={28} className="text-green-400" />
+          <p className="text-sm font-semibold text-white">Nenhum aluno inativo</p>
+          <p className="text-xs text-gray-500">Todos os alunos com ficha vigente treinaram nos últimos {diasInativos} dias.</p>
+        </div>
+      ) : (
+        <div className="mx-4 bg-[#29292e] rounded-lg border border-[#323238] overflow-hidden">
+          <table className="w-full text-left">
+            <thead className="bg-[#1a1a1a] border-b border-[#323238]">
+              <tr>
+                <th className="px-4 py-2.5 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Aluno</th>
+                <th className="px-4 py-2.5 text-[10px] font-bold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Ficha vigente até</th>
+                <th className="px-4 py-2.5" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#323238]/40">
+              {inativos.map(f => (
+                <tr
+                  key={f.name}
+                  onClick={() => onSelectAluno
+                    ? onSelectAluno({ name: f.aluno, nome_completo: f.nome_completo })
+                    : navigate(`/alunos/${encodeURIComponent(f.aluno)}`)
+                  }
+                  className="hover:bg-white/5 transition-colors cursor-pointer group"
+                >
+                  <td className="px-4 py-3">
+                    <p className="text-sm font-medium text-white group-hover:text-[#2563eb] transition-colors">{f.nome_completo}</p>
+                  </td>
+                  <td className="px-4 py-3 hidden sm:table-cell">
+                    <p className="text-xs text-gray-400">{f.data_de_fim ? fmtDate(f.data_de_fim) : <span className="text-gray-600">Sem prazo</span>}</p>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <ChevronRight size={14} className="text-gray-600 group-hover:text-white transition-colors ml-auto" />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 const STATUS_OPTS = [
@@ -654,7 +993,7 @@ const STATUS_OPTS = [
 export default function TreinosRealizados() {
   const { id: rotaId } = useParams()
   const navigate = useNavigate()
-  const [view, setView] = useState(rotaId ? 'detalhe' : 'lista') // 'lista' | 'detalhe' | 'progressao'
+  const [view, setView] = useState(rotaId ? 'detalhe' : 'lista') // 'lista' | 'detalhe' | 'frequencia' | 'inativos'
   const [lista, setLista] = useState([])
   const [loading, setLoading] = useState(false)
   const [busca, setBusca] = useState('')
@@ -668,10 +1007,7 @@ export default function TreinosRealizados() {
   const [treinoAberto, setTreinoAberto] = useState(rotaId ? { name: rotaId } : null)
   const [modalExcluir, setModalExcluir] = useState(null) // treino a confirmar
   const [excluindo, setExcluindo] = useState(false)
-  const [modalInativos, setModalInativos] = useState(false)
-  const [diasInativos, setDiasInativos] = useState(7)
-  const [inativos, setInativos] = useState(null) // null = não carregado, [] = carregado
-  const [loadingInativos, setLoadingInativos] = useState(false)
+  const [alunoFrequencia, setAlunoFrequencia] = useState(null)
   const errorModal = useErrorModal()
   const debounceRef = useRef(null)
 
@@ -688,25 +1024,6 @@ export default function TreinosRealizados() {
     } finally {
       setExcluindo(false)
     }
-  }
-
-  const carregarInativos = async (dias = diasInativos) => {
-    setLoadingInativos(true)
-    try {
-      const result = await listarAlunosInativosComFicha(dias)
-      setInativos(result)
-    } catch (e) {
-      console.error(e)
-      setInativos([])
-    } finally {
-      setLoadingInativos(false)
-    }
-  }
-
-  const abrirModalInativos = (dias = diasInativos) => {
-    setModalInativos(true)
-    setInativos(null)
-    carregarInativos(dias)
   }
 
   const carregar = async (reset = true, query = queryBusca, status = statusFiltro) => {
@@ -745,6 +1062,19 @@ export default function TreinosRealizados() {
     })
   }, [lista, filtroTreino, filtroDataInicio, filtroDataFim])
 
+  const alunosRecentes = useMemo(() => {
+    const vistos = new Set()
+    const result = []
+    for (const t of lista) {
+      if (t.aluno && t.nome_completo && !vistos.has(t.aluno)) {
+        vistos.add(t.aluno)
+        result.push({ name: t.aluno, nome_completo: t.nome_completo })
+        if (result.length >= 5) break
+      }
+    }
+    return result
+  }, [lista])
+
   if (view === 'detalhe' && treinoAberto) {
     return (
       <div className="h-full flex flex-col">
@@ -766,25 +1096,47 @@ export default function TreinosRealizados() {
       subtitle="Histórico de execução dos alunos"
       actions={
         <>
+          <div className="flex items-center bg-[#1a1a1a] border border-[#323238] rounded-lg overflow-hidden">
+            <button
+              onClick={() => setView('lista')}
+              className={`h-7 px-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                view === 'lista' ? 'bg-[#2563eb] text-white' : 'text-gray-500 hover:text-white'
+              }`}
+            >
+              <List size={11} /> Lista
+            </button>
+            <button
+              onClick={() => setView('frequencia')}
+              className={`h-7 px-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                view === 'frequencia' ? 'bg-[#2563eb] text-white' : 'text-gray-500 hover:text-white'
+              }`}
+            >
+              <Calendar size={11} /> Frequência
+            </button>
+            <button
+              onClick={() => setView('inativos')}
+              className={`h-7 px-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                view === 'inativos' ? 'bg-[#2563eb] text-white' : 'text-gray-500 hover:text-white'
+              }`}
+            >
+              <WifiOff size={11} /> Inativos
+            </button>
+          </div>
           <BotaoTutoriais videos={TUTORIAIS_TREINOS_PROGRESSAO} />
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={WifiOff}
-            onClick={() => abrirModalInativos()}
-            className="text-amber-400 border-amber-500/30 hover:bg-amber-900/20 hover:border-amber-500/50 hover:text-amber-300"
-          >
-            Alunos que não estão usando o app
-          </Button>
-          <Button variant="secondary" size="sm" icon={RefreshCw} onClick={() => carregar()} loading={loading} />
+          <Button variant="secondary" size="sm" icon={RefreshCw} onClick={() => carregar()} loading={loading && view === 'lista'} />
         </>
       }
-      loading={loading && lista.length === 0}
-      empty={listaFiltrada.length === 0 && !loading ? {
+      loading={view === 'lista' && loading && lista.length === 0}
+      empty={view === 'lista' && listaFiltrada.length === 0 && !loading ? {
         title: 'Nenhum treino encontrado',
         description: 'Ajuste os filtros ou aguarde novos registros',
       } : null}
     >
+      {view === 'frequencia' && <FrequenciaView alunosRecentes={alunosRecentes} initialAluno={alunoFrequencia} />}
+      {view === 'inativos' && (
+        <InativosView onSelectAluno={(a) => { setAlunoFrequencia(a); setView('frequencia') }} />
+      )}
+      {view === 'lista' && (<>
       {/* Filtros extras */}
       <div className="px-4 pb-3 flex flex-wrap gap-2">
         {/* Busca nome */}
@@ -940,76 +1292,7 @@ export default function TreinosRealizados() {
           )}
         </div>
       )}
-      {modalInativos && (
-        <Modal
-          isOpen
-          onClose={() => setModalInativos(false)}
-          title="Alunos que não estão usando o app"
-          size="md"
-          footer={
-            <Button variant="ghost" onClick={() => setModalInativos(false)}>Fechar</Button>
-          }
-        >
-          <div className="p-4 space-y-4">
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-gray-400 shrink-0">Sem treino nos últimos</span>
-              <select
-                value={diasInativos}
-                onChange={e => {
-                  const d = Number(e.target.value)
-                  setDiasInativos(d)
-                  setInativos(null)
-                  carregarInativos(d)
-                }}
-                className="h-8 px-2 bg-[#1a1a1a] border border-[#323238] text-white rounded-lg text-xs outline-none focus:border-[#2563eb]/60 transition-colors"
-              >
-                <option value={7}>7 dias</option>
-                <option value={14}>14 dias</option>
-                <option value={30}>30 dias</option>
-              </select>
-            </div>
-
-            {loadingInativos || inativos === null ? (
-              <div className="flex justify-center py-8"><Spinner /></div>
-            ) : inativos.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 py-8 text-center">
-                <UserX size={28} className="text-green-400" />
-                <p className="text-sm font-semibold text-white">Nenhum aluno inativo</p>
-                <p className="text-xs text-gray-500">Todos os alunos com ficha vigente treinaram nos últimos {diasInativos} dias.</p>
-              </div>
-            ) : (
-              <>
-                <p className="text-xs text-gray-500">
-                  <span className="text-white font-bold">{inativos.length}</span> aluno{inativos.length !== 1 ? 's' : ''} com ficha vigente sem registrar treino nos últimos <span className="text-white font-bold">{diasInativos} dias</span>.
-                </p>
-                <div className="bg-[#29292e] rounded-lg border border-[#323238] overflow-hidden">
-                  <div className="divide-y divide-[#323238]/50 max-h-80 overflow-y-auto">
-                    {inativos.map(f => (
-                      <div key={f.name} className="flex items-center justify-between px-4 py-3 hover:bg-white/[0.03] transition-colors">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-white truncate">{f.nome_completo}</p>
-                          {f.data_de_fim && (
-                            <p className="text-[10px] text-gray-500 mt-0.5">
-                              Ficha até {fmtDate(f.data_de_fim)}
-                            </p>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => { setModalInativos(false); navigate(`/alunos/${encodeURIComponent(f.aluno)}`) }}
-                          className="shrink-0 ml-3 h-7 px-3 flex items-center gap-1.5 text-gray-400 hover:text-white border border-[#323238] hover:border-[#2563eb]/50 rounded-lg text-[11px] font-medium transition-colors"
-                        >
-                          Ver aluno
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </Modal>
-      )}
-
+      </>)}
       {modalExcluir && (
         <Modal
           isOpen

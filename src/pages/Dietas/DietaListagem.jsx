@@ -523,10 +523,13 @@ const ModalNovaDieta = ({ onClose, onCriada }) => {
 // ─── DietaListagem ────────────────────────────────────────────────────────────
 
 const FETCH_LIMIT = 200
+const SESSION_KEY = 'dietas_listagem_state'
+const readSession = () => { try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)) } catch { return null } }
 
 export default function DietaListagem() {
   const navigate = useNavigate()
-  const [filtros, setFiltros] = useState({ status: null, kcalMin: '', kcalMax: '', refeicoes: [] })
+  const _saved = useMemo(readSession, [])
+  const [filtros, setFiltros] = useState(() => _saved?.filtros ?? { status: null, kcalMin: '', kcalMax: '', refeicoes: [] })
   const [modalFiltros, setModalFiltros] = useState(false)
   const [vizId, setVizId] = useState(null)
   const [modalDuplicar, setModalDuplicar] = useState(null)
@@ -536,11 +539,15 @@ export default function DietaListagem() {
   const errorModal = useErrorModal()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [search, setSearch] = useState('')
-  const [query, setQuery] = useState('')
+  const [search, setSearch] = useState(_saved?.search ?? '')
+  const [query, setQuery] = useState(_saved?.search ?? '')
   const [view, setView] = useState('list')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+
+  useEffect(() => {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ search, filtros }))
+  }, [search, filtros])
 
   useEffect(() => {
     const t = setTimeout(() => { setQuery(search); setPage(1) }, 400)
@@ -644,7 +651,7 @@ export default function DietaListagem() {
           filtros={filtros}
           onChange={(f) => { setPage(1); setFiltros(f) }}
           onClose={() => setModalFiltros(false)}
-          onLimpar={() => { setPage(1); setFiltros({ status: null, kcalMin: '', kcalMax: '', refeicoes: [] }) }}
+          onLimpar={() => { setPage(1); setFiltros({ status: null, kcalMin: '', kcalMax: '', refeicoes: [] }); setSearch(''); sessionStorage.removeItem(SESSION_KEY) }}
         />
       )}
 

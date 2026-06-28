@@ -134,6 +134,38 @@ export const listarAlunosInativosComFicha = async (dias = 7) => {
   return [...porAluno.values()].filter(f => !treinosRecentes.has(f.aluno))
 }
 
+export const listarTreinosDoAlunoNoPeriodo = async (alunoId, dataInicio, dataFim) => {
+  const res = await client.get(`/api/resource/${DOCTYPE}`, {
+    params: {
+      fields: JSON.stringify(['name', 'aluno', 'nome_completo', 'treino_label', 'treino', 'data_e_hora_do_inicio', 'status', 'tem_aerobico', 'tempo_total_de_treino']),
+      filters: JSON.stringify([
+        ['aluno', '=', alunoId],
+        ['data_e_hora_do_inicio', '>=', `${dataInicio} 00:00:00`],
+        ['data_e_hora_do_inicio', '<=', `${dataFim} 23:59:59`],
+      ]),
+      limit: 300,
+      order_by: 'data_e_hora_do_inicio asc',
+    },
+  })
+  return res.data?.data || []
+}
+
+export const listarAerobicosDoAlunoNoPeriodo = async (alunoId, dataInicio, dataFim) => {
+  const res = await client.get('/api/resource/Aerobico Realizado', {
+    params: {
+      fields: JSON.stringify(['name', 'exercicio', 'data_marcacao']),
+      filters: JSON.stringify([
+        ['aluno', '=', alunoId],
+        ['data_marcacao', '>=', dataInicio],
+        ['data_marcacao', '<=', dataFim],
+      ]),
+      limit: 300,
+      order_by: 'data_marcacao asc',
+    },
+  })
+  return res.data?.data || []
+}
+
 export const listarIdsDoAluno = async (alunoId, limit = 300) => {
   const res = await client.get(`/api/resource/${DOCTYPE}`, {
     params: {
