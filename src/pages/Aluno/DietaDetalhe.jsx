@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Printer, Apple, Info, Leaf } from 'lucide-react'
+import { ArrowLeft, Printer, Apple, Info, Leaf, AlertCircle } from 'lucide-react'
 import { Spinner, Button } from '../../components/ui'
 import { GlassCard, SectionHeader } from '../../components/aluno'
 import { buscarDietaAluno } from '../../api/aluno'
@@ -29,12 +29,20 @@ export default function DietaDetalhe() {
 
   const [data, setData] = useState(null)
   const [carregando, setCarregando] = useState(true)
+  const [erro, setErro] = useState(null)
 
   useEffect(() => {
     let cancelado = false
     buscarDietaAluno(name)
       .then(res => { if (!cancelado) setData(res) })
-      .catch(err => !cancelado && errorModalRef.current.show(err, 'Dieta'))
+      .catch(err => {
+        if (cancelado) return
+        if (err.response?.status === 403) {
+          setErro('Voce nao tem permissao para acessar essa dieta.')
+        } else {
+          errorModalRef.current.show(err, 'Dieta')
+        }
+      })
       .finally(() => !cancelado && setCarregando(false))
     return () => { cancelado = true }
   }, [name])
@@ -44,6 +52,17 @@ export default function DietaDetalhe() {
       <div className="min-h-[60vh] flex items-center justify-center bg-[var(--sf-bg)]">
         {errorModal.element}
         <Spinner />
+      </div>
+    )
+  }
+
+  if (erro) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center px-6 bg-[var(--sf-bg)]">
+        <div className="sf-card flex items-center gap-3 px-5 py-4 max-w-sm w-full">
+          <AlertCircle size={18} className="text-[var(--sf-cyan)] shrink-0" />
+          <span className="text-[var(--sf-text)] text-sm">{erro}</span>
+        </div>
       </div>
     )
   }
