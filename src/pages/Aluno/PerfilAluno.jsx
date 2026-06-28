@@ -80,6 +80,8 @@ export default function PerfilAluno() {
     return () => { cancelado = true }
   }, [])
 
+  const fotoSrc = useAuthSrc(perfil?.foto_url || null)
+
   if (carregando) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center bg-[var(--sf-bg)]">
@@ -100,7 +102,6 @@ export default function PerfilAluno() {
   const altura = perfil.height ? `${perfil.height} m` : null
   const peso = perfil.weight ? `${perfil.weight} kg` : null
   const idade = perfil.age ? `${perfil.age} anos` : null
-  const fotoSrc = useAuthSrc(perfil.foto_url || null)
 
   return (
     <div className="pb-8 bg-[var(--sf-bg)] min-h-full">
