@@ -558,6 +558,7 @@ export default function DietaListagem() {
         kcalMin: filtros.kcalMin || undefined,
         kcalMax: filtros.kcalMax || undefined,
         limit: FETCH_LIMIT,
+        rascunho: filtros.status === 'Rascunho' || undefined,
       })
       const lista = query ? list.filter(d => buscarSmart(d.nome_completo, query)) : list
       setDietas(lista)

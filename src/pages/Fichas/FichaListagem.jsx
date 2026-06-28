@@ -981,6 +981,7 @@ export default function FichaListagem() {
       const { list } = await listarFichas({
         busca: query || undefined,
         limit: FETCH_LIMIT,
+        rascunho: filtros.status === 'Rascunho' || undefined,
       })
       const lista = query ? list.filter(f => buscarSmart(f.nome_completo, query) || buscarSmart(f.titulo, query)) : list
       setFichas(lista)
@@ -1000,9 +1001,7 @@ export default function FichaListagem() {
 
   useEffect(() => { fetchFichas() }, [fetchFichas])
 
-  // Filtros client-side — busca por nome bypassa todos os filtros locais
   const fichasVisiveis = fichas.filter(f => {
-    if (query.trim()) return true
     if (filtros.status && statusFicha(f) !== filtros.status) return false
     if (filtros.nivel && f.nivel !== filtros.nivel) return false
     const estrutura = f.estrutura_calculada || ''

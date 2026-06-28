@@ -45,7 +45,7 @@ export const dadosAntropometricosFromAluno = (alunoDoc = {}) => ({
 
 // ─── Dietas ───────────────────────────────────────────────────────────────────
 
-export const listarDietas = async ({ alunoId, busca, kcalMin, kcalMax, page = 1, limit = 20 } = {}) => {
+export const listarDietas = async ({ alunoId, busca, kcalMin, kcalMax, rascunho, page = 1, limit = 20 } = {}) => {
   const params = {
     fields: JSON.stringify([
       "name", "date", "final_date", "enabled", "creation",
@@ -65,6 +65,10 @@ export const listarDietas = async ({ alunoId, busca, kcalMin, kcalMax, page = 1,
   if (busca) filtros.push(...filtrosBusca('nome_completo', busca))
   if (kcalMin) filtros.push(["total_calories", ">=", Number(kcalMin)])
   if (kcalMax) filtros.push(["total_calories", "<=", Number(kcalMax)])
+  if (rascunho) {
+    filtros.push(["date", "is", "not set"])
+    filtros.push(["final_date", "is", "not set"])
+  }
   if (filtros.length) params.filters = JSON.stringify(filtros)
 
   const res = await client.get('/api/resource/Dieta', { params })

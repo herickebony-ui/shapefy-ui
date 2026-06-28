@@ -5,7 +5,7 @@ import { filtrosBusca } from '../utils/strings'
 
 // ─── Fichas de Treino ─────────────────────────────────────────────────────────
 
-export const listarFichas = async ({ busca, nivel, aluno, page = 1, limit = 50 } = {}) => {
+export const listarFichas = async ({ busca, nivel, aluno, rascunho, page = 1, limit = 50 } = {}) => {
   const fields = [
     'name', 'creation', 'aluno', 'nome_completo', 'titulo',
     'nivel', 'objetivo', 'data_de_inicio', 'data_de_fim', 'estrutura_calculada', 'profissional', 'enabled',
@@ -20,6 +20,10 @@ export const listarFichas = async ({ busca, nivel, aluno, page = 1, limit = 50 }
     const regularFilters = [['Ficha', 'profissional', '=', profissionalLogado()]]
     if (nivel) regularFilters.push(['Ficha', 'nivel', '=', nivel])
     if (aluno) regularFilters.push(['Ficha', 'aluno', '=', aluno])
+    if (rascunho) {
+      regularFilters.push(['Ficha', 'data_de_inicio', 'is', 'not set'])
+      regularFilters.push(['Ficha', 'data_de_fim', 'is', 'not set'])
+    }
 
     const data = new URLSearchParams({
       doctype: 'Ficha',
@@ -44,6 +48,10 @@ export const listarFichas = async ({ busca, nivel, aluno, page = 1, limit = 50 }
   const filters = []
   if (nivel) filters.push(['nivel', '=', nivel])
   if (aluno) filters.push(['aluno', '=', aluno])
+  if (rascunho) {
+    filters.push(['data_de_inicio', 'is', 'not set'])
+    filters.push(['data_de_fim', 'is', 'not set'])
+  }
 
   const params = {
     fields: JSON.stringify(fields),
