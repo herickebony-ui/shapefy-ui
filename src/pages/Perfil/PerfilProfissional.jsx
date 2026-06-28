@@ -35,6 +35,7 @@ function ImageUploadField({ label, hint, value, fieldname, docname, onUploaded }
       formData.append('docname', docname)
       formData.append('fieldname', fieldname)
       formData.append('is_private', '0')
+      formData.append('optimize', '0')
       const res = await client.post('/api/method/upload_file', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
