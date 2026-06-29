@@ -5,6 +5,21 @@ import { pollNotificacoesAluno, marcarNotificacoesVisualizadasAluno } from '../.
 
 const POLL_MS = 60_000
 
+// URLs de notificação podem vir como URLs absolutas do Frappe (ex: https://shapefy.online/preencher_feedback?name=XYZ).
+// Mapeia para rotas React do aluno.
+function resolverUrl(rawUrl) {
+  if (!rawUrl) return '/aluno'
+  if (rawUrl.startsWith('/aluno')) return rawUrl
+  if (rawUrl.startsWith('/')) return `/aluno${rawUrl}`
+  try {
+    const u = new URL(rawUrl)
+    const name = u.searchParams.get('name')
+    if (u.pathname.includes('preencher_feedback') && name) return `/aluno/feedbacks/${name}`
+    if (u.pathname.includes('preencher_anamnese') && name) return `/aluno/anamneses/${name}`
+  } catch {}
+  return '/aluno'
+}
+
 function formatarData(creation) {
   if (!creation) return ''
   const d = new Date(creation)
@@ -66,7 +81,7 @@ export default function SinhoNotificacoesAluno() {
       setNaoLidas(prev => Math.max(0, prev - 1))
       try { await marcarNotificacoesVisualizadasAluno() } catch {}
     }
-    if (notif.url) navigate(notif.url)
+    navigate(resolverUrl(notif.url))
   }
 
   return (

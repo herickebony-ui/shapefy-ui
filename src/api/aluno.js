@@ -38,12 +38,12 @@ export const listarProximosFeedbacksAluno = async () => {
 
 // Marca todas as notificações do aluno como visualizadas. Invalida cache do home.
 export const marcarNotificacoesVisualizadasAluno = async () => {
-  const res = await client.post('/api/method/shapefy.api.aluno.marcar_notificacoes_visualizadas')
+  const res = await client.post('/api/method/shapefy.api.aluno.marcar_notificacoes_visualizadas', {}, { skipAuthRedirect: true })
   return res.data?.message || { marcadas: 0 }
 }
 
 export const pollNotificacoesAluno = async () => {
-  const res = await client.get('/api/method/shapefy.api.aluno.notificacoes_poll')
+  const res = await client.get('/api/method/shapefy.api.aluno.notificacoes_poll', { skipAuthRedirect: true })
   return res.data?.message || { nao_visualizadas: 0, notificacoes: [] }
 }
 

@@ -63,10 +63,9 @@ let isRedirecting = false
 client.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 && !error.config?.skipAuthRedirect && !isRedirecting) {
+    const isAlunoRequest = !!error.config?.headers?.['X-Aluno-Token']
+    if (error.response?.status === 401 && !error.config?.skipAuthRedirect && !isAlunoRequest && !isRedirecting) {
       isRedirecting = true
-      // Usa clearAuth() para limpar Zustand + localStorage de forma consistente,
-      // em vez de remover chaves manualmente (incluindo shapefy-auth).
       useAuthStore.getState().clearAuth()
       if (window.location.pathname !== '/login') {
         window.location.href = '/login'
