@@ -253,14 +253,14 @@ const nomeArquivoSeguro = (nome = '') => {
 }
 
 // Upload genérico de arquivo (PDF/imagem) — sempre público, sem optimize e com
-// nome sanitizado.
+// nome sanitizado. Não passa o campo 'optimize': string '0' é truthy em Python
+// e ativaria optimize_image (resize 1024×768, quality 85) ao invés de desativar.
 export const uploadArquivo = async (file) => {
   const seguro = nomeArquivoSeguro(file.name)
   const arquivo = seguro !== file.name ? new File([file], seguro, { type: file.type }) : file
   const formData = new FormData()
   formData.append('file', arquivo)
   formData.append('is_private', '0')
-  formData.append('optimize', '0')
   const res = await client.post('/api/method/upload_file', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })

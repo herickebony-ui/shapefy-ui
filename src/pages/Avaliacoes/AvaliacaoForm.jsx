@@ -66,10 +66,10 @@ function FotoUpload({ label, value, onChange }) {
     try {
       const fd = new FormData()
       fd.append('file', file)
-      // is_private=0 e optimize=0: arquivo público (URL acessível direto) e SEM compressão
-      // do Frappe — preserva qualidade original que o profissional vai usar nas comparações.
+      // is_private=0: arquivo público (URL acessível direto).
+      // Não passa 'optimize': string '0' é truthy em Python e ativaria
+      // optimize_image (resize 1024×768, quality 85) ao invés de desativar.
       fd.append('is_private', '0')
-      fd.append('optimize', '0')
       const res = await client.post('/api/method/upload_file', fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
