@@ -33,7 +33,7 @@ export async function toRenderableImage(file) {
   if (!heic) return file
   try {
     if (!_heic2any) _heic2any = (await import('heic2any')).default
-    const resultado = await _heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 })
+    const resultado = await _heic2any({ blob: file, toType: 'image/jpeg', quality: 1 })
     const blob = Array.isArray(resultado) ? resultado[0] : resultado
     const base = (file.name || 'foto').replace(/\.(heic|heif|png|jpe?g|webp)$/i, '')
     return new File([blob], `${base}.jpg`, { type: 'image/jpeg' })
@@ -53,7 +53,7 @@ export async function heicUrlToObjectUrl(url) {
     if (!_heic2any) _heic2any = (await import('heic2any')).default
     const resp = await fetch(url)
     const blob = await resp.blob()
-    const jpeg = await _heic2any({ blob, toType: 'image/jpeg', quality: 0.9 })
+    const jpeg = await _heic2any({ blob, toType: 'image/jpeg', quality: 1 })
     return URL.createObjectURL(Array.isArray(jpeg) ? jpeg[0] : jpeg)
   } catch (e) {
     console.warn('Falha ao decodificar HEIC no display:', e)
