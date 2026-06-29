@@ -29,7 +29,6 @@ export default function FotoSlotUpload({ label, value, onChange, modelo = '', mo
       const fd = new FormData()
       fd.append('file', preparado)
       fd.append('is_private', '0')
-      fd.append('optimize', '0')
       const res = await client.post('/api/method/upload_file', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       const url = res.data?.message?.file_url
       if (url) onChange(url)

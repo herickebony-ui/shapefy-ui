@@ -227,7 +227,6 @@ export const uploadImagemComunidade = async (file) => {
   const fd = new FormData()
   fd.append('file', file)
   fd.append('is_private', '0')
-  fd.append('optimize', '0')
   const res = await client.post('/api/method/upload_file', fd, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
