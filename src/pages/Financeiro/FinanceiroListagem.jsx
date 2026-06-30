@@ -3,6 +3,7 @@ import {
   Plus, RefreshCw, Search, CalendarDays, SlidersHorizontal,
   TrendingUp, History, Wallet, Users, FileDown, RefreshCcw, Eye, Edit2,
   Receipt, Calendar as CalendarIcon, Filter, DollarSign, Package, BookCheck,
+  CheckCircle, Clock,
 } from 'lucide-react'
 import {
   Button, Spinner, EmptyState, DataTable, Tabs, StatCard, Badge, BotaoAjuda,
@@ -71,6 +72,7 @@ export default function FinanceiroListagem() {
   const [renovarModalOpen, setRenovarModalOpen] = useState(false)
   const [renovarPreSelecionado, setRenovarPreSelecionado] = useState(null)
   const [historicoAluno, setHistoricoAluno] = useState(null) // { id, nome }
+  const [parcelasAReceberModalOpen, setParcelasAReceberModalOpen] = useState(false)
   const [contratoForm, setContratoForm] = useState(null) // null | 'novo' | { contrato, alunoNome }
   const [contratoDetalhe, setContratoDetalhe] = useState(null) // { contratoId, alunoNome }
 
@@ -85,7 +87,7 @@ export default function FinanceiroListagem() {
     setLoading(true)
     try {
       const [contratosRes, planosRes] = await Promise.all([
-        listarContratos({ limit: 200 }),
+        listarContratos({ limit: 500 }),
         listarPlanos({ limit: 100 }),
       ])
       setContratos(contratosRes.list)
@@ -573,31 +575,48 @@ export default function FinanceiroListagem() {
       }`}>
         {view === 'records' ? (
           <>
-            <StatCard label="Alunos com plano vigente" value={stats.ativos} />
             <StatCard
-              label={carregandoParcelas ? 'Recebido (período)…' : 'Recebido no período'}
+              label="Alunos Ativos"
+              value={stats.ativos}
+              icon={Users}
+              subtext={`Ativos + Pago e não iniciado: ${stats.ativos + stats.pagosNaoIniciados}`}
+            />
+            <StatCard
+              label={carregandoParcelas ? 'Faturamento Líquido…' : 'Faturamento Líquido'}
               value={formatCurrency(stats.faturamentoReal)}
+              icon={Wallet}
               color="success"
+              subtext="Recebido no período"
             />
             <StatCard
-              label="Forecast (renovações)"
+              label="Previsão (Forecast)"
               value={formatCurrency(stats.forecastRenovacaoValor)}
-              unit={`${stats.forecastRenovacaoQtd} contrato${stats.forecastRenovacaoQtd === 1 ? '' : 's'}`}
-              color="success"
+              icon={TrendingUp}
+              subtext={`Vence no período · ${stats.forecastRenovacaoQtd} contrato${stats.forecastRenovacaoQtd === 1 ? '' : 's'}`}
             />
-            <StatCard
-              label={carregandoParcelas ? 'Parcelas (período)…' : 'Parcelamentos a receber'}
-              value={formatCurrency(stats.parcelamentosAReceberValor)}
-              unit={`${stats.parcelamentosAReceberQtd} parcela${stats.parcelamentosAReceberQtd === 1 ? '' : 's'}`}
-              color="warning"
-            />
+            <div
+              onClick={() => setParcelasAReceberModalOpen(true)}
+              className="cursor-pointer hover:brightness-110 transition-all"
+              title="Ver todas as parcelas pendentes"
+            >
+              <StatCard
+                label={carregandoParcelas ? 'Parcelas (período)…' : 'Parcelamentos a receber'}
+                value={formatCurrency(stats.parcelamentosAReceberValor)}
+                icon={Clock}
+                color="warning"
+                subtext={`${stats.parcelamentosAReceberQtd} parcela${stats.parcelamentosAReceberQtd === 1 ? '' : 's'} pendentes`}
+              />
+            </div>
             <div title={stats.taxaRetencao != null
                 ? `${stats.taxaRetencaoNum.renovados} renovaram de ${stats.taxaRetencaoNum.venceram} que venceram`
                 : 'Sem contratos vencendo no período'}>
               <StatCard
-                label="Taxa de retenção"
+                label="Taxa de Retenção"
                 value={stats.taxaRetencao != null ? `${stats.taxaRetencao}%` : '—'}
-                unit={stats.taxaRetencao != null ? `${stats.taxaRetencaoNum.renovados}/${stats.taxaRetencaoNum.venceram}` : ''}
+                icon={CheckCircle}
+                subtext={stats.taxaRetencao != null
+                  ? `${stats.taxaRetencaoNum.renovados}/${stats.taxaRetencaoNum.venceram} renovações`
+                  : 'Renovações / Vencimentos'}
                 color={
                   stats.taxaRetencao == null ? 'muted'
                   : stats.taxaRetencao >= 70 ? 'success'
@@ -921,6 +940,70 @@ export default function FinanceiroListagem() {
         onClose={() => setHistoricoAluno(null)}
       />
       {errorModal.element}
+
+      {/* MODAL PARCELAMENTOS A RECEBER */}
+      {parcelasAReceberModalOpen && (() => {
+        const pendentes = parcelasDoPeriodo
+          .filter(p => !dataPagamentoEfetivaParcela(p))
+          .sort((a, b) => (normalizeDate(a.data_vencimento) || '').localeCompare(normalizeDate(b.data_vencimento) || ''))
+        const totalPendente = pendentes.reduce((s, p) => s + (parseFloat(p.valor_parcela) || 0), 0)
+        return (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md animate-in fade-in">
+            <div className="bg-[#29292e] rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden border border-[#323238]">
+              <div className="p-5 border-b border-[#323238] flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl font-bold text-white">Parcelamentos a Receber</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {pendentes.length} parcelas pendentes · {formatCurrency(totalPendente)} total
+                  </p>
+                </div>
+                <button onClick={() => setParcelasAReceberModalOpen(false)} className="p-2 hover:bg-[#1e1e22] rounded-full transition-colors">
+                  <span className="text-gray-400 text-xl leading-none">×</span>
+                </button>
+              </div>
+              <div className="overflow-y-auto flex-1">
+                {pendentes.length === 0 ? (
+                  <div className="p-8 text-center text-gray-500 text-sm">Nenhuma parcela pendente no período.</div>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 bg-[#1e1e22] border-b border-[#323238]">
+                      <tr>
+                        <th className="p-3 text-left text-[10px] font-black uppercase tracking-wider text-gray-500">Aluno</th>
+                        <th className="p-3 text-left text-[10px] font-black uppercase tracking-wider text-gray-500">Plano</th>
+                        <th className="p-3 text-left text-[10px] font-black uppercase tracking-wider text-gray-500">Parcela</th>
+                        <th className="p-3 text-left text-[10px] font-black uppercase tracking-wider text-gray-500">Vencimento</th>
+                        <th className="p-3 text-right text-[10px] font-black uppercase tracking-wider text-gray-500">Valor</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pendentes.map((p, idx) => {
+                        const venc = normalizeDate(p.data_vencimento)
+                        const hoje = new Date().toISOString().slice(0, 10)
+                        const vencida = venc && venc < hoje
+                        const alunoNome = alunosMap[p.aluno]?.nome_completo || p.aluno || '—'
+                        return (
+                          <tr key={p.name || idx} className="border-b border-[#323238]/50 hover:bg-[#1e1e22]/60 transition-colors">
+                            <td className="p-3 text-white font-bold">{alunoNome}</td>
+                            <td className="p-3 text-gray-500 text-xs">{p.nome_plano_snapshot || '—'}</td>
+                            <td className="p-3 text-gray-500 text-xs">Parcela {p.numero_parcela}{p.qtd_parcelas ? `/${p.qtd_parcelas}` : ''}</td>
+                            <td className="p-3">
+                              <span className={`text-xs font-bold ${vencida ? 'text-red-400' : 'text-white'}`}>
+                                {venc ? formatDateBr(venc) : '—'}
+                                {vencida && <span className="ml-1 text-[10px] text-red-400/70">VENCIDA</span>}
+                              </span>
+                            </td>
+                            <td className="p-3 text-right font-bold text-yellow-400">{formatCurrency(p.valor_parcela)}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </ListPage>
   )
 }
