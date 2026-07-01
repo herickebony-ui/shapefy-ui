@@ -4,6 +4,7 @@ import { ArrowLeft, TrendingUp, Images, Pencil, Check, Maximize2, X } from 'luci
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Spinner, Button } from '../../components/ui'
 import HeicSafeImg from '../../components/ui/HeicSafeImg'
+import EditarRegistroModal from '../../components/evolucao/EditarRegistroModal'
 import { timelineEvolucao, salvarRegistro } from '../../api/evolucao'
 import useErrorModal from '../../hooks/useErrorModal'
 
@@ -178,29 +179,9 @@ export default function EvolucaoAluno({ mode = 'both', embedded = false }) {
   const [registros, setRegistros] = useState([])
   const [nome, setNome] = useState('')
   const [loading, setLoading] = useState(true)
-  const [editId, setEditId] = useState(null)
-  const [pesoInput, setPesoInput] = useState('')
-  const [salvandoPeso, setSalvandoPeso] = useState(false)
+  const [editandoRegistro, setEditandoRegistro] = useState(null)
   const [mostrarEdicao, setMostrarEdicao] = useState(false)
   const errorModal = useErrorModal()
-
-  const salvarPeso = async () => {
-    const p = parseFloat(String(pesoInput).replace(',', '.'))
-    if (!p || p < 20 || p > 400) {
-      errorModal.show({ message: 'Informe um peso válido em kg (entre 20 e 400).' }, 'Editar peso')
-      return
-    }
-    setSalvandoPeso(true)
-    try {
-      await salvarRegistro(editId, { peso: p, peso_revisado: 1 })
-      setRegistros((rs) => rs.map((r) => (r.name === editId ? { ...r, peso: p } : r)))
-      setEditId(null)
-    } catch (e) {
-      errorModal.show(e, 'Editar peso')
-    } finally {
-      setSalvandoPeso(false)
-    }
-  }
 
   useEffect(() => {
     let cancelado = false
@@ -247,46 +228,29 @@ export default function EvolucaoAluno({ mode = 'both', embedded = false }) {
           <div className="bg-[#1a1a1a] rounded-xl border border-[#323238] p-4">
             <div className="flex items-center justify-between mb-3">
               <h2 className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider"><TrendingUp size={13} /> Peso ao longo do tempo</h2>
-              <Button variant="ghost" size="xs" icon={Pencil} onClick={() => setMostrarEdicao((v) => !v)}>{mostrarEdicao ? 'Ocultar' : 'Ver / editar pesos'}</Button>
+              <Button variant="ghost" size="xs" icon={Pencil} onClick={() => setMostrarEdicao((v) => !v)}>{mostrarEdicao ? 'Ocultar' : 'Ver registros'}</Button>
             </div>
             <GraficoPeso pontos={pontosPeso} />
 
-            {/* Lista editável de pesos por data (escondida por padrão — o gráfico já mostra) */}
             {mostrarEdicao && (
             <div className="mt-4 border-t border-[#323238]/50 pt-3 space-y-1">
-              <p className="text-gray-600 text-[10px] uppercase tracking-wider font-bold mb-1">Corrija ou adicione o peso de cada data</p>
+              <p className="text-gray-600 text-[10px] uppercase tracking-wider font-bold mb-1">Registros — clique no lápis para editar data, peso e fotos</p>
               {[...registros].reverse().map((r) => (
                 <div key={r.name} className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-white/5">
                   <span className="text-gray-400 text-xs w-14 shrink-0">{fmtData(r.data)}</span>
-                  {editId === r.name ? (
-                    <div className="flex items-center gap-2 flex-1">
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        autoFocus
-                        value={pesoInput}
-                        onChange={(e) => setPesoInput(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && salvarPeso()}
-                        placeholder="kg"
-                        className="w-24 h-8 px-2 bg-[#0a0a0a] border border-[#323238] text-white rounded-lg text-sm outline-none focus:border-[#2563eb]/60"
-                      />
-                      <Button variant="success" size="xs" icon={Check} loading={salvandoPeso} onClick={salvarPeso}>Salvar</Button>
-                      <button onClick={() => setEditId(null)} className="text-gray-500 text-xs hover:text-white">cancelar</button>
-                    </div>
-                  ) : (
-                    <>
-                      <span className="flex-1 text-sm font-semibold">
-                        {r.peso != null && r.peso > 0 ? <span className="text-white">{numBR(r.peso)} kg</span> : <span className="text-gray-600 font-normal italic">sem peso</span>}
-                      </span>
-                      <button
-                        onClick={() => { setPesoInput(r.peso != null && r.peso > 0 ? String(r.peso).replace('.', ',') : ''); setEditId(r.name) }}
-                        title="Editar peso"
-                        className="h-7 w-7 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors shrink-0"
-                      >
-                        <Pencil size={12} />
-                      </button>
-                    </>
+                  <span className="flex-1 text-sm font-semibold">
+                    {r.peso != null && r.peso > 0 ? <span className="text-white">{numBR(r.peso)} kg</span> : <span className="text-gray-600 font-normal italic">sem peso</span>}
+                  </span>
+                  {r.fotos?.length > 0 && (
+                    <span className="text-gray-600 text-[10px]">{r.fotos.length} foto{r.fotos.length > 1 ? 's' : ''}</span>
                   )}
+                  <button
+                    onClick={() => setEditandoRegistro(r)}
+                    title="Editar data, peso e fotos"
+                    className="h-7 w-7 flex items-center justify-center text-blue-400 hover:text-white hover:bg-blue-600 border border-[#323238] hover:border-blue-600 rounded-lg transition-colors shrink-0"
+                  >
+                    <Pencil size={12} />
+                  </button>
                 </div>
               ))}
             </div>
@@ -301,6 +265,16 @@ export default function EvolucaoAluno({ mode = 'both', embedded = false }) {
           </div>
           )}
         </>
+      )}
+      {editandoRegistro && (
+        <EditarRegistroModal
+          registro={editandoRegistro}
+          onClose={() => setEditandoRegistro(null)}
+          onSalvo={(atualizado) => {
+            setRegistros(rs => rs.map(r => r.name === atualizado.name ? { ...r, ...atualizado } : r))
+            setEditandoRegistro(null)
+          }}
+        />
       )}
       {errorModal.element}
     </div>
