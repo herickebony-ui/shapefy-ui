@@ -632,7 +632,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
           more = r.hasMore
         }
         if (cancelado) return
-        setRegistros(regs)
+        setRegistros([...regs].sort((a, b) => (b.data || '').localeCompare(a.data || '')))
         setHasMore(serverPaged && more)
         // nomes dos alunos da página (feed/embutido)
         if (!buscaDebounced && !alunoId) {
@@ -750,7 +750,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
           ? { ...r, ...(payload.data ? { data: payload.data } : {}), ...(payload.peso != null ? { peso: payload.peso } : {}) }
           : r
         setComparando(cs => cs.map(upd))
-        setRegistros(rs => rs.map(upd))
+        setRegistros(rs => [...rs.map(upd)].sort((a, b) => (b.data || '').localeCompare(a.data || '')))
         const baseAluno = (registrosDoAluno.length ? registrosDoAluno : comparando).map(upd)
         setRegistrosDoAluno(baseAluno)
         setPontosTodos(
