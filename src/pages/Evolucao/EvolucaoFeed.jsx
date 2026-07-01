@@ -8,6 +8,7 @@ import DistribuirFotosModal from '../../components/evolucao/DistribuirFotosModal
 import { listarRegistros, listarRegistrosFeed, buscarRegistro, salvarRegistro, excluirRegistro, uploadFotoEvolucao } from '../../api/evolucao'
 import { salvarAvaliacao } from '../../api/avaliacoes'
 import { parseFrappeErrorDetail } from '../../utils/frappeErrors'
+import client from '../../api/client'
 import { uploadArquivo } from '../../api/modelos'
 import { listarAlunosByIds, listarAlunos } from '../../api/alunos'
 import { listarConjuntos, buscarConjunto } from '../../api/conjuntos'
@@ -827,10 +828,28 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
     if (!confirmDesvincular) return
     setDesvinculando(true)
     try {
-      await salvarAvaliacao(confirmDesvincular.avaliacaoName, { registro_evolucao: '' })
-      await excluirRegistro(confirmDesvincular.registroName)
+      // 1. Desvincular da Avaliação
+      await salvarAvaliacao(confirmDesvincular.avaliacaoName, { registro_evolucao: null })
+
+      // 2. Tentar excluir; se ainda houver outro vínculo (ex: Feedback), limpar e tentar de novo
+      const tentarExcluir = async () => {
+        try {
+          await excluirRegistro(confirmDesvincular.registroName)
+        } catch (e2) {
+          if (e2?.response?.status !== 417) throw e2
+          const detail2 = parseFrappeErrorDetail(e2)
+          const msg2 = detail2.messages.join(' ')
+          // Feedback vinculado ao mesmo registro
+          const feedbackMatch = msg2.match(/\bFeedback\s+([\w]+)/i)
+          if (!feedbackMatch) throw e2
+          await client.put(`/api/resource/Feedback/${encodeURIComponent(feedbackMatch[1])}`, { registro_evolucao: null })
+          await excluirRegistro(confirmDesvincular.registroName)
+        }
+      }
+      await tentarExcluir()
+
+      // 3. Sucesso — só atualiza state local, sem reload que traria o registro de volta
       setRegistros(rs => rs.filter(r => r.name !== confirmDesvincular.registroName))
-      setRefreshKey(k => k + 1)
       setConfirmDesvincular(null)
     } catch (e) {
       errorModal.show(e, 'Excluir registro')
