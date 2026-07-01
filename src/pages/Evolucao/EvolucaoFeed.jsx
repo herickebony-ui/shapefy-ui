@@ -223,7 +223,41 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
               </div>
             </div>
             <GraficoPeso pontos={pontosGrafico} />
-            {mostrarEdicao && (
+            {mostrarEdicao && isSingle && reg && editId === reg.name && (
+              <div className="mt-4 pt-4 border-t border-[#323238] flex flex-wrap items-end gap-3">
+                <div className="flex flex-col gap-1">
+                  <span className="text-gray-500 text-[10px] font-medium uppercase tracking-wider">Data do registro</span>
+                  <input
+                    type="date" value={dataInput}
+                    onChange={e => setDataInput(e.target.value)}
+                    className="h-9 px-3 bg-[#29292e] border border-[#2563eb]/60 text-white rounded-lg text-sm outline-none"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-gray-500 text-[10px] font-medium uppercase tracking-wider">Peso (kg)</span>
+                  <input
+                    type="number" step="0.1" value={pesoInput}
+                    onChange={e => setPesoInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') salvarEdit(reg.name) }}
+                    placeholder="Ex: 72,5"
+                    className="w-28 h-9 px-3 bg-[#29292e] border border-[#2563eb]/60 text-white rounded-lg text-sm outline-none"
+                  />
+                </div>
+                <Button variant="secondary" size="sm" icon={Images} onClick={() => multiFileInputRef.current?.click()}>
+                  Selecionar várias fotos
+                </Button>
+                <button onClick={() => salvarEdit(reg.name)} disabled={salvando} title="Salvar"
+                  className="h-9 px-3 flex items-center gap-1.5 text-green-400 hover:text-white border border-green-500/30 hover:bg-green-700 rounded-lg text-sm transition-colors">
+                  {salvando ? <span className="w-3 h-3 border-2 border-green-400 border-t-transparent rounded-full animate-spin" /> : <Check size={14} />}
+                  Salvar
+                </button>
+                <button onClick={() => setMostrarEdicao(false)} title="Cancelar"
+                  className="h-9 px-3 flex items-center gap-1.5 text-gray-400 hover:text-white border border-[#323238] rounded-lg text-sm transition-colors">
+                  <X size={14} /> Cancelar
+                </button>
+              </div>
+            )}
+            {mostrarEdicao && !isSingle && (
               <div className="mt-4 pt-4 border-t border-[#323238]">
                 <p className="text-gray-500 text-[10px] uppercase tracking-wider font-bold mb-2">Editar data e peso · {listaEdicaoFiltrada.length} registro(s)</p>
                 <div className="space-y-1 max-h-80 overflow-auto pr-1">
@@ -274,10 +308,7 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
             )}
           </div>
           {isSingle && slots.length > 0 && (
-            <div className="flex justify-end">
-              <Button variant="secondary" size="xs" icon={Images} onClick={() => multiFileInputRef.current?.click()}>
-                Selecionar várias fotos
-              </Button>
+            <div className="hidden">
               <input
                 ref={multiFileInputRef}
                 type="file"
