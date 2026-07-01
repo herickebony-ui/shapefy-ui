@@ -203,20 +203,22 @@ export default function FinanceiroListagem() {
       }
     })
 
-    // KPIs reais via parcelas (caixa + a receber)
-    // Usa dataPagamentoEfetivaParcela: parcela é paga se tem data_pagamento
-    // próprio OU se está coberta pela data_pagamento_principal do contrato
-    // (à vista, ou parcela 1 do parcelado).
+    // Faturamento líquido: todo contrato com data_pagamento_principal no período
     let faturamentoReal = 0
     let aReceber = 0
+    contratos.forEach((c) => {
+      if (c.status_manual === 'Pausado') return
+      const dp = normalizeDate(c.data_pagamento_principal)
+      if (dp && dp >= dateRange.start && dp <= dateRange.end) {
+        faturamentoReal += parseFloat(c.valor_liquido_total) || 0
+      }
+    })
+    // A receber: parcelas pendentes com vencimento no período (mantido pra previsão no PDF)
     parcelasDoPeriodo.forEach((p) => {
       const dataPag = dataPagamentoEfetivaParcela(p)
       const dv = normalizeDate(p.data_vencimento)
       const valor = parseFloat(p.valor_parcela) || 0
-
-      if (dataPag && dataPag >= dateRange.start && dataPag <= dateRange.end) {
-        faturamentoReal += valor
-      } else if (dv && dv >= dateRange.start && dv <= dateRange.end && !dataPag) {
+      if (!dataPag && dv && dv >= dateRange.start && dv <= dateRange.end) {
         aReceber += valor
       }
     })
