@@ -980,7 +980,6 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
     <>
       {errorModal.element}
       {modalConfirmExcluir}
-      {modalDesvincular}
       {registrarModal}
       <ListPage
         title="Evolução do Aluno"
