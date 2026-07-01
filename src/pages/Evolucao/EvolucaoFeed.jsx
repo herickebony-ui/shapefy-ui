@@ -36,13 +36,15 @@ const FEED_LIMIT = 1000 // teto de registros carregados pro feed (paginação é
 
 // Comparação de Registros — mesmo visual da comparação de feedbacks: tabela
 // datas × (peso + slots), fotos via ImagemInterativa, com gráfico de peso no topo.
-function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, onVoltar, onPesoSalvo, onExcluir, onFotosSalvas }) {
+function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, onVoltar, onPesoSalvo, onExcluir, onFotosSalvas, modoEdicao = false }) {
   const listaEdicao = (todosRegistros && todosRegistros.length) ? todosRegistros : registros
+  const isSingle = registros.length === 1
+  const reg = isSingle ? registros[0] : null
   const [verTodosPesos, setVerTodosPesos] = useState(registros.length < 2)
   const [mostrarEdicao, setMostrarEdicao] = useState(false)
   const [editId, setEditId] = useState(null)
-  const [pesoInput, setPesoInput] = useState('')
-  const [dataInput, setDataInput] = useState('')
+  const [pesoInput, setPesoInput] = useState(() => modoEdicao && reg ? (reg.peso != null && reg.peso > 0 ? String(reg.peso) : '') : '')
+  const [dataInput, setDataInput] = useState(() => modoEdicao && reg ? String(reg.data || '').split(' ')[0] : '')
   const [salvando, setSalvando] = useState(false)
   const [swapSlot, setSwapSlot] = useState(null)  // slot_id aguardando para troca
   const [uploadingSlot, setUploadingSlot] = useState(null)  // slot_id com upload em progresso
@@ -53,9 +55,6 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
   const fileInputRef = useRef(null)
   const multiFileInputRef = useRef(null)
   const pendingUploadSlot = useRef(null)
-
-  const isSingle = registros.length === 1
-  const reg = isSingle ? registros[0] : null
 
   // Cópia local das fotos editável (somente no modo single-registro).
   const [fotosLocais, setFotosLocais] = useState(reg?.fotos || [])
@@ -202,6 +201,41 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
       <div className="flex-1 overflow-auto p-4 md:p-6">
         <div className="max-w-7xl mx-auto space-y-4">
 
+          {modoEdicao && isSingle && reg && (
+            <div className="bg-[#1a1a1a] rounded-xl border border-[#2563eb]/40 p-4 flex flex-wrap items-end gap-3">
+              <div className="flex flex-col gap-1">
+                <span className="text-gray-500 text-[10px] font-medium uppercase tracking-wider">Data do registro</span>
+                <input
+                  type="date" value={dataInput}
+                  onChange={e => setDataInput(e.target.value)}
+                  className="h-9 px-3 bg-[#29292e] border border-[#2563eb]/60 text-white rounded-lg text-sm outline-none"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-gray-500 text-[10px] font-medium uppercase tracking-wider">Peso (kg)</span>
+                <input
+                  type="number" step="0.1" value={pesoInput}
+                  onChange={e => setPesoInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') salvarEdit(reg.name) }}
+                  placeholder="Ex: 72,5"
+                  className="w-28 h-9 px-3 bg-[#29292e] border border-[#2563eb]/60 text-white rounded-lg text-sm outline-none"
+                />
+              </div>
+              <Button variant="secondary" size="sm" icon={Images} onClick={() => multiFileInputRef.current?.click()}>
+                Selecionar várias fotos
+              </Button>
+              <button onClick={() => salvarEdit(reg.name)} disabled={salvando}
+                className="h-9 px-3 flex items-center gap-1.5 text-green-400 hover:text-white border border-green-500/30 hover:bg-green-700 rounded-lg text-sm transition-colors">
+                {salvando ? <span className="w-3 h-3 border-2 border-green-400 border-t-transparent rounded-full animate-spin" /> : <Check size={14} />}
+                Salvar
+              </button>
+              <button onClick={onVoltar}
+                className="h-9 px-3 flex items-center gap-1.5 text-gray-400 hover:text-white border border-[#323238] rounded-lg text-sm transition-colors">
+                <X size={14} /> Cancelar
+              </button>
+            </div>
+          )}
+
           <div className="bg-[#1a1a1a] rounded-xl border border-[#323238] p-4">
             <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
               <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
@@ -213,51 +247,13 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
                     {verTodosPesos ? 'Só selecionados' : 'Comparar todos os pesos'}
                   </Button>
                 )}
-                <Button variant={mostrarEdicao ? 'info' : 'ghost'} size="xs" icon={Pencil} onClick={() => {
-                  const abrindo = !mostrarEdicao
-                  setMostrarEdicao(abrindo)
-                  if (abrindo && isSingle && reg) abrirEdicao(reg)
-                }}>
+                <Button variant={mostrarEdicao ? 'info' : 'ghost'} size="xs" icon={Pencil} onClick={() => setMostrarEdicao(v => !v)}>
                   Editar peso e data
                 </Button>
               </div>
             </div>
             <GraficoPeso pontos={pontosGrafico} />
-            {mostrarEdicao && isSingle && reg && editId === reg.name && (
-              <div className="mt-4 pt-4 border-t border-[#323238] flex flex-wrap items-end gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="text-gray-500 text-[10px] font-medium uppercase tracking-wider">Data do registro</span>
-                  <input
-                    type="date" value={dataInput}
-                    onChange={e => setDataInput(e.target.value)}
-                    className="h-9 px-3 bg-[#29292e] border border-[#2563eb]/60 text-white rounded-lg text-sm outline-none"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-gray-500 text-[10px] font-medium uppercase tracking-wider">Peso (kg)</span>
-                  <input
-                    type="number" step="0.1" value={pesoInput}
-                    onChange={e => setPesoInput(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') salvarEdit(reg.name) }}
-                    placeholder="Ex: 72,5"
-                    className="w-28 h-9 px-3 bg-[#29292e] border border-[#2563eb]/60 text-white rounded-lg text-sm outline-none"
-                  />
-                </div>
-                <Button variant="secondary" size="sm" icon={Images} onClick={() => multiFileInputRef.current?.click()}>
-                  Selecionar várias fotos
-                </Button>
-                <button onClick={() => salvarEdit(reg.name)} disabled={salvando} title="Salvar"
-                  className="h-9 px-3 flex items-center gap-1.5 text-green-400 hover:text-white border border-green-500/30 hover:bg-green-700 rounded-lg text-sm transition-colors">
-                  {salvando ? <span className="w-3 h-3 border-2 border-green-400 border-t-transparent rounded-full animate-spin" /> : <Check size={14} />}
-                  Salvar
-                </button>
-                <button onClick={() => setMostrarEdicao(false)} title="Cancelar"
-                  className="h-9 px-3 flex items-center gap-1.5 text-gray-400 hover:text-white border border-[#323238] rounded-lg text-sm transition-colors">
-                  <X size={14} /> Cancelar
-                </button>
-              </div>
-            )}
-            {mostrarEdicao && !isSingle && (
+            {mostrarEdicao && (
               <div className="mt-4 pt-4 border-t border-[#323238]">
                 <p className="text-gray-500 text-[10px] uppercase tracking-wider font-bold mb-2">Editar data e peso · {listaEdicaoFiltrada.length} registro(s)</p>
                 <div className="space-y-1 max-h-80 overflow-auto pr-1">
@@ -718,8 +714,10 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
   }, [comparando])
 
   // Clique na linha: compara fotos+peso do registro.
-  const viewRegistro = async (row) => {
+  const [editarAoAbrir, setEditarAoAbrir] = useState(false)
+  const viewRegistro = async (row, comEdicao = true) => {
     setLoadingCmp(true)
+    setEditarAoAbrir(comEdicao)
     try {
       const doc = await buscarRegistro(row.name)
       setComparando([doc])
@@ -771,7 +769,8 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
         todosRegistros={todosRegistros}
         pontosPeso={pontosPeso}
         nome={nome}
-        onVoltar={() => { setComparando(null); setSelecionados([]); setModoComparar(false) }}
+        modoEdicao={editarAoAbrir}
+        onVoltar={() => { setComparando(null); setSelecionados([]); setModoComparar(false); setEditarAoAbrir(false) }}
         onPesoSalvo={onPesoSalvo}
         onExcluir={() => {
           const name = comparando[0]?.name
@@ -897,7 +896,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
         columns={columns}
         rows={filtrados}
         rowKey="name"
-        onRowClick={viewRegistro}
+        onRowClick={(row) => viewRegistro(row, false)}
         // Feed paginado: rows já é a página do servidor → mostra tudo (page 1 interno).
         // Busca/embutido: pagina no client.
         page={serverPaged ? 1 : page}
