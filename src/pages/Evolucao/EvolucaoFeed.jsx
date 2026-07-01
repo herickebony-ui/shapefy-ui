@@ -6,6 +6,7 @@ import ImagemInterativa from '../Feedbacks/ImagemInterativa'
 import RegistrarEvolucaoModal from '../../components/evolucao/RegistrarEvolucaoModal'
 import DistribuirFotosModal from '../../components/evolucao/DistribuirFotosModal'
 import { listarRegistros, listarRegistrosFeed, buscarRegistro, salvarRegistro, excluirRegistro, uploadFotoEvolucao } from '../../api/evolucao'
+import { salvarAvaliacao } from '../../api/avaliacoes'
 import { uploadArquivo } from '../../api/modelos'
 import { listarAlunosByIds, listarAlunos } from '../../api/alunos'
 import { listarConjuntos, buscarConjunto } from '../../api/conjuntos'
@@ -586,6 +587,8 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
   const [showRegistrar, setShowRegistrar] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [buscaDebounced, setBuscaDebounced] = useState('')
+  const [confirmDesvincular, setConfirmDesvincular] = useState(null) // {registroName, avaliacaoName, rowData}
+  const [desvinculando, setDesvinculando] = useState(false)
   const errorModal = useErrorModal()
 
   // Feed global sem busca: pagina do servidor (não carrega tudo). Com busca ou
@@ -791,7 +794,30 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
       setRegistros(rs => rs.filter(r => r.name !== row.name))
       setRefreshKey(k => k + 1)
     } catch (e) {
+      // 417 = Frappe bloqueou por vínculo com Avaliacao da Composicao Corporal
+      const msg = e?.response?.data?.exception || e?.response?.data?.message || ''
+      const matchAvaliacao = msg.match(/Avaliacao da Composicao Corporal\s+([\w\d]+)/i)
+      if (e?.response?.status === 417 && matchAvaliacao) {
+        setConfirmDesvincular({ registroName: row.name, avaliacaoName: matchAvaliacao[1], rowData: row })
+        return
+      }
       errorModal.show(e, 'Excluir registro')
+    }
+  }
+
+  const confirmarDesvincularEExcluir = async () => {
+    if (!confirmDesvincular) return
+    setDesvinculando(true)
+    try {
+      await salvarAvaliacao(confirmDesvincular.avaliacaoName, { registro_evolucao: '' })
+      await excluirRegistro(confirmDesvincular.registroName)
+      setRegistros(rs => rs.filter(r => r.name !== confirmDesvincular.registroName))
+      setRefreshKey(k => k + 1)
+      setConfirmDesvincular(null)
+    } catch (e) {
+      errorModal.show(e, 'Excluir registro')
+    } finally {
+      setDesvinculando(false)
     }
   }
 
@@ -913,6 +939,31 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
     </>
   )
 
+  const modalDesvincular = confirmDesvincular && (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+      <div className="bg-[#1a1a1a] border border-[#323238] rounded-xl p-6 max-w-md w-full shadow-2xl">
+        <h3 className="text-white text-base font-bold mb-1">Excluir registro de evolução</h3>
+        <p className="text-gray-400 text-sm mb-4">
+          Este registro está vinculado a uma <span className="text-white font-medium">Avaliação de Composição Corporal</span>. A avaliação será mantida, mas perderá as fotos e o peso vinculados. Os demais dados da avaliação continuam intactos.
+        </p>
+        <p className="text-amber-400 text-xs bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2 mb-5">
+          Esta ação não pode ser desfeita.
+        </p>
+        <div className="flex gap-2 justify-end">
+          <button onClick={() => setConfirmDesvincular(null)} disabled={desvinculando}
+            className="h-9 px-4 text-sm text-gray-400 hover:text-white border border-[#323238] rounded-lg transition-colors disabled:opacity-50">
+            Cancelar
+          </button>
+          <button onClick={confirmarDesvincularEExcluir} disabled={desvinculando}
+            className="h-9 px-4 text-sm text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
+            {desvinculando && <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+            Excluir só o registro
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+
   const registrarModal = showRegistrar && (
     <RegistrarEvolucaoModal
       alunoId={alunoId}
@@ -927,6 +978,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
     return (
       <div className="space-y-3">
         {errorModal.element}
+        {modalDesvincular}
         {registrarModal}
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <p className="text-gray-500 text-xs">Selecione 2–3 registros pra comparar fotos. Use o ícone de peso pra ver a evolução de peso.</p>
@@ -940,6 +992,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
   return (
     <>
       {errorModal.element}
+      {modalDesvincular}
       {registrarModal}
       <ListPage
         title="Evolução do Aluno"
