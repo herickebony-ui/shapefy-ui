@@ -5,6 +5,7 @@ import { Spinner } from '../../components/ui'
 import { ActionButton } from '../../components/aluno'
 import { FormularioRespostas, listarFaltantesObrigatorias } from '../../components/aluno/form'
 import CampoImagem from '../../components/aluno/form/CampoImagem'
+import DistribuirFotosModal from '../../components/evolucao/DistribuirFotosModal'
 import { buscarFeedbackAluno, responderFeedback, uploadFotoAluno } from '../../api/aluno'
 import useErrorModal from '../../hooks/useErrorModal'
 
@@ -42,6 +43,7 @@ export default function FeedbackResposta() {
   const [feedback, setFeedback] = useState(null)
   const [respostas, setRespostas] = useState([])
   const [fotosSlots, setFotosSlots] = useState({}) // {slot_id: url} — fluxo com conjunto
+  const [fotosMulti, setFotosMulti] = useState(null)
   const [pesoVal, setPesoVal] = useState('')
   const [carregando, setCarregando] = useState(true)
   const [enviando, setEnviando] = useState(false)
@@ -262,6 +264,7 @@ export default function FeedbackResposta() {
                 <CampoImagem
                   value={fotosSlots[s.slot_id] || ''}
                   onChange={(url) => setFotosSlots(prev => ({ ...prev, [s.slot_id]: url || '' }))}
+                  onMultipleSelected={(files) => setFotosMulti(files)}
                   uploadFn={uploadFotoAluno}
                   modelo={s.foto_modelo}
                   modeloCrop={s.foto_modelo_crop}
@@ -323,6 +326,15 @@ export default function FeedbackResposta() {
           </div>
         </div>
       </div>
+      {fotosMulti && (
+        <DistribuirFotosModal
+          files={fotosMulti}
+          slots={conjuntoSlots}
+          uploadFn={uploadFotoAluno}
+          onConfirm={(novasFotos) => setFotosSlots(prev => ({ ...prev, ...novasFotos }))}
+          onClose={() => setFotosMulti(null)}
+        />
+      )}
     </div>
   )
 }

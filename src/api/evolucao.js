@@ -1,5 +1,18 @@
 import client from './client'
 
+// Upload de foto de evolução pelo profissional (pública + sem optimize = qualidade original).
+// Recebe o arquivo já processado (HEIC→JPEG feito antes pelo chamador).
+export const uploadFotoEvolucao = async (file) => {
+  const fd = new FormData()
+  fd.append('file', file)
+  fd.append('is_private', '0')
+  fd.append('optimize', '0')
+  const res = await client.post('/api/method/upload_file', fd, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return res.data?.message?.file_url || null
+}
+
 // Registro de Evolução Física — fonte única de peso/foto/medida na timeline.
 // Doctype: "Registro de Evolucao Fisica" (+ child "Registro Evolucao Foto").
 

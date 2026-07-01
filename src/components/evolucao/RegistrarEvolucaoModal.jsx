@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Save, X } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Save, X, Images } from 'lucide-react'
 import { Modal, Button, FormGroup, Input, Select, Autocomplete } from '../ui'
 import FotoSlotUpload from './FotoSlotUpload'
+import DistribuirFotosModal from './DistribuirFotosModal'
 import { listarConjuntos, buscarConjunto, conjuntoPadraoAtual } from '../../api/conjuntos'
-import { criarRegistroManual } from '../../api/evolucao'
+import { criarRegistroManual, uploadFotoEvolucao } from '../../api/evolucao'
 import { listarAlunos } from '../../api/alunos'
 import useErrorModal from '../../hooks/useErrorModal'
 
@@ -23,6 +24,8 @@ export default function RegistrarEvolucaoModal({ alunoId = null, alunoNome = '',
   const [conjuntoSlots, setConjuntoSlots] = useState([])
   const [fotosSlots, setFotosSlots] = useState({})
   const [salvando, setSalvando] = useState(false)
+  const [fotosMulti, setFotosMulti] = useState(null)
+  const multiInputRef = useRef(null)
   const errorModal = useErrorModal()
 
   const carregarSlots = useCallback(async (conjuntoId) => {
@@ -132,18 +135,61 @@ export default function RegistrarEvolucaoModal({ alunoId = null, alunoNome = '',
         </FormGroup>
 
         {conjuntoSlots.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {conjuntoSlots.map(s => (
-              <FotoSlotUpload
-                key={s.slot_id}
-                label={s.rotulo}
-                modelo={s.foto_modelo || ''}
-                modeloCrop={s.foto_modelo_crop || ''}
-                value={fotosSlots[s.slot_id] || ''}
-                onChange={(url) => setFotosSlots(prev => ({ ...prev, [s.slot_id]: url }))}
-              />
-            ))}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-500">Fotos por slot</span>
+              <Button
+                variant="secondary"
+                size="xs"
+                icon={Images}
+                onClick={() => multiInputRef.current?.click()}
+              >
+                Selecionar várias
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {conjuntoSlots.map(s => (
+                <FotoSlotUpload
+                  key={s.slot_id}
+                  label={s.rotulo}
+                  modelo={s.foto_modelo || ''}
+                  modeloCrop={s.foto_modelo_crop || ''}
+                  value={fotosSlots[s.slot_id] || ''}
+                  onChange={(url) => setFotosSlots(prev => ({ ...prev, [s.slot_id]: url }))}
+                />
+              ))}
+            </div>
+            <input
+              ref={multiInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp,image/heic,image/heif"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                const files = Array.from(e.target.files || [])
+                e.target.value = ''
+                if (files.length > 1) setFotosMulti(files)
+                else if (files.length === 1) {
+                  const [f] = files
+                  const slotLivre = conjuntoSlots.find(s => !fotosSlots[s.slot_id])
+                  if (slotLivre) {
+                    uploadFotoEvolucao(f).then(url => {
+                      if (url) setFotosSlots(prev => ({ ...prev, [slotLivre.slot_id]: url }))
+                    }).catch(console.error)
+                  }
+                }
+              }}
+            />
           </div>
+        )}
+        {fotosMulti && (
+          <DistribuirFotosModal
+            files={fotosMulti}
+            slots={conjuntoSlots}
+            uploadFn={uploadFotoEvolucao}
+            onConfirm={(novasFotos) => setFotosSlots(prev => ({ ...prev, ...novasFotos }))}
+            onClose={() => setFotosMulti(null)}
+          />
         )}
       </div>
     </Modal>
