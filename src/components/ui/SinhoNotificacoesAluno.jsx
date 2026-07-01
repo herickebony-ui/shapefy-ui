@@ -9,19 +9,19 @@ function isDevolutiva(n) {
   return n.titulo?.toLowerCase().includes('devolutiva')
 }
 
-// URLs de notificação podem vir como URLs absolutas do Frappe (ex: https://shapefy.online/preencher_feedback?name=XYZ).
-// Mapeia para rotas React do aluno.
+// URLs de notificação podem vir como URLs absolutas do Frappe (ex: https://shapefyapp.com/preencher_feedback?name=XYZ).
+// Retorna a rota React correspondente, ou null se não houver mapeamento conhecido.
+// null = marcar como lida mas NÃO navegar (notificações informativas sem destino específico).
 function resolverUrl(rawUrl) {
-  if (!rawUrl) return '/aluno'
+  if (!rawUrl) return null
   if (rawUrl.startsWith('/aluno')) return rawUrl
-  if (rawUrl.startsWith('/')) return `/aluno${rawUrl}`
   try {
     const u = new URL(rawUrl)
     const name = u.searchParams.get('name')
     if (u.pathname.includes('preencher_feedback') && name) return `/aluno/feedbacks/${name}`
     if (u.pathname.includes('preencher_anamnese') && name) return `/aluno/anamneses/${name}`
   } catch {}
-  return '/aluno'
+  return null
 }
 
 function formatarData(creation) {
@@ -103,15 +103,14 @@ export default function SinhoNotificacoesAluno() {
 
   async function clicarNotif(notif) {
     if (isDevolutiva(notif)) {
-      // Devolutiva: expande/colapsa no lugar, não navega
       toggleExpandido(notif.name)
       await marcarLida(notif)
       return
     }
-    // Outros: navega
+    const destino = resolverUrl(notif.url)
     setAberto(false)
     await marcarLida(notif)
-    navigate(resolverUrl(notif.url))
+    if (destino) navigate(destino)
   }
 
   return (
@@ -238,7 +237,7 @@ export default function SinhoNotificacoesAluno() {
                               <EyeOff size={11} />
                             </button>
                           )}
-                          {!devolutiva && <ChevronRight size={13} className="text-[#64748B]" />}
+                          {!devolutiva && resolverUrl(n.url) && <ChevronRight size={13} className="text-[#64748B]" />}
                         </div>
                       </button>
                     )

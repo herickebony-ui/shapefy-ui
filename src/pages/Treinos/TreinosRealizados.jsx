@@ -257,40 +257,41 @@ function PrescricaoInline({ presc }) {
 
 function ChipsRealizados({ series: seriesStr }) {
   const series = parseSeries(seriesStr)
-  const validas = series.filter((s) => s.carga || s.repeticoes)
-  if (!validas.length) return null
+  const validas = series.filter(s => s.carga || s.repeticoes)
   const notas = series.map((s, i) => s.nota ? { idx: i + 1, nota: s.nota } : null).filter(Boolean)
+  if (!validas.length && !notas.length) return null
   return (
     <div className="mt-1.5 ml-4 space-y-1">
-      <div className="flex flex-wrap gap-1">
-        {validas.map((s, i) => (
-          <div
-            key={i}
-            className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] border ${
-              s.concluida
-                ? 'bg-green-500/10 border-green-500/30'
-                : 'bg-[#1a1a1a] border-[#323238]'
-            }`}
-          >
-            {s.carga > 0 ? (
-              <>
-                <span className="text-white font-bold font-mono">{s.carga}kg</span>
-                <span className="text-gray-600 text-[8px]">×</span>
-                <span className="text-gray-300 font-medium">{s.repeticoes}</span>
-              </>
-            ) : (
-              <span className="text-gray-300 font-medium">{s.repeticoes} reps</span>
-            )}
-            {s.concluida && <span className="text-green-400 text-[9px] font-bold">✓</span>}
-            {s.nota && <span className="text-blue-400 text-[9px]">✎</span>}
-          </div>
-        ))}
-      </div>
-      {notas.map(({ idx, nota }) => (
-        <p key={idx} className="text-[11px] text-blue-300/80 italic">
-          Série {idx}: "{nota}"
+      {validas.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {validas.map((s, i) => (
+            <div key={i} className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] border ${
+              s.concluida ? 'bg-green-500/10 border-green-500/30' : 'bg-[#1a1a1a] border-[#323238]'
+            }`}>
+              {s.carga > 0 ? (
+                <>
+                  <span className="text-white font-bold font-mono">{s.carga}kg</span>
+                  <span className="text-gray-600 text-[8px]">×</span>
+                  <span className="text-gray-300 font-medium">{s.repeticoes}</span>
+                </>
+              ) : (
+                <span className="text-gray-300 font-medium">{s.repeticoes} reps</span>
+              )}
+              {s.concluida && <span className="text-green-400 text-[9px] font-bold">✓</span>}
+            </div>
+          ))}
+        </div>
+      )}
+      {notas.length > 0 && (
+        <p className="text-[11px] text-blue-300/80 italic">
+          {notas.map(({ idx, nota }, i) => (
+            <span key={idx}>
+              {i > 0 && <span className="text-gray-600 mx-1">·</span>}
+              <span className="text-gray-500">Série {idx}:</span> "{nota}"
+            </span>
+          ))}
         </p>
-      ))}
+      )}
     </div>
   )
 }
@@ -351,7 +352,7 @@ function SectionTable({ title, items, tipo, icon, prescricoes, semanaInfo }) {
                 </span>
                 {tipo === 'strength' && <PrescricaoInline presc={presc} />}
               </div>
-              {tipo === 'strength' && !!item.realizado && <ChipsRealizados series={item.series} />}
+              {tipo === 'strength' && <ChipsRealizados series={item.series} />}
               {!!item.exercicio_original && (
                 <p className="mt-1 ml-4 text-[11px] text-blue-400/80 flex items-center gap-1.5">
                   <Shuffle size={10} className="shrink-0" />
