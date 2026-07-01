@@ -7,7 +7,7 @@ import {
   salvarStatusFeedback, rotarImagemFeedback, trocarFotosFeedback, excluirFeedback,
   buscarAgendamentosPorFeedbacks,
 } from '../../api/feedbacks'
-import { salvarAgendamento } from '../../api/cronogramaFeedbacks'
+import { salvarAgendamento, excluirAgendamento } from '../../api/cronogramaFeedbacks'
 import { buscarRegistro } from '../../api/evolucao'
 import useErrorModal from '../../hooks/useErrorModal'
 import { Button, Badge, Spinner, EmptyState, DataTable, Modal, FormGroup, Textarea } from '../../components/ui'
@@ -537,6 +537,9 @@ export default function FeedbackListagem() {
     if (!modalExcluir || excluindo) return
     setExcluindo(true)
     try {
+      if (modalExcluir.agendamento_name) {
+        await excluirAgendamento(modalExcluir.agendamento_name)
+      }
       await excluirFeedback(modalExcluir.name)
       setFeedbacks(prev => prev.filter(f => f.name !== modalExcluir.name))
       setSelecionados(prev => prev.filter(f => f.name !== modalExcluir.name))
@@ -855,6 +858,12 @@ export default function FeedbackListagem() {
                 <p className="text-gray-400 text-xs">
                   Formulário: <span className="text-gray-200">{modalExcluir.titulo || modalExcluir.formulario || '—'}</span>
                 </p>
+                {modalExcluir.agendamento_name && (
+                  <p className="text-xs text-red-400/80 flex items-start gap-1.5 pt-1 border-t border-[#323238]">
+                    <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                    O agendamento vinculado também será excluído.
+                  </p>
+                )}
               </div>
             </div>
           </div>
