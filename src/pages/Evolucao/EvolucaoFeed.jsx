@@ -7,6 +7,7 @@ import RegistrarEvolucaoModal from '../../components/evolucao/RegistrarEvolucaoM
 import DistribuirFotosModal from '../../components/evolucao/DistribuirFotosModal'
 import { listarRegistros, listarRegistrosFeed, buscarRegistro, salvarRegistro, excluirRegistro, uploadFotoEvolucao } from '../../api/evolucao'
 import { salvarAvaliacao } from '../../api/avaliacoes'
+import { parseFrappeErrorDetail } from '../../utils/frappeErrors'
 import { uploadArquivo } from '../../api/modelos'
 import { listarAlunosByIds, listarAlunos } from '../../api/alunos'
 import { listarConjuntos, buscarConjunto } from '../../api/conjuntos'
@@ -806,25 +807,15 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
       setRefreshKey(k => k + 1)
       setConfirmExcluir(null)
     } catch (e) {
-      // Parseia _server_messages do Frappe para encontrar nome da Avaliacao
-      let msgTotal = [
-        e?.response?.data?.exception || '',
-        e?.response?.data?.message || '',
-      ]
-      try {
-        const sm = e?.response?.data?._server_messages
-        if (sm) {
-          const arr = JSON.parse(sm)
-          arr.forEach(s => { try { msgTotal.push(JSON.parse(s).message) } catch { msgTotal.push(s) } })
+      if (e?.response?.status === 417) {
+        const detail = parseFrappeErrorDetail(e)
+        const fullMsg = detail.messages.join(' ')
+        const matchAvaliacao = fullMsg.match(/Avaliacao da Composicao Corporal\s+([\w]+)/i)
+        if (matchAvaliacao) {
+          setConfirmExcluir(null)
+          setConfirmDesvincular({ registroName, avaliacaoName: matchAvaliacao[1], rowData })
+          return
         }
-      } catch {}
-      const msg = msgTotal.join(' ')
-      const matchAvaliacao = msg.match(/Avaliacao da Composicao Corporal[^\s]*\s+([\w\d]+)/i)
-        || msg.match(/([\w\d]+)(?=\s*$)/) // fallback: último token da mensagem
-      if (e?.response?.status === 417 && msg.toLowerCase().includes('avaliacao da composicao corporal') && matchAvaliacao) {
-        setConfirmExcluir(null)
-        setConfirmDesvincular({ registroName, avaliacaoName: matchAvaliacao[1], rowData })
-        return
       }
       errorModal.show(e, 'Excluir registro')
     } finally {
