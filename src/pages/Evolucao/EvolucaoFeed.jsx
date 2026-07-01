@@ -1041,6 +1041,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
   return (
     <>
       {errorModal.element}
+      {modalConfirmExcluir}
       {modalDesvincular}
       {registrarModal}
       <ListPage
