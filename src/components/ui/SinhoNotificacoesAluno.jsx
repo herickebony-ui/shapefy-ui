@@ -6,7 +6,8 @@ import { pollNotificacoesAluno, marcarNotificacoesVisualizadasAluno } from '../.
 const POLL_MS = 60_000
 
 function isDevolutiva(n) {
-  return n.titulo?.toLowerCase().includes('devolutiva')
+  const titulo = n.titulo?.toLowerCase() || ''
+  return titulo.includes('devolutiva') || titulo.includes('retorno do profissional')
 }
 
 // URLs de notificação podem vir como URLs absolutas do Frappe (ex: https://shapefyapp.com/preencher_feedback?name=XYZ).
