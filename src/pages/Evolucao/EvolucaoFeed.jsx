@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { Activity, Search, Columns, X, ArrowLeft, CheckCircle, Plus, Image as ImageIcon, LineChart as LineChartIcon, ChevronLeft, ChevronRight, Pencil, Check, Trash2, ArrowLeftRight, Camera, Save } from 'lucide-react'
+import { Activity, Search, Columns, X, ArrowLeft, CheckCircle, Plus, Image as ImageIcon, LineChart as LineChartIcon, ChevronLeft, ChevronRight, Pencil, Check, Trash2, ArrowLeftRight, Camera, Save, Images } from 'lucide-react'
 import { Button, Badge, Spinner, EmptyState, DataTable } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 import ImagemInterativa from '../Feedbacks/ImagemInterativa'
 import RegistrarEvolucaoModal from '../../components/evolucao/RegistrarEvolucaoModal'
-import { listarRegistros, listarRegistrosFeed, buscarRegistro, salvarRegistro, excluirRegistro } from '../../api/evolucao'
+import DistribuirFotosModal from '../../components/evolucao/DistribuirFotosModal'
+import { listarRegistros, listarRegistrosFeed, buscarRegistro, salvarRegistro, excluirRegistro, uploadFotoEvolucao } from '../../api/evolucao'
 import { uploadArquivo } from '../../api/modelos'
 import { listarAlunosByIds, listarAlunos } from '../../api/alunos'
 import { listarConjuntos, buscarConjunto } from '../../api/conjuntos'
@@ -47,8 +48,10 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
   const [uploadingSlot, setUploadingSlot] = useState(null)  // slot_id com upload em progresso
   const [excluindo, setExcluindo] = useState(false)
   const [excluidos, setExcluidos] = useState(new Set())
+  const [fotosMulti, setFotosMulti] = useState(null)
   const listaEdicaoFiltrada = listaEdicao.filter(r => !excluidos.has(r.name))
   const fileInputRef = useRef(null)
+  const multiFileInputRef = useRef(null)
   const pendingUploadSlot = useRef(null)
 
   const isSingle = registros.length === 1
@@ -270,6 +273,44 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
               </div>
             )}
           </div>
+          {isSingle && slots.length > 0 && (
+            <div className="flex justify-end">
+              <Button variant="secondary" size="xs" icon={Images} onClick={() => multiFileInputRef.current?.click()}>
+                Selecionar várias fotos
+              </Button>
+              <input
+                ref={multiFileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp,image/heic,image/heif"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || [])
+                  e.target.value = ''
+                  if (files.length > 1) setFotosMulti(files)
+                  else if (files.length === 1) triggerUpload(slots[0]?.slot_id)
+                }}
+              />
+            </div>
+          )}
+          {fotosMulti && (
+            <DistribuirFotosModal
+              files={fotosMulti}
+              slots={slots}
+              uploadFn={uploadFotoEvolucao}
+              onConfirm={async (novasUrls) => {
+                const novasFotos = [...fotosLocais]
+                for (const [slot_id, url] of Object.entries(novasUrls)) {
+                  const idx = novasFotos.findIndex(f => f.slot_id === slot_id)
+                  const slot = slots.find(s => s.slot_id === slot_id)
+                  if (idx !== -1) novasFotos[idx] = { ...novasFotos[idx], url }
+                  else novasFotos.push({ slot_id, url, rotulo: slot?.rotulo || slot_id, ordem: slot?.ordem || 999 })
+                }
+                await salvarFotos(novasFotos)
+              }}
+              onClose={() => setFotosMulti(null)}
+            />
+          )}
           <div className="bg-[#1a1a1a] rounded-lg border border-[#323238] overflow-x-auto">
             <table className="w-full text-left border-collapse table-fixed">
               <thead>
