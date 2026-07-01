@@ -37,7 +37,7 @@ const FEED_LIMIT = 1000 // teto de registros carregados pro feed (paginação é
 
 // Comparação de Registros — mesmo visual da comparação de feedbacks: tabela
 // datas × (peso + slots), fotos via ImagemInterativa, com gráfico de peso no topo.
-function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, onVoltar, onPesoSalvo, onExcluir, onFotosSalvas, modoEdicao = false }) {
+function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, onVoltar, onPesoSalvo, onExcluir, onExcluirRequest, onFotosSalvas, modoEdicao = false }) {
   const listaEdicao = (todosRegistros && todosRegistros.length) ? todosRegistros : registros
   const isSingle = registros.length === 1
   const reg = isSingle ? registros[0] : null
@@ -133,11 +133,13 @@ function RegistroComparacao({ registros, todosRegistros, pontosPeso = [], nome, 
     }
   }
 
-  const handleExcluir = async () => {
+  const handleExcluir = () => {
     if (!reg) return
+    if (onExcluirRequest) { onExcluirRequest(reg); return }
+    // fallback sem orquestrador externo
     if (!window.confirm(`Excluir o registro de ${fmtData(reg.data)} (foto + peso)? Não dá pra desfazer.`)) return
     setExcluindo(true)
-    try { await excluirRegistro(reg.name); onExcluir?.() } catch { setExcluindo(false) }
+    excluirRegistro(reg.name).then(() => onExcluir?.()).catch(() => setExcluindo(false))
   }
 
   // Edita peso (peso_revisado=1) e/ou a data (campo `data`, manual). O display
@@ -780,6 +782,10 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
           const name = comparando[0]?.name
           setComparando(null); setSelecionados([]); setModoComparar(false)
           if (name) { setRegistros(rs => rs.filter(r => r.name !== name)); setRefreshKey(k => k + 1) }
+        }}
+        onExcluirRequest={(reg) => {
+          setComparando(null); setSelecionados([]); setModoComparar(false)
+          excluirLinha(reg)
         }}
         onFotosSalvas={(novasFotos) => {
           setComparando(cs => cs.map((r, i) => i === 0 ? { ...r, fotos: novasFotos } : r))
