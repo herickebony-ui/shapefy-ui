@@ -319,17 +319,36 @@ function ViewComparacao({ dados, imgSrcs, onVoltar, onRotate, modoTrocarFoto, se
 export default function FeedbackListagem() {
   const errorModal = useErrorModal()
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const [feedbacks, setFeedbacks] = useState([])
   const [formularios, setFormularios] = useState([])
   const [loading, setLoading] = useState(true)
-  const [busca, setBusca] = useState('')
-  const [filtroStatus, setFiltroStatus] = useState(['Respondido']) // multi-seleção
-  const [filtroFormulario, setFiltroFormulario] = useState('')
-  const [filtroDataInicio, setFiltroDataInicio] = useState('')
-  const [filtroDataFim, setFiltroDataFim] = useState('')
+  const [busca, setBuscaState] = useState(() => searchParams.get('q') || '')
+  const [filtroStatus, setFiltroStatusState] = useState(() => {
+    const s = searchParams.get('status')
+    return s ? s.split(',') : ['Respondido']
+  })
+  const [filtroFormulario, setFiltroFormularioState] = useState(() => searchParams.get('formulario') || '')
+  const [filtroDataInicio, setFiltroDataInicioState] = useState(() => searchParams.get('de') || '')
+  const [filtroDataFim, setFiltroDataFimState] = useState(() => searchParams.get('ate') || '')
   const [page, setPage] = useState(1)
+
+  const syncParams = (patch) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      Object.entries(patch).forEach(([k, v]) => {
+        if (!v || (Array.isArray(v) && !v.length)) next.delete(k)
+        else next.set(k, Array.isArray(v) ? v.join(',') : v)
+      })
+      return next
+    }, { replace: true })
+  }
+
+  const setBusca = (v) => { setBuscaState(v); syncParams({ q: v }) }
+  const setFiltroFormulario = (v) => { setFiltroFormularioState(v); syncParams({ formulario: v }) }
+  const setFiltroDataInicio = (v) => { setFiltroDataInicioState(v); syncParams({ de: v }) }
+  const setFiltroDataFim = (v) => { setFiltroDataFimState(v); syncParams({ ate: v }) }
 
   const [view, setView] = useState('list')
   const [modalVincular, setModalVincular] = useState(false)
@@ -584,7 +603,11 @@ export default function FeedbackListagem() {
   ]
 
   const toggleStatusFiltro = (s) => {
-    setFiltroStatus(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
+    setFiltroStatusState(prev => {
+      const next = prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]
+      syncParams({ status: next })
+      return next
+    })
     setPage(1)
   }
 
