@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { Activity, Search, Columns, X, ArrowLeft, CheckCircle, Plus, Image as ImageIcon, LineChart as LineChartIcon, ChevronLeft, ChevronRight, Pencil, Check, Trash2, ArrowLeftRight, Camera, Save, Images } from 'lucide-react'
-import { Button, Badge, Spinner, EmptyState, DataTable } from '../../components/ui'
+import { Button, Badge, Spinner, EmptyState, DataTable, Modal } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 import ImagemInterativa from '../Feedbacks/ImagemInterativa'
 import RegistrarEvolucaoModal from '../../components/evolucao/RegistrarEvolucaoModal'
@@ -587,7 +587,8 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
   const [showRegistrar, setShowRegistrar] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [buscaDebounced, setBuscaDebounced] = useState('')
-  const [confirmDesvincular, setConfirmDesvincular] = useState(null) // {registroName, avaliacaoName, rowData}
+  const [confirmExcluir, setConfirmExcluir] = useState(null) // {registroName, rowData} — confirmação inicial
+  const [confirmDesvincular, setConfirmDesvincular] = useState(null) // {registroName, avaliacaoName} — vínculo detectado
   const [desvinculando, setDesvinculando] = useState(false)
   const errorModal = useErrorModal()
 
@@ -787,21 +788,41 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
     )
   }
 
-  const excluirLinha = async (row) => {
-    if (!window.confirm(`Excluir o registro de ${fmtData(row.data)} (foto + peso) deste aluno? Não dá pra desfazer.`)) return
+  const excluirLinha = (row) => setConfirmExcluir({ registroName: row.name, rowData: row })
+
+  const executarExcluir = async () => {
+    if (!confirmExcluir) return
+    const { registroName, rowData } = confirmExcluir
+    setDesvinculando(true)
     try {
-      await excluirRegistro(row.name)
-      setRegistros(rs => rs.filter(r => r.name !== row.name))
+      await excluirRegistro(registroName)
+      setRegistros(rs => rs.filter(r => r.name !== registroName))
       setRefreshKey(k => k + 1)
+      setConfirmExcluir(null)
     } catch (e) {
-      // 417 = Frappe bloqueou por vínculo com Avaliacao da Composicao Corporal
-      const msg = e?.response?.data?.exception || e?.response?.data?.message || ''
-      const matchAvaliacao = msg.match(/Avaliacao da Composicao Corporal\s+([\w\d]+)/i)
-      if (e?.response?.status === 417 && matchAvaliacao) {
-        setConfirmDesvincular({ registroName: row.name, avaliacaoName: matchAvaliacao[1], rowData: row })
+      // Parseia _server_messages do Frappe para encontrar nome da Avaliacao
+      let msgTotal = [
+        e?.response?.data?.exception || '',
+        e?.response?.data?.message || '',
+      ]
+      try {
+        const sm = e?.response?.data?._server_messages
+        if (sm) {
+          const arr = JSON.parse(sm)
+          arr.forEach(s => { try { msgTotal.push(JSON.parse(s).message) } catch { msgTotal.push(s) } })
+        }
+      } catch {}
+      const msg = msgTotal.join(' ')
+      const matchAvaliacao = msg.match(/Avaliacao da Composicao Corporal[^\s]*\s+([\w\d]+)/i)
+        || msg.match(/([\w\d]+)(?=\s*$)/) // fallback: último token da mensagem
+      if (e?.response?.status === 417 && msg.toLowerCase().includes('avaliacao da composicao corporal') && matchAvaliacao) {
+        setConfirmExcluir(null)
+        setConfirmDesvincular({ registroName, avaliacaoName: matchAvaliacao[1], rowData })
         return
       }
       errorModal.show(e, 'Excluir registro')
+    } finally {
+      setDesvinculando(false)
     }
   }
 
@@ -939,29 +960,50 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
     </>
   )
 
-  const modalDesvincular = confirmDesvincular && (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-      <div className="bg-[#1a1a1a] border border-[#323238] rounded-xl p-6 max-w-md w-full shadow-2xl">
-        <h3 className="text-white text-base font-bold mb-1">Excluir registro de evolução</h3>
-        <p className="text-gray-400 text-sm mb-4">
-          Este registro está vinculado a uma <span className="text-white font-medium">Avaliação de Composição Corporal</span>. A avaliação será mantida, mas perderá as fotos e o peso vinculados. Os demais dados da avaliação continuam intactos.
+  const modalConfirmExcluir = confirmExcluir && (
+    <Modal
+      isOpen
+      onClose={() => setConfirmExcluir(null)}
+      title="Excluir registro"
+      size="sm"
+      footer={
+        <>
+          <Button variant="ghost" onClick={() => setConfirmExcluir(null)}>Cancelar</Button>
+          <Button variant="danger" loading={desvinculando} onClick={executarExcluir}>Excluir</Button>
+        </>
+      }
+    >
+      <div className="px-4 py-3 space-y-2">
+        <p className="text-gray-300 text-sm">
+          Excluir o registro de <span className="text-white font-semibold">{fmtData(confirmExcluir.rowData?.data)}</span>? Foto e peso serão removidos permanentemente.
         </p>
-        <p className="text-amber-400 text-xs bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2 mb-5">
-          Esta ação não pode ser desfeita.
-        </p>
-        <div className="flex gap-2 justify-end">
-          <button onClick={() => setConfirmDesvincular(null)} disabled={desvinculando}
-            className="h-9 px-4 text-sm text-gray-400 hover:text-white border border-[#323238] rounded-lg transition-colors disabled:opacity-50">
-            Cancelar
-          </button>
-          <button onClick={confirmarDesvincularEExcluir} disabled={desvinculando}
-            className="h-9 px-4 text-sm text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
-            {desvinculando && <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-            Excluir só o registro
-          </button>
-        </div>
+        <p className="text-gray-500 text-xs">Esta ação não pode ser desfeita.</p>
       </div>
-    </div>
+    </Modal>
+  )
+
+  const modalDesvincular = confirmDesvincular && (
+    <Modal
+      isOpen
+      onClose={() => setConfirmDesvincular(null)}
+      title="Registro vinculado a uma Avaliação"
+      size="sm"
+      footer={
+        <>
+          <Button variant="ghost" onClick={() => setConfirmDesvincular(null)}>Cancelar</Button>
+          <Button variant="danger" loading={desvinculando} onClick={confirmarDesvincularEExcluir}>Excluir só o registro</Button>
+        </>
+      }
+    >
+      <div className="px-4 py-3 space-y-3">
+        <p className="text-gray-300 text-sm">
+          Este registro está vinculado a uma <span className="text-white font-semibold">Avaliação de Composição Corporal</span>. A avaliação será mantida, mas perderá as fotos e o peso.
+        </p>
+        <p className="text-amber-400 text-xs bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+          Os demais dados da avaliação (medidas, dobras, etc.) continuam intactos.
+        </p>
+      </div>
+    </Modal>
   )
 
   const registrarModal = showRegistrar && (
@@ -978,6 +1020,7 @@ export default function EvolucaoFeed({ alunoId = null, alunoNome = '', embedded 
     return (
       <div className="space-y-3">
         {errorModal.element}
+        {modalConfirmExcluir}
         {modalDesvincular}
         {registrarModal}
         <div className="flex items-center justify-between gap-2 flex-wrap">
