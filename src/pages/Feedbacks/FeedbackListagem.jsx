@@ -1,14 +1,16 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { maybeOpenNewTab } from '../../utils/navigation'
-import { RefreshCw, Search, Columns, CheckCircle, Star, X, ArrowLeft, Link2, Trash2, AlertTriangle, Copy, Check } from 'lucide-react'
+import { RefreshCw, Search, Columns, CheckCircle, Star, X, ArrowLeft, Link2, Trash2, AlertTriangle, Copy, Check, StickyNote } from 'lucide-react'
 import {
   listarFeedbacks, listarFormularios, buscarFeedback, listarFeedbacksDoAluno,
   salvarStatusFeedback, rotarImagemFeedback, trocarFotosFeedback, excluirFeedback,
+  buscarAgendamentosPorFeedbacks,
 } from '../../api/feedbacks'
+import { salvarAgendamento } from '../../api/cronogramaFeedbacks'
 import { buscarRegistro } from '../../api/evolucao'
 import useErrorModal from '../../hooks/useErrorModal'
-import { Button, Badge, Spinner, EmptyState, DataTable, Modal } from '../../components/ui'
+import { Button, Badge, Spinner, EmptyState, DataTable, Modal, FormGroup, Textarea } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 import ImagemInterativa from './ImagemInterativa'
 import VincularFeedbackModal from '../../components/feedback/VincularFeedbackModal'
@@ -344,6 +346,10 @@ export default function FeedbackListagem() {
   const [fotosSelecionadas, setFotosSelecionadas] = useState([])
   const [salvandoTroca, setSalvandoTroca] = useState(false)
 
+  const [modalNota, setModalNota] = useState(null)
+  const [notaTexto, setNotaTexto] = useState('')
+  const [salvandoNota, setSalvandoNota] = useState(false)
+
   const debounceRef = useRef(null)
 
   const carregar = useCallback(async (opts = {}) => {
@@ -359,7 +365,9 @@ export default function FeedbackListagem() {
       const lista = buscaUsada
         ? list.filter(f => buscarSmart([f.nome_completo, f.email, f.aluno], buscaUsada))
         : list
-      setFeedbacks(lista)
+      const mapaAgendamentos = await buscarAgendamentosPorFeedbacks(lista.map(f => f.name))
+      const listaComNota = lista.map(f => ({ ...f, ...(mapaAgendamentos[f.name] || {}) }))
+      setFeedbacks(listaComNota)
       setPage(1)
     } catch (e) {
       console.error(e)
@@ -496,6 +504,25 @@ export default function FeedbackListagem() {
     }
   }
 
+  const abrirModalNota = (row) => {
+    setModalNota(row)
+    setNotaTexto(row.observacao || '')
+  }
+
+  const salvarNota = async () => {
+    if (!modalNota?.agendamento_name) return
+    setSalvandoNota(true)
+    try {
+      await salvarAgendamento(modalNota.agendamento_name, { observacao: notaTexto })
+      setFeedbacks(prev => prev.map(f => f.name === modalNota.name ? { ...f, observacao: notaTexto } : f))
+      setModalNota(null)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setSalvandoNota(false)
+    }
+  }
+
   const handleStatusChange = async (fb, novoStatus) => {
     setFeedbacks(prev => prev.map(f => f.name === fb.name ? { ...f, status: novoStatus } : f))
     try {
@@ -598,7 +625,28 @@ export default function FeedbackListagem() {
     {
       label: 'Aluno',
       render: (row) => (
-        <span className="text-white text-sm font-medium">{row.nome_completo}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-white text-sm font-medium">{row.nome_completo}</span>
+          {row.agendamento_name && (
+            <button
+              onClick={(e) => { e.stopPropagation(); abrirModalNota(row) }}
+              title={row.observacao ? `Nota: ${row.observacao}` : 'Adicionar nota interna'}
+              className="flex items-center gap-1 shrink-0 transition-colors"
+            >
+              {row.observacao ? (
+                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-red-500/50 text-red-400 text-[10px] font-medium shadow-[0_0_4px_rgba(239,68,68,0.2)]">
+                  <StickyNote size={10} />
+                  Notas
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 text-gray-600 hover:text-gray-400 text-[11px]">
+                  <StickyNote size={10} />
+                  Notas
+                </span>
+              )}
+            </button>
+          )}
+        </div>
       ),
     },
     {
@@ -809,6 +857,31 @@ export default function FeedbackListagem() {
                 </p>
               </div>
             </div>
+          </div>
+        </Modal>
+      )}
+      {modalNota && (
+        <Modal
+          isOpen
+          onClose={() => !salvandoNota && setModalNota(null)}
+          title="Nota interna"
+          size="sm"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setModalNota(null)} disabled={salvandoNota}>Cancelar</Button>
+              <Button variant="primary" onClick={salvarNota} loading={salvandoNota}>Salvar</Button>
+            </>
+          }
+        >
+          <div className="p-4">
+            <FormGroup label="Nota" hint="Visível apenas para você">
+              <Textarea
+                value={notaTexto}
+                onChange={setNotaTexto}
+                placeholder="Digite sua nota interna sobre este feedback..."
+                rows={4}
+              />
+            </FormGroup>
           </div>
         </Modal>
       )}

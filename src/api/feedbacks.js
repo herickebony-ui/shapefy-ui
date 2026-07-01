@@ -145,6 +145,23 @@ export const salvarRespostaFeedback = async (id, resposta) => {
   return res.data.data
 }
 
+// Busca os Feedback Agendados vinculados a uma lista de Feedback (pelo campo feedback_resposta).
+// Retorna mapa: feedbackName → { agendamento_name, observacao }
+export const buscarAgendamentosPorFeedbacks = async (feedbackNames) => {
+  if (!feedbackNames.length) return {}
+  const params = {
+    fields: JSON.stringify(['name', 'feedback_resposta', 'observacao']),
+    filters: JSON.stringify([['feedback_resposta', 'in', feedbackNames]]),
+    limit: feedbackNames.length + 10,
+  }
+  const res = await client.get('/api/resource/Feedback Agendado', { params })
+  const mapa = {}
+  for (const a of res.data.data || []) {
+    if (a.feedback_resposta) mapa[a.feedback_resposta] = { agendamento_name: a.name, observacao: a.observacao || '' }
+  }
+  return mapa
+}
+
 export const trocarFotosFeedback = async (id, perguntas, idx1, idx2) => {
   const novas = perguntas.map((p, i) => {
     if (i === idx1) return { ...p, resposta: perguntas[idx2].resposta }

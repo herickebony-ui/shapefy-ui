@@ -486,22 +486,28 @@ export default function PainelFeedbacks() {
         return (
           <div className="flex items-center justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
             <button
+              onClick={() => abrirModalNota(row)}
+              title={row.observacao ? `Nota: ${row.observacao}` : 'Adicionar nota interna'}
+              className="flex items-center gap-1 transition-colors"
+            >
+              {row.observacao ? (
+                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-red-500/50 text-red-400 text-[10px] font-medium shadow-[0_0_4px_rgba(239,68,68,0.2)]">
+                  <StickyNote size={10} />
+                  Notas
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 text-gray-600 hover:text-gray-400 text-[11px]">
+                  <StickyNote size={10} />
+                  Notas
+                </span>
+              )}
+            </button>
+            <button
               onClick={() => irParaCronograma(row.aluno)}
               title="Abrir cronograma do aluno"
               className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors"
             >
               <Calendar size={12} />
-            </button>
-            <button
-              onClick={() => abrirModalNota(row)}
-              title={row.observacao ? `Nota: ${row.observacao}` : 'Adicionar nota interna'}
-              className={`h-7 w-7 flex items-center justify-center rounded-lg border transition-colors ${
-                row.observacao
-                  ? 'text-amber-400 bg-amber-500/10 border-amber-500/40 hover:bg-amber-500/20'
-                  : 'text-gray-400 hover:text-white border-[#323238] hover:border-gray-500'
-              }`}
-            >
-              <StickyNote size={12} />
             </button>
             {podeCobrar && (
               <button
