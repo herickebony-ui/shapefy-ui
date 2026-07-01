@@ -3,15 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import {
   RefreshCw, ChevronLeft, ChevronRight, Calendar, MessageCircle,
   Eye, Search, AlertCircle, Clock, Check, UserPlus,
-  CalendarPlus, CalendarClock, CalendarX, ArrowRight,
+  CalendarPlus, CalendarClock, CalendarX, ArrowRight, StickyNote,
 } from 'lucide-react'
 
 import {
-  Button, Badge, Avatar, DataTable, EmptyState, Modal,
+  Button, Badge, Avatar, DataTable, EmptyState, Modal, Textarea, FormGroup,
 } from '../../components/ui'
 import ListPage from '../../components/templates/ListPage'
 
-import { listarAgendamentos } from '../../api/cronogramaFeedbacks'
+import { listarAgendamentos, salvarAgendamento } from '../../api/cronogramaFeedbacks'
 import { listarAlunos, listarAlunosByIds } from '../../api/alunos'
 
 import Toast from './cronograma/Toast'
@@ -104,6 +104,9 @@ export default function PainelFeedbacks() {
   // ─── Modais ─────────────────────────────────────────────────────────────────
   const [modalPendencia, setModalPendencia] = useState(null) // { titulo, descricao, alunos, icon, color }
   const [modalSemResposta, setModalSemResposta] = useState(null) // agendamento sem feedback respondido
+  const [modalNota, setModalNota] = useState(null) // { agendamento } — editar observacao
+  const [notaTexto, setNotaTexto] = useState('')
+  const [salvandoNota, setSalvandoNota] = useState(false)
 
   // ─── Toast ──────────────────────────────────────────────────────────────────
   const [toast, setToast] = useState({ show: false, msg: '', type: 'success' })
@@ -316,28 +319,30 @@ export default function PainelFeedbacks() {
     }
   }, [alunosPorId, agendamentos, hojeISO])
 
-  // Lista filtrada
+  // Lista filtrada — quando há busca por nome, ignora filtro de período e puxa tudo
   const filtrados = useMemo(() => {
     let lista = agendamentosHidratados.filter(a => !a.is_start)
 
-    if (filtroPeriodo === 'esta_semana') {
-      lista = lista.filter(a => a.data_agendada >= semana.inicio && a.data_agendada <= semana.fim)
-    } else if (filtroPeriodo === 'proxima_semana') {
-      const px = rangeSemana(1)
-      lista = lista.filter(a => a.data_agendada >= px.inicio && a.data_agendada <= px.fim)
-    } else if (filtroPeriodo === 'hoje') {
-      lista = lista.filter(a => a.data_agendada === hojeISO)
-    } else if (filtroPeriodo === 'mes') {
-      const m = rangeMes()
-      lista = lista.filter(a => a.data_agendada >= m.inicio && a.data_agendada <= m.fim)
-    } else if (filtroPeriodo === 'intervalo') {
-      if (intervaloInicio) lista = lista.filter(a => a.data_agendada >= intervaloInicio)
-      if (intervaloFim) lista = lista.filter(a => a.data_agendada <= intervaloFim)
-    } else if (filtroPeriodo === 'atrasados') {
-      lista = lista.filter(a =>
-        a.data_agendada < hojeISO &&
-        a.status !== 'Respondido' && a.status !== 'Concluido',
-      )
+    if (!queryBusca) {
+      if (filtroPeriodo === 'esta_semana') {
+        lista = lista.filter(a => a.data_agendada >= semana.inicio && a.data_agendada <= semana.fim)
+      } else if (filtroPeriodo === 'proxima_semana') {
+        const px = rangeSemana(1)
+        lista = lista.filter(a => a.data_agendada >= px.inicio && a.data_agendada <= px.fim)
+      } else if (filtroPeriodo === 'hoje') {
+        lista = lista.filter(a => a.data_agendada === hojeISO)
+      } else if (filtroPeriodo === 'mes') {
+        const m = rangeMes()
+        lista = lista.filter(a => a.data_agendada >= m.inicio && a.data_agendada <= m.fim)
+      } else if (filtroPeriodo === 'intervalo') {
+        if (intervaloInicio) lista = lista.filter(a => a.data_agendada >= intervaloInicio)
+        if (intervaloFim) lista = lista.filter(a => a.data_agendada <= intervaloFim)
+      } else if (filtroPeriodo === 'atrasados') {
+        lista = lista.filter(a =>
+          a.data_agendada < hojeISO &&
+          a.status !== 'Respondido' && a.status !== 'Concluido',
+        )
+      }
     }
 
     if (filtroTipo === 'troca') lista = lista.filter(a => a.is_training)
@@ -361,6 +366,29 @@ export default function PainelFeedbacks() {
   // ═════════════════════════════════════════════════════════════════════════
   const irParaCronograma = (alunoId) =>
     navigate(`/cronograma-feedbacks/aluno/${encodeURIComponent(alunoId)}`)
+
+  const abrirModalNota = (row) => {
+    setNotaTexto(row.observacao || '')
+    setModalNota(row)
+  }
+
+  const salvarNota = async () => {
+    if (!modalNota) return
+    setSalvandoNota(true)
+    try {
+      await salvarAgendamento(modalNota.name, { observacao: notaTexto })
+      setAgendamentos(prev =>
+        prev.map(a => a.name === modalNota.name ? { ...a, observacao: notaTexto } : a),
+      )
+      setModalNota(null)
+      showToast('Nota salva')
+    } catch (e) {
+      console.error(e)
+      showToast('Erro ao salvar nota', 'error')
+    } finally {
+      setSalvandoNota(false)
+    }
+  }
 
   // Clique no nome do aluno na lista: abre o feedback respondido daquela linha.
   // Se ainda não foi respondido, abre modal informativo com ações disponíveis.
@@ -463,6 +491,17 @@ export default function PainelFeedbacks() {
               className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-white border border-[#323238] hover:border-gray-500 rounded-lg transition-colors"
             >
               <Calendar size={12} />
+            </button>
+            <button
+              onClick={() => abrirModalNota(row)}
+              title={row.observacao ? `Nota: ${row.observacao}` : 'Adicionar nota interna'}
+              className={`h-7 w-7 flex items-center justify-center rounded-lg border transition-colors ${
+                row.observacao
+                  ? 'text-amber-400 bg-amber-500/10 border-amber-500/40 hover:bg-amber-500/20'
+                  : 'text-gray-400 hover:text-white border-[#323238] hover:border-gray-500'
+              }`}
+            >
+              <StickyNote size={12} />
             </button>
             {podeCobrar && (
               <button
@@ -887,6 +926,33 @@ export default function PainelFeedbacks() {
           </Modal>
         )
       })()}
+
+      {modalNota && (
+        <Modal
+          isOpen
+          title="Nota interna"
+          subtitle={modalNota._alunoNome}
+          size="sm"
+          onClose={() => setModalNota(null)}
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setModalNota(null)}>Cancelar</Button>
+              <Button variant="primary" loading={salvandoNota} onClick={salvarNota}>Salvar</Button>
+            </>
+          }
+        >
+          <div className="p-4">
+            <FormGroup label="Nota" hint="Visível apenas para você">
+              <Textarea
+                value={notaTexto}
+                onChange={setNotaTexto}
+                placeholder="Observação sobre este agendamento..."
+                rows={4}
+              />
+            </FormGroup>
+          </div>
+        </Modal>
+      )}
 
       <Toast {...toast} />
     </>

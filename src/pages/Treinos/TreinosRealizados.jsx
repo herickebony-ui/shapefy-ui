@@ -62,12 +62,13 @@ const normalize = (s) =>
 
 const normalizeSeries = (arr, fallbackCarga = 0) =>
   arr.map(s => {
-    if (typeof s === 'number') return { repeticoes: s, carga: fallbackCarga, concluida: false }
-    if (Array.isArray(s)) return { repeticoes: s[0] ?? 0, carga: s[1] ?? fallbackCarga, concluida: !!s[2] }
+    if (typeof s === 'number') return { repeticoes: s, carga: fallbackCarga, concluida: false, nota: '' }
+    if (Array.isArray(s)) return { repeticoes: s[0] ?? 0, carga: s[1] ?? fallbackCarga, concluida: !!s[2], nota: '' }
     if (s && typeof s === 'object') return {
       carga: Number(s.carga ?? s.weight ?? fallbackCarga),
       repeticoes: Number(s.repeticoes ?? s.reps ?? 0),
       concluida: !!(s.concluida ?? s.done ?? false),
+      nota: s.nota || '',
     }
     return null
   }).filter(Boolean)
@@ -258,28 +259,37 @@ function ChipsRealizados({ series: seriesStr }) {
   const series = parseSeries(seriesStr)
   const validas = series.filter((s) => s.carga || s.repeticoes)
   if (!validas.length) return null
+  const notas = series.map((s, i) => s.nota ? { idx: i + 1, nota: s.nota } : null).filter(Boolean)
   return (
-    <div className="flex flex-wrap gap-1 mt-1.5 ml-4">
-      {validas.map((s, i) => (
-        <div
-          key={i}
-          className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] border ${
-            s.concluida
-              ? 'bg-green-500/10 border-green-500/30'
-              : 'bg-[#1a1a1a] border-[#323238]'
-          }`}
-        >
-          {s.carga > 0 ? (
-            <>
-              <span className="text-white font-bold font-mono">{s.carga}kg</span>
-              <span className="text-gray-600 text-[8px]">×</span>
-              <span className="text-gray-300 font-medium">{s.repeticoes}</span>
-            </>
-          ) : (
-            <span className="text-gray-300 font-medium">{s.repeticoes} reps</span>
-          )}
-          {s.concluida && <span className="text-green-400 text-[9px] font-bold">✓</span>}
-        </div>
+    <div className="mt-1.5 ml-4 space-y-1">
+      <div className="flex flex-wrap gap-1">
+        {validas.map((s, i) => (
+          <div
+            key={i}
+            className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] border ${
+              s.concluida
+                ? 'bg-green-500/10 border-green-500/30'
+                : 'bg-[#1a1a1a] border-[#323238]'
+            }`}
+          >
+            {s.carga > 0 ? (
+              <>
+                <span className="text-white font-bold font-mono">{s.carga}kg</span>
+                <span className="text-gray-600 text-[8px]">×</span>
+                <span className="text-gray-300 font-medium">{s.repeticoes}</span>
+              </>
+            ) : (
+              <span className="text-gray-300 font-medium">{s.repeticoes} reps</span>
+            )}
+            {s.concluida && <span className="text-green-400 text-[9px] font-bold">✓</span>}
+            {s.nota && <span className="text-blue-400 text-[9px]">✎</span>}
+          </div>
+        ))}
+      </div>
+      {notas.map(({ idx, nota }) => (
+        <p key={idx} className="text-[11px] text-blue-300/80 italic">
+          Série {idx}: "{nota}"
+        </p>
       ))}
     </div>
   )

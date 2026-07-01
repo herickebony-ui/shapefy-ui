@@ -351,9 +351,14 @@ function SerieLinha({ exercicio, idx, serie, onUpdate, onConcluir, onAnotar, onV
             <Check size={15} strokeWidth={3} />
           </button>
         </div>
-        {hist?.repeticoes != null && (
+        {hist && (hist.repeticoes > 0 || hist.carga > 0 || hist.nota) && (
           <p className="text-[var(--sf-text-muted)] text-[11px] pl-1">
-            historico: {hist.repeticoes} reps - {hist.carga}kg
+            {(hist.repeticoes > 0 || hist.carga > 0) && `historico: ${hist.repeticoes} reps - ${hist.carga}kg`}
+            {hist.nota && (
+              <span className="text-[#60A5FA] italic">
+                {(hist.repeticoes > 0 || hist.carga > 0) ? ` · "${hist.nota}"` : `"${hist.nota}"`}
+              </span>
+            )}
           </p>
         )}
         {serie.nota && (
