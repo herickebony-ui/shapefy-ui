@@ -104,7 +104,7 @@ function Lightbox({ src, onClose }) {
 }
 
 // ─── Comparação de fotos por slot (alinhada por slot_id) ──────────────────────
-export function MatrizFotos({ registros }) {
+export function MatrizFotos({ registros, onEditar }) {
   const [lightboxSrc, setLightboxSrc] = useState(null)
   const cols = registros // todas as datas — scroll horizontal resolve o "muitas fotos"
   // união dos slots por slot_id (rótulo/ordem do registro mais recente que o tem)
@@ -132,7 +132,18 @@ export function MatrizFotos({ registros }) {
           <div className="grid gap-2" style={{ gridTemplateColumns: `120px repeat(${cols.length}, 120px)` }}>
             <div />
             {cols.map((reg) => (
-              <div key={reg.name} className="text-center text-[10px] font-bold text-[#60A5FA] uppercase tracking-wider">{fmtData(reg.data)}</div>
+              <div key={reg.name} className="flex flex-col items-center gap-1">
+                <span className="text-[10px] font-bold text-[#60A5FA] uppercase tracking-wider">{fmtData(reg.data)}</span>
+                {onEditar && (
+                  <button
+                    onClick={() => onEditar(reg)}
+                    title="Editar data, peso e fotos"
+                    className="h-5 w-5 flex items-center justify-center text-gray-600 hover:text-blue-400 hover:bg-blue-600/10 rounded transition-colors"
+                  >
+                    <Pencil size={10} />
+                  </button>
+                )}
+              </div>
             ))}
           </div>
           {slots.map((slot) => (
@@ -261,7 +272,7 @@ export default function EvolucaoAluno({ mode = 'both', embedded = false }) {
           {showFotos && (
           <div className="bg-[#1a1a1a] rounded-xl border border-[#323238] p-4">
             <h2 className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3"><Images size={13} /> Comparação de fotos <span className="text-gray-600 normal-case">· role pro lado →</span></h2>
-            <MatrizFotos registros={registros} />
+            <MatrizFotos registros={registros} onEditar={setEditandoRegistro} />
           </div>
           )}
         </>
